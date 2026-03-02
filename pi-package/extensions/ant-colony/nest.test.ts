@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -98,6 +98,7 @@ describe("pheromone dirty flag", () => {
 
 describe("claimNextTask", () => {
   it("claims highest scored pending task", () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5);
     nest.writeTask({
       id: "t-low", parentId: null, title: "Low", description: "",
       caste: "worker", status: "pending", priority: 5, files: [],
@@ -110,10 +111,14 @@ describe("claimNextTask", () => {
       claimedBy: null, result: null, error: null, spawnedTasks: [],
       createdAt: Date.now(), startedAt: null, finishedAt: null,
     });
-    const claimed = nest.claimNextTask("worker", "ant-1");
-    expect(claimed).not.toBeNull();
-    expect(claimed!.id).toBe("t-high");
-    expect(claimed!.status).toBe("claimed");
+    try {
+      const claimed = nest.claimNextTask("worker", "ant-1");
+      expect(claimed).not.toBeNull();
+      expect(claimed!.id).toBe("t-high");
+      expect(claimed!.status).toBe("claimed");
+    } finally {
+      randomSpy.mockRestore();
+    }
   });
 
   it("returns null when no pending tasks", () => {
