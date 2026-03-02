@@ -9,7 +9,7 @@ import { t } from "../i18n.js";
  *
  * @returns The selected agent template identifier string.
  */
-export async function selectAgents(): Promise<string> {
+export async function selectAgents(initialValue?: string): Promise<string> {
   const agent = await p.select({
     message: t("agent.select"),
     options: [
@@ -19,6 +19,7 @@ export async function selectAgents(): Promise<string> {
       { value: "data-ai-engineer",    label: t("agent.dataai"),    hint: t("agent.dataaiHint") },
       { value: "colony-operator",     label: t("agent.colony"),    hint: t("agent.colonyHint") },
     ],
+    initialValue,
   });
   if (p.isCancel(agent)) { p.cancel(t("cancelled")); process.exit(0); }
   return agent;

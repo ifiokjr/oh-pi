@@ -1,20 +1,13 @@
-import chalk from "chalk";
 import { selectLanguage, getLocale } from "./i18n.js";
-import { t } from "./i18n.js";
 import { welcome } from "./tui/welcome.js";
 import { selectMode } from "./tui/mode-select.js";
-import { setupProviders, type ProviderSetupResult } from "./tui/provider-setup.js";
+import { setupProviders } from "./tui/provider-setup.js";
 import { selectPreset } from "./tui/preset-select.js";
-import { selectTheme } from "./tui/theme-select.js";
-import { selectKeybindings } from "./tui/keybinding-select.js";
-import { selectExtensions } from "./tui/extension-select.js";
-import { selectAgents } from "./tui/agents-select.js";
-import { runHorizontalTabs } from "./tui/horizontal-tabs.js";
+import { runConfigWizard, type WizardBaseConfig } from "./tui/config-wizard.js";
 import { confirmApply } from "./tui/confirm-apply.js";
 import { detectEnv, type EnvInfo } from "./utils/detect.js";
 import type { OhPConfig } from "./types.js";
 import { EXTENSIONS } from "./registry.js";
-type TabbedBaseConfig = Pick<OhPConfig, "theme" | "keybindings" | "extensions" | "prompts" | "agents" | "thinking">;
 
 /**
  * 主入口函数。检测环境、选择语言、展示欢迎界面，根据用户选择的模式执行对应配置流程，最终确认并应用配置。
@@ -64,7 +57,7 @@ async function quickFlow(env: EnvInfo): Promise<OhPConfig> {
  */
 async function presetFlow(env: EnvInfo): Promise<OhPConfig> {
   const preset = await selectPreset();
-  return runTabbedFlow(env, preset);
+  return runConfigWizard(env, preset);
 }
 
 /**
@@ -74,121 +67,13 @@ async function presetFlow(env: EnvInfo): Promise<OhPConfig> {
  */
 async function customFlow(env: EnvInfo): Promise<OhPConfig> {
   const defaultExtensions = EXTENSIONS.filter(e => e.default).map(e => e.name);
-  return runTabbedFlow(env, {
+  const initial: WizardBaseConfig = {
     theme: "dark",
     keybindings: "default",
     extensions: defaultExtensions,
     prompts: ["review", "fix", "explain", "commit", "test", "refactor", "optimize", "security", "document", "pr"],
     agents: "general-developer",
     thinking: "medium",
-  });
-}
-
-async function runTabbedFlow(env: EnvInfo, initial: TabbedBaseConfig): Promise<OhPConfig> {
-  const defaultExtensions = EXTENSIONS.filter(e => e.default).map(e => e.name);
-  let providerSetup: ProviderSetupResult | null = null;
-  let theme = initial.theme;
-  let keybindings = initial.keybindings;
-  let extensions = initial.extensions.length > 0 ? [...initial.extensions] : defaultExtensions;
-  let agents = initial.agents;
-  await runHorizontalTabs({
-    title: t("custom.tabHeader"),
-    canFinish: () => !!providerSetup,
-    finishBlockedMessage: () => t("custom.needProviders"),
-    tabs: [
-      {
-        label: t("custom.tabProviders"),
-        summary: () => summarizeProviders(providerSetup),
-        details: () => providerDetails(providerSetup),
-        edit: async () => {
-          providerSetup = await setupProviders(env);
-        },
-      },
-      {
-        label: t("custom.tabAppearance"),
-        summary: () => `${t("confirm.theme")} ${theme} · ${t("confirm.keybindings")} ${keybindings}`,
-        details: () => [
-          `${chalk.dim(t("confirm.theme"))} ${chalk.cyan(theme)}`,
-          `${chalk.dim(t("confirm.keybindings"))} ${chalk.cyan(keybindings)}`,
-        ],
-        edit: async () => {
-          theme = await selectTheme();
-          keybindings = await selectKeybindings();
-        },
-      },
-      {
-        label: t("custom.tabFeatures"),
-        summary: () => t("custom.tabFeaturesHint", { count: extensions.length }),
-        details: () => [
-          chalk.dim(t("confirm.extensions")),
-          extensions.length > 0 ? `  ${extensions.join(", ")}` : `  ${t("confirm.none")}`,
-        ],
-        edit: async () => {
-          extensions = await selectExtensions();
-        },
-      },
-      {
-        label: t("custom.tabAgents"),
-        summary: () => `${t("confirm.agents")} ${agents}`,
-        details: () => [
-          `${chalk.dim(t("confirm.agents"))} ${chalk.cyan(agents)}`,
-          `${chalk.dim(t("confirm.thinking"))} ${chalk.cyan(initial.thinking)}`,
-        ],
-        edit: async () => {
-          agents = await selectAgents();
-        },
-      },
-      {
-        label: t("custom.tabFinish"),
-        summary: () => t("custom.tabFinishHint"),
-        details: () => [
-          chalk.dim(t("custom.tabFinishHelp")),
-        ],
-        edit: async () => {
-          // Finish tab is read-only; use key F to complete.
-        },
-      },
-    ],
-  });
-
-  if (!providerSetup) {
-    throw new Error("Provider setup is required before finishing tabbed flow");
-  }
-  const finalProviderSetup = providerSetup as ProviderSetupResult;
-
-  return {
-    providers: finalProviderSetup.providers,
-    providerStrategy: finalProviderSetup.providerStrategy,
-    theme,
-    keybindings,
-    extensions,
-    prompts: initial.prompts,
-    agents,
-    thinking: initial.thinking,
   };
-}
-
-function summarizeProviders(setup: ProviderSetupResult | null): string {
-  if (!setup) return t("custom.providersUnset");
-  if (setup.providerStrategy === "keep") return t("confirm.providerStrategyKeep");
-  if (setup.providerStrategy === "add") {
-    return setup.providers.length > 0
-      ? t("custom.providersAdd", { list: setup.providers.map(p => p.name).join(", ") })
-      : t("confirm.providerStrategyAdd");
-  }
-  if (setup.providers.length === 0) return t("confirm.providerStrategyReplace");
-  return t("custom.providersReplace", { list: setup.providers.map(p => p.name).join(", ") });
-}
-
-function providerDetails(setup: ProviderSetupResult | null): string[] {
-  if (!setup) return [chalk.dim(t("custom.needProviders"))];
-  if (setup.providerStrategy === "keep") return [chalk.dim(t("confirm.providerStrategyKeep"))];
-  if (setup.providers.length === 0) return [chalk.dim(t("confirm.none"))];
-
-  const primary = setup.providers[0];
-  return [
-    `${chalk.dim(t("confirm.providerStrategy"))} ${chalk.cyan(setup.providerStrategy)}`,
-    `${chalk.dim(t("confirm.providers"))} ${chalk.cyan(setup.providers.map(p => p.name).join(", "))}`,
-    `${chalk.dim(t("confirm.model"))} ${chalk.cyan(primary?.defaultModel ?? t("confirm.none"))}`,
-  ];
+  return runConfigWizard(env, initial);
 }

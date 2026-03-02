@@ -7,14 +7,19 @@ import { EXTENSIONS } from "../registry.js";
  * Exits the process if the user cancels the selection.
  * @returns A promise that resolves to an array of selected extension names.
  */
-export async function selectExtensions(): Promise<string[]> {
+export async function selectExtensions(initialValues?: string[]): Promise<string[]> {
+  const fallbackDefaults = EXTENSIONS.filter(e => e.default).map(e => e.name);
+  const validValues = new Set(EXTENSIONS.map(e => e.name));
+  const seeded = (initialValues && initialValues.length > 0 ? initialValues : fallbackDefaults)
+    .filter(name => validValues.has(name));
+
   const exts = await p.multiselect({
     message: t("ext.select"),
     options: EXTENSIONS.map(e => ({
       value: e.name,
       label: e.label,
     })),
-    initialValues: EXTENSIONS.filter(e => e.default).map(e => e.name),
+    initialValues: seeded,
   });
   if (p.isCancel(exts)) { p.cancel(t("cancelled")); process.exit(0); }
   return exts;

@@ -1,6 +1,6 @@
 {
   "name": "oh-pi",
-  "version": "0.1.83",
+  "version": "0.1.84",
   "description": "One-click setup for pi-coding-agent. Like oh-my-zsh for pi.",
   "type": "module",
   "bin": {

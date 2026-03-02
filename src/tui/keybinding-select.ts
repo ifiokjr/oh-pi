@@ -8,7 +8,7 @@ import { t } from "../i18n.js";
  *
  * @returns The name of the selected keybinding scheme.
  */
-export async function selectKeybindings(): Promise<string> {
+export async function selectKeybindings(initialValue?: string): Promise<string> {
   const kb = await p.select({
     message: t("kb.select"),
     options: [
@@ -16,6 +16,7 @@ export async function selectKeybindings(): Promise<string> {
       { value: "vim",     label: t("kb.vim"),      hint: t("kb.vimHint") },
       { value: "emacs",   label: t("kb.emacs"),    hint: t("kb.emacsHint") },
     ],
+    initialValue,
   });
   if (p.isCancel(kb)) { p.cancel(t("cancelled")); process.exit(0); }
   return kb;
