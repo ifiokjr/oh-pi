@@ -28,7 +28,7 @@ import {
 import type { Nest } from "./nest.js";
 import { extractPheromones, type ParsedSubTask, parseSubTasks } from "./parser.js";
 import { buildPrompt, CASTE_PROMPTS } from "./prompts.js";
-import type { Ant, AntCaste, AntConfig, AntStreamEvent, DroneCommandPolicy, Task } from "./types.js";
+import type { Ant, AntCaste, AntConfig, AntStreamEvent, AntUsageEvent, DroneCommandPolicy, Task } from "./types.js";
 
 let antCounter = 0;
 
@@ -176,6 +176,21 @@ function resolveModel(modelStr: string, modelRegistry: ModelRegistry) {
 	return null;
 }
 
+function modelIdentity(modelStr: string): { provider: string; model: string } {
+	const slashIdx = modelStr.indexOf("/");
+	if (slashIdx > 0) {
+		return {
+			provider: modelStr.slice(0, slashIdx),
+			model: modelStr.slice(slashIdx + 1),
+		};
+	}
+	return { provider: "unknown", model: modelStr };
+}
+
+function toNumber(value: unknown): number {
+	return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
 /** Minimal ResourceLoader for ant sessions — ants don't load extensions or skills. */
 function makeMinimalResourceLoader(systemPrompt: string): ResourceLoader {
 	return {
@@ -260,6 +275,7 @@ export async function spawnAnt(
 	antConfig: Omit<AntConfig, "systemPrompt">,
 	signal?: AbortSignal,
 	onStream?: (event: AntStreamEvent) => void,
+	onUsage?: (event: AntUsageEvent) => void,
 	authStorage?: AuthStorage,
 	modelRegistry?: ModelRegistry,
 	budgetPromptSection?: string,
@@ -310,6 +326,7 @@ export async function spawnAnt(
 	if (!model) {
 		throw new Error(`Model not found: ${antConfig.model}`);
 	}
+	const configuredIdentity = modelIdentity(antConfig.model);
 
 	const tools = createToolsForCaste(cwd, antConfig.tools);
 	const resourceLoader = makeMinimalResourceLoader(systemPrompt);
@@ -338,6 +355,7 @@ export async function spawnAnt(
 		});
 		session = created.session;
 
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Ant stream handling needs streaming, usage, and pheromone updates in one subscription.
 		session.subscribe((event: AgentSessionEvent) => {
 			if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
 				const delta = event.assistantMessageEvent.delta;
@@ -363,12 +381,43 @@ export async function spawnAnt(
 			}
 
 			if (event.type === "message_end" && event.message?.role === "assistant") {
-				// biome-ignore lint/suspicious/noExplicitAny: Usage stats are not part of the typed message interface
-				const u = (event.message as any).usage;
-				if (u) {
-					ant.usage.input += u.input || 0;
-					ant.usage.output += u.output || 0;
-					ant.usage.cost += u.cost?.total || 0;
+				const message = event.message as {
+					usage?: {
+						input?: number;
+						output?: number;
+						cacheRead?: number;
+						cacheWrite?: number;
+						cost?: { total?: number };
+					};
+					provider?: string;
+					model?: string;
+				};
+				const usage = message.usage;
+				if (usage) {
+					const input = toNumber(usage.input);
+					const output = toNumber(usage.output);
+					const cacheRead = toNumber(usage.cacheRead);
+					const cacheWrite = toNumber(usage.cacheWrite);
+					const costTotal = toNumber(usage.cost?.total);
+
+					ant.usage.input += input;
+					ant.usage.output += output;
+					ant.usage.cost += costTotal;
+
+					onUsage?.({
+						antId,
+						caste: antConfig.caste,
+						taskId: task.id,
+						provider: typeof message.provider === "string" ? message.provider : configuredIdentity.provider,
+						model: typeof message.model === "string" ? message.model : configuredIdentity.model,
+						usage: {
+							input,
+							output,
+							cacheRead,
+							cacheWrite,
+							costTotal,
+						},
+					});
 				}
 			}
 		});

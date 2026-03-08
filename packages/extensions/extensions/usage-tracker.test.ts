@@ -14,6 +14,7 @@ vi.mock("node:fs", async (importOriginal) => {
 	return {
 		...actual,
 		existsSync: vi.fn().mockReturnValue(false),
+		mkdirSync: vi.fn(),
 		readFileSync: vi.fn().mockReturnValue("{}"),
 		writeFileSync: vi.fn(),
 	};
@@ -150,7 +151,7 @@ async function runWithTimers<T>(fn: () => Promise<T>): Promise<T> {
 
 // ─── Import ──────────────────────────────────────────────────────────────────
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import usageTracker from "./usage-tracker.js";
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -161,6 +162,11 @@ describe("usage-tracker extension", () => {
 
 	beforeEach(() => {
 		vi.useFakeTimers();
+		vi.clearAllMocks();
+		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
+		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		pi = createMockPi();
 		ctx = createMockCtx();
 	});
@@ -246,6 +252,78 @@ describe("usage-tracker extension", () => {
 			const text = result.content[0].text;
 			expect(text).toContain("claude-sonnet-4-20250514");
 			expect(text).toContain("gpt-4o");
+		});
+	});
+
+	describe("rolling 30d totals", () => {
+		it("loads persisted 30d history from disk and shows it in summary", async () => {
+			const now = Date.now();
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) =>
+				String(path).includes("usage-tracker-history.json"),
+			);
+			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path).includes("usage-tracker-history.json")) {
+					return JSON.stringify({
+						version: 1,
+						entries: [{ timestamp: now - 60_000, cost: 1.23 }],
+					});
+				}
+				return "{}";
+			});
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "summary" }, undefined, undefined, ctx));
+			expect(result.content[0].text).toContain("30d: $1.23");
+		});
+
+		it("persists turn costs to rolling history", () => {
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+			pi._emit(
+				"turn_end",
+				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.45 }), toolResults: [] },
+				ctx,
+			);
+
+			const writes = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls.filter(
+				(call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("usage-tracker-history.json"),
+			);
+			expect(writes.length).toBeGreaterThan(0);
+			expect(String(writes[writes.length - 1][1])).toContain('"entries"');
+		});
+
+		it("drops history older than 30 days", async () => {
+			const now = Date.now();
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) =>
+				String(path).includes("usage-tracker-history.json"),
+			);
+			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path).includes("usage-tracker-history.json")) {
+					return JSON.stringify({
+						version: 1,
+						entries: [
+							{ timestamp: now - 31 * 24 * 60 * 60 * 1000, cost: 10 },
+							{ timestamp: now - 60_000, cost: 1 },
+						],
+					});
+				}
+				return "{}";
+			});
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+			pi._emit(
+				"turn_end",
+				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.5 }), toolResults: [] },
+				ctx,
+			);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			expect(result.content[0].text).toContain("30d total cost: $1.50");
 		});
 	});
 
@@ -386,7 +464,7 @@ describe("usage-tracker extension", () => {
 			expect(result.content[0].text).toContain("Rate Limits");
 		});
 
-		it("returns summary with rate limits and session cost", async () => {
+		it("returns summary with rate limits, session cost, and 30d total", async () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: makeAssistantMessage(), toolResults: [] }, ctx);
@@ -397,6 +475,7 @@ describe("usage-tracker extension", () => {
 			expect(text).toContain("Session:");
 			expect(text).toContain("1 turns");
 			expect(text).toContain("in /");
+			expect(text).toContain("30d:");
 		});
 
 		it("adds CodexBar-style detail lines (pace, constrained window, cache, plan)", async () => {
@@ -489,6 +568,30 @@ describe("usage-tracker extension", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 			expect(ctx._widgets.has("usage-tracker")).toBe(true);
+		});
+
+		it("renders both session and 30d totals", () => {
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+			pi._emit(
+				"turn_end",
+				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.02 }), toolResults: [] },
+				ctx,
+			);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						render: () => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
+			const rendered = component?.render().join("\n") ?? "";
+			expect(rendered).toContain("💰");
+			expect(rendered).toContain("30d:");
 		});
 
 		it("removes widget via /usage-toggle", async () => {
@@ -593,6 +696,42 @@ describe("usage-tracker extension", () => {
 		it("registers usage:query listener on pi.events", () => {
 			usageTracker(pi as any);
 			expect(pi.events.on).toHaveBeenCalledWith("usage:query", expect.any(Function));
+		});
+
+		it("registers usage:record listener for external inference usage", () => {
+			usageTracker(pi as any);
+			expect(pi.events.on).toHaveBeenCalledWith("usage:record", expect.any(Function));
+		});
+
+		it("ingests external usage records (e.g. ant-colony background inference)", async () => {
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const onCalls = (pi.events.on as ReturnType<typeof vi.fn>).mock.calls;
+			const recordHandler = onCalls.find((c: unknown[]) => c[0] === "usage:record")?.[1] as
+				| ((payload: unknown) => void)
+				| undefined;
+			expect(recordHandler).toBeDefined();
+
+			recordHandler?.({
+				source: "ant-colony",
+				scope: "background",
+				provider: "anthropic",
+				model: "claude-sonnet-4-20250514",
+				usage: {
+					input: 1200,
+					output: 800,
+					cacheRead: 0,
+					cacheWrite: 0,
+					costTotal: 0.02,
+				},
+			});
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			expect(result.content[0].text).toContain("External inference:");
+			expect(result.content[0].text).toContain("ant-colony/background");
+			expect(result.content[0].text).toContain("$0.020");
 		});
 
 		it("broadcasts usage:limits on turn_end", () => {

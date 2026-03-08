@@ -30,9 +30,11 @@ import type {
 	Ant,
 	AntCaste,
 	AntStreamEvent,
+	AntUsageEvent,
 	ColonyMetrics,
 	ColonySignal,
 	ColonyState,
+	ColonyWorkspace,
 	ModelOverrides,
 	Task,
 	TaskPriority,
@@ -47,6 +49,7 @@ export interface QueenCallbacks {
 	onAntSpawn?(ant: Ant, task: Task): void;
 	onAntDone?(ant: Ant, task: Task, output: string): void;
 	onAntStream?(event: AntStreamEvent): void;
+	onAntUsage?(event: AntUsageEvent): void;
 	onProgress?(metrics: ColonyMetrics): void;
 	onComplete?(state: ColonyState): void;
 }
@@ -61,6 +64,8 @@ export interface ColonyEventBus {
 
 export interface QueenOptions {
 	cwd: string;
+	/** Actual execution cwd for ants (can be an isolated worktree). */
+	executionCwd?: string;
 	goal: string;
 	maxAnts?: number;
 	maxCost?: number;
@@ -70,6 +75,8 @@ export interface QueenOptions {
 	callbacks: QueenCallbacks;
 	authStorage?: AuthStorage;
 	modelRegistry?: ModelRegistry;
+	/** Execution workspace metadata (shared cwd vs worktree). */
+	workspace?: ColonyWorkspace;
 	/** Event bus for cross-extension communication (usage-tracker integration). */
 	eventBus?: ColonyEventBus;
 	/** Optional shared tracker to avoid listener buildup in on/emit-only runtimes. */
@@ -494,6 +501,7 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 							config,
 							antSignal,
 							callbacks.onAntStream,
+							callbacks.onAntUsage,
 							opts.authStorage,
 							opts.modelRegistry,
 							budgetSection,
@@ -744,6 +752,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 	}
 	resetAntCounter();
 	const colonyId = makeColonyId();
+	const executionCwd = opts.executionCwd ?? opts.cwd;
 	const nest = new Nest(opts.cwd, colonyId);
 
 	const initialState: ColonyState = {
@@ -766,6 +775,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		},
 		maxCost: opts.maxCost ?? null,
 		modelOverrides: {},
+		workspace: opts.workspace,
 		createdAt: Date.now(),
 		finishedAt: null,
 	};
@@ -800,7 +810,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 
 	const waveBase: Omit<WaveOptions, "caste"> & { importGraph?: ImportGraph } = {
 		nest,
-		cwd: opts.cwd,
+		cwd: executionCwd,
 		signal,
 		callbacks,
 		emitSignal,
@@ -908,7 +918,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 				.flatMap((t) => t.files)
 				.filter((f) => /\.[tj]sx?$/.test(f));
 			if (allFiles.length > 0) {
-				importGraph = buildImportGraph([...new Set(allFiles)], opts.cwd);
+				importGraph = buildImportGraph([...new Set(allFiles)], executionCwd);
 				waveBase.importGraph = importGraph;
 			}
 		} catch {
@@ -992,7 +1002,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		let tscPassed = true;
 		try {
 			const { execSync } = await import("node:child_process");
-			execSync("npx tsc --noEmit", { cwd: opts.cwd, timeout: 30000, stdio: "pipe" });
+			execSync("npx tsc --noEmit", { cwd: executionCwd, timeout: 30000, stdio: "pipe" });
 		} catch {
 			tscPassed = false;
 		}
@@ -1055,6 +1065,8 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 
 	const nest = new Nest(opts.cwd, found.colonyId);
 	nest.restore();
+	const restored = nest.getStateLight();
+	const executionCwd = opts.executionCwd ?? restored.workspace?.executionCwd ?? opts.cwd;
 
 	const { signal, callbacks } = opts;
 
@@ -1068,7 +1080,7 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 
 	const waveBase: Omit<WaveOptions, "caste"> & { budgetPlan?: BudgetPlan | null } = {
 		nest,
-		cwd: opts.cwd,
+		cwd: executionCwd,
 		signal,
 		callbacks,
 		emitSignal,
@@ -1124,7 +1136,7 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		let tscPassed = true;
 		try {
 			const { execSync } = await import("node:child_process");
-			execSync("npx tsc --noEmit", { cwd: opts.cwd, timeout: 30000, stdio: "pipe" });
+			execSync("npx tsc --noEmit", { cwd: executionCwd, timeout: 30000, stdio: "pipe" });
 		} catch {
 			tscPassed = false;
 		}

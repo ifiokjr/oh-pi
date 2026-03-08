@@ -20,9 +20,9 @@
  * **`Ctrl+U`** shortcut to open the overlay.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { AssistantMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
@@ -47,6 +47,33 @@ interface ModelUsage {
 interface TurnSnapshot {
 	timestamp: number;
 	tokens: number;
+	cost: number;
+}
+
+interface UsageSample {
+	source: string;
+	model: string;
+	provider: string;
+	input: number;
+	output: number;
+	cacheRead: number;
+	cacheWrite: number;
+	costTotal: number;
+}
+
+interface SourceUsage {
+	source: string;
+	turns: number;
+	input: number;
+	output: number;
+	cacheRead: number;
+	cacheWrite: number;
+	costTotal: number;
+}
+
+/** Persisted historical cost point for rolling 30-day totals. */
+interface HistoricalCostPoint {
+	timestamp: number;
 	cost: number;
 }
 
@@ -88,6 +115,12 @@ const PROBE_COOLDOWN_MS = 30_000;
 
 /** Probe timeout (15 seconds). */
 const PROBE_TIMEOUT_MS = 15_000;
+
+/** Rolling cost window duration (30 days). */
+const ROLLING_COST_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Cap persisted history size so the file cannot grow unbounded. */
+const ROLLING_HISTORY_MAX_POINTS = 20_000;
 
 /** Ignore pace calculations until at least ~3% of a window should be consumed. */
 const PACE_MIN_EXPECTED_USED_PCT = 3;
@@ -807,18 +840,26 @@ function ensureCtrlUUnbound(): void {
 	}
 }
 
+function getUsageHistoryPath(): string {
+	return join(homedir(), ".pi", "agent", "usage-tracker-history.json");
+}
+
 export default function usageTracker(pi: ExtensionAPI) {
 	// Unbind ctrl+u from deleteToLineStart so our shortcut wins cleanly
 	ensureCtrlUUnbound();
 
 	/** Per-model accumulated usage. Key = model ID. */
 	const models = new Map<string, ModelUsage>();
+	/** Per-source accumulated usage (session, ant-colony background, etc.). */
+	const sources = new Map<string, SourceUsage>();
 	/** Recent turn snapshots for pace calc. */
 	const turnHistory: TurnSnapshot[] = [];
 	/** Highest cost threshold already triggered. */
 	let lastThresholdIndex = -1;
 	/** Session start time. */
 	let sessionStart = Date.now();
+	/** Last known extension context (used for cross-extension usage events). */
+	let activeCtx: ExtensionContext | null = null;
 	/** Widget visibility. */
 	let widgetVisible = true;
 	/** Cached rate limit probes. */
@@ -827,41 +868,216 @@ export default function usageTracker(pi: ExtensionAPI) {
 	const lastProbeTime = new Map<string, number>();
 	/** Whether a probe is currently in flight. */
 	const probeInFlight = new Set<string>();
+	/** Persistent history file for rolling 30d totals. */
+	const usageHistoryPath = getUsageHistoryPath();
+	/** Rolling history points (cost + timestamp), persisted on disk. */
+	const rollingHistory: HistoricalCostPoint[] = [];
+
+	function pruneRollingHistory(now = Date.now()): void {
+		const cutoff = now - ROLLING_COST_WINDOW_MS;
+		for (let i = rollingHistory.length - 1; i >= 0; i--) {
+			if (!Number.isFinite(rollingHistory[i].timestamp) || rollingHistory[i].timestamp < cutoff) {
+				rollingHistory.splice(i, 1);
+			}
+		}
+		if (rollingHistory.length > ROLLING_HISTORY_MAX_POINTS) {
+			rollingHistory.splice(0, rollingHistory.length - ROLLING_HISTORY_MAX_POINTS);
+		}
+	}
+
+	function getRolling30dCost(now = Date.now()): number {
+		pruneRollingHistory(now);
+		let total = 0;
+		for (const point of rollingHistory) {
+			total += point.cost;
+		}
+		return total;
+	}
+
+	function loadRollingHistory(): void {
+		try {
+			if (!existsSync(usageHistoryPath)) {
+				return;
+			}
+			const raw = JSON.parse(readFileSync(usageHistoryPath, "utf-8")) as { entries?: unknown };
+			if (!Array.isArray(raw.entries)) {
+				return;
+			}
+			for (const item of raw.entries) {
+				if (!item || typeof item !== "object") {
+					continue;
+				}
+				const timestamp = Number((item as { timestamp?: unknown }).timestamp);
+				const cost = Number((item as { cost?: unknown }).cost);
+				if (!(Number.isFinite(timestamp) && Number.isFinite(cost)) || cost < 0) {
+					continue;
+				}
+				rollingHistory.push({ timestamp, cost });
+			}
+			rollingHistory.sort((a, b) => a.timestamp - b.timestamp);
+			pruneRollingHistory();
+		} catch {
+			// Non-critical. If history cannot be read, continue with in-memory tracking.
+		}
+	}
+
+	function saveRollingHistory(): void {
+		try {
+			const dir = dirname(usageHistoryPath);
+			if (!existsSync(dir)) {
+				mkdirSync(dir, { recursive: true });
+			}
+			const payload = {
+				version: 1,
+				entries: rollingHistory,
+			};
+			writeFileSync(usageHistoryPath, `${JSON.stringify(payload, null, 2)}\n`, "utf-8");
+		} catch {
+			// Non-critical. We still keep in-memory stats for current runtime.
+		}
+	}
+
+	loadRollingHistory();
 
 	// ─── Data collection ──────────────────────────────────────────────────
 
-	function recordUsage(msg: AssistantMessage): void {
-		const key = msg.model;
+	function toFiniteNumber(value: unknown): number {
+		const n = typeof value === "number" ? value : Number(value);
+		return Number.isFinite(n) ? n : 0;
+	}
+
+	function sourceLabel(source: string, scope?: string): string {
+		const base = source.trim() || "external";
+		const scoped = scope?.trim();
+		return scoped ? `${base}/${scoped}` : base;
+	}
+
+	function recordUsageSample(sample: UsageSample, options: { persist?: boolean } = {}): void {
 		const now = Date.now();
-		const existing = models.get(key);
+		const input = Math.max(0, toFiniteNumber(sample.input));
+		const output = Math.max(0, toFiniteNumber(sample.output));
+		const cacheRead = Math.max(0, toFiniteNumber(sample.cacheRead));
+		const cacheWrite = Math.max(0, toFiniteNumber(sample.cacheWrite));
+		const cost = Math.max(0, toFiniteNumber(sample.costTotal));
+		const modelKey = sample.model;
+
+		const existing = models.get(modelKey);
 		if (existing) {
 			existing.turns += 1;
-			existing.input += msg.usage.input;
-			existing.output += msg.usage.output;
-			existing.cacheRead += msg.usage.cacheRead;
-			existing.cacheWrite += msg.usage.cacheWrite;
-			existing.costTotal += msg.usage.cost.total;
+			existing.input += input;
+			existing.output += output;
+			existing.cacheRead += cacheRead;
+			existing.cacheWrite += cacheWrite;
+			existing.costTotal += cost;
 			existing.lastSeen = now;
 		} else {
-			models.set(key, {
-				model: msg.model,
-				provider: msg.provider,
+			models.set(modelKey, {
+				model: sample.model,
+				provider: sample.provider,
 				turns: 1,
-				input: msg.usage.input,
-				output: msg.usage.output,
-				cacheRead: msg.usage.cacheRead,
-				cacheWrite: msg.usage.cacheWrite,
-				costTotal: msg.usage.cost.total,
+				input,
+				output,
+				cacheRead,
+				cacheWrite,
+				costTotal: cost,
 				firstSeen: now,
 				lastSeen: now,
 			});
 		}
-		turnHistory.push({ timestamp: now, tokens: msg.usage.input + msg.usage.output, cost: msg.usage.cost.total });
+
+		const sourceKey = sample.source.trim() || "session";
+		const sourceTotals = sources.get(sourceKey);
+		if (sourceTotals) {
+			sourceTotals.turns += 1;
+			sourceTotals.input += input;
+			sourceTotals.output += output;
+			sourceTotals.cacheRead += cacheRead;
+			sourceTotals.cacheWrite += cacheWrite;
+			sourceTotals.costTotal += cost;
+		} else {
+			sources.set(sourceKey, {
+				source: sourceKey,
+				turns: 1,
+				input,
+				output,
+				cacheRead,
+				cacheWrite,
+				costTotal: cost,
+			});
+		}
+
+		turnHistory.push({ timestamp: now, tokens: input + output, cost });
 		// Keep last 60 min
 		const cutoff = now - 3_600_000;
 		while (turnHistory.length > 0 && turnHistory[0].timestamp < cutoff) {
 			turnHistory.shift();
 		}
+
+		if (options.persist !== false && Number.isFinite(cost) && cost >= 0) {
+			rollingHistory.push({ timestamp: now, cost });
+			pruneRollingHistory(now);
+			saveRollingHistory();
+		}
+	}
+
+	function recordUsage(msg: AssistantMessage, options: { persist?: boolean } = {}): void {
+		recordUsageSample(
+			{
+				source: "session",
+				model: msg.model,
+				provider: msg.provider,
+				input: msg.usage.input,
+				output: msg.usage.output,
+				cacheRead: msg.usage.cacheRead,
+				cacheWrite: msg.usage.cacheWrite,
+				costTotal: msg.usage.cost.total,
+			},
+			options,
+		);
+	}
+
+	function parseExternalUsageSample(payload: unknown): UsageSample | null {
+		if (!payload || typeof payload !== "object") {
+			return null;
+		}
+		const data = payload as {
+			source?: unknown;
+			scope?: unknown;
+			model?: unknown;
+			provider?: unknown;
+			usage?: unknown;
+		};
+		if (!data.usage || typeof data.usage !== "object") {
+			return null;
+		}
+		const model = typeof data.model === "string" ? data.model.trim() : "";
+		const provider = typeof data.provider === "string" ? data.provider.trim() : "";
+		if (!(model && provider)) {
+			return null;
+		}
+		const usage = data.usage as {
+			input?: unknown;
+			output?: unknown;
+			cacheRead?: unknown;
+			cacheWrite?: unknown;
+			costTotal?: unknown;
+			cost?: { total?: unknown };
+		};
+		const directCost = toFiniteNumber(usage.costTotal);
+		const nestedCost = toFiniteNumber(usage.cost?.total);
+		return {
+			source: sourceLabel(
+				typeof data.source === "string" ? data.source : "external",
+				typeof data.scope === "string" ? data.scope : undefined,
+			),
+			model,
+			provider,
+			input: toFiniteNumber(usage.input),
+			output: toFiniteNumber(usage.output),
+			cacheRead: toFiniteNumber(usage.cacheRead),
+			cacheWrite: toFiniteNumber(usage.cacheWrite),
+			costTotal: directCost > 0 ? directCost : nestedCost,
+		};
 	}
 
 	function getTotals() {
@@ -882,7 +1098,25 @@ export default function usageTracker(pi: ExtensionAPI) {
 		const totalTokens = input + output;
 		const avgTokensPerTurn = turns > 0 ? totalTokens / turns : 0;
 		const avgCostPerTurn = turns > 0 ? cost / turns : 0;
-		return { input, output, cacheRead, cacheWrite, cost, turns, totalTokens, avgTokensPerTurn, avgCostPerTurn };
+		const rolling30dCost = getRolling30dCost();
+		return {
+			input,
+			output,
+			cacheRead,
+			cacheWrite,
+			cost,
+			turns,
+			totalTokens,
+			avgTokensPerTurn,
+			avgCostPerTurn,
+			rolling30dCost,
+		};
+	}
+
+	function getExternalSources(): SourceUsage[] {
+		return [...sources.values()]
+			.filter((entry) => entry.source !== "session" && entry.turns > 0)
+			.sort((a, b) => b.costTotal - a.costTotal);
 	}
 
 	function getPace(): { tokensPerMin: number; costPerHour: number } | null {
@@ -917,6 +1151,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	function reset(): void {
 		models.clear();
+		sources.clear();
 		turnHistory.length = 0;
 		lastThresholdIndex = -1;
 		sessionStart = Date.now();
@@ -926,7 +1161,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		reset();
 		for (const entry of ctx.sessionManager.getBranch()) {
 			if (entry.type === "message" && entry.message.role === "assistant") {
-				recordUsage(entry.message as AssistantMessage);
+				recordUsage(entry.message as AssistantMessage, { persist: false });
 			}
 		}
 	}
@@ -1000,10 +1235,16 @@ export default function usageTracker(pi: ExtensionAPI) {
 		for (const [key, value] of models) {
 			perModel[key] = { ...value };
 		}
+		const perSource: Record<string, SourceUsage> = {};
+		for (const [key, value] of sources) {
+			perSource[key] = { ...value };
+		}
 		pi.events.emit("usage:limits", {
 			providers,
 			sessionCost: totals.cost,
+			rolling30dCost: totals.rolling30dCost,
 			perModel,
+			perSource,
 		});
 	}
 
@@ -1013,6 +1254,18 @@ export default function usageTracker(pi: ExtensionAPI) {
 	 * current data via `"usage:limits"`.
 	 */
 	pi.events.on("usage:query", () => {
+		broadcastUsageData();
+	});
+
+	pi.events.on("usage:record", (payload) => {
+		const sample = parseExternalUsageSample(payload);
+		if (!sample) {
+			return;
+		}
+		recordUsageSample(sample);
+		if (activeCtx) {
+			checkThresholds(activeCtx);
+		}
 		broadcastUsageData();
 	});
 
@@ -1159,6 +1412,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		return parts.join(theme.fg("dim", "  "));
 	}
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Plain-text report combines many optional telemetry sections.
 	function generatePlainReport(ctx: ExtensionContext): string {
 		const totals = getTotals();
 		const elapsed = Date.now() - sessionStart;
@@ -1185,6 +1439,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 			`Tokens: ${fmtTokens(totals.input)} in / ${fmtTokens(totals.output)} out (${fmtTokens(totals.totalTokens)} total)`,
 		);
 		lines.push(`Cost: ${fmtCost(totals.cost)}`);
+		lines.push(`30d total cost: ${fmtCost(totals.rolling30dCost)}`);
 		if (totals.turns > 0) {
 			lines.push(
 				`Avg/turn: ${fmtTokens(Math.round(totals.avgTokensPerTurn))} tokens, ${fmtCost(totals.avgCostPerTurn)}`,
@@ -1203,6 +1458,21 @@ export default function usageTracker(pi: ExtensionAPI) {
 			lines.push(
 				`Context: ${ctxUsage.percent.toFixed(0)}% used (${fmtTokens(ctxUsage.tokens ?? 0)} / ${fmtTokens(ctxUsage.contextWindow)})`,
 			);
+		}
+
+		const externalSources = getExternalSources();
+		if (externalSources.length > 0) {
+			const externalTotalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
+			const externalTurns = externalSources.reduce((sum, source) => sum + source.turns, 0);
+			const externalTokens = externalSources.reduce((sum, source) => sum + source.input + source.output, 0);
+			lines.push(
+				`External inference: ${fmtCost(externalTotalCost)} across ${externalTurns} turns (${fmtTokens(externalTokens)} tokens)`,
+			);
+			for (const source of externalSources) {
+				lines.push(
+					`  - ${source.source}: ${fmtCost(source.costTotal)}, ${source.turns} turns, ${fmtTokens(source.input)} in / ${fmtTokens(source.output)} out`,
+				);
+			}
 		}
 
 		if (models.size > 0) {
@@ -1255,6 +1525,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 		);
 
 		lines.push(
+			`  ${theme.fg("accent", "30d    ")}${sep}${theme.fg("warning", fmtCost(totals.rolling30dCost))} ${theme.fg("dim", "total cost")}`,
+		);
+
+		lines.push(
 			`  ${theme.fg("accent", "Tokens ")}${sep}${theme.fg("success", fmtTokens(totals.input))} in${sep}${theme.fg("warning", fmtTokens(totals.output))} out${sep}${theme.fg("dim", fmtTokens(totals.totalTokens))} total`,
 		);
 
@@ -1283,6 +1557,24 @@ export default function usageTracker(pi: ExtensionAPI) {
 			lines.push(
 				`  ${theme.fg("accent", "Context")}${sep}${theme.fg(color, progressBar(100 - pct, 20))} ${theme.fg(color, `${(100 - pct).toFixed(0)}% free`)} of ${fmtTokens(ctxUsage.contextWindow)}`,
 			);
+		}
+
+		const externalSources = getExternalSources();
+		if (externalSources.length > 0) {
+			const externalTotalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
+			const externalTurns = externalSources.reduce((sum, source) => sum + source.turns, 0);
+			const externalTokens = externalSources.reduce((sum, source) => sum + source.input + source.output, 0);
+			lines.push(
+				`  ${theme.fg("accent", "External")}${sep}${theme.fg("warning", fmtCost(externalTotalCost))}${sep}${externalTurns} turns${sep}${fmtTokens(externalTokens)} tokens`,
+			);
+			for (const source of externalSources.slice(0, 4)) {
+				lines.push(
+					`    ${theme.fg("dim", source.source)}${sep}${theme.fg("warning", fmtCost(source.costTotal))}${sep}${source.turns} turns${sep}${fmtTokens(source.input)} in / ${fmtTokens(source.output)} out`,
+				);
+			}
+			if (externalSources.length > 4) {
+				lines.push(`    ${theme.fg("dim", `+${externalSources.length - 4} more sources`)}`);
+			}
 		}
 
 		// ── Per-model breakdown ──
@@ -1338,10 +1630,17 @@ export default function usageTracker(pi: ExtensionAPI) {
 			parts.push(rlWidget);
 		}
 
-		// Session cost (only if we have data)
+		// Session + rolling 30d cost (only if we have data)
 		if (totals.turns > 0) {
 			parts.push(theme.fg("warning", `💰${fmtCost(totals.cost)}`));
+			parts.push(theme.fg("dim", `30d: ${fmtCost(totals.rolling30dCost)}`));
 			parts.push(`${theme.fg("success", fmtTokens(totals.input))}/${theme.fg("warning", fmtTokens(totals.output))}`);
+		}
+
+		const externalSources = getExternalSources();
+		if (externalSources.length > 0) {
+			const externalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
+			parts.push(theme.fg("warning", `🐜${fmtCost(externalCost)}`));
 		}
 
 		if (parts.length === 0) {
@@ -1354,6 +1653,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	// ─── Event handlers ───────────────────────────────────────────────────
 
 	pi.on("session_start", (_event, ctx) => {
+		activeCtx = ctx;
 		hydrateFromSession(ctx);
 		triggerProbe(ctx);
 
@@ -1373,11 +1673,13 @@ export default function usageTracker(pi: ExtensionAPI) {
 	});
 
 	pi.on("session_switch", (_event, ctx) => {
+		activeCtx = ctx;
 		hydrateFromSession(ctx);
 		triggerProbe(ctx);
 	});
 
 	pi.on("turn_end", (event, ctx) => {
+		activeCtx = ctx;
 		if (event.message.role === "assistant") {
 			recordUsage(event.message as unknown as AssistantMessage);
 			checkThresholds(ctx);
@@ -1387,6 +1689,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	});
 
 	pi.on("model_select", (_event, ctx) => {
+		activeCtx = ctx;
 		triggerProbe(ctx); // Probe the new provider
 	});
 
@@ -1487,7 +1790,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 			if (format === "summary") {
 				const rlText = renderRateLimitsPlain();
 				const totals = getTotals();
-				const sessionLine = `Session: ${fmtCost(totals.cost)} cost, ${totals.turns} turns, ${fmtTokens(totals.input)} in / ${fmtTokens(totals.output)} out`;
+				const externalSources = getExternalSources();
+				const externalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
+				const externalText = externalCost > 0 ? ` | external: ${fmtCost(externalCost)}` : "";
+				const sessionLine = `Session: ${fmtCost(totals.cost)} cost, ${totals.turns} turns, ${fmtTokens(totals.input)} in / ${fmtTokens(totals.output)} out | 30d: ${fmtCost(totals.rolling30dCost)}${externalText}`;
 				text = rlText.trim() ? `${rlText}\n${sessionLine}` : `No rate limit data available.\n${sessionLine}`;
 			} else {
 				text = generatePlainReport(ctx);

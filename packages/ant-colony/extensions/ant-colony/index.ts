@@ -16,8 +16,14 @@ import { Container, matchesKey, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { Nest } from "./nest.js";
 import { createUsageLimitsTracker, type QueenCallbacks, resumeColony, runColony } from "./queen.js";
-import type { AntStreamEvent, ColonyMetrics, ColonyRuntimeIdentity, ColonyState } from "./types.js";
-
+import type {
+	AntStreamEvent,
+	AntUsageEvent,
+	ColonyMetrics,
+	ColonyRuntimeIdentity,
+	ColonyState,
+	ColonyWorkspace,
+} from "./types.js";
 import {
 	buildReport,
 	casteIcon,
@@ -28,6 +34,12 @@ import {
 	statusIcon,
 	statusLabel,
 } from "./ui.js";
+import {
+	formatWorkspaceReport,
+	formatWorkspaceSummary,
+	prepareColonyWorkspace,
+	resumeColonyWorkspace,
+} from "./worktree.js";
 
 // ═══ Background colony state ═══
 
@@ -58,6 +70,7 @@ interface BackgroundColony {
 	id: string;
 	identity: ColonyRuntimeIdentity;
 	goal: string;
+	workspace: ColonyWorkspace;
 	abortController: AbortController;
 	state: ColonyState | null;
 	phase: string;
@@ -192,6 +205,36 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 	const finalSignalLabel = (phase: ColonyState["status"]) => (phase === "done" ? "COMPLETE" : statusLabel(phase));
 
+	const withWorkspaceReport = (workspace: ColonyWorkspace, report: string) => {
+		const header = formatWorkspaceReport(workspace);
+		return header ? `${header}\n\n${report}` : report;
+	};
+
+	const emitAntUsageRecord = (
+		event: AntUsageEvent,
+		runMode: "background" | "sync",
+		workspace: ColonyWorkspace,
+		colony?: BackgroundColony,
+	) => {
+		const usage = event.usage;
+		if (usage.input + usage.output + usage.cacheRead + usage.cacheWrite + usage.costTotal <= 0) {
+			return;
+		}
+		pi.events.emit("usage:record", {
+			source: "ant-colony",
+			scope: runMode,
+			workspaceMode: workspace.mode,
+			colonyRuntimeId: colony?.identity.runtimeId ?? null,
+			colonyId: colony?.identity.stableId ?? null,
+			antId: event.antId,
+			caste: event.caste,
+			taskId: event.taskId,
+			provider: event.provider,
+			model: event.model,
+			usage,
+		});
+	};
+
 	// ─── Status rendering ───
 
 	let lastRender = 0;
@@ -238,6 +281,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				const parts = [`🐜[${colonyIdentity(colony)}] ${statusIcon(phase)} ${statusLabel(phase)}`];
 				parts.push(m ? `${m.tasksDone}/${m.tasksTotal} (${pct})` : `0/0 (${pct})`);
 				parts.push(`⚡${active}`);
+				parts.push(colony.workspace.mode === "worktree" ? "🧪wt" : "🧪shared");
 				if (m) {
 					parts.push(formatCost(m.totalCost));
 				}
@@ -274,12 +318,21 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		signal?: AbortSignal | null,
 	) {
 		ensureGitignore(params.cwd);
+		const workspace = prepareColonyWorkspace({
+			cwd: params.cwd,
+			runtimeId: `sync-${Date.now().toString(36)}`,
+		});
 
-		const callbacks: QueenCallbacks = {};
+		const callbacks: QueenCallbacks = {
+			onAntUsage(event) {
+				emitAntUsageRecord(event, "sync", workspace);
+			},
+		};
 
 		try {
 			const state = await runColony({
 				cwd: params.cwd,
+				executionCwd: workspace.executionCwd,
 				goal: params.goal,
 				maxAnts: params.maxAnts,
 				maxCost: params.maxCost,
@@ -288,17 +341,19 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				signal: signal ?? undefined,
 				callbacks,
 				modelRegistry: params.modelRegistry,
+				workspace,
 				eventBus: pi.events, // Usage-tracker integration for budget-aware planning
 				usageLimitsTracker,
 			});
 
 			return {
-				content: [{ type: "text" as const, text: buildReport(state) }],
+				content: [{ type: "text" as const, text: withWorkspaceReport(workspace, buildReport(state)) }],
 				isError: state.status === "failed" || state.status === "budget_exceeded",
 			};
 		} catch (e) {
+			const report = withWorkspaceReport(workspace, `Colony failed: ${e}`);
 			return {
-				content: [{ type: "text" as const, text: `Colony failed: ${e}` }],
+				content: [{ type: "text" as const, text: report }],
 				isError: true,
 			};
 		}
@@ -316,16 +371,24 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			cwd: string;
 			modelRegistry?: ModelRegistry;
 		},
-		options?: { resume?: boolean; stableIdHint?: string },
-	): string {
+		options?: { resume?: boolean; stableIdHint?: string; workspaceHint?: ColonyWorkspace | null },
+	): { id: string; workspace: ColonyWorkspace } {
 		const resume = options?.resume ?? false;
 		const colonyId = nextColonyId();
 		const abortController = new AbortController();
+		const workspace = resume
+			? resumeColonyWorkspace({
+					cwd: params.cwd,
+					runtimeId: colonyId,
+					savedWorkspace: options?.workspaceHint ?? null,
+				})
+			: prepareColonyWorkspace({ cwd: params.cwd, runtimeId: colonyId });
 		const now = Date.now();
 		const colony: BackgroundColony = {
 			id: colonyId,
 			identity: { runtimeId: colonyId, stableId: options?.stableIdHint ?? UNKNOWN_STABLE_COLONY_ID },
 			goal: params.goal,
+			workspace,
 			abortController,
 			state: {
 				id: options?.stableIdHint ?? colonyId,
@@ -347,6 +410,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				},
 				maxCost: params.maxCost ?? null,
 				modelOverrides: params.modelOverrides as ColonyState["modelOverrides"],
+				workspace,
 				createdAt: now,
 				finishedAt: null,
 			},
@@ -357,7 +421,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 		pushLog(colony, {
 			level: "info",
-			text: `INITIALIZING · Colony [${colonyIdentityVerbose(colony)}] launched in background`,
+			text: `INITIALIZING · Colony [${colonyIdentityVerbose(colony)}] launched in background · ${formatWorkspaceSummary(workspace)}`,
 		});
 
 		let lastPhase = "";
@@ -434,6 +498,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 					stream.lastLine = lines[lines.length - 1]?.trim() || "...";
 				}
 			},
+			onAntUsage(event: AntUsageEvent) {
+				emitAntUsageRecord(event, "background", workspace, colony);
+			},
 			onProgress(metrics) {
 				if (colony.state) {
 					colony.state.metrics = metrics;
@@ -442,6 +509,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			},
 			onComplete(state) {
 				colony.state = state;
+				if (!colony.state.workspace) {
+					colony.state.workspace = workspace;
+				}
 				registerStableId(colony, state.id);
 				colony.phase =
 					state.status === "done" ? "Colony mission complete" : `Colony ${state.status.replace(/_/g, " ")}`;
@@ -459,6 +529,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 		const colonyOpts = {
 			cwd: params.cwd,
+			executionCwd: workspace.executionCwd,
 			goal: params.goal,
 			maxAnts: params.maxAnts,
 			maxCost: params.maxCost,
@@ -468,6 +539,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			callbacks,
 			authStorage: undefined,
 			modelRegistry: params.modelRegistry,
+			workspace,
 			eventBus: pi.events, // Usage-tracker integration for budget-aware planning
 			usageLimitsTracker,
 		};
@@ -484,7 +556,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				const phase = state.status;
 				const ok = phase === "done";
 				const signalLabel = finalSignalLabel(phase);
-				const report = buildReport(state);
+				const report = withWorkspaceReport(state.workspace ?? workspace, buildReport(state));
 				const m = state.metrics;
 				const reportId = hasStableId(colony.identity)
 					? `${colony.identity.runtimeId}|${colony.identity.stableId}`
@@ -510,7 +582,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				);
 
 				pi.events.emit("ant-colony:notify", {
-					msg: `🐜[${colonyIdentityVerbose(colony)}] Colony ${ok ? "completed" : phase.replace(/_/g, " ")}: ${m.tasksDone}/${m.tasksTotal} tasks │ ${formatCost(m.totalCost)}`,
+					msg: `🐜[${colonyIdentityVerbose(colony)}] Colony ${ok ? "completed" : phase.replace(/_/g, " ")}: ${m.tasksDone}/${m.tasksTotal} tasks │ ${formatCost(m.totalCost)} │ ${formatWorkspaceSummary(workspace)}`,
 					level: ok ? "success" : "error",
 				});
 			})
@@ -521,20 +593,21 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 					pi.events.emit("ant-colony:clear-ui");
 				}
 				pi.events.emit("ant-colony:notify", {
-					msg: `🐜[${colonyIdentityVerbose(colony)}] Colony crashed: ${e}`,
+					msg: `🐜[${colonyIdentityVerbose(colony)}] Colony crashed: ${e} │ ${formatWorkspaceSummary(workspace)}`,
 					level: "error",
 				});
+				const crashReport = withWorkspaceReport(workspace, `## 🐜 Colony Crashed\n${e}`);
 				pi.sendMessage(
 					{
 						customType: "ant-colony-report",
-						content: `[COLONY_SIGNAL:FAILED] [${colonyIdentity(colony)}]\n## 🐜 Colony Crashed\n${e}`,
+						content: `[COLONY_SIGNAL:FAILED] [${colonyIdentity(colony)}]\n${crashReport}`,
 						display: true,
 					},
 					{ triggerTurn: true, deliverAs: "followUp" },
 				);
 			});
 
-		return colonyId;
+		return { id: colonyId, workspace };
 	}
 
 	// ═══ Custom message renderer for colony progress signals ═══
@@ -668,6 +741,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 								theme.fg("muted", ` │ ${elapsed} │ ${cost}`),
 						);
 						lines.push(theme.fg("muted", `  Goal: ${trim(c.goal, w - 8)}`));
+						lines.push(theme.fg("muted", `  Workspace: ${trim(formatWorkspaceSummary(c.workspace), w - 14)}`));
 						if (hasStableId(c.identity)) {
 							lines.push(theme.fg("muted", `  Stable ID: ${trim(c.identity.stableId, w - 14)}`));
 						}
@@ -677,6 +751,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						lines.push(theme.fg("muted", `  ${progressBar(progress, barWidth)} ${pct}%`));
 						if (c.phase && c.phase !== "initializing") {
 							lines.push(theme.fg("muted", `  Phase: ${trim(c.phase, w - 10)}`));
+						}
+						if (c.workspace.note) {
+							lines.push(theme.fg("muted", `  Workspace note: ${trim(c.workspace.note, w - 18)}`));
 						}
 						lines.push("");
 
@@ -890,6 +967,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		description: [
 			"Launch an autonomous ant colony in the BACKGROUND to accomplish a complex goal.",
 			"The colony runs asynchronously — you can continue chatting while it works.",
+			"By default, ants run in an isolated git worktree so they don't interfere with your current branch.",
 			"Results are automatically injected when the colony finishes.",
 			"Scouts explore the codebase, workers execute tasks in parallel, soldiers review quality.",
 			"Use for multi-file changes, large refactors, or complex features.",
@@ -947,13 +1025,13 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			}
 
 			// Interactive mode: run in background
-			const launchedId = launchBackgroundColony(colonyParams);
+			const launched = launchBackgroundColony(colonyParams);
 
 			return {
 				content: [
 					{
 						type: "text",
-						text: `[COLONY_SIGNAL:LAUNCHED] [${launchedId}]\n🐜 Colony [${launchedId}] launched in background (${colonies.size} active).\nGoal: ${params.goal}\n\nThe colony runs autonomously in passive mode. Progress is pushed via [COLONY_SIGNAL:*] follow-up messages. Do not poll bg_colony_status unless the user explicitly asks for a manual snapshot.`,
+						text: `[COLONY_SIGNAL:LAUNCHED] [${launched.id}]\n🐜 Colony [${launched.id}] launched in background (${colonies.size} active).\nGoal: ${params.goal}\nWorkspace: ${formatWorkspaceSummary(launched.workspace)}\n\nThe colony runs autonomously in passive mode. Progress is pushed via [COLONY_SIGNAL:*] follow-up messages. Do not poll bg_colony_status unless the user explicitly asks for a manual snapshot.`,
 					},
 				],
 			};
@@ -990,8 +1068,13 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			);
 			if (colonies.size > 0) {
 				for (const colony of colonies.values()) {
+					const workspaceTag = colony.workspace.mode === "worktree" ? "🧪wt" : "🧪shared";
 					container.addChild(
-						new Text(theme.fg("muted", `  [${colonyIdentity(colony)}] ${colony.goal.slice(0, 65)}`), 0, 0),
+						new Text(
+							theme.fg("muted", `  [${colonyIdentity(colony)}] ${workspaceTag} ${colony.goal.slice(0, 58)}`),
+							0,
+							0,
+						),
 					);
 				}
 				container.addChild(
@@ -1021,12 +1104,16 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		const lines: string[] = [
 			`🐜 ${statusIcon(phase)} ${trim(c.goal, 80)}`,
 			`ID: ${colonyIdentityVerbose(c)}`,
+			`Workspace: ${trim(formatWorkspaceSummary(c.workspace), 100)}`,
 			`${statusLabel(phase)} │ ${m ? `${m.tasksDone}/${m.tasksTotal} tasks` : "starting"} │ ${pct}% │ ⚡${activeAnts} │ ${m ? formatCost(m.totalCost) : "$0"} │ ${elapsed}`,
 			`${progressBar(progress, 18)} ${pct}%`,
 		];
 
 		if (c.phase && c.phase !== "initializing") {
 			lines.push(`Phase: ${trim(c.phase, 100)}`);
+		}
+		if (c.workspace.note) {
+			lines.push(`Workspace note: ${trim(c.workspace.note, 100)}`);
 		}
 		const lastLog = c.logs[c.logs.length - 1];
 		if (lastLog) {
@@ -1141,7 +1228,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			const id = launchBackgroundColony({
+			const launched = launchBackgroundColony({
 				cwd: ctx.cwd,
 				goal,
 				currentModel,
@@ -1149,7 +1236,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				modelRegistry: ctx.modelRegistry ?? undefined,
 			});
 			ctx.ui.notify(
-				`🐜[${id}] Colony launched (${colonies.size} active): ${goal.slice(0, 70)}${goal.length > 70 ? "..." : ""}`,
+				`🐜[${launched.id}] Colony launched (${colonies.size} active): ${goal.slice(0, 70)}${goal.length > 70 ? "..." : ""}\nWorkspace: ${formatWorkspaceSummary(launched.workspace)}`,
 				"info",
 			);
 		},
@@ -1250,7 +1337,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			}
 
 			for (const found of toResume) {
-				const id = launchBackgroundColony(
+				const launched = launchBackgroundColony(
 					{
 						cwd: ctx.cwd,
 						goal: found.state.goal,
@@ -1259,9 +1346,12 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						modelOverrides: {},
 						modelRegistry: ctx.modelRegistry,
 					},
-					{ resume: true, stableIdHint: found.colonyId },
+					{ resume: true, stableIdHint: found.colonyId, workspaceHint: found.state.workspace ?? null },
 				);
-				ctx.ui.notify(`🐜[${id}|${found.colonyId}] Resuming: ${found.state.goal.slice(0, 60)}...`, "info");
+				ctx.ui.notify(
+					`🐜[${launched.id}|${found.colonyId}] Resuming: ${found.state.goal.slice(0, 60)}...\nWorkspace: ${formatWorkspaceSummary(launched.workspace)}`,
+					"info",
+				);
 			}
 		},
 	});
