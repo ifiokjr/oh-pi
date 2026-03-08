@@ -1,6 +1,6 @@
 {
   "name": "@ifi/oh-pi-extensions",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Core pi extensions: safe-guard, git-guard, auto-session, custom-footer, and more.",
   "keywords": [
     "pi-package"
