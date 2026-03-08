@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_ANT_CONFIGS } from "../extensions/ant-colony/types.js";
 import type { AntCaste } from "../extensions/ant-colony/types.js";
+import { DEFAULT_ANT_CONFIGS } from "../extensions/ant-colony/types.js";
 
 describe("DEFAULT_ANT_CONFIGS", () => {
 	const castes: AntCaste[] = ["scout", "worker", "soldier", "drone"];

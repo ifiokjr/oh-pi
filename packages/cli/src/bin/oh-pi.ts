@@ -17,6 +17,7 @@ if (process.platform === "win32") {
 }
 
 import { run } from "../index.js";
+
 run().catch((e) => {
 	console.error(e);
 	process.exit(1);

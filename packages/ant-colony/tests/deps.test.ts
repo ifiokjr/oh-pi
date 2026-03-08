@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildImportGraph, dependencyDepth, taskDependsOn } from "../extensions/ant-colony/deps.js";
 import type { ImportGraph } from "../extensions/ant-colony/deps.js";
+import { buildImportGraph, dependencyDepth, taskDependsOn } from "../extensions/ant-colony/deps.js";
 
 describe("buildImportGraph", () => {
 	it("returns empty graph for empty files", () => {

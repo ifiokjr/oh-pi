@@ -1,10 +1,10 @@
+export { getLocale, selectLanguage, setLocale, t } from "./i18n.js";
+export { EXTENSIONS, KEYBINDING_SCHEMES, MODEL_CAPABILITIES, PROVIDERS, THEMES } from "./registry.js";
 export type {
-	Locale,
-	ProviderSetupStrategy,
 	DiscoveredModel,
-	ProviderConfig,
-	OhPConfig,
+	Locale,
 	ModelCapabilities,
+	OhPConfig,
+	ProviderConfig,
+	ProviderSetupStrategy,
 } from "./types.js";
-export { MODEL_CAPABILITIES, PROVIDERS, THEMES, EXTENSIONS, KEYBINDING_SCHEMES } from "./registry.js";
-export { t, setLocale, getLocale, selectLanguage } from "./i18n.js";

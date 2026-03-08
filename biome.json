@@ -1,17 +1,20 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-	"organizeImports": {
-		"enabled": true
+	"$schema": "https://biomejs.dev/schemas/2.4.6/schema.json",
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
 	},
 	"files": {
-		"include": [
+		"includes": [
 			"packages/core/src/**/*.ts",
 			"packages/cli/src/**/*.ts",
 			"packages/extensions/extensions/**/*.ts",
 			"packages/ant-colony/extensions/**/*.ts",
 			"packages/ant-colony/tests/**/*.ts"
-		],
-		"ignore": ["node_modules", "dist", ".ant-colony"]
+		]
 	},
 	"formatter": {
 		"enabled": true,
@@ -43,7 +46,7 @@
 				},
 				"noExtraBooleanCast": "error",
 				"noForEach": "warn",
-				"noMultipleSpacesInRegularExpressionLiterals": "error",
+				"noAdjacentSpacesInRegex": "error",
 				"noStaticOnlyClass": "error",
 				"noUselessCatch": "error",
 				"noUselessConstructor": "error",
@@ -52,10 +55,8 @@
 				"noUselessLoneBlockStatements": "error",
 				"noUselessRename": "error",
 				"noUselessSwitchCase": "error",
-				"noUselessTernary": "error",
 				"noUselessTypeConstraint": "error",
 				"noVoid": "error",
-				"noWith": "error",
 				"useArrowFunction": "error",
 				"useFlatMap": "error",
 				"useLiteralKeys": "error",
@@ -72,7 +73,7 @@
 				"noInnerDeclarations": "error",
 				"noInvalidConstructorSuper": "error",
 				"noInvalidUseBeforeDeclaration": "error",
-				"noNewSymbol": "error",
+				"noInvalidBuiltinInstantiation": "error",
 				"noNonoctalDecimalEscape": "error",
 				"noPrecisionLoss": "error",
 				"noSelfAssign": "error",
@@ -103,8 +104,6 @@
 				"noGlobalEval": "error"
 			},
 			"style": {
-				"noArguments": "error",
-				"noCommaOperator": "error",
 				"noDefaultExport": "off",
 				"noImplicitBoolean": "warn",
 				"noInferrableTypes": "warn",
@@ -116,7 +115,6 @@
 				"noShoutyConstants": "warn",
 				"noUnusedTemplateLiteral": "error",
 				"noUselessElse": "error",
-				"noVar": "error",
 				"useBlockStatements": "error",
 				"useCollapsedElseIf": "error",
 				"useConst": "error",
@@ -157,7 +155,6 @@
 				},
 				"useNodejsImportProtocol": "error",
 				"useNumberNamespace": "error",
-				"useNumericLiterals": "error",
 				"useSelfClosingElements": "error",
 				"useShorthandAssign": "error",
 				"useSingleVarDeclarator": "error",
@@ -172,7 +169,10 @@
 				"noCommentText": "error",
 				"noConfusingLabels": "error",
 				"noConfusingVoidType": "error",
-				"noConsoleLog": "warn",
+				"noConsole": {
+					"level": "warn",
+					"options": { "allow": ["log", "error", "warn"] }
+				},
 				"noConstEnum": "error",
 				"noControlCharactersInRegex": "error",
 				"noDebugger": "error",
@@ -202,20 +202,19 @@
 				"useDefaultSwitchClauseLast": "error",
 				"useGetterReturn": "error",
 				"useIsArray": "error",
-				"useNamespaceKeyword": "error",
-				"useValidTypeof": "error"
+				"useNamespaceKeyword": "error"
 			}
 		}
 	},
 	"overrides": [
 		{
-			"include": ["**/*.test.ts"],
+			"includes": ["**/*.test.ts"],
 			"linter": {
 				"rules": {
 					"suspicious": {
 						"noExplicitAny": "off",
 						"noEmptyBlockStatements": "off",
-						"noConsoleLog": "off"
+						"noConsole": "off"
 					},
 					"correctness": {
 						"noUnusedVariables": "off"
@@ -231,7 +230,7 @@
 			}
 		},
 		{
-			"include": ["packages/extensions/extensions/**/*.ts", "packages/ant-colony/extensions/**/*.ts"],
+			"includes": ["**/packages/extensions/extensions/**/*.ts", "**/packages/ant-colony/extensions/**/*.ts"],
 			"linter": {
 				"rules": {
 					"suspicious": {

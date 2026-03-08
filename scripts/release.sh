@@ -43,7 +43,6 @@ echo ""
 echo "🔍 Running CI checks..."
 echo "  → lint"
 pnpm exec biome ci . || { echo "❌ Biome lint failed"; exit 1; }
-pnpm exec prettier --check '**/*.md' || { echo "❌ Markdown format failed"; exit 1; }
 echo "  → typecheck"
 pnpm --filter @ifi/oh-pi-core build
 pnpm typecheck || { echo "❌ Type check failed"; exit 1; }

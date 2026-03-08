@@ -59,13 +59,13 @@ function makeSessionEntry(msg: any) {
 }
 
 function createMockPi() {
-	const handlers = new Map<string, Function[]>();
+	const handlers = new Map<string, ((...args: any[]) => void)[]>();
 	const tools = new Map<string, any>();
 	const commands = new Map<string, any>();
 	const shortcuts = new Map<string, any>();
 
 	return {
-		on(event: string, handler: Function) {
+		on(event: string, handler: (...args: any[]) => void) {
 			if (!handlers.has(event)) {
 				handlers.set(event, []);
 			}

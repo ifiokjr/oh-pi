@@ -1,7 +1,6 @@
 import * as p from "@clack/prompts";
-import { t } from "@ifi/oh-pi-core";
-import { PROVIDERS } from "@ifi/oh-pi-core";
 import type { DiscoveredModel, ProviderConfig, ProviderSetupStrategy } from "@ifi/oh-pi-core";
+import { PROVIDERS, t } from "@ifi/oh-pi-core";
 import chalk from "chalk";
 import type { EnvInfo } from "../utils/detect.js";
 

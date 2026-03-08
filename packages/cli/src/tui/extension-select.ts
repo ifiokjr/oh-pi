@@ -1,6 +1,5 @@
 import * as p from "@clack/prompts";
-import { t } from "@ifi/oh-pi-core";
-import { EXTENSIONS } from "@ifi/oh-pi-core";
+import { EXTENSIONS, t } from "@ifi/oh-pi-core";
 
 /**
  * Prompts the user to select enabled extensions from the available list via a multi-select TUI prompt.

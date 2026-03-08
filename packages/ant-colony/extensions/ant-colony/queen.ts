@@ -16,7 +16,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { adapt, defaultConcurrency, sampleSystem } from "./concurrency.js";
-import { type ImportGraph, buildImportGraph, taskDependsOn } from "./deps.js";
+import { buildImportGraph, type ImportGraph, taskDependsOn } from "./deps.js";
 import { Nest } from "./nest.js";
 import { makePheromoneId, makeTaskId, resetAntCounter, runDrone, spawnAnt } from "./spawner.js";
 import type {
@@ -162,7 +162,7 @@ export interface PlanValidation {
 
 export function shouldUseScoutQuorum(goal: string): boolean {
 	// Multi-step/compound goals benefit from at least 2 scout votes
-	return /(\n\s*\d+[\.)]|[;；]| and |以及|并且|同时|步骤|phase|then|之后)/i.test(goal);
+	return /(\n\s*\d+[.)]|[;；]| and |以及|并且|同时|步骤|phase|then|之后)/i.test(goal);
 }
 
 export function validateExecutionPlan(tasks: Task[]): PlanValidation {

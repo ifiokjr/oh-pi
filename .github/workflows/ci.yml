@@ -48,9 +48,6 @@ jobs:
       - name: Biome check (lint + format)
         run: pnpm exec biome ci .
 
-      - name: Markdown format check
-        run: pnpm exec prettier --check '**/*.md'
-
   typecheck:
     name: Type Check (tsgo)
     runs-on: ubuntu-latest

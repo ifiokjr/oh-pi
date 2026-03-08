@@ -84,7 +84,9 @@ export class Nest {
 	private pheromoneIndexDirty = true;
 
 	constructor(
+		// biome-ignore lint/correctness/noUnusedPrivateClassMembers: used as this.cwd throughout
 		private cwd: string,
+		// biome-ignore lint/correctness/noUnusedPrivateClassMembers: used as this.colonyId throughout
 		private colonyId: string,
 	) {
 		this.dir = path.join(cwd, ".ant-colony", colonyId);

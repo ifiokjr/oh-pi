@@ -8,8 +8,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
@@ -109,7 +108,7 @@ export default function (pi: ExtensionAPI) {
 
 				const current = getCurrentVersion();
 				const latest = getLatestVersion();
-				if (!(current && latest) || !isNewer(latest, current)) {
+				if (!(current && latest && isNewer(latest, current))) {
 					return;
 				}
 

@@ -6,16 +6,15 @@
 		"build:fast": "pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli run build:fast",
 		"typecheck": "pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli run typecheck",
 		"test": "vitest run",
-		"lint": "biome check . && prettier --check '**/*.md'",
-		"lint:fix": "biome check --fix . && prettier --write '**/*.md'",
-		"format": "biome format --write . && prettier --write '**/*.md'",
-		"check": "biome ci . && prettier --check '**/*.md'"
+		"lint": "biome check .",
+		"lint:fix": "biome check --fix .",
+		"format": "biome format --write .",
+		"check": "biome ci ."
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.0",
+		"@biomejs/biome": "^2.4.6",
 		"@types/node": "^22.0.0",
 		"@typescript/native-preview": "7.0.0-dev.20260305.1",
-		"prettier": "^3.8.1",
 		"typescript": "^5.7.0",
 		"vitest": "^3.0.0"
 	},

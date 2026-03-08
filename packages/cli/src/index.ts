@@ -1,13 +1,12 @@
-import { getLocale, selectLanguage } from "@ifi/oh-pi-core";
-import { EXTENSIONS } from "@ifi/oh-pi-core";
 import type { OhPConfig } from "@ifi/oh-pi-core";
-import { type WizardBaseConfig, runConfigWizard } from "./tui/config-wizard.js";
+import { EXTENSIONS, getLocale, selectLanguage } from "@ifi/oh-pi-core";
+import { runConfigWizard, type WizardBaseConfig } from "./tui/config-wizard.js";
 import { confirmApply } from "./tui/confirm-apply.js";
 import { selectMode } from "./tui/mode-select.js";
 import { selectPreset } from "./tui/preset-select.js";
 import { setupProviders } from "./tui/provider-setup.js";
 import { welcome } from "./tui/welcome.js";
-import { type EnvInfo, detectEnv } from "./utils/detect.js";
+import { detectEnv, type EnvInfo } from "./utils/detect.js";
 
 /**
  * Main entry point — orchestrates the full oh-pi setup flow:

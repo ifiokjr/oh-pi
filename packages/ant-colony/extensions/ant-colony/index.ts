@@ -12,7 +12,7 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Container, Text, matchesKey } from "@mariozechner/pi-tui";
+import { Container, matchesKey, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { Nest } from "./nest.js";
 import { type QueenCallbacks, resumeColony, runColony } from "./queen.js";
@@ -524,7 +524,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						const barWidth = Math.max(10, Math.min(24, w - 28));
 
 						lines.push(
-							theme.fg("accent", theme.bold(`  🐜 Colony Details`)) + theme.fg("muted", ` │ ${elapsed} │ ${cost}`),
+							theme.fg("accent", theme.bold("  🐜 Colony Details")) + theme.fg("muted", ` │ ${elapsed} │ ${cost}`),
 						);
 						lines.push(theme.fg("muted", `  Goal: ${trim(c.goal, w - 8)}`));
 						lines.push(
@@ -818,7 +818,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			);
 			if (activeColony) {
 				container.addChild(new Text(theme.fg("muted", `  Goal: ${activeColony.goal.slice(0, 70)}`), 0, 0));
-				container.addChild(new Text(theme.fg("muted", `  Ctrl+Shift+A for details │ /colony-stop to cancel`), 0, 0));
+				container.addChild(new Text(theme.fg("muted", "  Ctrl+Shift+A for details │ /colony-stop to cancel"), 0, 0));
 			}
 			return container;
 		},

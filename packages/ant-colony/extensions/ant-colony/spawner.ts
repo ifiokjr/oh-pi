@@ -11,10 +11,6 @@ import { getModel } from "@mariozechner/pi-ai";
 import {
 	type AgentSessionEvent,
 	AuthStorage,
-	ModelRegistry,
-	type ResourceLoader,
-	SessionManager,
-	SettingsManager,
 	createAgentSession,
 	createBashTool,
 	createEditTool,
@@ -24,10 +20,14 @@ import {
 	createLsTool,
 	createReadTool,
 	createWriteTool,
+	ModelRegistry,
+	type ResourceLoader,
+	SessionManager,
+	SettingsManager,
 } from "@mariozechner/pi-coding-agent";
 import type { Nest } from "./nest.js";
-import { type ParsedSubTask, extractPheromones, parseSubTasks } from "./parser.js";
-import { CASTE_PROMPTS, buildPrompt } from "./prompts.js";
+import { extractPheromones, type ParsedSubTask, parseSubTasks } from "./parser.js";
+import { buildPrompt, CASTE_PROMPTS } from "./prompts.js";
 import type { Ant, AntCaste, AntConfig, AntStreamEvent, Task } from "./types.js";
 
 let antCounter = 0;

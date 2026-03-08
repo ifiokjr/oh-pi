@@ -1,6 +1,5 @@
 import * as p from "@clack/prompts";
-import { t } from "@ifi/oh-pi-core";
-import { THEMES } from "@ifi/oh-pi-core";
+import { THEMES, t } from "@ifi/oh-pi-core";
 
 /**
  * Prompts the user to select a theme from the available themes list.
