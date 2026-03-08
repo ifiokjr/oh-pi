@@ -105,7 +105,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build core (required for CLI type resolution)
-        run: pnpm --filter @ifiokjr/oh-pi-core build
+        run: pnpm --filter @ifi/oh-pi-core build
 
       - name: Type check with tsgo
         run: pnpm typecheck
@@ -129,7 +129,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build core (required for CLI test resolution)
-        run: pnpm --filter @ifiokjr/oh-pi-core build
+        run: pnpm --filter @ifi/oh-pi-core build
 
       - name: Run tests
         run: pnpm test

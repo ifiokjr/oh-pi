@@ -1,6 +1,6 @@
 # Refactor Plan: Monorepo Multi-Package Split
 
-> Split oh-pi into individually consumable pi packages under `@ifiokjr/*`, with a meta-package that
+> Split oh-pi into individually consumable pi packages under `@ifi/*`, with a meta-package that
 > bundles everything.
 
 ## 1. Guiding Principles
@@ -9,7 +9,7 @@
 
 Pi packages are npm/git bundles discovered by a `"pi"` key in `package.json` (or conventional
 directory layout: `extensions/`, `skills/`, `prompts/`, `themes/`). Each package can be installed
-independently via `pi install npm:@ifiokjr/oh-pi-extensions` and the resources are auto-loaded.
+independently via `pi install npm:@ifi/oh-pi-extensions` and the resources are auto-loaded.
 
 Key constraints from the pi package spec:
 
@@ -23,10 +23,10 @@ Key constraints from the pi package spec:
 
 ### Design goals
 
-1. **Individual consumption**: `pi install npm:@ifiokjr/oh-pi-ant-colony` installs just the colony
+1. **Individual consumption**: `pi install npm:@ifi/oh-pi-ant-colony` installs just the colony
    extension
-2. **Combination consumption**: `pi install npm:@ifiokjr/oh-pi` installs everything
-3. **The CLI remains a standalone `npx` tool**: `npx @ifiokjr/oh-pi` runs the TUI configurator
+2. **Combination consumption**: `pi install npm:@ifi/oh-pi` installs everything
+3. **The CLI remains a standalone `npx` tool**: `npx @ifi/oh-pi` runs the TUI configurator
 4. **Shared types live in a core package** imported by extensions at dev time (but pi provides the
    runtime)
 5. **pnpm workspace** for local development, independent publishing
@@ -38,50 +38,50 @@ Key constraints from the pi package spec:
 ### 2.1 Package Overview
 
 ```
-@ifiokjr/oh-pi-core          Shared types, registries, i18n — foundation for CLI and extensions
-@ifiokjr/oh-pi-extensions    All non-colony extensions (safe-guard, git-guard, etc.) as a pi package
-@ifiokjr/oh-pi-ant-colony    The ant colony multi-agent extension as a standalone pi package
-@ifiokjr/oh-pi-themes        All themes as a standalone pi package
-@ifiokjr/oh-pi-prompts       All prompt templates as a standalone pi package
-@ifiokjr/oh-pi-skills        All skills as a standalone pi package
-@ifiokjr/oh-pi-agents        All AGENTS.md templates as a standalone pi package
-@ifiokjr/oh-pi-cli           The TUI configurator binary (npx @ifiokjr/oh-pi-cli)
-@ifiokjr/oh-pi               Meta-package: re-exports everything, single install for all resources
+@ifi/oh-pi-core          Shared types, registries, i18n — foundation for CLI and extensions
+@ifi/oh-pi-extensions    All non-colony extensions (safe-guard, git-guard, etc.) as a pi package
+@ifi/oh-pi-ant-colony    The ant colony multi-agent extension as a standalone pi package
+@ifi/oh-pi-themes        All themes as a standalone pi package
+@ifi/oh-pi-prompts       All prompt templates as a standalone pi package
+@ifi/oh-pi-skills        All skills as a standalone pi package
+@ifi/oh-pi-agents        All AGENTS.md templates as a standalone pi package
+@ifi/oh-pi-cli           The TUI configurator binary (npx @ifi/oh-pi-cli)
+@ifi/oh-pi               Meta-package: re-exports everything, single install for all resources
 ```
 
 ### 2.2 Dependency Graph
 
 ```
-                         @ifiokjr/oh-pi (meta)
+                         @ifi/oh-pi (meta)
                              │
          ┌───────────┬───────┼────────┬──────────┬──────────┐
          │           │       │        │          │          │
          ▼           ▼       ▼        ▼          ▼          ▼
-   @ifiokjr/oh-pi-  @ifiokjr/oh-pi- @ifiokjr/oh-pi- @ifiokjr/oh-pi- @ifiokjr/oh-pi- @ifiokjr/oh-pi-
+   @ifi/oh-pi-  @ifi/oh-pi- @ifi/oh-pi- @ifi/oh-pi- @ifi/oh-pi- @ifi/oh-pi-
    extensions   ant-colony  themes    prompts    skills    agents
          │           │
          │           │ (devDependency for types only)
          ▼           ▼
-      @ifiokjr/oh-pi-core
+      @ifi/oh-pi-core
          │
          │ (peerDependency "*")
          ▼
   @mariozechner/pi-coding-agent  (runtime host)
 
-  @ifiokjr/oh-pi-cli ──▶ @ifiokjr/oh-pi-core (dependency)
+  @ifi/oh-pi-cli ──▶ @ifi/oh-pi-core (dependency)
        │
        │  (publishes to npm with bin: { "oh-pi": ... })
        ▼
-  npx @ifiokjr/oh-pi-cli
+  npx @ifi/oh-pi-cli
 ```
 
 ### 2.3 What Each Package Contains
 
-#### `@ifiokjr/oh-pi-core` (foundation library)
+#### `@ifi/oh-pi-core` (foundation library)
 
 ```
 packages/core/
-├── package.json            # name: @ifiokjr/oh-pi-core
+├── package.json            # name: @ifi/oh-pi-core
 ├── tsconfig.json
 └── src/
     ├── index.ts            # Re-exports everything
@@ -92,15 +92,15 @@ packages/core/
 ```
 
 - **Published as**: compiled ESM (`dist/`) + TypeScript declarations
-- **Used by**: `@ifiokjr/oh-pi-cli` (direct dependency), extensions (devDependency for type imports only
+- **Used by**: `@ifi/oh-pi-cli` (direct dependency), extensions (devDependency for type imports only
   — at runtime pi provides the host)
 - **Not a pi package** — this is a pure library, no `"pi"` manifest
 
-#### `@ifiokjr/oh-pi-extensions` (pi package)
+#### `@ifi/oh-pi-extensions` (pi package)
 
 ```
 packages/extensions/
-├── package.json            # name: @ifiokjr/oh-pi-extensions, keyword: pi-package
+├── package.json            # name: @ifi/oh-pi-extensions, keyword: pi-package
 ├── extensions/
 │   ├── auto-session-name.ts
 │   ├── auto-update.ts
@@ -114,15 +114,15 @@ packages/extensions/
 └── README.md
 ```
 
-- **Installed via**: `pi install npm:@ifiokjr/oh-pi-extensions`
+- **Installed via**: `pi install npm:@ifi/oh-pi-extensions`
 - **No compilation** — pi loads `.ts` files directly via jiti
 - **Tests live alongside source** — vitest runs from workspace root
 
-#### `@ifiokjr/oh-pi-ant-colony` (pi package)
+#### `@ifi/oh-pi-ant-colony` (pi package)
 
 ```
 packages/ant-colony/
-├── package.json            # name: @ifiokjr/oh-pi-ant-colony, keyword: pi-package
+├── package.json            # name: @ifi/oh-pi-ant-colony, keyword: pi-package
 ├── extensions/
 │   └── ant-colony/
 │       ├── index.ts        # Extension entry point
@@ -148,15 +148,15 @@ packages/ant-colony/
 └── README.md
 ```
 
-- **Installed via**: `pi install npm:@ifiokjr/oh-pi-ant-colony`
+- **Installed via**: `pi install npm:@ifi/oh-pi-ant-colony`
 - **Standalone** — works without any other oh-pi packages
 - **Tests separated** — not in `extensions/` so they don't get installed by pi
 
-#### `@ifiokjr/oh-pi-themes` (pi package)
+#### `@ifi/oh-pi-themes` (pi package)
 
 ```
 packages/themes/
-├── package.json            # name: @ifiokjr/oh-pi-themes, keyword: pi-package
+├── package.json            # name: @ifi/oh-pi-themes, keyword: pi-package
 └── themes/
     ├── catppuccin-mocha.json
     ├── cyberpunk.json
@@ -166,14 +166,14 @@ packages/themes/
     └── tokyo-night.json
 ```
 
-- **Installed via**: `pi install npm:@ifiokjr/oh-pi-themes`
+- **Installed via**: `pi install npm:@ifi/oh-pi-themes`
 - **Pure JSON** — no code, no compilation
 
-#### `@ifiokjr/oh-pi-prompts` (pi package)
+#### `@ifi/oh-pi-prompts` (pi package)
 
 ```
 packages/prompts/
-├── package.json            # name: @ifiokjr/oh-pi-prompts, keyword: pi-package
+├── package.json            # name: @ifi/oh-pi-prompts, keyword: pi-package
 └── prompts/
     ├── commit.md
     ├── document.md
@@ -187,11 +187,11 @@ packages/prompts/
     └── test.md
 ```
 
-#### `@ifiokjr/oh-pi-skills` (pi package)
+#### `@ifi/oh-pi-skills` (pi package)
 
 ```
 packages/skills/
-├── package.json            # name: @ifiokjr/oh-pi-skills, keyword: pi-package
+├── package.json            # name: @ifi/oh-pi-skills, keyword: pi-package
 └── skills/
     ├── claymorphism/SKILL.md
     ├── context7/SKILL.md
@@ -205,11 +205,11 @@ packages/skills/
     └── web-search/SKILL.md
 ```
 
-#### `@ifiokjr/oh-pi-agents` (pi package)
+#### `@ifi/oh-pi-agents` (pi package)
 
 ```
 packages/agents/
-├── package.json            # name: @ifiokjr/oh-pi-agents, keyword: pi-package
+├── package.json            # name: @ifi/oh-pi-agents, keyword: pi-package
 └── agents/                 # Pi doesn't auto-discover agents/, use pi manifest
     ├── colony-operator.md
     ├── data-ai-engineer.md
@@ -218,15 +218,15 @@ packages/agents/
     └── security-researcher.md
 ```
 
-> Note: pi doesn't have a conventional `agents/` auto-discovery. The CLI (`@ifiokjr/oh-pi-cli`) copies
+> Note: pi doesn't have a conventional `agents/` auto-discovery. The CLI (`@ifi/oh-pi-cli`) copies
 > selected agent templates to `~/.pi/agent/AGENTS.md`. This package is consumed by the CLI, not
 > directly by pi.
 
-#### `@ifiokjr/oh-pi-cli` (CLI binary)
+#### `@ifi/oh-pi-cli` (CLI binary)
 
 ```
 packages/cli/
-├── package.json            # name: @ifiokjr/oh-pi-cli, bin: { "oh-pi": ... }
+├── package.json            # name: @ifi/oh-pi-cli, bin: { "oh-pi": ... }
 ├── tsconfig.json
 └── src/
     ├── bin/oh-pi.ts        # CLI entry point
@@ -250,10 +250,10 @@ packages/cli/
 ```
 
 - **Published as**: compiled ESM with `bin` entry
-- **Dependencies**: `@ifiokjr/oh-pi-core`, `@clack/prompts`, `chalk`
+- **Dependencies**: `@ifi/oh-pi-core`, `@clack/prompts`, `chalk`
 - **Knows about all resource packages** — uses their paths to copy resources during `applyConfig()`
 
-#### `@ifiokjr/oh-pi` (meta-package)
+#### `@ifi/oh-pi` (meta-package)
 
 ```
 packages/oh-pi/
@@ -265,32 +265,32 @@ packages/oh-pi/
 
 ```json
 {
-  "name": "@ifiokjr/oh-pi",
+  "name": "@ifi/oh-pi",
   "keywords": ["pi-package"],
   "dependencies": {
-    "@ifiokjr/oh-pi-extensions": "workspace:*",
-    "@ifiokjr/oh-pi-ant-colony": "workspace:*",
-    "@ifiokjr/oh-pi-themes": "workspace:*",
-    "@ifiokjr/oh-pi-prompts": "workspace:*",
-    "@ifiokjr/oh-pi-skills": "workspace:*",
-    "@ifiokjr/oh-pi-agents": "workspace:*"
+    "@ifi/oh-pi-extensions": "workspace:*",
+    "@ifi/oh-pi-ant-colony": "workspace:*",
+    "@ifi/oh-pi-themes": "workspace:*",
+    "@ifi/oh-pi-prompts": "workspace:*",
+    "@ifi/oh-pi-skills": "workspace:*",
+    "@ifi/oh-pi-agents": "workspace:*"
   },
   "bundledDependencies": [
-    "@ifiokjr/oh-pi-extensions",
-    "@ifiokjr/oh-pi-ant-colony",
-    "@ifiokjr/oh-pi-themes",
-    "@ifiokjr/oh-pi-prompts",
-    "@ifiokjr/oh-pi-skills",
-    "@ifiokjr/oh-pi-agents"
+    "@ifi/oh-pi-extensions",
+    "@ifi/oh-pi-ant-colony",
+    "@ifi/oh-pi-themes",
+    "@ifi/oh-pi-prompts",
+    "@ifi/oh-pi-skills",
+    "@ifi/oh-pi-agents"
   ],
   "pi": {
     "extensions": [
-      "node_modules/@ifiokjr/oh-pi-extensions/extensions",
-      "node_modules/@ifiokjr/oh-pi-ant-colony/extensions"
+      "node_modules/@ifi/oh-pi-extensions/extensions",
+      "node_modules/@ifi/oh-pi-ant-colony/extensions"
     ],
-    "themes": ["node_modules/@ifiokjr/oh-pi-themes/themes"],
-    "prompts": ["node_modules/@ifiokjr/oh-pi-prompts/prompts"],
-    "skills": ["node_modules/@ifiokjr/oh-pi-skills/skills"]
+    "themes": ["node_modules/@ifi/oh-pi-themes/themes"],
+    "prompts": ["node_modules/@ifi/oh-pi-prompts/prompts"],
+    "skills": ["node_modules/@ifi/oh-pi-skills/skills"]
   }
 }
 ```
@@ -316,42 +316,42 @@ oh-pi/                              # Monorepo root
 │   └── ...
 │
 ├── packages/
-│   ├── core/                       # @ifiokjr/oh-pi-core
+│   ├── core/                       # @ifi/oh-pi-core
 │   │   ├── package.json
 │   │   ├── tsconfig.json           # extends ../../tsconfig.base.json
 │   │   └── src/
 │   │
-│   ├── cli/                        # @ifiokjr/oh-pi-cli
+│   ├── cli/                        # @ifi/oh-pi-cli
 │   │   ├── package.json
 │   │   ├── tsconfig.json
 │   │   └── src/
 │   │
-│   ├── extensions/                 # @ifiokjr/oh-pi-extensions
+│   ├── extensions/                 # @ifi/oh-pi-extensions
 │   │   ├── package.json
 │   │   └── extensions/
 │   │
-│   ├── ant-colony/                 # @ifiokjr/oh-pi-ant-colony
+│   ├── ant-colony/                 # @ifi/oh-pi-ant-colony
 │   │   ├── package.json
 │   │   ├── extensions/
 │   │   └── tests/
 │   │
-│   ├── themes/                     # @ifiokjr/oh-pi-themes
+│   ├── themes/                     # @ifi/oh-pi-themes
 │   │   ├── package.json
 │   │   └── themes/
 │   │
-│   ├── prompts/                    # @ifiokjr/oh-pi-prompts
+│   ├── prompts/                    # @ifi/oh-pi-prompts
 │   │   ├── package.json
 │   │   └── prompts/
 │   │
-│   ├── skills/                     # @ifiokjr/oh-pi-skills
+│   ├── skills/                     # @ifi/oh-pi-skills
 │   │   ├── package.json
 │   │   └── skills/
 │   │
-│   ├── agents/                     # @ifiokjr/oh-pi-agents
+│   ├── agents/                     # @ifi/oh-pi-agents
 │   │   ├── package.json
 │   │   └── agents/
 │   │
-│   └── oh-pi/                      # @ifiokjr/oh-pi (meta-package)
+│   └── oh-pi/                      # @ifi/oh-pi (meta-package)
 │       ├── package.json
 │       └── README.md
 ```
@@ -412,11 +412,11 @@ packages:
 
 ## 4. Package.json Details
 
-### `@ifiokjr/oh-pi-core`
+### `@ifi/oh-pi-core`
 
 ```json
 {
-  "name": "@ifiokjr/oh-pi-core",
+  "name": "@ifi/oh-pi-core",
   "version": "0.2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -443,11 +443,11 @@ packages:
 }
 ```
 
-### `@ifiokjr/oh-pi-cli`
+### `@ifi/oh-pi-cli`
 
 ```json
 {
-  "name": "@ifiokjr/oh-pi-cli",
+  "name": "@ifi/oh-pi-cli",
   "version": "0.2.0",
   "type": "module",
   "bin": { "oh-pi": "dist/bin/oh-pi.js" },
@@ -458,16 +458,16 @@ packages:
     "typecheck": "tsgo -config tsconfig.json"
   },
   "dependencies": {
-    "@ifiokjr/oh-pi-core": "workspace:*"
+    "@ifi/oh-pi-core": "workspace:*"
   }
 }
 ```
 
-### `@ifiokjr/oh-pi-extensions`
+### `@ifi/oh-pi-extensions`
 
 ```json
 {
-  "name": "@ifiokjr/oh-pi-extensions",
+  "name": "@ifi/oh-pi-extensions",
   "version": "0.2.0",
   "keywords": ["pi-package"],
   "pi": { "extensions": ["./extensions"] },
@@ -482,11 +482,11 @@ packages:
 }
 ```
 
-### `@ifiokjr/oh-pi-ant-colony`
+### `@ifi/oh-pi-ant-colony`
 
 ```json
 {
-  "name": "@ifiokjr/oh-pi-ant-colony",
+  "name": "@ifi/oh-pi-ant-colony",
   "version": "0.2.0",
   "keywords": ["pi-package"],
   "pi": { "extensions": ["./extensions"] },
@@ -501,11 +501,11 @@ packages:
 }
 ```
 
-### `@ifiokjr/oh-pi-themes` / `prompts` / `skills`
+### `@ifi/oh-pi-themes` / `prompts` / `skills`
 
 ```json
 {
-  "name": "@ifiokjr/oh-pi-themes",
+  "name": "@ifi/oh-pi-themes",
   "version": "0.2.0",
   "keywords": ["pi-package"],
   "pi": { "themes": ["./themes"] },
@@ -515,18 +515,18 @@ packages:
 
 (Prompts and skills follow the same pattern with their respective resource type.)
 
-### `@ifiokjr/oh-pi-agents`
+### `@ifi/oh-pi-agents`
 
 ```json
 {
-  "name": "@ifiokjr/oh-pi-agents",
+  "name": "@ifi/oh-pi-agents",
   "version": "0.2.0",
   "files": ["agents", "README.md"]
 }
 ```
 
 > Note: This is NOT a pi package (no `"pi"` key). Agent templates are consumed only by
-> `@ifiokjr/oh-pi-cli` which copies the selected template to `~/.pi/agent/AGENTS.md`. Pi has no
+> `@ifi/oh-pi-cli` which copies the selected template to `~/.pi/agent/AGENTS.md`. Pi has no
 > `agents/` auto-discovery.
 
 ---
@@ -549,12 +549,12 @@ export function resolvePackagePath(pkg: string, subpath: string): string {
 }
 
 export const resources = {
-  extensions: () => resolvePackagePath("@ifiokjr/oh-pi-extensions", "extensions"),
-  antColony: () => resolvePackagePath("@ifiokjr/oh-pi-ant-colony", "extensions/ant-colony"),
-  themes: () => resolvePackagePath("@ifiokjr/oh-pi-themes", "themes"),
-  prompts: () => resolvePackagePath("@ifiokjr/oh-pi-prompts", "prompts"),
-  skills: () => resolvePackagePath("@ifiokjr/oh-pi-skills", "skills"),
-  agents: () => resolvePackagePath("@ifiokjr/oh-pi-agents", "agents"),
+  extensions: () => resolvePackagePath("@ifi/oh-pi-extensions", "extensions"),
+  antColony: () => resolvePackagePath("@ifi/oh-pi-ant-colony", "extensions/ant-colony"),
+  themes: () => resolvePackagePath("@ifi/oh-pi-themes", "themes"),
+  prompts: () => resolvePackagePath("@ifi/oh-pi-prompts", "prompts"),
+  skills: () => resolvePackagePath("@ifi/oh-pi-skills", "skills"),
+  agents: () => resolvePackagePath("@ifi/oh-pi-agents", "agents"),
 };
 ```
 
@@ -567,7 +567,7 @@ The CLI adds all resource packages as dependencies so they're always resolvable.
 ### Install just the colony extension
 
 ```bash
-pi install npm:@ifiokjr/oh-pi-ant-colony
+pi install npm:@ifi/oh-pi-ant-colony
 # → Installs extensions/ant-colony/ with all its .ts files
 # → Available immediately, no other oh-pi packages needed
 ```
@@ -575,14 +575,14 @@ pi install npm:@ifiokjr/oh-pi-ant-colony
 ### Install just the themes
 
 ```bash
-pi install npm:@ifiokjr/oh-pi-themes
+pi install npm:@ifi/oh-pi-themes
 # → Installs 6 JSON themes
 ```
 
 ### Install everything
 
 ```bash
-pi install npm:@ifiokjr/oh-pi
+pi install npm:@ifi/oh-pi
 # → Bundles all sub-packages via bundledDependencies
 # → All extensions, themes, prompts, skills available
 ```
@@ -590,7 +590,7 @@ pi install npm:@ifiokjr/oh-pi
 ### Run the configurator
 
 ```bash
-npx @ifiokjr/oh-pi-cli
+npx @ifi/oh-pi-cli
 # → Interactive TUI, knows about all resource packages
 # → Generates ~/.pi/agent/ config
 ```
@@ -598,8 +598,8 @@ npx @ifiokjr/oh-pi-cli
 ### Install everything + configure
 
 ```bash
-pi install npm:@ifiokjr/oh-pi
-npx @ifiokjr/oh-pi-cli
+pi install npm:@ifi/oh-pi
+npx @ifi/oh-pi-cli
 # → Full setup experience
 ```
 
@@ -655,10 +655,10 @@ jobs:
 
 ### Phase 3: Fix imports
 
-1. Update `packages/cli/src/` imports from `./types.js` → `@ifiokjr/oh-pi-core`
+1. Update `packages/cli/src/` imports from `./types.js` → `@ifi/oh-pi-core`
 2. Update `packages/cli/src/utils/resources.ts` to use `createRequire` pattern
 3. Update `packages/cli/src/utils/install.ts` to reference new resource paths
-4. Add `@ifiokjr/oh-pi-core` dependency to cli's `package.json`
+4. Add `@ifi/oh-pi-core` dependency to cli's `package.json`
 5. Add resource package dependencies to cli's `package.json`
 
 ### Phase 4: Fix tests
@@ -690,8 +690,8 @@ jobs:
 - All packages start at `0.2.0` (current is `0.1.85`)
 - Use [changesets](https://github.com/changesets/changesets) for independent versioning
 - Resource-only packages (themes, prompts, skills) version independently
-- `@ifiokjr/oh-pi-core` and `@ifiokjr/oh-pi-cli` version together (shared types)
-- `@ifiokjr/oh-pi` meta-package version bumps when any dependency bumps
+- `@ifi/oh-pi-core` and `@ifi/oh-pi-cli` version together (shared types)
+- `@ifi/oh-pi` meta-package version bumps when any dependency bumps
 
 ---
 

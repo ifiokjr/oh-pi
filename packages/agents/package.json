@@ -1,5 +1,5 @@
 {
-  "name": "@ifiokjr/oh-pi-agents",
+  "name": "@ifi/oh-pi-agents",
   "version": "0.2.2",
   "description": "AGENTS.md templates for pi: general-developer, fullstack, security-researcher, and more.",
   "files": [

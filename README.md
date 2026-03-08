@@ -10,12 +10,12 @@ Like oh-my-zsh for pi — but with an autonomous ant colony.
 
 [![CI](https://github.com/ifiokjr/oh-pi/actions/workflows/ci.yml/badge.svg)](https://github.com/ifiokjr/oh-pi/actions/workflows/ci.yml)
 [![license](https://img.shields.io/github/license/ifiokjr/oh-pi)](./LICENSE)
-[![node](https://img.shields.io/node/v/@ifiokjr/oh-pi-cli)](https://nodejs.org)
+[![node](https://img.shields.io/node/v/@ifi/oh-pi-cli)](https://nodejs.org)
 
 [English](./README.md) | [中文](./README.zh.md) | [Français](./README.fr.md)
 
 ```bash
-npx @ifiokjr/oh-pi-cli
+npx @ifi/oh-pi-cli
 ```
 
 </div>
@@ -25,7 +25,7 @@ npx @ifiokjr/oh-pi-cli
 ## 30-Second Start
 
 ```bash
-npx @ifiokjr/oh-pi-cli   # configure everything
+npx @ifi/oh-pi-cli   # configure everything
 pi                    # start coding
 ```
 
@@ -39,15 +39,15 @@ meta-package.
 
 | Package                                          | Description                             | Install                                |
 | ------------------------------------------------ | --------------------------------------- | -------------------------------------- |
-| [`@ifiokjr/oh-pi`](./packages/oh-pi)                 | Meta-package — bundles everything below | `pi install npm:@ifiokjr/oh-pi`            |
-| [`@ifiokjr/oh-pi-cli`](./packages/cli)               | Interactive TUI configurator            | `npx @ifiokjr/oh-pi-cli`                   |
-| [`@ifiokjr/oh-pi-core`](./packages/core)             | Shared types, registries, i18n          | (library, not installed directly)      |
-| [`@ifiokjr/oh-pi-extensions`](./packages/extensions) | 9 extensions (see below)                | `pi install npm:@ifiokjr/oh-pi-extensions` |
-| [`@ifiokjr/oh-pi-ant-colony`](./packages/ant-colony) | Multi-agent swarm extension             | `pi install npm:@ifiokjr/oh-pi-ant-colony` |
-| [`@ifiokjr/oh-pi-themes`](./packages/themes)         | 6 color themes                          | `pi install npm:@ifiokjr/oh-pi-themes`     |
-| [`@ifiokjr/oh-pi-prompts`](./packages/prompts)       | 10 prompt templates                     | `pi install npm:@ifiokjr/oh-pi-prompts`    |
-| [`@ifiokjr/oh-pi-skills`](./packages/skills)         | 10 skill packs                          | `pi install npm:@ifiokjr/oh-pi-skills`     |
-| [`@ifiokjr/oh-pi-agents`](./packages/agents)         | 5 AGENTS.md templates                   | (used by CLI only)                     |
+| [`@ifi/oh-pi`](./packages/oh-pi)                 | Meta-package — bundles everything below | `pi install npm:@ifi/oh-pi`            |
+| [`@ifi/oh-pi-cli`](./packages/cli)               | Interactive TUI configurator            | `npx @ifi/oh-pi-cli`                   |
+| [`@ifi/oh-pi-core`](./packages/core)             | Shared types, registries, i18n          | (library, not installed directly)      |
+| [`@ifi/oh-pi-extensions`](./packages/extensions) | 9 extensions (see below)                | `pi install npm:@ifi/oh-pi-extensions` |
+| [`@ifi/oh-pi-ant-colony`](./packages/ant-colony) | Multi-agent swarm extension             | `pi install npm:@ifi/oh-pi-ant-colony` |
+| [`@ifi/oh-pi-themes`](./packages/themes)         | 6 color themes                          | `pi install npm:@ifi/oh-pi-themes`     |
+| [`@ifi/oh-pi-prompts`](./packages/prompts)       | 10 prompt templates                     | `pi install npm:@ifi/oh-pi-prompts`    |
+| [`@ifi/oh-pi-skills`](./packages/skills)         | 10 skill packs                          | `pi install npm:@ifi/oh-pi-skills`     |
+| [`@ifi/oh-pi-agents`](./packages/agents)         | 5 AGENTS.md templates                   | (used by CLI only)                     |
 
 ---
 

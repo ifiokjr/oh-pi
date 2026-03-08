@@ -1,6 +1,6 @@
 import * as p from "@clack/prompts";
-import type { OhPConfig } from "@ifiokjr/oh-pi-core";
-import { t } from "@ifiokjr/oh-pi-core";
+import type { OhPConfig } from "@ifi/oh-pi-core";
+import { t } from "@ifi/oh-pi-core";
 import chalk from "chalk";
 import type { EnvInfo } from "../utils/detect.js";
 import { applyConfig, backupConfig, installPi } from "../utils/install.js";

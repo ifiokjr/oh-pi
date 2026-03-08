@@ -49,25 +49,25 @@ importers:
       '@clack/prompts':
         specifier: ^1.1.0
         version: 1.1.0
-      '@ifiokjr/oh-pi-agents':
+      '@ifi/oh-pi-agents':
         specifier: workspace:*
         version: link:../agents
-      '@ifiokjr/oh-pi-ant-colony':
+      '@ifi/oh-pi-ant-colony':
         specifier: workspace:*
         version: link:../ant-colony
-      '@ifiokjr/oh-pi-core':
+      '@ifi/oh-pi-core':
         specifier: workspace:*
         version: link:../core
-      '@ifiokjr/oh-pi-extensions':
+      '@ifi/oh-pi-extensions':
         specifier: workspace:*
         version: link:../extensions
-      '@ifiokjr/oh-pi-prompts':
+      '@ifi/oh-pi-prompts':
         specifier: workspace:*
         version: link:../prompts
-      '@ifiokjr/oh-pi-skills':
+      '@ifi/oh-pi-skills':
         specifier: workspace:*
         version: link:../skills
-      '@ifiokjr/oh-pi-themes':
+      '@ifi/oh-pi-themes':
         specifier: workspace:*
         version: link:../themes
       chalk:
@@ -103,22 +103,22 @@ importers:
 
   packages/oh-pi:
     dependencies:
-      '@ifiokjr/oh-pi-agents':
+      '@ifi/oh-pi-agents':
         specifier: workspace:*
         version: link:../agents
-      '@ifiokjr/oh-pi-ant-colony':
+      '@ifi/oh-pi-ant-colony':
         specifier: workspace:*
         version: link:../ant-colony
-      '@ifiokjr/oh-pi-extensions':
+      '@ifi/oh-pi-extensions':
         specifier: workspace:*
         version: link:../extensions
-      '@ifiokjr/oh-pi-prompts':
+      '@ifi/oh-pi-prompts':
         specifier: workspace:*
         version: link:../prompts
-      '@ifiokjr/oh-pi-skills':
+      '@ifi/oh-pi-skills':
         specifier: workspace:*
         version: link:../skills
-      '@ifiokjr/oh-pi-themes':
+      '@ifi/oh-pi-themes':
         specifier: workspace:*
         version: link:../themes
 

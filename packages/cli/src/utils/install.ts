@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { OhPConfig } from "@ifiokjr/oh-pi-core";
+import type { OhPConfig } from "@ifi/oh-pi-core";
 import {
 	writeAgents,
 	writeExtensions,

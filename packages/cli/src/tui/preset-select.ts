@@ -1,6 +1,6 @@
 import * as p from "@clack/prompts";
-import type { OhPConfig } from "@ifiokjr/oh-pi-core";
-import { t } from "@ifiokjr/oh-pi-core";
+import type { OhPConfig } from "@ifi/oh-pi-core";
+import { t } from "@ifi/oh-pi-core";
 
 interface Preset extends Omit<OhPConfig, "providers"> {}
 

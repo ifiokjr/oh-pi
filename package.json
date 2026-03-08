@@ -2,9 +2,9 @@
 	"private": true,
 	"packageManager": "pnpm@10.30.2",
 	"scripts": {
-		"build": "pnpm -r --filter @ifiokjr/oh-pi-core --filter @ifiokjr/oh-pi-cli run build",
-		"build:fast": "pnpm -r --filter @ifiokjr/oh-pi-core --filter @ifiokjr/oh-pi-cli run build:fast",
-		"typecheck": "pnpm -r --filter @ifiokjr/oh-pi-core --filter @ifiokjr/oh-pi-cli run typecheck",
+		"build": "pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli run build",
+		"build:fast": "pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli run build:fast",
+		"typecheck": "pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli run typecheck",
 		"test": "vitest run",
 		"lint": "biome check .",
 		"lint:fix": "biome check --fix .",

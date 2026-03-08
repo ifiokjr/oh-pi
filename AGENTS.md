@@ -82,22 +82,22 @@ to GitHub, and publishes all 9 packages to npm under the `@ifi` scope.
 
 ```
 packages/
-  core/          → @ifiokjr/oh-pi-core (compiled library: types, registry, i18n)
-  cli/           → @ifiokjr/oh-pi-cli (compiled binary: TUI configurator)
-  extensions/    → @ifiokjr/oh-pi-extensions (raw .ts: 9 pi extensions)
-  ant-colony/    → @ifiokjr/oh-pi-ant-colony (raw .ts: multi-agent swarm)
-  themes/        → @ifiokjr/oh-pi-themes (JSON theme files)
-  prompts/       → @ifiokjr/oh-pi-prompts (markdown prompt templates)
-  skills/        → @ifiokjr/oh-pi-skills (skill directories)
-  agents/        → @ifiokjr/oh-pi-agents (AGENTS.md templates)
-  oh-pi/         → @ifiokjr/oh-pi (meta-package, bundles everything)
+  core/          → @ifi/oh-pi-core (compiled library: types, registry, i18n)
+  cli/           → @ifi/oh-pi-cli (compiled binary: TUI configurator)
+  extensions/    → @ifi/oh-pi-extensions (raw .ts: 9 pi extensions)
+  ant-colony/    → @ifi/oh-pi-ant-colony (raw .ts: multi-agent swarm)
+  themes/        → @ifi/oh-pi-themes (JSON theme files)
+  prompts/       → @ifi/oh-pi-prompts (markdown prompt templates)
+  skills/        → @ifi/oh-pi-skills (skill directories)
+  agents/        → @ifi/oh-pi-agents (AGENTS.md templates)
+  oh-pi/         → @ifi/oh-pi (meta-package, bundles everything)
 ```
 
 ## Key Conventions
 
 - **Pi extensions ship raw `.ts`** — pi loads them via jiti, no compilation needed
 - **Core and CLI are compiled** — they produce `dist/` via tsc
-- **Imports**: CLI imports from `@ifiokjr/oh-pi-core`, not relative paths. Extensions import from
+- **Imports**: CLI imports from `@ifi/oh-pi-core`, not relative paths. Extensions import from
   pi SDK packages.
 - **Chinese text in regex patterns and locales.ts is intentional** — bilingual parsing support
 - **`noDefaultExport: off`** — extensions use default exports as their API pattern

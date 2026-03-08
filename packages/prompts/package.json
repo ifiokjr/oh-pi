@@ -1,5 +1,5 @@
 {
-  "name": "@ifiokjr/oh-pi-prompts",
+  "name": "@ifi/oh-pi-prompts",
   "version": "0.2.2",
   "description": "Prompt templates for pi: review, fix, explain, refactor, test, commit, and more.",
   "keywords": [

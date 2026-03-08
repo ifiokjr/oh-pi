@@ -1,5 +1,5 @@
 import * as p from "@clack/prompts";
-import { t } from "@ifiokjr/oh-pi-core";
+import { t } from "@ifi/oh-pi-core";
 
 /**
  * Presents an interactive prompt for the user to select an agent template

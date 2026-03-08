@@ -1,5 +1,5 @@
 {
-  "name": "@ifiokjr/oh-pi-cli",
+  "name": "@ifi/oh-pi-cli",
   "version": "0.2.2",
   "description": "Interactive TUI configurator for pi-coding-agent.",
   "type": "module",
@@ -22,13 +22,13 @@
   "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^1.1.0",
-    "@ifiokjr/oh-pi-agents": "workspace:*",
-    "@ifiokjr/oh-pi-ant-colony": "workspace:*",
-    "@ifiokjr/oh-pi-core": "workspace:*",
-    "@ifiokjr/oh-pi-extensions": "workspace:*",
-    "@ifiokjr/oh-pi-prompts": "workspace:*",
-    "@ifiokjr/oh-pi-skills": "workspace:*",
-    "@ifiokjr/oh-pi-themes": "workspace:*",
+    "@ifi/oh-pi-agents": "workspace:*",
+    "@ifi/oh-pi-ant-colony": "workspace:*",
+    "@ifi/oh-pi-core": "workspace:*",
+    "@ifi/oh-pi-extensions": "workspace:*",
+    "@ifi/oh-pi-prompts": "workspace:*",
+    "@ifi/oh-pi-skills": "workspace:*",
+    "@ifi/oh-pi-themes": "workspace:*",
     "chalk": "^5.6.2"
   },
   "engines": {

@@ -1,5 +1,5 @@
-import type { OhPConfig } from "@ifiokjr/oh-pi-core";
-import { EXTENSIONS, getLocale, selectLanguage } from "@ifiokjr/oh-pi-core";
+import type { OhPConfig } from "@ifi/oh-pi-core";
+import { EXTENSIONS, getLocale, selectLanguage } from "@ifi/oh-pi-core";
 import { runConfigWizard, type WizardBaseConfig } from "./tui/config-wizard.js";
 import { confirmApply } from "./tui/confirm-apply.js";
 import { selectMode } from "./tui/mode-select.js";
