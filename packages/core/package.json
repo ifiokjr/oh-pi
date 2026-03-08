@@ -1,6 +1,6 @@
 {
   "name": "@ifi/oh-pi-core",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Shared types, registries, and i18n for oh-pi packages.",
   "type": "module",
   "main": "./dist/index.js",

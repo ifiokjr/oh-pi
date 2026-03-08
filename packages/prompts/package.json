@@ -1,6 +1,6 @@
 {
   "name": "@ifi/oh-pi-prompts",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Prompt templates for pi: review, fix, explain, refactor, test, commit, and more.",
   "keywords": [
     "pi-package"

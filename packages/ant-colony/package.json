@@ -1,6 +1,6 @@
 {
   "name": "@ifi/oh-pi-ant-colony",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Autonomous multi-agent swarm extension for pi — adaptive concurrency, pheromone communication.",
   "keywords": [
     "pi-package"
