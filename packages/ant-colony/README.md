@@ -44,7 +44,11 @@ The LLM automatically invokes the `ant_colony` tool when task complexity warrant
 ### Commands
 
 ```
-/colony-stop                Cancel a running colony
+/colony <goal>              Start a new colony for the given goal
+/colony-count               Show number of currently running colonies
+/colony-status [id]         Show running colonies (runtime cN or stable colony-... ID)
+/colony-stop [id|all]       Cancel one running colony (runtime/stable ID) or all
+/colony-resume [colonyId]   Resume a specific stable colony ID, or all resumable by default
 Ctrl+Shift+A                Open colony details panel
 ```
 
@@ -94,13 +98,17 @@ Each task declares the files it operates on. The queen guarantees:
 ## Installation
 
 ```bash
-# Option 1: Symlink to pi extensions directory
-mkdir -p ~/.pi/agent/extensions/ant-colony
-ln -sf "$(pwd)/pi-package/extensions/ant-colony/index.ts" ~/.pi/agent/extensions/ant-colony/index.ts
-# ... (symlink all .ts files)
+# Install just ant-colony
+pi install npm:@ifi/oh-pi-ant-colony
 
-# Option 2: Install via oh-pi
-npx oh-pi  # Select "Full Power" preset
+# Or install the full oh-pi bundle (includes ant-colony)
+pi install npm:@ifi/oh-pi
+```
+
+Then enable/configure extensions with:
+
+```bash
+npx @ifi/oh-pi-cli
 ```
 
 ## Module Reference

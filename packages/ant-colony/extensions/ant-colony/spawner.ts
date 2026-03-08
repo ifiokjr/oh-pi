@@ -28,7 +28,7 @@ import {
 import type { Nest } from "./nest.js";
 import { extractPheromones, type ParsedSubTask, parseSubTasks } from "./parser.js";
 import { buildPrompt, CASTE_PROMPTS } from "./prompts.js";
-import type { Ant, AntCaste, AntConfig, AntStreamEvent, Task } from "./types.js";
+import type { Ant, AntCaste, AntConfig, AntStreamEvent, DroneCommandPolicy, Task } from "./types.js";
 
 let antCounter = 0;
 
@@ -54,6 +54,91 @@ export interface AntResult {
 	newTasks: ParsedSubTask[];
 	pheromones: import("./types.js").Pheromone[];
 	rateLimited: boolean;
+}
+
+const DRONE_COMMAND_POLICY: DroneCommandPolicy = {
+	allowlist: ["npm", "pnpm", "yarn", "npx", "node", "git", "ls", "cat", "echo"],
+	maxArgs: 24,
+	maxCommandLength: 240,
+};
+
+const BLOCKED_DRONE_TOKENS = /(?:[;&|`$<>]|\$\(|\|\||&&)/;
+
+function extractDroneCommand(task: Task): string {
+	const ctxMatch = task.context?.match(/```(?:bash|sh)?\s*\n?([\s\S]*?)```/);
+	return ctxMatch?.[1]?.trim() || task.description.trim();
+}
+
+function parseCommandArgv(command: string): string[] {
+	const argv: string[] = [];
+	let current = "";
+	let quote: '"' | "'" | null = null;
+	let escaping = false;
+	for (const ch of command) {
+		if (escaping) {
+			current += ch;
+			escaping = false;
+			continue;
+		}
+		if (ch === "\\") {
+			escaping = true;
+			continue;
+		}
+		if (quote) {
+			if (ch === quote) {
+				quote = null;
+			} else {
+				current += ch;
+			}
+			continue;
+		}
+		if (ch === '"' || ch === "'") {
+			quote = ch;
+			continue;
+		}
+		if (/\s/.test(ch)) {
+			if (current.length > 0) {
+				argv.push(current);
+				current = "";
+			}
+			continue;
+		}
+		current += ch;
+	}
+	if (quote) {
+		throw new Error("Drone command rejected: unclosed quote");
+	}
+	if (escaping) {
+		throw new Error("Drone command rejected: trailing escape");
+	}
+	if (current.length > 0) {
+		argv.push(current);
+	}
+	return argv;
+}
+
+function validateDroneCommand(command: string, policy: DroneCommandPolicy): string[] {
+	if (!command) {
+		throw new Error("Drone command rejected: empty command");
+	}
+	if (command.length > policy.maxCommandLength) {
+		throw new Error(`Drone command rejected: exceeds ${policy.maxCommandLength} chars`);
+	}
+	if (BLOCKED_DRONE_TOKENS.test(command)) {
+		throw new Error("Drone command rejected: shell metacharacters are not allowed");
+	}
+	const argv = parseCommandArgv(command);
+	if (argv.length === 0) {
+		throw new Error("Drone command rejected: empty argv");
+	}
+	if (argv.length - 1 > policy.maxArgs) {
+		throw new Error(`Drone command rejected: too many args (max ${policy.maxArgs})`);
+	}
+	const executable = argv[0];
+	if (!policy.allowlist.includes(executable)) {
+		throw new Error(`Drone command rejected: executable '${executable}' is not allowlisted`);
+	}
+	return argv;
 }
 
 // Re-export for queen.ts compatibility
@@ -129,16 +214,11 @@ export async function runDrone(cwd: string, nest: Nest, task: Task): Promise<Ant
 	nest.updateTaskStatus(task.id, "active");
 
 	try {
-		const { execSync } = await import("node:child_process");
-		// Prefer bash command from context code block, fall back to description
-		const ctxMatch = task.context?.match(/```(?:bash|sh)?\s*\n?([\s\S]*?)```/);
-		const cmd = ctxMatch?.[1]?.trim() || task.description;
-		// Basic dangerous command validation
-		const DANGEROUS = /\brm\s+-rf\s+\/|mkfs\b|dd\s+if=|chmod\s+777\s+\/|>\s*\/dev\/sd/i;
-		if (DANGEROUS.test(cmd)) {
-			throw new Error(`Drone refused dangerous command: ${cmd.slice(0, 80)}`);
-		}
-		const output = execSync(cmd, { cwd, encoding: "utf-8", timeout: 30000, stdio: "pipe" }).trim();
+		const { execFileSync } = await import("node:child_process");
+		const command = extractDroneCommand(task);
+		const argv = validateDroneCommand(command, DRONE_COMMAND_POLICY);
+		const [file, ...args] = argv;
+		const output = execFileSync(file, args, { cwd, encoding: "utf-8", timeout: 30000, stdio: "pipe" }).trim();
 
 		ant.status = "done";
 		ant.finishedAt = Date.now();
@@ -150,7 +230,7 @@ export async function runDrone(cwd: string, nest: Nest, task: Task): Promise<Ant
 			antId,
 			antCaste: "drone",
 			taskId: task.id,
-			content: `Drone executed: ${cmd.slice(0, 100)}`,
+			content: `Drone executed: ${command.slice(0, 100)}`,
 			files: task.files,
 			strength: 1,
 			createdAt: Date.now(),

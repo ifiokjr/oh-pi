@@ -72,13 +72,15 @@ export interface QueenOptions {
 	modelRegistry?: ModelRegistry;
 	/** Event bus for cross-extension communication (usage-tracker integration). */
 	eventBus?: ColonyEventBus;
+	/** Optional shared tracker to avoid listener buildup in on/emit-only runtimes. */
+	usageLimitsTracker?: UsageLimitsTracker;
 }
 
 function makeColonyId(): string {
 	return `colony-${Date.now().toString(36)}`;
 }
 
-interface UsageLimitsTracker {
+export interface UsageLimitsTracker {
 	requestSnapshot(): UsageLimitsEvent | null;
 	dispose(): void;
 }
@@ -116,10 +118,15 @@ export function createUsageLimitsTracker(eventBus?: ColonyEventBus): UsageLimits
 			return latestLimits;
 		},
 		dispose() {
-			if (subscribed && typeof eventBus.off === "function") {
-				eventBus.off("usage:limits", handler);
+			if (!subscribed) {
+				return;
 			}
-			subscribed = false;
+			if (typeof eventBus.off === "function") {
+				eventBus.off("usage:limits", handler);
+				subscribed = false;
+			}
+			// If `off` is unavailable, keep the subscription active on this tracker
+			// instance to avoid duplicate listeners on subsequent requestSnapshot() calls.
 		},
 	};
 }
@@ -788,7 +795,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		const m = state.metrics;
 		const active = state.ants.filter((a) => a.status === "working").length;
 		const progress = m.tasksTotal > 0 ? m.tasksDone / m.tasksTotal : 0;
-		callbacks.onSignal?.({ phase, progress, active, cost: m.totalCost, message });
+		callbacks.onSignal?.({ phase, progress, active, cost: m.totalCost, message, colonyId: state.id });
 	};
 
 	const waveBase: Omit<WaveOptions, "caste"> & { importGraph?: ImportGraph } = {
@@ -805,7 +812,8 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 
 	// ═══ Usage-aware budget planning ═══
 	// Query usage-tracker for rate limit / cost data via the event bus.
-	const usageLimitsTracker = createUsageLimitsTracker(opts.eventBus);
+	const ownsUsageLimitsTracker = !opts.usageLimitsTracker;
+	const usageLimitsTracker = opts.usageLimitsTracker ?? createUsageLimitsTracker(opts.eventBus);
 	const refreshBudgetPlan = (): BudgetPlan | null => {
 		const latestLimits = usageLimitsTracker.requestSnapshot();
 		const state = nest.getStateLight();
@@ -1025,7 +1033,9 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		emitSignal("failed", String(e).slice(0, 100));
 		return failState;
 	} finally {
-		usageLimitsTracker.dispose();
+		if (ownsUsageLimitsTracker) {
+			usageLimitsTracker.dispose();
+		}
 		const finalStatus = nest.getState().status;
 		if (finalStatus === "done") {
 			cleanup();
@@ -1053,7 +1063,7 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		const m = state.metrics;
 		const active = state.ants.filter((a) => a.status === "working").length;
 		const progress = m.tasksTotal > 0 ? m.tasksDone / m.tasksTotal : 0;
-		callbacks.onSignal?.({ phase, progress, active, cost: m.totalCost, message });
+		callbacks.onSignal?.({ phase, progress, active, cost: m.totalCost, message, colonyId: state.id });
 	};
 
 	const waveBase: Omit<WaveOptions, "caste"> & { budgetPlan?: BudgetPlan | null } = {
@@ -1069,7 +1079,8 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 	};
 
 	// Budget plan for resumed colony
-	const usageLimitsTracker = createUsageLimitsTracker(opts.eventBus);
+	const ownsUsageLimitsTracker = !opts.usageLimitsTracker;
+	const usageLimitsTracker = opts.usageLimitsTracker ?? createUsageLimitsTracker(opts.eventBus);
 	const latestLimits = usageLimitsTracker.requestSnapshot();
 	const state = nest.getStateLight();
 	waveBase.budgetPlan = planBudget(latestLimits, state.metrics, opts.maxCost ?? null, state.concurrency);
@@ -1146,7 +1157,9 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		emitSignal("failed", String(e).slice(0, 100));
 		return failState;
 	} finally {
-		usageLimitsTracker.dispose();
+		if (ownsUsageLimitsTracker) {
+			usageLimitsTracker.dispose();
+		}
 		const finalStatus = nest.getState().status;
 		if (finalStatus === "done") {
 			cleanup();

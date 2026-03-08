@@ -136,6 +136,19 @@ describe("createUsageLimitsTracker", () => {
 		expect(() => tracker.dispose()).not.toThrow();
 	});
 
+	it("does not re-subscribe the same tracker after dispose when off() is unavailable", () => {
+		const on = vi.fn();
+		const emit = vi.fn();
+		const tracker = createUsageLimitsTracker({ on, emit });
+
+		tracker.requestSnapshot();
+		tracker.dispose();
+		tracker.requestSnapshot();
+
+		expect(on).toHaveBeenCalledTimes(1);
+		expect(emit).toHaveBeenCalledTimes(2);
+	});
+
 	it("unsubscribes when off() is available", () => {
 		const on = vi.fn();
 		const emit = vi.fn();

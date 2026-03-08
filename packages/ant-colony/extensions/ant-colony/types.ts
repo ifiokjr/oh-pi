@@ -149,4 +149,16 @@ export interface ColonySignal {
 	active: number; // Number of currently active ants
 	cost: number;
 	message: string; // Human-readable status summary
+	colonyId?: string; // Stable persisted colony ID (e.g. colony-lk42...)
+}
+
+export interface DroneCommandPolicy {
+	allowlist: string[];
+	maxArgs: number;
+	maxCommandLength: number;
+}
+
+export interface ColonyRuntimeIdentity {
+	runtimeId: string; // Session-local ID (e.g. c1)
+	stableId: string; // Persisted nest ID (e.g. colony-lk42...)
 }

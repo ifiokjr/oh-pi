@@ -15,8 +15,8 @@ import type { ExtensionAPI, ModelRegistry } from "@mariozechner/pi-coding-agent"
 import { Container, matchesKey, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { Nest } from "./nest.js";
-import { type QueenCallbacks, resumeColony, runColony } from "./queen.js";
-import type { AntStreamEvent, ColonyMetrics, ColonyState } from "./types.js";
+import { createUsageLimitsTracker, type QueenCallbacks, resumeColony, runColony } from "./queen.js";
+import type { AntStreamEvent, ColonyMetrics, ColonyRuntimeIdentity, ColonyState } from "./types.js";
 
 import {
 	buildReport,
@@ -54,8 +54,9 @@ interface ColonyLogEntry {
 }
 
 interface BackgroundColony {
-	/** Short identifier for this colony (c1, c2, ...). */
+	/** Short runtime identifier for this colony (c1, c2, ...). */
 	id: string;
+	identity: ColonyRuntimeIdentity;
 	goal: string;
 	abortController: AbortController;
 	state: ColonyState | null;
@@ -70,6 +71,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 	const colonies = new Map<string, BackgroundColony>();
 	/** Auto-incrementing colony counter for generating IDs. */
 	let colonyCounter = 0;
+	const UNKNOWN_STABLE_COLONY_ID = "pending";
+	const usageLimitsTracker = createUsageLimitsTracker(pi.events);
 
 	/** Generate a short colony ID like c1, c2, ... */
 	function nextColonyId(): string {
@@ -77,13 +80,40 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		return `c${colonyCounter}`;
 	}
 
+	const hasStableId = (identity: ColonyRuntimeIdentity) => identity.stableId !== UNKNOWN_STABLE_COLONY_ID;
+	const shortStableId = (stableId: string) =>
+		stableId.length > 24 ? `${stableId.slice(0, 14)}…${stableId.slice(-6)}` : stableId;
+	const colonyIdentity = (c: BackgroundColony) =>
+		hasStableId(c.identity) ? `${c.identity.runtimeId}|${shortStableId(c.identity.stableId)}` : c.identity.runtimeId;
+	const colonyIdentityVerbose = (c: BackgroundColony) =>
+		hasStableId(c.identity) ? `${c.identity.runtimeId} (stable: ${c.identity.stableId})` : c.identity.runtimeId;
+	const registerStableId = (c: BackgroundColony, stableId?: string | null) => {
+		if (!stableId) {
+			return;
+		}
+		const trimmed = stableId.trim();
+		if (!trimmed) {
+			return;
+		}
+		c.identity.stableId = trimmed;
+	};
+
 	/**
-	 * Resolve a colony by ID. If no ID given and exactly one colony is running,
-	 * returns that one. Returns null if no match or ambiguous.
+	 * Resolve a colony by runtime ID (`c1`) or stable persisted ID (`colony-...`).
+	 * If no ID given and exactly one colony is running, returns that one.
 	 */
 	function resolveColony(idArg?: string): BackgroundColony | null {
 		if (idArg) {
-			return colonies.get(idArg) ?? null;
+			const direct = colonies.get(idArg);
+			if (direct) {
+				return direct;
+			}
+			for (const colony of colonies.values()) {
+				if (colony.identity.stableId === idArg) {
+					return colony;
+				}
+			}
+			return null;
 		}
 		if (colonies.size === 1) {
 			return colonies.values().next().value ?? null;
@@ -160,6 +190,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		}
 	};
 
+	const finalSignalLabel = (phase: ColonyState["status"]) => (phase === "done" ? "COMPLETE" : statusLabel(phase));
+
 	// ─── Status rendering ───
 
 	let lastRender = 0;
@@ -203,7 +235,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				const pct = `${Math.round(progress * 100)}%`;
 				const active = colony.antStreams.size;
 
-				const parts = [`🐜[${colony.id}] ${statusIcon(phase)} ${statusLabel(phase)}`];
+				const parts = [`🐜[${colonyIdentity(colony)}] ${statusIcon(phase)} ${statusLabel(phase)}`];
 				parts.push(m ? `${m.tasksDone}/${m.tasksTotal} (${pct})` : `0/0 (${pct})`);
 				parts.push(`⚡${active}`);
 				if (m) {
@@ -257,6 +289,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				callbacks,
 				modelRegistry: params.modelRegistry,
 				eventBus: pi.events, // Usage-tracker integration for budget-aware planning
+				usageLimitsTracker,
 			});
 
 			return {
@@ -283,27 +316,62 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			cwd: string;
 			modelRegistry?: ModelRegistry;
 		},
-		resume = false,
+		options?: { resume?: boolean; stableIdHint?: string },
 	): string {
+		const resume = options?.resume ?? false;
 		const colonyId = nextColonyId();
 		const abortController = new AbortController();
+		const now = Date.now();
 		const colony: BackgroundColony = {
 			id: colonyId,
+			identity: { runtimeId: colonyId, stableId: options?.stableIdHint ?? UNKNOWN_STABLE_COLONY_ID },
 			goal: params.goal,
 			abortController,
-			state: null,
+			state: {
+				id: options?.stableIdHint ?? colonyId,
+				goal: params.goal,
+				status: "scouting",
+				tasks: [],
+				ants: [],
+				pheromones: [],
+				concurrency: { current: 0, min: 1, max: params.maxAnts ?? 8, optimal: 1, history: [] },
+				metrics: {
+					tasksTotal: 0,
+					tasksDone: 0,
+					tasksFailed: 0,
+					antsSpawned: 0,
+					totalCost: 0,
+					totalTokens: 0,
+					startTime: now,
+					throughputHistory: [],
+				},
+				maxCost: params.maxCost ?? null,
+				modelOverrides: params.modelOverrides as ColonyState["modelOverrides"],
+				createdAt: now,
+				finishedAt: null,
+			},
 			phase: "initializing",
 			antStreams: new Map(),
 			logs: [],
 		};
 
-		pushLog(colony, { level: "info", text: `INITIALIZING · Colony [${colonyId}] launched in background` });
+		pushLog(colony, {
+			level: "info",
+			text: `INITIALIZING · Colony [${colonyIdentityVerbose(colony)}] launched in background`,
+		});
 
 		let lastPhase = "";
 
 		const callbacks: QueenCallbacks = {
 			onSignal(signal) {
+				registerStableId(colony, signal.colonyId);
 				colony.phase = signal.message;
+				if (colony.state) {
+					colony.state.status = signal.phase;
+					if (signal.colonyId) {
+						colony.state.id = signal.colonyId;
+					}
+				}
 				// Inject message on phase transition (display: true makes it visible to the LLM without polling)
 				if (signal.phase !== lastPhase) {
 					lastPhase = signal.phase;
@@ -312,7 +380,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 					pi.sendMessage(
 						{
 							customType: "ant-colony-progress",
-							content: `[COLONY_SIGNAL:${signal.phase.toUpperCase()}] 🐜[${colonyId}] ${signal.message} (${pct}%, ${formatCost(signal.cost)})`,
+							content: `[COLONY_SIGNAL:${signal.phase.toUpperCase()}] 🐜[${colonyIdentity(colony)}] ${signal.message} (${pct}%, ${formatCost(signal.cost)})`,
 							display: true,
 						},
 						{ triggerTurn: false, deliverAs: "followUp" },
@@ -322,6 +390,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			},
 			onPhase(phase, detail) {
 				colony.phase = detail;
+				if (colony.state) {
+					colony.state.status = phase;
+				}
 				pushLog(colony, { level: "info", text: `${statusLabel(phase)} · ${detail}` });
 				throttledRender();
 			},
@@ -348,7 +419,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				pi.sendMessage(
 					{
 						customType: "ant-colony-progress",
-						content: `[COLONY_SIGNAL:TASK_DONE] 🐜[${colonyId}] ${icon} ${task.title.slice(0, 60)} (${progress}, ${cost})`,
+						content: `[COLONY_SIGNAL:TASK_DONE] 🐜[${colonyIdentity(colony)}] ${icon} ${task.title.slice(0, 60)} (${progress}, ${cost})`,
 						display: true,
 					},
 					{ triggerTurn: false, deliverAs: "followUp" },
@@ -371,7 +442,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			},
 			onComplete(state) {
 				colony.state = state;
-				colony.phase = state.status === "done" ? "Colony mission complete" : "Colony failed";
+				registerStableId(colony, state.id);
+				colony.phase =
+					state.status === "done" ? "Colony mission complete" : `Colony ${state.status.replace(/_/g, " ")}`;
 				pushLog(colony, {
 					level: state.status === "done" ? "info" : "error",
 					text: `${statusLabel(state.status)} · ${state.metrics.tasksDone}/${state.metrics.tasksTotal} · ${formatCost(state.metrics.totalCost)}`,
@@ -396,6 +469,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			authStorage: undefined,
 			modelRegistry: params.modelRegistry,
 			eventBus: pi.events, // Usage-tracker integration for budget-aware planning
+			usageLimitsTracker,
 		};
 		colony.promise = resume ? resumeColony(colonyOpts) : runColony(colonyOpts);
 
@@ -406,12 +480,18 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		// Wait for completion in background, inject results
 		colony.promise
 			.then((state) => {
-				const ok = state.status === "done";
+				registerStableId(colony, state.id);
+				const phase = state.status;
+				const ok = phase === "done";
+				const signalLabel = finalSignalLabel(phase);
 				const report = buildReport(state);
 				const m = state.metrics;
+				const reportId = hasStableId(colony.identity)
+					? `${colony.identity.runtimeId}|${colony.identity.stableId}`
+					: colony.identity.runtimeId;
 				pushLog(colony, {
 					level: ok ? "info" : "error",
-					text: `${ok ? "COMPLETE" : "FAILED"} · ${m.tasksDone}/${m.tasksTotal} · ${formatCost(m.totalCost)}`,
+					text: `${statusLabel(phase)} · ${m.tasksDone}/${m.tasksTotal} · ${formatCost(m.totalCost)}`,
 				});
 
 				colonies.delete(colonyId);
@@ -423,14 +503,14 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				pi.sendMessage(
 					{
 						customType: "ant-colony-report",
-						content: `[COLONY_SIGNAL:COMPLETE] [${colonyId}]\n${report}`,
+						content: `[COLONY_SIGNAL:${signalLabel}] [${reportId}]\n${report}`,
 						display: true,
 					},
 					{ triggerTurn: true, deliverAs: "followUp" },
 				);
 
 				pi.events.emit("ant-colony:notify", {
-					msg: `🐜[${colonyId}] Colony ${ok ? "completed" : "failed"}: ${m.tasksDone}/${m.tasksTotal} tasks │ ${formatCost(m.totalCost)}`,
+					msg: `🐜[${colonyIdentityVerbose(colony)}] Colony ${ok ? "completed" : phase.replace(/_/g, " ")}: ${m.tasksDone}/${m.tasksTotal} tasks │ ${formatCost(m.totalCost)}`,
 					level: ok ? "success" : "error",
 				});
 			})
@@ -440,11 +520,14 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				if (colonies.size === 0) {
 					pi.events.emit("ant-colony:clear-ui");
 				}
-				pi.events.emit("ant-colony:notify", { msg: `🐜[${colonyId}] Colony crashed: ${e}`, level: "error" });
+				pi.events.emit("ant-colony:notify", {
+					msg: `🐜[${colonyIdentityVerbose(colony)}] Colony crashed: ${e}`,
+					level: "error",
+				});
 				pi.sendMessage(
 					{
 						customType: "ant-colony-report",
-						content: `[COLONY_SIGNAL:FAILED] [${colonyId}]\n## 🐜 Colony Crashed\n${e}`,
+						content: `[COLONY_SIGNAL:FAILED] [${colonyIdentity(colony)}]\n## 🐜 Colony Crashed\n${e}`,
 						display: true,
 					},
 					{ triggerTurn: true, deliverAs: "followUp" },
@@ -569,18 +652,25 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 						// Show colony selector if multiple are running
 						if (colonies.size > 1) {
-							const ids = [...colonies.keys()];
-							const idx = selectedColonyIdx % ids.length;
-							const selector = ids
-								.map((id, i) => (i === idx ? theme.fg("accent", theme.bold(`[${id}]`)) : theme.fg("muted", id)))
+							const running = [...colonies.values()];
+							const idx = selectedColonyIdx % running.length;
+							const selector = running
+								.map((item, i) => {
+									const label = `[${colonyIdentity(item)}]`;
+									return i === idx ? theme.fg("accent", theme.bold(label)) : theme.fg("muted", label);
+								})
 								.join(" ");
 							lines.push(`  ${selector}  ${theme.fg("dim", "(n = next colony)")}`);
 						}
 
 						lines.push(
-							theme.fg("accent", theme.bold(`  🐜 Colony [${c.id}]`)) + theme.fg("muted", ` │ ${elapsed} │ ${cost}`),
+							theme.fg("accent", theme.bold(`  🐜 Colony [${colonyIdentity(c)}]`)) +
+								theme.fg("muted", ` │ ${elapsed} │ ${cost}`),
 						);
 						lines.push(theme.fg("muted", `  Goal: ${trim(c.goal, w - 8)}`));
+						if (hasStableId(c.identity)) {
+							lines.push(theme.fg("muted", `  Stable ID: ${trim(c.identity.stableId, w - 14)}`));
+						}
 						lines.push(
 							`  ${statusIcon(phase)} ${theme.bold(statusLabel(phase))} │ ${m ? `${m.tasksDone}/${m.tasksTotal}` : "0/0"} │ ${pct}% │ ⚡${activeAnts}`,
 						);
@@ -750,7 +840,6 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 							cachedLines = undefined;
 							cleanup();
 						},
-						// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keymap branch handling for panel controls.
 						handleInput(data: string) {
 							if (matchesKey(data, "escape")) {
 								cleanup();
@@ -758,21 +847,26 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 								return;
 							}
 
-							if (data === "1") {
-								currentTab = "tasks";
-							} else if (data === "2") {
-								currentTab = "streams";
-							} else if (data === "3") {
-								currentTab = "log";
-							} else if (data === "0") {
-								taskFilter = "all";
-							} else if (data.toLowerCase() === "a") {
-								taskFilter = "active";
-							} else if (data.toLowerCase() === "d") {
-								taskFilter = "done";
-							} else if (data.toLowerCase() === "f") {
-								taskFilter = "failed";
-							} else if (data.toLowerCase() === "n") {
+							const tabByKey: Partial<Record<string, "tasks" | "streams" | "log">> = {
+								"1": "tasks",
+								"2": "streams",
+								"3": "log",
+							};
+							const filterByKey: Partial<Record<string, "all" | "active" | "done" | "failed">> = {
+								"0": "all",
+								a: "active",
+								d: "done",
+								f: "failed",
+							};
+							const lower = data.toLowerCase();
+							const nextTab = tabByKey[data];
+							const nextFilter = filterByKey[lower];
+
+							if (nextTab) {
+								currentTab = nextTab;
+							} else if (nextFilter) {
+								taskFilter = nextFilter;
+							} else if (lower === "n") {
 								selectedColonyIdx++;
 							} else {
 								return;
@@ -896,7 +990,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			);
 			if (colonies.size > 0) {
 				for (const colony of colonies.values()) {
-					container.addChild(new Text(theme.fg("muted", `  [${colony.id}] ${colony.goal.slice(0, 65)}`), 0, 0));
+					container.addChild(
+						new Text(theme.fg("muted", `  [${colonyIdentity(colony)}] ${colony.goal.slice(0, 65)}`), 0, 0),
+					);
 				}
 				container.addChild(
 					new Text(
@@ -924,6 +1020,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 		const lines: string[] = [
 			`🐜 ${statusIcon(phase)} ${trim(c.goal, 80)}`,
+			`ID: ${colonyIdentityVerbose(c)}`,
 			`${statusLabel(phase)} │ ${m ? `${m.tasksDone}/${m.tasksTotal} tasks` : "starting"} │ ${pct}% │ ⚡${activeAnts} │ ${m ? formatCost(m.totalCost) : "$0"} │ ${elapsed}`,
 			`${progressBar(progress, 18)} ${pct}%`,
 		];
@@ -953,10 +1050,31 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		}
 		const parts: string[] = [`${colonies.size} colonies running:\n`];
 		for (const colony of colonies.values()) {
-			parts.push(`── [${colony.id}] ──\n${buildColonyStatusText(colony)}\n`);
+			parts.push(`── [${colonyIdentity(colony)}] ──\n${buildColonyStatusText(colony)}\n`);
 		}
 		return parts.join("\n");
 	}
+
+	const activeColonyIdsText = () => [...colonies.values()].map((c) => colonyIdentityVerbose(c)).join(", ");
+
+	const colonyIdCompletions = (prefix: string) => {
+		const items: Array<{ value: string; label: string }> = [];
+		for (const colony of colonies.values()) {
+			if (colony.identity.runtimeId.startsWith(prefix)) {
+				items.push({
+					value: colony.identity.runtimeId,
+					label: `${colony.identity.runtimeId} — ${colony.goal.slice(0, 50)}${hasStableId(colony.identity) ? ` (stable: ${colony.identity.stableId})` : ""}`,
+				});
+			}
+			if (hasStableId(colony.identity) && colony.identity.stableId.startsWith(prefix)) {
+				items.push({
+					value: colony.identity.stableId,
+					label: `${colony.identity.stableId} — runtime ${colony.identity.runtimeId}`,
+				});
+			}
+		}
+		return items;
+	};
 
 	// ═══ Tool: bg_colony_status ═══
 	pi.registerTool({
@@ -1044,7 +1162,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			if (colonies.size === 0) {
 				ctx.ui.notify("No colonies running.", "info");
 			} else {
-				const ids = [...colonies.values()].map((c) => `[${c.id}] ${c.goal.slice(0, 50)}`).join("\n  ");
+				const ids = [...colonies.values()].map((c) => `[${colonyIdentity(c)}] ${c.goal.slice(0, 50)}`).join("\n  ");
 				ctx.ui.notify(`${colonies.size} active ${colonies.size === 1 ? "colony" : "colonies"}:\n  ${ids}`, "info");
 			}
 		},
@@ -1052,14 +1170,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 	// ═══ Command: /colony-status ═══
 	pi.registerCommand("colony-status", {
-		description: "Show current colony progress (optionally specify ID: /colony-status c1)",
+		description: "Show current colony progress (runtime ID c1 or stable ID colony-...)",
 		getArgumentCompletions(prefix) {
-			const items = [...colonies.keys()]
-				.filter((id) => id.startsWith(prefix))
-				.map((id) => {
-					const c = colonies.get(id);
-					return { value: id, label: `${id} — ${c?.goal.slice(0, 50) ?? ""}` };
-				});
+			const items = colonyIdCompletions(prefix);
 			return items.length > 0 ? items : null;
 		},
 		async handler(args, ctx) {
@@ -1071,7 +1184,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			if (idArg) {
 				const colony = resolveColony(idArg);
 				if (!colony) {
-					ctx.ui.notify(`Colony "${idArg}" not found. Active: ${[...colonies.keys()].join(", ")}`, "warning");
+					ctx.ui.notify(`Colony "${idArg}" not found. Active: ${activeColonyIdsText()}`, "warning");
 					return;
 				}
 				ctx.ui.notify(buildColonyStatusText(colony), "info");
@@ -1083,17 +1196,11 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 	// ═══ Command: /colony-stop ═══
 	pi.registerCommand("colony-stop", {
-		description: "Stop a colony (specify ID, or stops all if none given)",
+		description: "Stop a colony (runtime/stable ID), or all if omitted or 'all'",
 		getArgumentCompletions(prefix) {
-			const items = [
-				{ value: "all", label: "all — Stop all running colonies" },
-				...[...colonies.keys()]
-					.filter((id) => id.startsWith(prefix))
-					.map((id) => {
-						const c = colonies.get(id);
-						return { value: id, label: `${id} — ${c?.goal.slice(0, 50) ?? ""}` };
-					}),
-			].filter((i) => i.value.startsWith(prefix));
+			const items = [{ value: "all", label: "all — Stop all running colonies" }, ...colonyIdCompletions(prefix)].filter(
+				(i) => i.value.startsWith(prefix),
+			);
 			return items.length > 0 ? items : null;
 		},
 		async handler(args, ctx) {
@@ -1111,11 +1218,14 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			} else {
 				const colony = resolveColony(idArg);
 				if (!colony) {
-					ctx.ui.notify(`Colony "${idArg}" not found. Active: ${[...colonies.keys()].join(", ")}`, "warning");
+					ctx.ui.notify(`Colony "${idArg}" not found. Active: ${activeColonyIdsText()}`, "warning");
 					return;
 				}
 				colony.abortController.abort();
-				ctx.ui.notify(`🐜[${colony.id}] Abort signal sent. Waiting for ants to finish...`, "warning");
+				ctx.ui.notify(
+					`🐜[${colonyIdentityVerbose(colony)}] Abort signal sent. Waiting for ants to finish...`,
+					"warning",
+				);
 			}
 		},
 	});
@@ -1129,9 +1239,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				return;
 			}
 
-			// If an argument is given, try to match a specific colony ID
+			// If an argument is given, try to match a specific colony ID.
+			// Otherwise resume all resumable colonies by default.
 			const target = args.trim();
-			const toResume = target ? all.filter((r) => r.colonyId === target) : [all[0]];
+			const toResume = target ? all.filter((r) => r.colonyId === target) : all;
 
 			if (toResume.length === 0) {
 				ctx.ui.notify(`Colony "${target}" not found. Resumable: ${all.map((r) => r.colonyId).join(", ")}`, "warning");
@@ -1148,9 +1259,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						modelOverrides: {},
 						modelRegistry: ctx.modelRegistry,
 					},
-					true,
+					{ resume: true, stableIdHint: found.colonyId },
 				);
-				ctx.ui.notify(`🐜[${id}] Resuming: ${found.state.goal.slice(0, 60)}...`, "info");
+				ctx.ui.notify(`🐜[${id}|${found.colonyId}] Resuming: ${found.state.goal.slice(0, 60)}...`, "info");
 			}
 		},
 	});
@@ -1173,5 +1284,6 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			pi.events.emit("ant-colony:clear-ui");
 			colonies.clear();
 		}
+		usageLimitsTracker.dispose();
 	});
 }
