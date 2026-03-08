@@ -1,6 +1,7 @@
 ---
 description: Optimize code for performance
 ---
+
 Optimize the following code for performance. Approach:
 
 1. **Measure first** — Identify the actual bottleneck

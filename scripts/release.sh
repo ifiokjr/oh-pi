@@ -33,7 +33,7 @@ if [[ -n $(git status --porcelain) ]] && [[ -z "$DRY_RUN" ]]; then
 fi
 
 echo "📋 Checking for pending changesets..."
-CHANGESET_COUNT=$(find .changeset -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+CHANGESET_COUNT=$(find .changeset -name '*.md' ! -name 'README.md' 2>/dev/null | wc -l | tr -d ' ')
 if [[ "$CHANGESET_COUNT" -eq 0 ]]; then
   echo "⚠️  No changesets found. Run 'knope document-change' first."
   exit 1
@@ -42,8 +42,10 @@ fi
 echo ""
 echo "🔍 Running CI checks..."
 echo "  → lint"
-pnpm exec biome ci . || { echo "❌ Lint failed"; exit 1; }
+pnpm exec biome ci . || { echo "❌ Biome lint failed"; exit 1; }
+pnpm exec prettier --check '**/*.md' || { echo "❌ Markdown format failed"; exit 1; }
 echo "  → typecheck"
+pnpm --filter @ifi/oh-pi-core build
 pnpm typecheck || { echo "❌ Type check failed"; exit 1; }
 echo "  → test"
 pnpm test || { echo "❌ Tests failed"; exit 1; }

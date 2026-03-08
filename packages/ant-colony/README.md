@@ -1,6 +1,7 @@
 # 🐜 Ant Colony — Multi-Agent Swarm Extension
 
-> A self-organizing multi-agent system modeled after real ant colony ecology. Adaptive concurrency, pheromone communication, zero centralized scheduling.
+> A self-organizing multi-agent system modeled after real ant colony ecology. Adaptive concurrency,
+> pheromone communication, zero centralized scheduling.
 
 ## Architecture
 
@@ -61,19 +62,21 @@ Ctrl+Shift+A                Open colony details panel
 
 Ants communicate indirectly through pheromones (stigmergy), not direct messages:
 
-| Type | Released By | Meaning |
-|------|-------------|---------|
-| discovery | Scout | Discovered code structure, dependencies |
-| progress | Worker | Completed changes, file modifications |
-| warning | Soldier | Quality issues, conflict risks |
-| completion | Worker | Task completion marker |
-| dependency | Any | File dependency relationships |
+| Type       | Released By | Meaning                                 |
+| ---------- | ----------- | --------------------------------------- |
+| discovery  | Scout       | Discovered code structure, dependencies |
+| progress   | Worker      | Completed changes, file modifications   |
+| warning    | Soldier     | Quality issues, conflict risks          |
+| completion | Worker      | Task completion marker                  |
+| dependency | Any         | File dependency relationships           |
 
-Pheromones decay exponentially (10-minute half-life), preventing stale info from misleading subsequent ants.
+Pheromones decay exponentially (10-minute half-life), preventing stale info from misleading
+subsequent ants.
 
 ## File Locking
 
 Each task declares the files it operates on. The queen guarantees:
+
 - Only one ant modifies a given file at any time
 - Conflicting tasks are automatically marked `blocked` and resume when locks release
 
@@ -102,15 +105,15 @@ npx oh-pi  # Select "Full Power" preset
 
 ## Module Reference
 
-| File | Lines | Responsibility |
-|------|-------|----------------|
-| `types.ts` | ~150 | Type system: ants, tasks, pheromones, colony state |
-| `nest.ts` | ~500 | Nest: file-system shared state, atomic R/W, pheromone decay |
-| `concurrency.ts` | ~120 | Adaptive concurrency: system sampling, exploration/steady-state adjustment |
-| `spawner.ts` | ~370 | Ant spawning: session management, prompt construction, output parsing |
-| `queen.ts` | ~1000 | Queen scheduling: lifecycle, task waves, multi-round iteration |
-| `index.ts` | ~900 | Extension entry: tool/shortcut registration, TUI rendering |
-| `deps.ts` | ~140 | Lightweight import graph for dependency-aware scheduling |
-| `parser.ts` | ~180 | Sub-task and pheromone extraction from ant output |
-| `prompts.ts` | ~90 | Per-caste system prompts and prompt builder |
-| `ui.ts` | ~140 | Formatting helpers for status bar, overlay, and reports |
+| File             | Lines | Responsibility                                                             |
+| ---------------- | ----- | -------------------------------------------------------------------------- |
+| `types.ts`       | ~150  | Type system: ants, tasks, pheromones, colony state                         |
+| `nest.ts`        | ~500  | Nest: file-system shared state, atomic R/W, pheromone decay                |
+| `concurrency.ts` | ~120  | Adaptive concurrency: system sampling, exploration/steady-state adjustment |
+| `spawner.ts`     | ~370  | Ant spawning: session management, prompt construction, output parsing      |
+| `queen.ts`       | ~1000 | Queen scheduling: lifecycle, task waves, multi-round iteration             |
+| `index.ts`       | ~900  | Extension entry: tool/shortcut registration, TUI rendering                 |
+| `deps.ts`        | ~140  | Lightweight import graph for dependency-aware scheduling                   |
+| `parser.ts`      | ~180  | Sub-task and pheromone extraction from ant output                          |
+| `prompts.ts`     | ~90   | Per-caste system prompts and prompt builder                                |
+| `ui.ts`          | ~140  | Formatting helpers for status bar, overlay, and reports                    |

@@ -2,7 +2,8 @@
 
 ## Project
 
-oh-pi is a monorepo of pi-coding-agent extensions, themes, prompts, skills, and a TUI configurator. All packages live under `packages/` and share the same version.
+oh-pi is a monorepo of pi-coding-agent extensions, themes, prompts, skills, and a TUI configurator.
+All packages live under `packages/` and share the same version.
 
 ## Code Standards
 
@@ -21,6 +22,7 @@ knope document-change
 ```
 
 Choose the change type:
+
 - **`major`** — Breaking API/behavior changes
 - **`minor`** — New features, new extensions, new config options
 - **`patch`** — Bug fixes, documentation updates, internal refactors
@@ -29,14 +31,19 @@ The changeset file is committed alongside your code changes. PRs without a chang
 
 ## Release Process
 
-Releases are done locally:
+Releases are done locally in two steps:
 
 ```bash
+# Step 1: Release — bump versions, update CHANGELOG, tag, push
 ./scripts/release.sh        # Full release (lint → typecheck → test → build → release)
 ./scripts/release.sh --dry-run  # Preview what would happen
+
+# Step 2: Publish — build and push all packages to npm
+knope publish
 ```
 
-This bumps all package versions in lockstep, updates `CHANGELOG.md`, creates a git tag, and pushes to GitHub.
+This bumps all package versions in lockstep, updates `CHANGELOG.md`, creates a git tag, pushes to
+GitHub, and publishes all 9 packages to npm under the `@ifi` scope.
 
 ## Project Structure
 
@@ -57,7 +64,8 @@ packages/
 
 - **Pi extensions ship raw `.ts`** — pi loads them via jiti, no compilation needed
 - **Core and CLI are compiled** — they produce `dist/` via tsc
-- **Imports**: CLI imports from `@ifi/oh-pi-core`, not relative paths. Extensions import from pi SDK packages.
+- **Imports**: CLI imports from `@ifi/oh-pi-core`, not relative paths. Extensions import from pi SDK
+  packages.
 - **Chinese text in regex patterns and locales.ts is intentional** — bilingual parsing support
 - **`noDefaultExport: off`** — extensions use default exports as their API pattern
 - **Test files**: Relaxed lint rules (no explicit any, no unused vars, etc.)

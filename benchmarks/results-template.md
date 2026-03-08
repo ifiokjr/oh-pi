@@ -24,14 +24,14 @@
 
 ## Comparison Results Table (copy and fill)
 
-| Scenario ID | Level | Mode | Success Rate | Avg Duration | Avg Cost | Rollback Rate | Notes |
-|---|---|---|---:|---:|---:|---:|---|
-| S-01 | S | Single agent |  |  |  |  |  |
-| S-01 | S | Colony |  |  |  |  |  |
-| M-01 | M | Single agent |  |  |  |  |  |
-| M-01 | M | Colony |  |  |  |  |  |
-| L-01 | L | Single agent |  |  |  |  |  |
-| L-01 | L | Colony |  |  |  |  |  |
+| Scenario ID | Level | Mode         | Success Rate | Avg Duration | Avg Cost | Rollback Rate | Notes |
+| ----------- | ----- | ------------ | -----------: | -----------: | -------: | ------------: | ----- |
+| S-01        | S     | Single agent |              |              |          |               |       |
+| S-01        | S     | Colony       |              |              |          |               |       |
+| M-01        | M     | Single agent |              |              |          |               |       |
+| M-01        | M     | Colony       |              |              |          |               |       |
+| L-01        | L     | Single agent |              |              |          |               |       |
+| L-01        | L     | Colony       |              |              |          |               |       |
 
 ---
 

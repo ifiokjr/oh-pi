@@ -22,16 +22,13 @@ jobs:
 
       - name: Check for changeset
         run: |
-          # Count .md files in .changeset/ (excluding README)
           CHANGESETS=$(find .changeset -name '*.md' ! -name 'README.md' 2>/dev/null | wc -l | tr -d ' ')
           if [ "$CHANGESETS" -eq 0 ]; then
             echo "::error::No changeset found. Every PR must include a changeset."
-            echo ""
             echo "Run 'knope document-change' locally to create one, then commit the file."
-            echo "See: https://knope.tech/tutorials/bot-workflow/"
             exit 1
           fi
-          echo "✅ Found $CHANGESET changeset(s)"
+          echo "✅ Found $CHANGESETS changeset(s)"
 
   lint:
     name: Lint & Format
@@ -50,6 +47,9 @@ jobs:
 
       - name: Biome check (lint + format)
         run: pnpm exec biome ci .
+
+      - name: Markdown format check
+        run: pnpm exec prettier --check '**/*.md'
 
   typecheck:
     name: Type Check (tsgo)

@@ -13,6 +13,7 @@
 ## S-Tier Scenarios
 
 ### S-01
+
 - Title:
 - Background:
 - Input:
@@ -20,6 +21,7 @@
 - Notes:
 
 ### S-02
+
 - Title:
 - Background:
 - Input:
@@ -31,6 +33,7 @@
 ## M-Tier Scenarios
 
 ### M-01
+
 - Title:
 - Background:
 - Input:
@@ -38,6 +41,7 @@
 - Notes:
 
 ### M-02
+
 - Title:
 - Background:
 - Input:
@@ -49,6 +53,7 @@
 ## L-Tier Scenarios
 
 ### L-01
+
 - Title:
 - Background:
 - Input:
@@ -56,6 +61,7 @@
 - Notes:
 
 ### L-02
+
 - Title:
 - Background:
 - Input:

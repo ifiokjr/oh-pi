@@ -1,6 +1,9 @@
 ---
 name: liquid-glass
-description: Apple Liquid Glass design system. Use when building UI with translucent, depth-aware glass morphism following Apple's design language. Provides CSS tokens, component patterns, dark/light mode, and animation specs.
+description:
+  Apple Liquid Glass design system. Use when building UI with translucent, depth-aware glass
+  morphism following Apple's design language. Provides CSS tokens, component patterns, dark/light
+  mode, and animation specs.
 ---
 
 # Liquid Glass Design System
@@ -20,21 +23,21 @@ Apple-inspired translucent glass UI with depth, refraction, and ambient light re
 Import the token file in your CSS:
 
 ```css
-@import 'references/tokens.css';
+@import "references/tokens.css";
 ```
 
 ## CSS Tokens Reference
 
 All tokens are defined in `references/tokens.css`. Key categories:
 
-| Category | Prefix | Example |
-|---|---|---|
-| Glass backgrounds | `--lg-bg-*` | `--lg-bg-primary` |
-| Blur | `--lg-blur-*` | `--lg-blur-md` |
-| Borders | `--lg-border-*` | `--lg-border-color` |
-| Shadows | `--lg-shadow-*` | `--lg-shadow-elevated` |
-| Radius | `--lg-radius-*` | `--lg-radius-lg` |
-| Animation | `--lg-duration-*` | `--lg-duration-normal` |
+| Category          | Prefix            | Example                |
+| ----------------- | ----------------- | ---------------------- |
+| Glass backgrounds | `--lg-bg-*`       | `--lg-bg-primary`      |
+| Blur              | `--lg-blur-*`     | `--lg-blur-md`         |
+| Borders           | `--lg-border-*`   | `--lg-border-color`    |
+| Shadows           | `--lg-shadow-*`   | `--lg-shadow-elevated` |
+| Radius            | `--lg-radius-*`   | `--lg-radius-lg`       |
+| Animation         | `--lg-duration-*` | `--lg-duration-normal` |
 
 ## Component Patterns
 
@@ -103,12 +106,17 @@ All tokens are defined in `references/tokens.css`. Key categories:
 
 ## Dark / Light Mode
 
-Tokens auto-switch via `prefers-color-scheme`. Light mode uses white-tinted glass; dark mode uses dark-tinted glass with higher blur to maintain readability.
+Tokens auto-switch via `prefers-color-scheme`. Light mode uses white-tinted glass; dark mode uses
+dark-tinted glass with higher blur to maintain readability.
 
 ```css
 /* Force a mode on a subtree */
-.light-glass { color-scheme: light; }
-.dark-glass  { color-scheme: dark; }
+.light-glass {
+  color-scheme: light;
+}
+.dark-glass {
+  color-scheme: dark;
+}
 ```
 
 ## Animations
@@ -118,8 +126,14 @@ Use spring-based easing for physical feel:
 ```css
 /* Entry */
 @keyframes glass-enter {
-  from { opacity: 0; transform: scale(0.95) translateY(8px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .glass-animate-in {

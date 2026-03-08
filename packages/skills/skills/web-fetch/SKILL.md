@@ -1,6 +1,8 @@
 ---
 name: web-fetch
-description: Fetch a web page and extract readable text content. Use when user needs to retrieve or read a web page.
+description:
+  Fetch a web page and extract readable text content. Use when user needs to retrieve or read a web
+  page.
 ---
 
 # web-fetch

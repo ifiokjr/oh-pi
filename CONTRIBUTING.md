@@ -16,14 +16,14 @@ pnpm test
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):
 
-| Prefix | Purpose |
-|--------|---------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation changes |
-| `refactor` | Refactor (no behavior change) |
-| `test` | Add or modify tests |
-| `chore` | Build, dependency, and other chores |
+| Prefix     | Purpose                             |
+| ---------- | ----------------------------------- |
+| `feat`     | New feature                         |
+| `fix`      | Bug fix                             |
+| `docs`     | Documentation changes               |
+| `refactor` | Refactor (no behavior change)       |
+| `test`     | Add or modify tests                 |
+| `chore`    | Build, dependency, and other chores |
 
 Examples:
 
@@ -75,4 +75,5 @@ Use the [Issue templates](https://github.com/telagod/oh-pi/issues/new/choose) an
 
 ## License
 
-By submitting a contribution, you agree that your code will be released under the [MIT](./LICENSE) license.
+By submitting a contribution, you agree that your code will be released under the [MIT](./LICENSE)
+license.

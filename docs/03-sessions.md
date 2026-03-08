@@ -2,7 +2,8 @@
 
 ## 1. Session Storage
 
-Sessions are stored as JSONL (JSON Lines) files using a tree structure. Each entry has an `id` and `parentId`, supporting in-place branching.
+Sessions are stored as JSONL (JSON Lines) files using a tree structure. Each entry has an `id` and
+`parentId`, supporting in-place branching.
 
 ### File Location
 
@@ -32,12 +33,19 @@ pi --session <path>    # Use specific session file or ID
 ### SessionHeader (first line, not part of tree)
 
 ```json
-{"type":"session","version":3,"id":"uuid","timestamp":"...","cwd":"/path"}
+{
+  "type": "session",
+  "version": 3,
+  "id": "uuid",
+  "timestamp": "...",
+  "cwd": "/path"
+}
 ```
 
 ### SessionMessageEntry (conversation messages)
 
 Contains an `AgentMessage`, types include:
+
 - `UserMessage` — User message
 - `AssistantMessage` — Assistant reply (with text/thinking/toolCall content blocks)
 - `ToolResultMessage` — Tool execution result
@@ -47,12 +55,19 @@ Contains an `AgentMessage`, types include:
 - `CompactionSummaryMessage` — Compaction summary
 
 ### ModelChangeEntry — Model switch record
+
 ### ThinkingLevelChangeEntry — Thinking level change record
+
 ### CompactionEntry — Context compaction record
+
 ### BranchSummaryEntry — Branch switch summary
+
 ### CustomEntry — Extension state persistence (not in LLM context)
+
 ### CustomMessageEntry — Extension message (participates in LLM context)
+
 ### LabelEntry — Bookmark/label
+
 ### SessionInfoEntry — Session metadata (display name, etc.)
 
 ## 3. Tree Structure & Branching
@@ -67,15 +82,16 @@ Contains an `AgentMessage`, types include:
 
 Switch branches within the same file, optionally generating summaries.
 
-| Key | Action |
-|-----|--------|
-| ↑/↓ | Navigate (depth-first) |
-| Enter | Select node |
-| Escape | Cancel |
+| Key    | Action                     |
+| ------ | -------------------------- |
+| ↑/↓    | Navigate (depth-first)     |
+| Enter  | Select node                |
+| Escape | Cancel                     |
 | Ctrl+U | Toggle: user messages only |
-| Ctrl+O | Toggle: show all |
+| Ctrl+O | Toggle: show all           |
 
 Selection behavior:
+
 - Select a user message → leaf set to its parent, message text placed in editor
 - Select a non-user message → leaf set to selected node, editor empty
 - Select root user message → leaf reset to null, start from beginning
@@ -84,11 +100,11 @@ Selection behavior:
 
 Extract the current branch path into a new file.
 
-| Feature | /fork | /tree |
-|---------|-------|-------|
-| View | Flat user message list | Full tree structure |
-| Action | Extract to new file | Switch leaf within same file |
-| Summary | None | Optional |
+| Feature | /fork                  | /tree                        |
+| ------- | ---------------------- | ---------------------------- |
+| View    | Flat user message list | Full tree structure          |
+| Action  | Extract to new file    | Switch leaf within same file |
+| Summary | None                   | Optional                     |
 
 ## 4. Context Compaction
 
@@ -112,20 +128,24 @@ Or manually: `/compact [instructions]`
 
 ```markdown
 ## Goal
+
 [User's goal]
 
 ## Constraints & Preferences
+
 - [User requirements]
 
 ## Progress
+
 ### Done / In Progress / Blocked
 
 ## Key Decisions
+
 ## Next Steps
+
 ## Critical Context
 
-<read-files>...</read-files>
-<modified-files>...</modified-files>
+<read-files>...</read-files> <modified-files>...</modified-files>
 ```
 
 ### Configuration
@@ -144,6 +164,7 @@ Or manually: `/compact [instructions]`
 
 When switching branches via `/tree`, you can optionally summarize the abandoned branch.
 
-Flow: find common ancestor → collect entries from old leaf to ancestor → LLM generates summary → append BranchSummaryEntry.
+Flow: find common ancestor → collect entries from old leaf to ancestor → LLM generates summary →
+append BranchSummaryEntry.
 
 File operation tracking accumulates across multiple compaction/branch summary cycles.

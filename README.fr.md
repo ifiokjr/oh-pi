@@ -29,13 +29,17 @@ npx oh-pi    # tout configurer
 pi           # commencer à coder
 ```
 
-oh-pi détecte automatiquement votre environnement, vous guide dans une TUI moderne, puis écrit `~/.pi/agent/`.
+oh-pi détecte automatiquement votre environnement, vous guide dans une TUI moderne, puis écrit
+`~/.pi/agent/`.
 
-Déjà configuré ? oh-pi détecte les fichiers existants et propose une **sauvegarde avant écrasement**.
+Déjà configuré ? oh-pi détecte les fichiers existants et propose une **sauvegarde avant
+écrasement**.
 
 ## Valeur en 2 minutes
 
-pi-coding-agent est puissant par défaut, mais la configuration manuelle (fournisseurs, thèmes, extensions, skills, prompts) prend du temps. oh-pi compresse cette phase en moins d'une minute — puis ajoute la colonie pour les tâches complexes.
+pi-coding-agent est puissant par défaut, mais la configuration manuelle (fournisseurs, thèmes,
+extensions, skills, prompts) prend du temps. oh-pi compresse cette phase en moins d'une minute —
+puis ajoute la colonie pour les tâches complexes.
 
 - [`docs/DEMO-SCRIPT.md`](./docs/DEMO-SCRIPT.md) — démo rapide en 2 minutes
 - [`ROADMAP.md`](./ROADMAP.md) — positionnement, jalons, métriques
@@ -43,7 +47,8 @@ pi-coding-agent est puissant par défaut, mais la configuration manuelle (fourni
 
 ## Quand ne pas utiliser la colonie
 
-Utilisez le flux pi classique (sans colonie) si la tâche est petite, très exploratoire, ou nécessite un pilotage humain continu.
+Utilisez le flux pi classique (sans colonie) si la tâche est petite, très exploratoire, ou nécessite
+un pilotage humain continu.
 
 ## Ce que vous obtenez
 
@@ -69,29 +74,31 @@ Utilisez le flux pi classique (sans colonie) si la tâche est petite, très expl
 
 ## Modes de configuration
 
-| Mode | Étapes | Pour |
-|------|--------|------|
-| 🚀 **Rapide** | 3 | Choisir fournisseur → entrer clé → terminé |
-| 📦 **Préréglage** | 2 | Choisir un profil de rôle → entrer clé |
-| 🎛️ **Personnalisé** | 6 | Tout choisir soi-même |
+| Mode                | Étapes | Pour                                       |
+| ------------------- | ------ | ------------------------------------------ |
+| 🚀 **Rapide**       | 3      | Choisir fournisseur → entrer clé → terminé |
+| 📦 **Préréglage**   | 2      | Choisir un profil de rôle → entrer clé     |
+| 🎛️ **Personnalisé** | 6      | Tout choisir soi-même                      |
 
 ### Préréglages
 
-| | Inclut |
-|---|--------|
+|                | Inclut                                   |
+| -------------- | ---------------------------------------- |
 | 🟢 **Complet** | Toutes extensions + colonie + bg-process |
-| 🔵 **Propre** | Aucune extension |
-| 🟣 **Colonie** | Colonie uniquement |
+| 🔵 **Propre**  | Aucune extension                         |
+| 🟣 **Colonie** | Colonie uniquement                       |
 
 ### Fournisseurs
 
-Anthropic · OpenAI · Google Gemini · Groq · OpenRouter · xAI · Mistral · [FOXNIO](https://www.foxnio.com) (fournisseur Claude d'intérêt public recommandé)
+Anthropic · OpenAI · Google Gemini · Groq · OpenRouter · xAI · Mistral ·
+[FOXNIO](https://www.foxnio.com) (fournisseur Claude d'intérêt public recommandé)
 
 Détection automatique des clés API depuis les variables d'environnement.
 
 ## 🐜 Colonie de fourmis
 
-La fonctionnalité phare. Un essaim multi-agents modelé sur l'écologie réelle des fourmis — profondément intégré au SDK pi.
+La fonctionnalité phare. Un essaim multi-agents modelé sur l'écologie réelle des fourmis —
+profondément intégré au SDK pi.
 
 ```
 Vous : "Refactorer l'auth des sessions vers JWT"
@@ -118,29 +125,34 @@ pi (processus principal)
                  └─ Auth et registre de modèles partagés
 ```
 
-**Mode interactif :** La colonie tourne en arrière-plan — vous continuez à discuter. Un widget en temps réel affiche la progression, et les résultats sont auto-injectés à la fin.
+**Mode interactif :** La colonie tourne en arrière-plan — vous continuez à discuter. Un widget en
+temps réel affiche la progression, et les résultats sont auto-injectés à la fin.
 
 **Mode print (`pi -p`) :** La colonie tourne de manière synchrone, bloque jusqu'à la fin.
 
 ### Pourquoi des fourmis ?
 
-Les vraies colonies de fourmis résolvent des problèmes complexes sans contrôle central. Chaque fourmi suit des règles simples, communique par **pistes de phéromones**, et la colonie s'auto-organise. oh-pi reproduit directement ce modèle :
+Les vraies colonies de fourmis résolvent des problèmes complexes sans contrôle central. Chaque
+fourmi suit des règles simples, communique par **pistes de phéromones**, et la colonie
+s'auto-organise. oh-pi reproduit directement ce modèle :
 
-| Fourmis réelles | oh-pi |
-|-----------------|-------|
-| L'éclaireuse trouve la nourriture | L'éclaireuse scanne le code, identifie les cibles |
-| Piste de phéromones | `.ant-colony/pheromone.jsonl` — découvertes partagées |
-| L'ouvrière transporte la nourriture | L'ouvrière exécute la tâche sur les fichiers assignés |
-| Le soldat garde le nid | Le soldat révise les changements, demande des corrections |
-| Plus de nourriture → plus de fourmis | Plus de tâches → concurrence plus élevée (auto-adaptée) |
-| Les phéromones s'évaporent | Demi-vie de 10 min — les infos obsolètes s'estompent |
+| Fourmis réelles                      | oh-pi                                                     |
+| ------------------------------------ | --------------------------------------------------------- |
+| L'éclaireuse trouve la nourriture    | L'éclaireuse scanne le code, identifie les cibles         |
+| Piste de phéromones                  | `.ant-colony/pheromone.jsonl` — découvertes partagées     |
+| L'ouvrière transporte la nourriture  | L'ouvrière exécute la tâche sur les fichiers assignés     |
+| Le soldat garde le nid               | Le soldat révise les changements, demande des corrections |
+| Plus de nourriture → plus de fourmis | Plus de tâches → concurrence plus élevée (auto-adaptée)   |
+| Les phéromones s'évaporent           | Demi-vie de 10 min — les infos obsolètes s'estompent      |
 
 ### UI en temps réel
 
 En mode interactif, la colonie affiche la progression en direct :
 
-- **Barre de statut** — footer compact avec métriques réelles : tâches terminées, fourmis actives, appels d'outils, tokens de sortie, coût, durée
-- **Ctrl+Shift+A** — panneau de détails en overlay avec liste des tâches, flux des fourmis actives et journal de la colonie
+- **Barre de statut** — footer compact avec métriques réelles : tâches terminées, fourmis actives,
+  appels d'outils, tokens de sortie, coût, durée
+- **Ctrl+Shift+A** — panneau de détails en overlay avec liste des tâches, flux des fourmis actives
+  et journal de la colonie
 - **Notification** — résumé à la fin
 
 Utilisez `/colony-stop` pour arrêter une colonie en cours.
@@ -149,17 +161,17 @@ Utilisez `/colony-stop` pour arrêter une colonie en cours.
 
 La colonie communique via des signaux structurés, pour éviter toute supposition côté modèle :
 
-| Signal | Signification |
-|--------|---------------|
-| `COLONY_SIGNAL:LAUNCHED` | Colonie démarrée en arrière-plan |
-| `COLONY_SIGNAL:SCOUTING` | Vague d'éclaireuses en exploration/planification |
-| `COLONY_SIGNAL:PLANNING_RECOVERY` | Boucle de récupération du plan en cours |
-| `COLONY_SIGNAL:WORKING` | Exécution des tâches par les ouvrières |
-| `COLONY_SIGNAL:REVIEWING` | Revue qualité par les soldats |
-| `COLONY_SIGNAL:TASK_DONE` | Tâche terminée (jalon de progression) |
-| `COLONY_SIGNAL:COMPLETE` | Mission terminée, rapport injecté |
-| `COLONY_SIGNAL:FAILED` | Mission échouée avec diagnostic |
-| `COLONY_SIGNAL:BUDGET_EXCEEDED` | Budget maximal atteint |
+| Signal                            | Signification                                    |
+| --------------------------------- | ------------------------------------------------ |
+| `COLONY_SIGNAL:LAUNCHED`          | Colonie démarrée en arrière-plan                 |
+| `COLONY_SIGNAL:SCOUTING`          | Vague d'éclaireuses en exploration/planification |
+| `COLONY_SIGNAL:PLANNING_RECOVERY` | Boucle de récupération du plan en cours          |
+| `COLONY_SIGNAL:WORKING`           | Exécution des tâches par les ouvrières           |
+| `COLONY_SIGNAL:REVIEWING`         | Revue qualité par les soldats                    |
+| `COLONY_SIGNAL:TASK_DONE`         | Tâche terminée (jalon de progression)            |
+| `COLONY_SIGNAL:COMPLETE`          | Mission terminée, rapport injecté                |
+| `COLONY_SIGNAL:FAILED`            | Mission échouée avec diagnostic                  |
+| `COLONY_SIGNAL:BUDGET_EXCEEDED`   | Budget maximal atteint                           |
 
 ### Contrôle des tours
 
@@ -169,19 +181,22 @@ Chaque fourmi a un budget strict de tours pour éviter les exécutions incontrô
 
 ### Sélection des modèles
 
-La colonie détecte automatiquement les modèles disponibles et laisse le LLM choisir le meilleur par rôle :
+La colonie détecte automatiquement les modèles disponibles et laisse le LLM choisir le meilleur par
+rôle :
 
-| Rôle | Stratégie | Exemple |
-|------|-----------|---------|
-| Éclaireuse | Rapide & économique — lecture seule | `claude-haiku-4-5`, `gpt-4o-mini` |
-| Ouvrière | Capable — modifie le code | `claude-sonnet-4-0`, `gpt-4o` |
-| Soldat | Même que ouvrière ou légèrement moins cher | `claude-sonnet-4-0` |
+| Rôle       | Stratégie                                  | Exemple                           |
+| ---------- | ------------------------------------------ | --------------------------------- |
+| Éclaireuse | Rapide & économique — lecture seule        | `claude-haiku-4-5`, `gpt-4o-mini` |
+| Ouvrière   | Capable — modifie le code                  | `claude-sonnet-4-0`, `gpt-4o`     |
+| Soldat     | Même que ouvrière ou légèrement moins cher | `claude-sonnet-4-0`               |
 
 Omettez les modèles pour utiliser le modèle de session actuel pour chaque fourmi.
 
 ### Rapport de coûts
 
-La colonie suit le coût par fourmi et le total, rapporté dans le résumé final. **Le coût n'interrompt jamais l'exécution** — les limites de tours et le contrôle de concurrence gèrent les ressources.
+La colonie suit le coût par fourmi et le total, rapporté dans le résumé final. **Le coût
+n'interrompt jamais l'exécution** — les limites de tours et le contrôle de concurrence gèrent les
+ressources.
 
 ### Déclenchement automatique
 
@@ -206,7 +221,8 @@ Tâches terminées   →  réduire au minimum
 
 ### Sécurité des fichiers
 
-Une fourmi par fichier. Toujours. Les tâches en conflit sont automatiquement bloquées et reprennent quand les verrous sont libérés.
+Une fourmi par fichier. Toujours. Les tâches en conflit sont automatiquement bloquées et reprennent
+quand les verrous sont libérés.
 
 ## Compétences
 
@@ -216,11 +232,11 @@ oh-pi embarque 11 compétences en trois catégories.
 
 Scripts Node.js sans dépendances — aucune clé API requise.
 
-| Compétence | Fonction |
-|------------|----------|
-| `context7` | Interroger la doc à jour des bibliothèques via Context7 API |
-| `web-search` | Recherche DuckDuckGo (gratuit, sans clé) |
-| `web-fetch` | Extraire le contenu d'une page web en texte brut |
+| Compétence   | Fonction                                                    |
+| ------------ | ----------------------------------------------------------- |
+| `context7`   | Interroger la doc à jour des bibliothèques via Context7 API |
+| `web-search` | Recherche DuckDuckGo (gratuit, sans clé)                    |
+| `web-fetch`  | Extraire le contenu d'une page web en texte brut            |
 
 ```bash
 # Exemples
@@ -231,14 +247,15 @@ Scripts Node.js sans dépendances — aucune clé API requise.
 
 ### 🎨 Compétences design UI
 
-Spécifications complètes avec tokens CSS, exemples de composants et principes de design. L'agent les charge quand vous demandez un style visuel spécifique.
+Spécifications complètes avec tokens CSS, exemples de composants et principes de design. L'agent les
+charge quand vous demandez un style visuel spécifique.
 
-| Compétence | Style | Préfixe CSS |
-|------------|-------|-------------|
-| `liquid-glass` | Verre translucide Apple WWDC 2025 | `--lg-` |
-| `glassmorphism` | Flou givré + transparence | `--glass-` |
-| `claymorphism` | Surfaces 3D douces en argile | `--clay-` |
-| `neubrutalism` | Bordures épaisses, ombres décalées, contraste élevé | `--nb-` |
+| Compétence      | Style                                               | Préfixe CSS |
+| --------------- | --------------------------------------------------- | ----------- |
+| `liquid-glass`  | Verre translucide Apple WWDC 2025                   | `--lg-`     |
+| `glassmorphism` | Flou givré + transparence                           | `--glass-`  |
+| `claymorphism`  | Surfaces 3D douces en argile                        | `--clay-`   |
+| `neubrutalism`  | Bordures épaisses, ombres décalées, contraste élevé | `--nb-`     |
 
 Chacune inclut `references/tokens.css` avec des propriétés CSS personnalisées prêtes à l'emploi.
 
@@ -249,23 +266,23 @@ pi charge la compétence liquid-glass → applique les tokens --lg-, effets de v
 
 ### 🔄 Compétences workflow
 
-| Compétence | Fonction |
-|------------|----------|
-| `quick-setup` | Détecter le type de projet, générer la config .pi/ |
+| Compétence     | Fonction                                             |
+| -------------- | ---------------------------------------------------- |
+| `quick-setup`  | Détecter le type de projet, générer la config .pi/   |
 | `debug-helper` | Analyse d'erreurs, interprétation de logs, profilage |
-| `git-workflow` | Branches, commits, PRs, résolution de conflits |
-| `ant-colony` | Commandes et stratégies de gestion de colonie |
+| `git-workflow` | Branches, commits, PRs, résolution de conflits       |
+| `ant-colony`   | Commandes et stratégies de gestion de colonie        |
 
 ## Thèmes
 
-| | |
-|---|---|
-| 🌙 **oh-pi Dark** | Cyan + violet, contraste élevé |
-| 🌙 **Cyberpunk** | Magenta néon + cyan électrique |
-| 🌙 **Nord** | Palette bleu arctique |
-| 🌙 **Catppuccin Mocha** | Pastel sur fond sombre |
-| 🌙 **Tokyo Night** | Crépuscule bleu + violet |
-| 🌙 **Gruvbox Dark** | Tons chauds rétro |
+|                         |                                |
+| ----------------------- | ------------------------------ |
+| 🌙 **oh-pi Dark**       | Cyan + violet, contraste élevé |
+| 🌙 **Cyberpunk**        | Magenta néon + cyan électrique |
+| 🌙 **Nord**             | Palette bleu arctique          |
+| 🌙 **Catppuccin Mocha** | Pastel sur fond sombre         |
+| 🌙 **Tokyo Night**      | Crépuscule bleu + violet       |
+| 🌙 **Gruvbox Dark**     | Tons chauds rétro              |
 
 ## Modèles de prompts
 
@@ -284,13 +301,13 @@ pi charge la compétence liquid-glass → applique les tokens --lg-, effets de v
 
 ## Modèles AGENTS.md
 
-| Modèle | Focus |
-|--------|-------|
+| Modèle                  | Focus                             |
+| ----------------------- | --------------------------------- |
 | Développeur généraliste | Directives de codage universelles |
-| Développeur full-stack | Frontend + backend + BDD |
-| Chercheur en sécurité | Pentest & audit |
-| Ingénieur Data & IA | MLOps & pipelines |
-| 🐜 Opérateur de colonie | Orchestration multi-agents |
+| Développeur full-stack  | Frontend + backend + BDD          |
+| Chercheur en sécurité   | Pentest & audit                   |
+| Ingénieur Data & IA     | MLOps & pipelines                 |
+| 🐜 Opérateur de colonie | Orchestration multi-agents        |
 
 ## Aussi un paquet Pi
 

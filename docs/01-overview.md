@@ -12,7 +12,9 @@
 
 ### Positioning
 
-Pi is a **minimalist terminal coding agent harness**. Core philosophy: "adapts to your workflow, not the other way around." Extends via TypeScript Extensions, Skills, Prompt Templates, and Themes — no need to fork or modify internals.
+Pi is a **minimalist terminal coding agent harness**. Core philosophy: "adapts to your workflow, not
+the other way around." Extends via TypeScript Extensions, Skills, Prompt Templates, and Themes — no
+need to fork or modify internals.
 
 ### Design Philosophy
 
@@ -41,12 +43,14 @@ npm install -g @mariozechner/pi-coding-agent
 ### Authentication
 
 **API Key:**
+
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 pi
 ```
 
 **Subscription OAuth:**
+
 ```bash
 pi
 /login  # Select provider
@@ -54,13 +58,13 @@ pi
 
 ### Run Modes
 
-| Mode | Launch | Use Case |
-|------|--------|----------|
-| Interactive | `pi` (default) | Full TUI interaction |
-| Print | `pi -p "prompt"` | Single output, then exit |
-| JSON | `pi --mode json "prompt"` | JSON Lines event stream |
-| RPC | `pi --mode rpc` | stdin/stdout JSON protocol, embed in other apps |
-| SDK | TypeScript import | Programmatic embedding |
+| Mode        | Launch                    | Use Case                                        |
+| ----------- | ------------------------- | ----------------------------------------------- |
+| Interactive | `pi` (default)            | Full TUI interaction                            |
+| Print       | `pi -p "prompt"`          | Single output, then exit                        |
+| JSON        | `pi --mode json "prompt"` | JSON Lines event stream                         |
+| RPC         | `pi --mode rpc`           | stdin/stdout JSON protocol, embed in other apps |
+| SDK         | TypeScript import         | Programmatic embedding                          |
 
 ## 3. Built-in Tools
 
@@ -78,35 +82,35 @@ pi --no-tools                      # Disable all built-in tools
 
 ### Subscription (OAuth /login)
 
-| Provider | Description |
-|----------|-------------|
-| Anthropic Claude Pro/Max | Claude series |
-| OpenAI ChatGPT Plus/Pro | GPT + Codex |
-| GitHub Copilot | VS Code integration |
-| Google Gemini CLI | Cloud Code Assist |
-| Google Antigravity | Gemini 3 + Claude + GPT-OSS |
+| Provider                 | Description                 |
+| ------------------------ | --------------------------- |
+| Anthropic Claude Pro/Max | Claude series               |
+| OpenAI ChatGPT Plus/Pro  | GPT + Codex                 |
+| GitHub Copilot           | VS Code integration         |
+| Google Gemini CLI        | Cloud Code Assist           |
+| Google Antigravity       | Gemini 3 + Claude + GPT-OSS |
 
 ### API Key
 
-| Provider | Environment Variable |
-|----------|---------------------|
-| Anthropic | `ANTHROPIC_API_KEY` |
-| OpenAI | `OPENAI_API_KEY` |
-| Azure OpenAI | `AZURE_OPENAI_API_KEY` |
-| Google Gemini | `GEMINI_API_KEY` |
-| Google Vertex | Application Default Credentials |
-| Amazon Bedrock | `AWS_PROFILE` / `AWS_ACCESS_KEY_ID` |
-| Mistral | `MISTRAL_API_KEY` |
-| Groq | `GROQ_API_KEY` |
-| Cerebras | `CEREBRAS_API_KEY` |
-| xAI | `XAI_API_KEY` |
-| OpenRouter | `OPENROUTER_API_KEY` |
-| Vercel AI Gateway | `AI_GATEWAY_API_KEY` |
-| ZAI | `ZAI_API_KEY` |
-| OpenCode Zen | `OPENCODE_API_KEY` |
-| Hugging Face | `HF_TOKEN` |
-| Kimi For Coding | `KIMI_API_KEY` |
-| MiniMax | `MINIMAX_API_KEY` |
+| Provider          | Environment Variable                |
+| ----------------- | ----------------------------------- |
+| Anthropic         | `ANTHROPIC_API_KEY`                 |
+| OpenAI            | `OPENAI_API_KEY`                    |
+| Azure OpenAI      | `AZURE_OPENAI_API_KEY`              |
+| Google Gemini     | `GEMINI_API_KEY`                    |
+| Google Vertex     | Application Default Credentials     |
+| Amazon Bedrock    | `AWS_PROFILE` / `AWS_ACCESS_KEY_ID` |
+| Mistral           | `MISTRAL_API_KEY`                   |
+| Groq              | `GROQ_API_KEY`                      |
+| Cerebras          | `CEREBRAS_API_KEY`                  |
+| xAI               | `XAI_API_KEY`                       |
+| OpenRouter        | `OPENROUTER_API_KEY`                |
+| Vercel AI Gateway | `AI_GATEWAY_API_KEY`                |
+| ZAI               | `ZAI_API_KEY`                       |
+| OpenCode Zen      | `OPENCODE_API_KEY`                  |
+| Hugging Face      | `HF_TOKEN`                          |
+| Kimi For Coding   | `KIMI_API_KEY`                      |
+| MiniMax           | `MINIMAX_API_KEY`                   |
 
 ### Custom Providers
 

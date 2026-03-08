@@ -41,6 +41,18 @@ command = "git push"
 type = "Release"
 
 [[workflows]]
+name = "publish"
+help_text = "Build and publish all public packages to npm"
+
+[[workflows.steps]]
+type = "Command"
+command = "pnpm build"
+
+[[workflows.steps]]
+type = "Command"
+command = "pnpm -r publish --access public --no-git-checks"
+
+[[workflows]]
 name = "document-change"
 help_text = "Create a new changeset file for the next release"
 

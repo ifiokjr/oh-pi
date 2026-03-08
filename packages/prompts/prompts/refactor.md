@@ -1,6 +1,7 @@
 ---
 description: Refactor code while preserving behavior
 ---
+
 Refactor the following code. Goals:
 
 1. **Preserve behavior** — No functional changes

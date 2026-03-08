@@ -1,6 +1,8 @@
 ---
 name: neubrutalism
-description: Neubrutalism design system skill. Use when building bold UI with thick borders, offset solid shadows, high saturation colors, and minimal border radius.
+description:
+  Neubrutalism design system skill. Use when building bold UI with thick borders, offset solid
+  shadows, high saturation colors, and minimal border radius.
 version: 1.0.0
 tags: [design, css, ui, neubrutalism, brutalism]
 ---
@@ -20,7 +22,7 @@ tags: [design, css, ui, neubrutalism, brutalism]
 Reference: [references/tokens.css](references/tokens.css)
 
 ```css
-@import 'references/tokens.css';
+@import "references/tokens.css";
 
 .nb-card {
   background: var(--nb-yellow);
@@ -33,6 +35,7 @@ Reference: [references/tokens.css](references/tokens.css)
 ## Component Examples
 
 ### Card
+
 ```css
 .nb-card {
   background: var(--nb-white);
@@ -44,6 +47,7 @@ Reference: [references/tokens.css](references/tokens.css)
 ```
 
 ### Button
+
 ```css
 .nb-btn {
   background: var(--nb-yellow);
@@ -54,7 +58,9 @@ Reference: [references/tokens.css](references/tokens.css)
   font-family: var(--nb-font);
   font-weight: var(--nb-font-weight);
   cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition:
+    transform 0.1s,
+    box-shadow 0.1s;
 }
 .nb-btn:hover {
   transform: translate(-2px, -2px);
@@ -67,6 +73,7 @@ Reference: [references/tokens.css](references/tokens.css)
 ```
 
 ### Navbar
+
 ```css
 .nb-nav {
   background: var(--nb-bg);
@@ -79,6 +86,7 @@ Reference: [references/tokens.css](references/tokens.css)
 ```
 
 ### Input
+
 ```css
 .nb-input {
   background: var(--nb-white);
@@ -96,6 +104,7 @@ Reference: [references/tokens.css](references/tokens.css)
 ```
 
 ### Badge
+
 ```css
 .nb-badge {
   background: var(--nb-pink);
@@ -116,7 +125,9 @@ Reference: [references/tokens.css](references/tokens.css)
 - Uppercase sparingly for labels/badges
 
 ```css
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-family: var(--nb-font-heading);
   font-weight: var(--nb-font-weight);
   letter-spacing: var(--nb-letter-spacing);
@@ -135,7 +146,8 @@ body {
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  .nb-btn:hover, .nb-btn:active {
+  .nb-btn:hover,
+  .nb-btn:active {
     transform: none;
   }
 }

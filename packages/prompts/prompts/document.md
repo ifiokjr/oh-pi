@@ -1,6 +1,7 @@
 ---
 description: Generate or update documentation
 ---
+
 Generate documentation for the following code. Include:
 
 1. **Overview** — What it does and why it exists

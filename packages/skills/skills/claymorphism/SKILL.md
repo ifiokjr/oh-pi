@@ -1,6 +1,8 @@
 ---
 name: claymorphism
-description: Claymorphism design system skill. Use when building soft, puffy, clay-like UI components with large radii, dual inner shadows, and offset outer shadows.
+description:
+  Claymorphism design system skill. Use when building soft, puffy, clay-like UI components with
+  large radii, dual inner shadows, and offset outer shadows.
 version: 1.0.0
 tags: [design, css, ui, claymorphism]
 ---
@@ -10,7 +12,8 @@ tags: [design, css, ui, claymorphism]
 ## 3 Core Elements
 
 1. **Large Radius** — Generous `border-radius` (20–50px) for a puffy, inflated look
-2. **Dual Inner Shadows** — Light inset from top-left + dark inset from bottom-right to simulate 3D clay surface
+2. **Dual Inner Shadows** — Light inset from top-left + dark inset from bottom-right to simulate 3D
+   clay surface
 3. **Offset Outer Shadow** — Directional `box-shadow` offset (not centered) to ground the element
 
 ## CSS Tokens
@@ -18,7 +21,7 @@ tags: [design, css, ui, claymorphism]
 Reference: [references/tokens.css](references/tokens.css)
 
 ```css
-@import 'references/tokens.css';
+@import "references/tokens.css";
 
 .clay-card {
   background: var(--clay-bg-card);
@@ -31,6 +34,7 @@ Reference: [references/tokens.css](references/tokens.css)
 ## Component Examples
 
 ### Card
+
 ```css
 .clay-card {
   background: var(--clay-bg-card);
@@ -42,6 +46,7 @@ Reference: [references/tokens.css](references/tokens.css)
 ```
 
 ### Button
+
 ```css
 .clay-btn {
   background: var(--clay-bg-button);
@@ -62,6 +67,7 @@ Reference: [references/tokens.css](references/tokens.css)
 ```
 
 ### Input
+
 ```css
 .clay-input {
   background: var(--clay-bg);
@@ -78,6 +84,7 @@ Reference: [references/tokens.css](references/tokens.css)
 ```
 
 ### Toggle
+
 ```css
 .clay-toggle {
   width: 56px;
@@ -98,14 +105,16 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ## Dark Mode Notes
 
-- Dark mode reduces inner highlight intensity (`rgba(255,255,255,0.05)` vs `0.6`) to avoid glowing artifacts
+- Dark mode reduces inner highlight intensity (`rgba(255,255,255,0.05)` vs `0.6`) to avoid glowing
+  artifacts
 - Outer shadow opacity increases to maintain depth on dark backgrounds
 - Background colors shift to warm dark tones — avoid pure black to preserve the clay feel
 - All dark tokens are defined in `[data-theme="dark"]` in `tokens.css`
 
 ## Accessibility Notes
 
-- Ensure **contrast ratio ≥ 4.5:1** for text — clay backgrounds are muted, verify against `--clay-text`
+- Ensure **contrast ratio ≥ 4.5:1** for text — clay backgrounds are muted, verify against
+  `--clay-text`
 - Provide visible `:focus` outlines since clay shadows alone don't indicate focus
 - Use `prefers-contrast: more` to flatten shadows and increase text contrast
 

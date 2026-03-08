@@ -1,6 +1,8 @@
 ---
 name: quick-setup
-description: Detect project type and generate .pi/ configuration. Use when setting up pi for a new project or when user asks to initialize pi config.
+description:
+  Detect project type and generate .pi/ configuration. Use when setting up pi for a new project or
+  when user asks to initialize pi config.
 ---
 
 # Quick Setup

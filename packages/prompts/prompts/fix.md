@@ -1,6 +1,7 @@
 ---
 description: Fix the current error or bug with minimal changes
 ---
+
 Fix the error/bug described below. Follow these principles:
 
 1. **Minimal change** — Only modify what's necessary to fix the issue

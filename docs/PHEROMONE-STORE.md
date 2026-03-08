@@ -1,6 +1,7 @@
 # PheromoneStore Interface Draft (Phase B)
 
-> Goal: Extract pheromone read/write from `nest.ts` JSONL implementation details. Define a stable interface first, then implement swappable Jsonl/SQLite storage.
+> Goal: Extract pheromone read/write from `nest.ts` JSONL implementation details. Define a stable
+> interface first, then implement swappable Jsonl/SQLite storage.
 
 ## 1. Design Goals
 
@@ -54,11 +55,13 @@ export interface PheromoneStore {
 ## 4. Mapping to Existing Nest Behavior
 
 Current pheromone responsibilities in `nest.ts`:
+
 - `dropPheromone`: Append-write to JSONL
 - `getAllPheromones`: Incremental read + decay + filter + periodic GC
 - `countWarnings/getPheromoneContext`: Query views
 
 Migration strategy:
+
 1. Keep `Nest` public methods unchanged.
 2. Push JSONL details down into `JsonlPheromoneStore`.
 3. `Nest` depends only on the `PheromoneStore` interface.
@@ -66,14 +69,17 @@ Migration strategy:
 ## 5. Migration Steps (Recommended)
 
 ### Step 1: Interface Introduction (no behavior change)
+
 - Create `pi-package/extensions/ant-colony/pheromone-store.ts` (types + factory only).
 - Existing logic stays in `nest.ts` but calls through the adapter layer.
 
 ### Step 2: JSONL Default Implementation
+
 - Extract existing JSONL read/write logic from `nest.ts` into `jsonl-pheromone-store.ts`.
 - Keep existing half-life and threshold defaults; ensure regression tests pass.
 
 ### Step 3: SQLite Experimental Implementation
+
 - Add `sqlite-pheromone-store.ts` (behind feature flag).
 - Compare for the same task set: read latency, file size, GC duration.
 
@@ -81,9 +87,11 @@ Migration strategy:
 
 - Swapping storage implementation doesn't affect queen scheduling results.
 - `planning_recovery` flow behavior is identical in regression tests.
-- No data corruption or significant performance degradation under long sessions (high-frequency writes).
+- No data corruption or significant performance degradation under long sessions (high-frequency
+  writes).
 
 ## 7. Risks & Rollback
 
 - Risk: Incomplete interface abstraction causes `Nest` to leak implementation details.
-- Rollback: Keep JSONL legacy path switch (`PHEROMONE_STORE=jsonl-legacy`) during a transition period.
+- Rollback: Keep JSONL legacy path switch (`PHEROMONE_STORE=jsonl-legacy`) during a transition
+  period.

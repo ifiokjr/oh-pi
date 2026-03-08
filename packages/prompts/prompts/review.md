@@ -1,6 +1,7 @@
 ---
 description: Review code for bugs, security issues, and improvements
 ---
+
 Review the code I'm about to share (or the current file). Focus on:
 
 1. **Bugs & Logic Errors** — Off-by-one, null/undefined, race conditions
@@ -10,6 +11,7 @@ Review the code I'm about to share (or the current file). Focus on:
 5. **Readability** — Naming, complexity, dead code
 
 For each issue found, provide:
+
 - Severity (🔴 Critical / 🟡 Warning / 🔵 Info)
 - Location (file:line)
 - Problem description

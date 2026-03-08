@@ -4,10 +4,10 @@
 
 ### File Locations
 
-| Location | Scope |
-|----------|-------|
-| `~/.pi/agent/settings.json` | Global |
-| `.pi/settings.json` | Project-level (overrides global) |
+| Location                    | Scope                            |
+| --------------------------- | -------------------------------- |
+| `~/.pi/agent/settings.json` | Global                           |
+| `.pi/settings.json`         | Project-level (overrides global) |
 
 Nested objects are merged; project overrides global.
 
@@ -15,63 +15,63 @@ Nested objects are merged; project overrides global.
 
 #### Model & Thinking
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `defaultProvider` | string | - | Default provider |
-| `defaultModel` | string | - | Default model ID |
-| `defaultThinkingLevel` | string | - | off/minimal/low/medium/high/xhigh |
-| `hideThinkingBlock` | boolean | false | Hide thinking output |
-| `thinkingBudgets` | object | - | Token budgets per level |
+| Setting                | Type    | Default | Description                       |
+| ---------------------- | ------- | ------- | --------------------------------- |
+| `defaultProvider`      | string  | -       | Default provider                  |
+| `defaultModel`         | string  | -       | Default model ID                  |
+| `defaultThinkingLevel` | string  | -       | off/minimal/low/medium/high/xhigh |
+| `hideThinkingBlock`    | boolean | false   | Hide thinking output              |
+| `thinkingBudgets`      | object  | -       | Token budgets per level           |
 
 #### UI & Display
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `theme` | string | "dark" | Theme name |
-| `quietStartup` | boolean | false | Hide startup header |
-| `doubleEscapeAction` | string | "tree" | Double-escape action: tree/fork/none |
-| `editorPaddingX` | number | 0 | Editor horizontal padding (0-3) |
-| `autocompleteMaxVisible` | number | 5 | Max autocomplete items visible (3-20) |
-| `showHardwareCursor` | boolean | false | Show terminal cursor |
+| Setting                  | Type    | Default | Description                           |
+| ------------------------ | ------- | ------- | ------------------------------------- |
+| `theme`                  | string  | "dark"  | Theme name                            |
+| `quietStartup`           | boolean | false   | Hide startup header                   |
+| `doubleEscapeAction`     | string  | "tree"  | Double-escape action: tree/fork/none  |
+| `editorPaddingX`         | number  | 0       | Editor horizontal padding (0-3)       |
+| `autocompleteMaxVisible` | number  | 5       | Max autocomplete items visible (3-20) |
+| `showHardwareCursor`     | boolean | false   | Show terminal cursor                  |
 
 #### Compaction
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `compaction.enabled` | true | Enable automatic compaction |
-| `compaction.reserveTokens` | 16384 | Tokens reserved for LLM response |
-| `compaction.keepRecentTokens` | 20000 | Recent tokens to keep |
+| Setting                       | Default | Description                      |
+| ----------------------------- | ------- | -------------------------------- |
+| `compaction.enabled`          | true    | Enable automatic compaction      |
+| `compaction.reserveTokens`    | 16384   | Tokens reserved for LLM response |
+| `compaction.keepRecentTokens` | 20000   | Recent tokens to keep            |
 
 #### Retry
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `retry.enabled` | true | Enable automatic retry |
-| `retry.maxRetries` | 3 | Maximum retry count |
-| `retry.baseDelayMs` | 2000 | Exponential backoff base delay |
-| `retry.maxDelayMs` | 60000 | Maximum server request delay |
+| Setting             | Default | Description                    |
+| ------------------- | ------- | ------------------------------ |
+| `retry.enabled`     | true    | Enable automatic retry         |
+| `retry.maxRetries`  | 3       | Maximum retry count            |
+| `retry.baseDelayMs` | 2000    | Exponential backoff base delay |
+| `retry.maxDelayMs`  | 60000   | Maximum server request delay   |
 
 #### Message Delivery
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `steeringMode` | "one-at-a-time" | Steering message delivery mode |
-| `followUpMode` | "one-at-a-time" | Follow-up message delivery mode |
-| `transport` | "sse" | Transport preference: sse/websocket/auto |
+| Setting        | Default         | Description                              |
+| -------------- | --------------- | ---------------------------------------- |
+| `steeringMode` | "one-at-a-time" | Steering message delivery mode           |
+| `followUpMode` | "one-at-a-time" | Follow-up message delivery mode          |
+| `transport`    | "sse"           | Transport preference: sse/websocket/auto |
 
 #### Terminal & Images
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `terminal.showImages` | true | Display images in terminal |
-| `images.autoResize` | true | Auto-resize to 2000x2000 |
-| `images.blockImages` | false | Block images from being sent to LLM |
+| Setting               | Default | Description                         |
+| --------------------- | ------- | ----------------------------------- |
+| `terminal.showImages` | true    | Display images in terminal          |
+| `images.autoResize`   | true    | Auto-resize to 2000x2000            |
+| `images.blockImages`  | false   | Block images from being sent to LLM |
 
 #### Shell
 
-| Setting | Description |
-|---------|-------------|
-| `shellPath` | Custom shell path |
+| Setting              | Description                                           |
+| -------------------- | ----------------------------------------------------- |
+| `shellPath`          | Custom shell path                                     |
 | `shellCommandPrefix` | Prefix for every bash command (e.g. enabling aliases) |
 
 #### Model Cycling
@@ -82,24 +82,24 @@ Nested objects are merged; project overrides global.
 
 #### Resource Paths
 
-| Setting | Description |
-|---------|-------------|
-| `packages` | npm/git package list |
-| `extensions` | Local extension paths |
-| `skills` | Local skill paths |
-| `prompts` | Local template paths |
-| `themes` | Local theme paths |
+| Setting               | Description                                    |
+| --------------------- | ---------------------------------------------- |
+| `packages`            | npm/git package list                           |
+| `extensions`          | Local extension paths                          |
+| `skills`              | Local skill paths                              |
+| `prompts`             | Local template paths                           |
+| `themes`              | Local theme paths                              |
 | `enableSkillCommands` | Register `/skill:name` commands (default true) |
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `PI_CODING_AGENT_DIR` | Override config directory (default `~/.pi/agent`) |
-| `PI_PACKAGE_DIR` | Override package directory |
-| `PI_SKIP_VERSION_CHECK` | Skip startup version check |
-| `PI_CACHE_RETENTION` | Set to `long` for extended prompt caching |
-| `VISUAL`, `EDITOR` | Ctrl+G external editor |
+| Variable                | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `PI_CODING_AGENT_DIR`   | Override config directory (default `~/.pi/agent`) |
+| `PI_PACKAGE_DIR`        | Override package directory                        |
+| `PI_SKIP_VERSION_CHECK` | Skip startup version check                        |
+| `PI_CACHE_RETENTION`    | Set to `long` for extended prompt caching         |
+| `VISUAL`, `EDITOR`      | Ctrl+G external editor                            |
 
 ---
 
@@ -108,7 +108,12 @@ Nested objects are merged; project overrides global.
 ### Quick Start
 
 ```typescript
-import { AuthStorage, createAgentSession, ModelRegistry, SessionManager } from "@mariozechner/pi-coding-agent";
+import {
+  AuthStorage,
+  createAgentSession,
+  ModelRegistry,
+  SessionManager,
+} from "@mariozechner/pi-coding-agent";
 
 const authStorage = new AuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);
@@ -130,67 +135,67 @@ await session.prompt("What files are in the current directory?");
 
 ### createAgentSession Options
 
-| Option | Description |
-|--------|-------------|
-| `cwd` | Working directory |
-| `agentDir` | Global config directory |
-| `model` | Specify model |
-| `thinkingLevel` | Thinking level |
-| `scopedModels` | Ctrl+P model cycle list |
-| `tools` | Built-in tool set |
-| `customTools` | Custom tools |
-| `resourceLoader` | Resource loader |
-| `sessionManager` | Session manager |
-| `settingsManager` | Settings manager |
-| `authStorage` | Auth storage |
-| `modelRegistry` | Model registry |
+| Option            | Description             |
+| ----------------- | ----------------------- |
+| `cwd`             | Working directory       |
+| `agentDir`        | Global config directory |
+| `model`           | Specify model           |
+| `thinkingLevel`   | Thinking level          |
+| `scopedModels`    | Ctrl+P model cycle list |
+| `tools`           | Built-in tool set       |
+| `customTools`     | Custom tools            |
+| `resourceLoader`  | Resource loader         |
+| `sessionManager`  | Session manager         |
+| `settingsManager` | Settings manager        |
+| `authStorage`     | Auth storage            |
+| `modelRegistry`   | Model registry          |
 
 ### AgentSession API
 
-| Method | Description |
-|--------|-------------|
-| `prompt(text, opts)` | Send prompt |
-| `steer(text)` | Interrupt-style message |
-| `followUp(text)` | Wait-style message |
-| `subscribe(listener)` | Subscribe to events |
-| `setModel(model)` | Switch model |
-| `newSession(opts)` | Create new session |
-| `fork(entryId)` | Fork session |
-| `navigateTree(targetId, opts)` | Tree navigation |
-| `compact(instructions)` | Manual compaction |
-| `abort()` | Abort current operation |
-| `dispose()` | Cleanup |
+| Method                         | Description             |
+| ------------------------------ | ----------------------- |
+| `prompt(text, opts)`           | Send prompt             |
+| `steer(text)`                  | Interrupt-style message |
+| `followUp(text)`               | Wait-style message      |
+| `subscribe(listener)`          | Subscribe to events     |
+| `setModel(model)`              | Switch model            |
+| `newSession(opts)`             | Create new session      |
+| `fork(entryId)`                | Fork session            |
+| `navigateTree(targetId, opts)` | Tree navigation         |
+| `compact(instructions)`        | Manual compaction       |
+| `abort()`                      | Abort current operation |
+| `dispose()`                    | Cleanup                 |
 
 ### SessionManager Static Methods
 
-| Method | Description |
-|--------|-------------|
-| `SessionManager.create(cwd)` | Create new session |
-| `SessionManager.open(path)` | Open existing session |
-| `SessionManager.continueRecent(cwd)` | Continue most recent session |
-| `SessionManager.inMemory()` | In-memory session (no persistence) |
-| `SessionManager.list(cwd)` | List sessions for directory |
-| `SessionManager.listAll()` | List all sessions |
+| Method                               | Description                        |
+| ------------------------------------ | ---------------------------------- |
+| `SessionManager.create(cwd)`         | Create new session                 |
+| `SessionManager.open(path)`          | Open existing session              |
+| `SessionManager.continueRecent(cwd)` | Continue most recent session       |
+| `SessionManager.inMemory()`          | In-memory session (no persistence) |
+| `SessionManager.list(cwd)`           | List sessions for directory        |
+| `SessionManager.listAll()`           | List all sessions                  |
 
 ### Event Types
 
-| Event | Description |
-|-------|-------------|
-| `message_update` | Streaming text/thinking/toolcall |
-| `tool_execution_start/update/end` | Tool execution lifecycle |
-| `agent_start/end` | Agent lifecycle |
-| `turn_start/end` | Turn lifecycle |
-| `message_start/end` | Message lifecycle |
-| `auto_compaction_start/end` | Auto compaction |
-| `auto_retry_start/end` | Auto retry |
+| Event                             | Description                      |
+| --------------------------------- | -------------------------------- |
+| `message_update`                  | Streaming text/thinking/toolcall |
+| `tool_execution_start/update/end` | Tool execution lifecycle         |
+| `agent_start/end`                 | Agent lifecycle                  |
+| `turn_start/end`                  | Turn lifecycle                   |
+| `message_start/end`               | Message lifecycle                |
+| `auto_compaction_start/end`       | Auto compaction                  |
+| `auto_retry_start/end`            | Auto retry                       |
 
 ### Mode Utilities
 
-| Class | Description |
-|-------|-------------|
+| Class             | Description               |
+| ----------------- | ------------------------- |
 | `InteractiveMode` | Full TUI interactive mode |
-| `runPrintMode()` | Single-output mode |
-| `runRpcMode()` | RPC subprocess mode |
+| `runPrintMode()`  | Single-output mode        |
+| `runRpcMode()`    | RPC subprocess mode       |
 
 ---
 
@@ -204,31 +209,32 @@ pi --mode rpc [options]
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
-| `prompt` | Send prompt (supports streamingBehavior: steer/followUp) |
-| `steer` | Queue interrupt message |
-| `follow_up` | Queue wait message |
-| `abort` | Abort current operation |
-| `new_session` | Create new session |
-| `get_state` | Get session state |
-| `get_messages` | Get all messages |
-| `set_model` | Switch model |
-| `cycle_model` | Cycle model |
-| `get_available_models` | List available models |
-| `set_thinking_level` | Set thinking level |
-| `compact` | Manual compaction |
-| `bash` | Execute shell command |
-| `get_session_stats` | Get token/cost statistics |
-| `export_html` | Export HTML |
-| `switch_session` | Switch session |
-| `fork` | Fork session |
-| `get_commands` | Get available commands |
-| `set_session_name` | Set session name |
+| Command                | Description                                              |
+| ---------------------- | -------------------------------------------------------- |
+| `prompt`               | Send prompt (supports streamingBehavior: steer/followUp) |
+| `steer`                | Queue interrupt message                                  |
+| `follow_up`            | Queue wait message                                       |
+| `abort`                | Abort current operation                                  |
+| `new_session`          | Create new session                                       |
+| `get_state`            | Get session state                                        |
+| `get_messages`         | Get all messages                                         |
+| `set_model`            | Switch model                                             |
+| `cycle_model`          | Cycle model                                              |
+| `get_available_models` | List available models                                    |
+| `set_thinking_level`   | Set thinking level                                       |
+| `compact`              | Manual compaction                                        |
+| `bash`                 | Execute shell command                                    |
+| `get_session_stats`    | Get token/cost statistics                                |
+| `export_html`          | Export HTML                                              |
+| `switch_session`       | Switch session                                           |
+| `fork`                 | Fork session                                             |
+| `get_commands`         | Get available commands                                   |
+| `set_session_name`     | Set session name                                         |
 
 ### Extension UI Sub-protocol
 
-Extension `ctx.ui.select/confirm/input/editor` calls become `extension_ui_request` / `extension_ui_response` request-response pairs in RPC mode.
+Extension `ctx.ui.select/confirm/input/editor` calls become `extension_ui_request` /
+`extension_ui_response` request-response pairs in RPC mode.
 
 `notify/setStatus/setWidget/setTitle/set_editor_text` are fire-and-forget (no response needed).
 
@@ -242,7 +248,7 @@ From the `@mariozechner/pi-tui` package.
 
 ```typescript
 interface Component {
-  render(width: number): string[];  // Each line must not exceed width
+  render(width: number): string[]; // Each line must not exceed width
   handleInput?(data: string): void;
   invalidate(): void;
 }
@@ -250,18 +256,18 @@ interface Component {
 
 ### Built-in Components
 
-| Component | Description |
-|-----------|-------------|
-| `Text` | Multi-line text with word wrap |
-| `Box` | Container with padding and background |
-| `Container` | Vertical layout for child components |
-| `Spacer` | Empty lines |
-| `Markdown` | Markdown renderer + syntax highlighting |
-| `Image` | In-terminal image rendering |
-| `SelectList` | Selection list |
-| `SettingsList` | Settings toggle list |
-| `Input` | Text input |
-| `Editor` | Multi-line editor |
+| Component      | Description                             |
+| -------------- | --------------------------------------- |
+| `Text`         | Multi-line text with word wrap          |
+| `Box`          | Container with padding and background   |
+| `Container`    | Vertical layout for child components    |
+| `Spacer`       | Empty lines                             |
+| `Markdown`     | Markdown renderer + syntax highlighting |
+| `Image`        | In-terminal image rendering             |
+| `SelectList`   | Selection list                          |
+| `SettingsList` | Settings toggle list                    |
+| `Input`        | Text input                              |
+| `Editor`       | Multi-line editor                       |
 
 ### Keyboard Input
 
@@ -289,19 +295,22 @@ if (matchesKey(data, Key.ctrl("c"))) { ... }
 ctx.ui.custom(component, {
   overlay: true,
   overlayOptions: {
-    width: "50%", anchor: "center", margin: 2,
+    width: "50%",
+    anchor: "center",
+    margin: 2,
     visible: (w, h) => w >= 80,
-  }
+  },
 });
 ```
 
 ### Theming
 
 Use `theme` parameter in tool rendering:
+
 ```typescript
-theme.fg("success", "✓ Done")  // Foreground color
-theme.bg("toolSuccessBg", text) // Background color
-theme.bold("text")              // Bold
+theme.fg("success", "✓ Done"); // Foreground color
+theme.bg("toolSuccessBg", text); // Background color
+theme.bold("text"); // Bold
 ```
 
 ---
@@ -319,10 +328,7 @@ Located at `~/.pi/agent/models.json`. Auto-reloaded when opening `/model`; no re
       "baseUrl": "http://localhost:11434/v1",
       "api": "openai-completions",
       "apiKey": "ollama",
-      "models": [
-        { "id": "llama3.1:8b" },
-        { "id": "qwen2.5-coder:7b" }
-      ]
+      "models": [{ "id": "llama3.1:8b" }, { "id": "qwen2.5-coder:7b" }]
     }
   }
 }
@@ -330,17 +336,18 @@ Located at `~/.pi/agent/models.json`. Auto-reloaded when opening `/model`; no re
 
 ### Supported API Types
 
-| API | Use Case |
-|-----|----------|
-| `openai-completions` | OpenAI Chat Completions (most universal) |
-| `openai-responses` | OpenAI Responses API |
-| `anthropic-messages` | Anthropic Messages API |
-| `google-generative-ai` | Google Generative AI |
-| `bedrock-converse-stream` | Amazon Bedrock |
+| API                       | Use Case                                 |
+| ------------------------- | ---------------------------------------- |
+| `openai-completions`      | OpenAI Chat Completions (most universal) |
+| `openai-responses`        | OpenAI Responses API                     |
+| `anthropic-messages`      | Anthropic Messages API                   |
+| `google-generative-ai`    | Google Generative AI                     |
+| `bedrock-converse-stream` | Amazon Bedrock                           |
 
 ### Overriding Built-in Providers
 
 Change only the baseUrl (keeps all built-in models):
+
 ```json
 { "providers": { "anthropic": { "baseUrl": "https://my-proxy.com/v1" } } }
 ```
@@ -363,6 +370,7 @@ pi.registerProvider("my-provider", {
 ## 6. Context Files
 
 Pi loads `AGENTS.md` (or `CLAUDE.md`) at startup:
+
 - `~/.pi/agent/AGENTS.md` — Global
 - Traverses parent directories from cwd
 - Current directory

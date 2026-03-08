@@ -26,68 +26,68 @@ pi config                   # Enable/disable package resources
 
 ### Mode Options
 
-| Flag | Description |
-|------|-------------|
-| (default) | Interactive mode |
-| `-p`, `--print` | Output response and exit |
-| `--mode json` | JSON Lines event stream |
-| `--mode rpc` | RPC process integration |
-| `--export <in> [out]` | Export session as HTML |
+| Flag                  | Description              |
+| --------------------- | ------------------------ |
+| (default)             | Interactive mode         |
+| `-p`, `--print`       | Output response and exit |
+| `--mode json`         | JSON Lines event stream  |
+| `--mode rpc`          | RPC process integration  |
+| `--export <in> [out]` | Export session as HTML   |
 
 ### Model Options
 
-| Option | Description |
-|--------|-------------|
-| `--provider <name>` | Provider |
-| `--model <pattern>` | Model (supports `provider/id` and `:<thinking>`) |
-| `--api-key <key>` | API key |
-| `--thinking <level>` | off/minimal/low/medium/high/xhigh |
-| `--models <patterns>` | Ctrl+P cycle models (comma-separated) |
-| `--list-models [search]` | List available models |
+| Option                   | Description                                      |
+| ------------------------ | ------------------------------------------------ |
+| `--provider <name>`      | Provider                                         |
+| `--model <pattern>`      | Model (supports `provider/id` and `:<thinking>`) |
+| `--api-key <key>`        | API key                                          |
+| `--thinking <level>`     | off/minimal/low/medium/high/xhigh                |
+| `--models <patterns>`    | Ctrl+P cycle models (comma-separated)            |
+| `--list-models [search]` | List available models                            |
 
 ### Session Options
 
-| Option | Description |
-|--------|-------------|
-| `-c`, `--continue` | Continue most recent session |
-| `-r`, `--resume` | Browse and select session |
-| `--session <path>` | Specify session file or partial UUID |
-| `--session-dir <dir>` | Custom session storage directory |
-| `--no-session` | Ephemeral mode |
+| Option                | Description                          |
+| --------------------- | ------------------------------------ |
+| `-c`, `--continue`    | Continue most recent session         |
+| `-r`, `--resume`      | Browse and select session            |
+| `--session <path>`    | Specify session file or partial UUID |
+| `--session-dir <dir>` | Custom session storage directory     |
+| `--no-session`        | Ephemeral mode                       |
 
 ### Tool Options
 
-| Option | Description |
-|--------|-------------|
+| Option           | Description                                                     |
+| ---------------- | --------------------------------------------------------------- |
 | `--tools <list>` | Enable specified built-in tools (default: read,bash,edit,write) |
-| `--no-tools` | Disable all built-in tools |
+| `--no-tools`     | Disable all built-in tools                                      |
 
 Available built-in tools: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`
 
 ### Resource Options
 
-| Option | Description |
-|--------|-------------|
+| Option                       | Description                 |
+| ---------------------------- | --------------------------- |
 | `-e`, `--extension <source>` | Load extension (repeatable) |
-| `--no-extensions` | Disable extension discovery |
-| `--skill <path>` | Load skill (repeatable) |
-| `--no-skills` | Disable skill discovery |
-| `--prompt-template <path>` | Load template (repeatable) |
-| `--no-prompt-templates` | Disable template discovery |
-| `--theme <path>` | Load theme (repeatable) |
-| `--no-themes` | Disable theme discovery |
+| `--no-extensions`            | Disable extension discovery |
+| `--skill <path>`             | Load skill (repeatable)     |
+| `--no-skills`                | Disable skill discovery     |
+| `--prompt-template <path>`   | Load template (repeatable)  |
+| `--no-prompt-templates`      | Disable template discovery  |
+| `--theme <path>`             | Load theme (repeatable)     |
+| `--no-themes`                | Disable theme discovery     |
 
 `--no-*` flags can be combined with explicit flags for precise control.
 
 ### Other Options
 
-| Option | Description |
-|--------|-------------|
-| `--system-prompt <text>` | Replace default system prompt |
-| `--append-system-prompt <text>` | Append to system prompt |
-| `--verbose` | Force verbose startup |
-| `-h`, `--help` | Help |
-| `-v`, `--version` | Version |
+| Option                          | Description                   |
+| ------------------------------- | ----------------------------- |
+| `--system-prompt <text>`        | Replace default system prompt |
+| `--append-system-prompt <text>` | Append to system prompt       |
+| `--verbose`                     | Force verbose startup         |
+| `-h`, `--help`                  | Help                          |
+| `-v`, `--version`               | Version                       |
 
 ### Common Examples
 
@@ -174,26 +174,26 @@ my-pi-package/
 
 ## 4. Platform Support
 
-| Platform | Notes |
-|----------|-------|
-| macOS / Linux | Native support |
-| Windows | Requires bash (Git Bash / Cygwin / WSL) |
-| Android (Termux) | Runs via Termux, no image clipboard |
+| Platform         | Notes                                   |
+| ---------------- | --------------------------------------- |
+| macOS / Linux    | Native support                          |
+| Windows          | Requires bash (Git Bash / Cygwin / WSL) |
+| Android (Termux) | Runs via Termux, no image clipboard     |
 
 ---
 
 ## 5. Key Numbers
 
-| Metric | Value |
-|--------|-------|
-| Built-in tools | 7 (read, bash, edit, write, grep, find, ls) |
-| Default enabled | 4 (read, bash, edit, write) |
-| Theme color tokens | 51 |
-| Supported API providers | 17+ |
-| Subscription providers | 5 |
-| Tool output truncation | 50KB / 2000 lines |
-| Session format | JSONL tree v3 |
-| Compaction keep tokens | 20000 (default) |
-| Compaction reserve tokens | 16384 (default) |
-| Retry count | 3 (default) |
-| Node.js requirement | >= 20.0.0 |
+| Metric                    | Value                                       |
+| ------------------------- | ------------------------------------------- |
+| Built-in tools            | 7 (read, bash, edit, write, grep, find, ls) |
+| Default enabled           | 4 (read, bash, edit, write)                 |
+| Theme color tokens        | 51                                          |
+| Supported API providers   | 17+                                         |
+| Subscription providers    | 5                                           |
+| Tool output truncation    | 50KB / 2000 lines                           |
+| Session format            | JSONL tree v3                               |
+| Compaction keep tokens    | 20000 (default)                             |
+| Compaction reserve tokens | 16384 (default)                             |
+| Retry count               | 3 (default)                                 |
+| Node.js requirement       | >= 20.0.0                                   |

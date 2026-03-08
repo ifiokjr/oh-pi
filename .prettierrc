@@ -1,0 +1,14 @@
+{
+  "proseWrap": "always",
+  "tabWidth": 2,
+  "useTabs": false,
+  "printWidth": 100,
+  "overrides": [
+    {
+      "files": "*.md",
+      "options": {
+        "parser": "markdown"
+      }
+    }
+  ]
+}

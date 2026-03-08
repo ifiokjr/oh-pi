@@ -1,0 +1,9 @@
+node_modules
+dist
+pnpm-lock.yaml
+*.ts
+*.js
+*.json
+*.css
+*.html
+*.svg

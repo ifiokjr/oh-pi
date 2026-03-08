@@ -1,27 +1,34 @@
 # Refactor Plan: Monorepo Multi-Package Split
 
-> Split oh-pi into individually consumable pi packages under `@ifi/*`, with a meta-package that bundles everything.
+> Split oh-pi into individually consumable pi packages under `@ifi/*`, with a meta-package that
+> bundles everything.
 
 ## 1. Guiding Principles
 
 ### From the pi package system
 
-Pi packages are npm/git bundles discovered by a `"pi"` key in `package.json` (or conventional directory layout: `extensions/`, `skills/`, `prompts/`, `themes/`). Each package can be installed independently via `pi install npm:@ifi/oh-pi-extensions` and the resources are auto-loaded.
+Pi packages are npm/git bundles discovered by a `"pi"` key in `package.json` (or conventional
+directory layout: `extensions/`, `skills/`, `prompts/`, `themes/`). Each package can be installed
+independently via `pi install npm:@ifi/oh-pi-extensions` and the resources are auto-loaded.
 
 Key constraints from the pi package spec:
 
 - **Extensions are loaded via jiti** — raw `.ts` files, no compilation needed by consumers
-- **Pi core packages must be `peerDependencies` with `"*"` range**: `@mariozechner/pi-ai`, `@mariozechner/pi-agent-core`, `@mariozechner/pi-coding-agent`, `@mariozechner/pi-tui`, `@sinclair/typebox`
+- **Pi core packages must be `peerDependencies` with `"*"` range**: `@mariozechner/pi-ai`,
+  `@mariozechner/pi-agent-core`, `@mariozechner/pi-coding-agent`, `@mariozechner/pi-tui`,
+  `@sinclair/typebox`
 - **Each package needs a `"pi"` manifest** in `package.json` or conventional dirs
 - **The `"pi-package"` keyword** makes it discoverable on the pi package gallery
 - **Resources are path-based** — `"extensions": ["./extensions"]` points to dirs of `.ts` files
 
 ### Design goals
 
-1. **Individual consumption**: `pi install npm:@ifi/oh-pi-ant-colony` installs just the colony extension
+1. **Individual consumption**: `pi install npm:@ifi/oh-pi-ant-colony` installs just the colony
+   extension
 2. **Combination consumption**: `pi install npm:@ifi/oh-pi` installs everything
 3. **The CLI remains a standalone `npx` tool**: `npx @ifi/oh-pi` runs the TUI configurator
-4. **Shared types live in a core package** imported by extensions at dev time (but pi provides the runtime)
+4. **Shared types live in a core package** imported by extensions at dev time (but pi provides the
+   runtime)
 5. **pnpm workspace** for local development, independent publishing
 
 ---
@@ -71,6 +78,7 @@ Key constraints from the pi package spec:
 ### 2.3 What Each Package Contains
 
 #### `@ifi/oh-pi-core` (foundation library)
+
 ```
 packages/core/
 ├── package.json            # name: @ifi/oh-pi-core
@@ -84,10 +92,12 @@ packages/core/
 ```
 
 - **Published as**: compiled ESM (`dist/`) + TypeScript declarations
-- **Used by**: `@ifi/oh-pi-cli` (direct dependency), extensions (devDependency for type imports only — at runtime pi provides the host)
+- **Used by**: `@ifi/oh-pi-cli` (direct dependency), extensions (devDependency for type imports only
+  — at runtime pi provides the host)
 - **Not a pi package** — this is a pure library, no `"pi"` manifest
 
 #### `@ifi/oh-pi-extensions` (pi package)
+
 ```
 packages/extensions/
 ├── package.json            # name: @ifi/oh-pi-extensions, keyword: pi-package
@@ -109,6 +119,7 @@ packages/extensions/
 - **Tests live alongside source** — vitest runs from workspace root
 
 #### `@ifi/oh-pi-ant-colony` (pi package)
+
 ```
 packages/ant-colony/
 ├── package.json            # name: @ifi/oh-pi-ant-colony, keyword: pi-package
@@ -142,6 +153,7 @@ packages/ant-colony/
 - **Tests separated** — not in `extensions/` so they don't get installed by pi
 
 #### `@ifi/oh-pi-themes` (pi package)
+
 ```
 packages/themes/
 ├── package.json            # name: @ifi/oh-pi-themes, keyword: pi-package
@@ -158,6 +170,7 @@ packages/themes/
 - **Pure JSON** — no code, no compilation
 
 #### `@ifi/oh-pi-prompts` (pi package)
+
 ```
 packages/prompts/
 ├── package.json            # name: @ifi/oh-pi-prompts, keyword: pi-package
@@ -175,6 +188,7 @@ packages/prompts/
 ```
 
 #### `@ifi/oh-pi-skills` (pi package)
+
 ```
 packages/skills/
 ├── package.json            # name: @ifi/oh-pi-skills, keyword: pi-package
@@ -192,6 +206,7 @@ packages/skills/
 ```
 
 #### `@ifi/oh-pi-agents` (pi package)
+
 ```
 packages/agents/
 ├── package.json            # name: @ifi/oh-pi-agents, keyword: pi-package
@@ -203,9 +218,12 @@ packages/agents/
     └── security-researcher.md
 ```
 
-> Note: pi doesn't have a conventional `agents/` auto-discovery. The CLI (`@ifi/oh-pi-cli`) copies selected agent templates to `~/.pi/agent/AGENTS.md`. This package is consumed by the CLI, not directly by pi.
+> Note: pi doesn't have a conventional `agents/` auto-discovery. The CLI (`@ifi/oh-pi-cli`) copies
+> selected agent templates to `~/.pi/agent/AGENTS.md`. This package is consumed by the CLI, not
+> directly by pi.
 
 #### `@ifi/oh-pi-cli` (CLI binary)
+
 ```
 packages/cli/
 ├── package.json            # name: @ifi/oh-pi-cli, bin: { "oh-pi": ... }
@@ -236,6 +254,7 @@ packages/cli/
 - **Knows about all resource packages** — uses their paths to copy resources during `applyConfig()`
 
 #### `@ifi/oh-pi` (meta-package)
+
 ```
 packages/oh-pi/
 ├── package.json
@@ -243,6 +262,7 @@ packages/oh-pi/
 ```
 
 `package.json`:
+
 ```json
 {
   "name": "@ifi/oh-pi",
@@ -275,7 +295,8 @@ packages/oh-pi/
 }
 ```
 
-This follows the pi packages.md pattern for bundling other packages: dependencies + bundledDependencies + `node_modules/` paths in the `pi` manifest.
+This follows the pi packages.md pattern for bundling other packages: dependencies +
+bundledDependencies + `node_modules/` paths in the `pi` manifest.
 
 ---
 
@@ -336,12 +357,14 @@ oh-pi/                              # Monorepo root
 ```
 
 ### `pnpm-workspace.yaml`
+
 ```yaml
 packages:
   - "packages/*"
 ```
 
 ### Root `package.json` (workspace root)
+
 ```json
 {
   "private": true,
@@ -367,6 +390,7 @@ packages:
 ```
 
 ### `tsconfig.base.json` (shared base)
+
 ```json
 {
   "compilerOptions": {
@@ -389,6 +413,7 @@ packages:
 ## 4. Package.json Details
 
 ### `@ifi/oh-pi-core`
+
 ```json
 {
   "name": "@ifi/oh-pi-core",
@@ -399,7 +424,10 @@ packages:
   "exports": {
     ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" },
     "./types": { "import": "./dist/types.js", "types": "./dist/types.d.ts" },
-    "./registry": { "import": "./dist/registry.js", "types": "./dist/registry.d.ts" },
+    "./registry": {
+      "import": "./dist/registry.js",
+      "types": "./dist/registry.d.ts"
+    },
     "./i18n": { "import": "./dist/i18n.js", "types": "./dist/i18n.d.ts" }
   },
   "files": ["dist", "README.md"],
@@ -416,6 +444,7 @@ packages:
 ```
 
 ### `@ifi/oh-pi-cli`
+
 ```json
 {
   "name": "@ifi/oh-pi-cli",
@@ -435,6 +464,7 @@ packages:
 ```
 
 ### `@ifi/oh-pi-extensions`
+
 ```json
 {
   "name": "@ifi/oh-pi-extensions",
@@ -453,6 +483,7 @@ packages:
 ```
 
 ### `@ifi/oh-pi-ant-colony`
+
 ```json
 {
   "name": "@ifi/oh-pi-ant-colony",
@@ -471,6 +502,7 @@ packages:
 ```
 
 ### `@ifi/oh-pi-themes` / `prompts` / `skills`
+
 ```json
 {
   "name": "@ifi/oh-pi-themes",
@@ -484,6 +516,7 @@ packages:
 (Prompts and skills follow the same pattern with their respective resource type.)
 
 ### `@ifi/oh-pi-agents`
+
 ```json
 {
   "name": "@ifi/oh-pi-agents",
@@ -492,15 +525,19 @@ packages:
 }
 ```
 
-> Note: This is NOT a pi package (no `"pi"` key). Agent templates are consumed only by `@ifi/oh-pi-cli` which copies the selected template to `~/.pi/agent/AGENTS.md`. Pi has no `agents/` auto-discovery.
+> Note: This is NOT a pi package (no `"pi"` key). Agent templates are consumed only by
+> `@ifi/oh-pi-cli` which copies the selected template to `~/.pi/agent/AGENTS.md`. Pi has no
+> `agents/` auto-discovery.
 
 ---
 
 ## 5. How Resources.ts Changes
 
-Currently `resources.ts` resolves paths relative to `pi-package/`. In the monorepo, the CLI needs to resolve paths to sibling workspace packages at publish time.
+Currently `resources.ts` resolves paths relative to `pi-package/`. In the monorepo, the CLI needs to
+resolve paths to sibling workspace packages at publish time.
 
-The solution: the CLI's `resources.ts` uses `import.meta.resolve()` or `createRequire` to locate installed package paths:
+The solution: the CLI's `resources.ts` uses `import.meta.resolve()` or `createRequire` to locate
+installed package paths:
 
 ```typescript
 import { createRequire } from "node:module";
@@ -528,6 +565,7 @@ The CLI adds all resource packages as dependencies so they're always resolvable.
 ## 6. Consumer Experience
 
 ### Install just the colony extension
+
 ```bash
 pi install npm:@ifi/oh-pi-ant-colony
 # → Installs extensions/ant-colony/ with all its .ts files
@@ -535,12 +573,14 @@ pi install npm:@ifi/oh-pi-ant-colony
 ```
 
 ### Install just the themes
+
 ```bash
 pi install npm:@ifi/oh-pi-themes
 # → Installs 6 JSON themes
 ```
 
 ### Install everything
+
 ```bash
 pi install npm:@ifi/oh-pi
 # → Bundles all sub-packages via bundledDependencies
@@ -548,6 +588,7 @@ pi install npm:@ifi/oh-pi
 ```
 
 ### Run the configurator
+
 ```bash
 npx @ifi/oh-pi-cli
 # → Interactive TUI, knows about all resource packages
@@ -555,6 +596,7 @@ npx @ifi/oh-pi-cli
 ```
 
 ### Install everything + configure
+
 ```bash
 pi install npm:@ifi/oh-pi
 npx @ifi/oh-pi-cli
@@ -592,6 +634,7 @@ jobs:
 ## 8. Migration Steps
 
 ### Phase 1: Scaffold workspace (no file moves yet)
+
 1. Create `pnpm-workspace.yaml`
 2. Create `tsconfig.base.json`
 3. Create `packages/` directory structure
@@ -599,6 +642,7 @@ jobs:
 5. Verify `pnpm install` resolves the workspace
 
 ### Phase 2: Move files
+
 1. Move `src/types.ts`, `src/registry.ts`, `src/i18n.ts`, `src/locales.ts` → `packages/core/src/`
 2. Move `src/bin/`, `src/index.ts`, `src/tui/`, `src/utils/` → `packages/cli/src/`
 3. Move `pi-package/extensions/ant-colony/` → `packages/ant-colony/extensions/ant-colony/`
@@ -610,6 +654,7 @@ jobs:
 9. Move ant-colony test files → `packages/ant-colony/tests/`
 
 ### Phase 3: Fix imports
+
 1. Update `packages/cli/src/` imports from `./types.js` → `@ifi/oh-pi-core`
 2. Update `packages/cli/src/utils/resources.ts` to use `createRequire` pattern
 3. Update `packages/cli/src/utils/install.ts` to reference new resource paths
@@ -617,18 +662,21 @@ jobs:
 5. Add resource package dependencies to cli's `package.json`
 
 ### Phase 4: Fix tests
+
 1. Update `vitest.config.ts` for workspace mode
 2. Update test imports for new package paths
 3. Ant-colony tests need to import from `../extensions/ant-colony/` (relative within package)
 4. Verify all 231 tests pass
 
 ### Phase 5: Fix build + CI
+
 1. Update biome.json includes for new paths
 2. Update CI workflow for workspace
 3. Verify `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm lint`
 4. Verify `pnpm build:fast` (tsgo)
 
 ### Phase 6: Verify pi consumption
+
 1. Create a test project
 2. `pi install ./packages/ant-colony` — verify extension loads
 3. `pi install ./packages/extensions` — verify all extensions load

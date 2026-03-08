@@ -1,6 +1,7 @@
 ---
 description: Security audit following OWASP guidelines
 ---
+
 Perform a security audit on the following code. Check for:
 
 1. **Injection** — SQL, XSS, command injection, path traversal
@@ -10,7 +11,6 @@ Perform a security audit on the following code. Check for:
 5. **Configuration** — Debug mode, default credentials, CORS misconfiguration
 6. **Dependencies** — Known vulnerable packages
 
-Rate each finding: 🔴 Critical / 🟠 High / 🟡 Medium / 🔵 Low
-Provide remediation for each.
+Rate each finding: 🔴 Critical / 🟠 High / 🟡 Medium / 🔵 Low Provide remediation for each.
 
 $@

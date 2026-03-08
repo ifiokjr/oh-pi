@@ -1,6 +1,8 @@
 ---
 name: glassmorphism
-description: Glassmorphism design system skill. Use when building frosted-glass UI components with blur, transparency, and layered depth effects.
+description:
+  Glassmorphism design system skill. Use when building frosted-glass UI components with blur,
+  transparency, and layered depth effects.
 version: 1.0.0
 tags: [design, css, ui, glassmorphism]
 ---
@@ -21,7 +23,7 @@ Reference: [references/tokens.css](references/tokens.css)
 Use CSS custom properties from `tokens.css` for consistent theming:
 
 ```css
-@import 'references/tokens.css';
+@import "references/tokens.css";
 
 .glass-card {
   background: var(--glass-bg);
@@ -36,6 +38,7 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 ## Component Examples
 
 ### Card
+
 ```css
 .glass-card {
   background: var(--glass-bg);
@@ -49,6 +52,7 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 ```
 
 ### Navbar
+
 ```css
 .glass-nav {
   background: var(--glass-bg-heavy);
@@ -63,6 +67,7 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 ```
 
 ### Modal Overlay
+
 ```css
 .glass-modal-backdrop {
   background: rgba(0, 0, 0, 0.4);
@@ -79,6 +84,7 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 ```
 
 ### Button
+
 ```css
 .glass-btn {
   background: var(--glass-bg-light);
@@ -95,10 +101,10 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 
 ## Browser Compatibility
 
-| Feature | Chrome | Firefox | Safari | Edge |
-|---------|--------|---------|--------|------|
-| `backdrop-filter` | 76+ | 103+ | 9+ (`-webkit-`) | 79+ |
-| `rgba()` backgrounds | All | All | All | All |
+| Feature              | Chrome | Firefox | Safari          | Edge |
+| -------------------- | ------ | ------- | --------------- | ---- |
+| `backdrop-filter`    | 76+    | 103+    | 9+ (`-webkit-`) | 79+  |
+| `rgba()` backgrounds | All    | All     | All             | All  |
 
 - Always include `-webkit-backdrop-filter` for Safari support
 - Firefox <103: use `@supports` fallback with solid semi-transparent bg
@@ -118,8 +124,10 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 
 ## Accessibility Notes
 
-- Ensure **contrast ratio ≥ 4.5:1** for text over glass surfaces — test against all possible backgrounds
-- Provide `prefers-reduced-transparency` media query to disable blur/transparency for users who need it
+- Ensure **contrast ratio ≥ 4.5:1** for text over glass surfaces — test against all possible
+  backgrounds
+- Provide `prefers-reduced-transparency` media query to disable blur/transparency for users who need
+  it
 - Avoid placing critical text on highly transparent surfaces without a fallback
 - Use `prefers-contrast: more` to increase border opacity and reduce transparency
 

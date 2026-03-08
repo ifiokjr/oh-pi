@@ -1,7 +1,7 @@
 # Module Dependency Graph & Single Responsibility Analysis
 
-> Generated: 2026-02-16 | Updated after refactoring
-> Based on commit 46c1d85 (refactor: single responsibility refactoring)
+> Generated: 2026-02-16 | Updated after refactoring Based on commit 46c1d85 (refactor: single
+> responsibility refactoring)
 
 ---
 
@@ -160,16 +160,16 @@ ant-colony/parser.ts
 
 ## 2. Fan-In/Fan-Out Analysis
 
-| Module | Fan-In | Fan-Out | Lines | Role |
-|--------|:------:|:-------:|:-----:|------|
-| `ant-colony/types.ts` | **8** | 0 | 144 | Pure leaf, foundational types |
-| `src/types.ts` | **5** | 0 | 69 | Pure leaf, interface definitions |
-| `src/registry.ts` | **3** | 1 | 77 | Runtime constant registry |
-| `ant-colony/nest.ts` | 3 | 1 | 298 | Shared state management |
-| `ant-colony/queen.ts` | 1 | **5** | 640 | Highest fan-out, scheduling core |
-| `ant-colony/spawner.ts` | 2 | **4** | 309 | Agent lifecycle management |
-| `ant-colony/index.ts` | 0 (entry) | 4 | 600 | Extension registration entry |
-| `src/index.ts` | 0 (entry) | 3+9 tui | 96 | TUI flow orchestration |
+| Module                  |  Fan-In   | Fan-Out | Lines | Role                             |
+| ----------------------- | :-------: | :-----: | :---: | -------------------------------- |
+| `ant-colony/types.ts`   |   **8**   |    0    |  144  | Pure leaf, foundational types    |
+| `src/types.ts`          |   **5**   |    0    |  69   | Pure leaf, interface definitions |
+| `src/registry.ts`       |   **3**   |    1    |  77   | Runtime constant registry        |
+| `ant-colony/nest.ts`    |     3     |    1    |  298  | Shared state management          |
+| `ant-colony/queen.ts`   |     1     |  **5**  |  640  | Highest fan-out, scheduling core |
+| `ant-colony/spawner.ts` |     2     |  **4**  |  309  | Agent lifecycle management       |
+| `ant-colony/index.ts`   | 0 (entry) |    4    |  600  | Extension registration entry     |
+| `src/index.ts`          | 0 (entry) | 3+9 tui |  96   | TUI flow orchestration           |
 
 ---
 
@@ -177,32 +177,32 @@ ant-colony/parser.ts
 
 ### src/ layer (19 modules, ~1,732 lines)
 
-| Module | Lines | Assessment | Notes |
-|--------|:-----:|:----------:|-------|
-| `src/index.ts` | 96 | ✅ | Pure orchestration, delegates each step |
-| `src/types.ts` | 69 | ✅ | Pure types, zero runtime code |
-| `src/registry.ts` | 77 | ✅ | Single responsibility: configurable item registry |
-| `src/i18n.ts` | 61 | ✅ | Translation data separated to locales.ts |
-| `src/locales.ts` | 420 | ✅ | Pure data, new languages only edit this file |
-| `src/utils/detect.ts` | 112 | ✅ | Single responsibility: environment info collection |
-| `src/utils/install.ts` | 98 | ✅ | 8-line orchestration after refactor |
-| `src/utils/writers.ts` | 152 | ✅ | 8 independent writer functions |
-| `src/utils/resources.ts` | 19 | ✅ | Pure function, zero side effects |
+| Module                   | Lines | Assessment | Notes                                              |
+| ------------------------ | :---: | :--------: | -------------------------------------------------- |
+| `src/index.ts`           |  96   |     ✅     | Pure orchestration, delegates each step            |
+| `src/types.ts`           |  69   |     ✅     | Pure types, zero runtime code                      |
+| `src/registry.ts`        |  77   |     ✅     | Single responsibility: configurable item registry  |
+| `src/i18n.ts`            |  61   |     ✅     | Translation data separated to locales.ts           |
+| `src/locales.ts`         |  420  |     ✅     | Pure data, new languages only edit this file       |
+| `src/utils/detect.ts`    |  112  |     ✅     | Single responsibility: environment info collection |
+| `src/utils/install.ts`   |  98   |     ✅     | 8-line orchestration after refactor                |
+| `src/utils/writers.ts`   |  152  |     ✅     | 8 independent writer functions                     |
+| `src/utils/resources.ts` |  19   |     ✅     | Pure function, zero side effects                   |
 
 ### ant-colony/ layer (10 modules, ~2,421 lines)
 
-| Module | Lines | Assessment | Notes |
-|--------|:-----:|:----------:|-------|
-| `index.ts` | 600 | ⚠️ Minor | Panel building coupled with registration (acceptable for extension entry) |
-| `queen.ts` | 640 | ⚠️ Minor | Rate limiting mixed with orchestration (acceptable for Orchestrator pattern) |
-| `spawner.ts` | 309 | ✅ | Prompts and parsing extracted out |
-| `prompts.ts` | 98 | ✅ | Single responsibility: caste prompt management |
-| `parser.ts` | 72 | ✅ | Single responsibility: structured output parsing |
-| `ui.ts` | 46 | ✅ | Pure display logic, zero side effects |
-| `nest.ts` | 298 | ✅ | All methods around nest state CRUD |
-| `concurrency.ts` | 120 | ✅ | Pure functions, zero internal dependencies |
-| `deps.ts` | 94 | ✅ | Pure functions, zero internal dependencies |
-| `types.ts` | 144 | ✅ | Type aggregation module |
+| Module           | Lines | Assessment | Notes                                                                        |
+| ---------------- | :---: | :--------: | ---------------------------------------------------------------------------- |
+| `index.ts`       |  600  |  ⚠️ Minor  | Panel building coupled with registration (acceptable for extension entry)    |
+| `queen.ts`       |  640  |  ⚠️ Minor  | Rate limiting mixed with orchestration (acceptable for Orchestrator pattern) |
+| `spawner.ts`     |  309  |     ✅     | Prompts and parsing extracted out                                            |
+| `prompts.ts`     |  98   |     ✅     | Single responsibility: caste prompt management                               |
+| `parser.ts`      |  72   |     ✅     | Single responsibility: structured output parsing                             |
+| `ui.ts`          |  46   |     ✅     | Pure display logic, zero side effects                                        |
+| `nest.ts`        |  298  |     ✅     | All methods around nest state CRUD                                           |
+| `concurrency.ts` |  120  |     ✅     | Pure functions, zero internal dependencies                                   |
+| `deps.ts`        |  94   |     ✅     | Pure functions, zero internal dependencies                                   |
+| `types.ts`       |  144  |     ✅     | Type aggregation module                                                      |
 
 ---
 
@@ -226,7 +226,9 @@ ant-colony/parser.ts
   └─────────────────────────────────────────────────────┘
 ```
 
-**Key finding**: src/ and ant-colony/ have **zero direct imports** — fully bridged via the pi Extension API. This is excellent architectural decoupling — both layers can evolve independently. The only coupling point is `install.ts` physically copying extension files to the user directory.
+**Key finding**: src/ and ant-colony/ have **zero direct imports** — fully bridged via the pi
+Extension API. This is excellent architectural decoupling — both layers can evolve independently.
+The only coupling point is `install.ts` physically copying extension files to the user directory.
 
 ---
 

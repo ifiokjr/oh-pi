@@ -6,13 +6,13 @@ Skills are on-demand capability packs following the [Agent Skills Standard](http
 
 ### Locations
 
-| Location | Scope |
-|----------|-------|
-| `~/.pi/agent/skills/` | Global |
-| `.pi/skills/` | Project-level |
-| Package `skills/` directory | Package-level |
+| Location                       | Scope            |
+| ------------------------------ | ---------------- |
+| `~/.pi/agent/skills/`          | Global           |
+| `.pi/skills/`                  | Project-level    |
+| Package `skills/` directory    | Package-level    |
 | `settings.json` `skills` array | Additional paths |
-| `--skill <path>` | CLI override |
+| `--skill <path>`               | CLI override     |
 
 Discovery: root-level `.md` files + recursive `SKILL.md` in subdirectories.
 
@@ -34,26 +34,24 @@ description: Skill description — determines when it's loaded. Be specific.
 # My Skill
 
 ## Setup
-\`\`\`bash
-cd /path/to/skill && npm install
-\`\`\`
+
+\`\`\`bash cd /path/to/skill && npm install \`\`\`
 
 ## Usage
-\`\`\`bash
-./scripts/process.sh <input>
-\`\`\`
+
+\`\`\`bash ./scripts/process.sh <input> \`\`\`
 ```
 
 ### Frontmatter Fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | ✅ | ≤64 chars, lowercase + digits + hyphens, must match parent directory name |
-| `description` | ✅ | ≤1024 chars, describes functionality and trigger scenarios |
-| `license` | ❌ | License |
-| `compatibility` | ❌ | Environment requirements |
-| `metadata` | ❌ | Arbitrary key-value pairs |
-| `disable-model-invocation` | ❌ | When true, hidden from system prompt; only callable via `/skill:name` |
+| Field                      | Required | Description                                                               |
+| -------------------------- | -------- | ------------------------------------------------------------------------- |
+| `name`                     | ✅       | ≤64 chars, lowercase + digits + hyphens, must match parent directory name |
+| `description`              | ✅       | ≤1024 chars, describes functionality and trigger scenarios                |
+| `license`                  | ❌       | License                                                                   |
+| `compatibility`            | ❌       | Environment requirements                                                  |
+| `metadata`                 | ❌       | Arbitrary key-value pairs                                                 |
+| `disable-model-invocation` | ❌       | When true, hidden from system prompt; only callable via `/skill:name`     |
 
 ### Skill Commands
 
@@ -67,6 +65,7 @@ Toggle `enableSkillCommands` in `/settings` or `settings.json`.
 ### Cross-Tool Skills
 
 Load skills from Claude Code or OpenAI Codex:
+
 ```json
 { "skills": ["~/.claude/skills", "~/.codex/skills"] }
 ```
@@ -79,12 +78,12 @@ Markdown snippets expanded by typing `/name`.
 
 ### Locations
 
-| Location | Scope |
-|----------|-------|
-| `~/.pi/agent/prompts/*.md` | Global |
-| `.pi/prompts/*.md` | Project-level |
+| Location                     | Scope         |
+| ---------------------------- | ------------- |
+| `~/.pi/agent/prompts/*.md`   | Global        |
+| `.pi/prompts/*.md`           | Project-level |
 | Package `prompts/` directory | Package-level |
-| `--prompt-template <path>` | CLI override |
+| `--prompt-template <path>`   | CLI override  |
 
 Discovery: non-recursive, only the `prompts/` root directory.
 
@@ -94,7 +93,9 @@ Discovery: non-recursive, only the `prompts/` root directory.
 ---
 description: Review staged git changes
 ---
+
 Review staged changes (`git diff --cached`). Focus on:
+
 - Bugs and logic errors
 - Security issues
 - Missing error handling
@@ -133,30 +134,32 @@ JSON files defining TUI colors. Supports hot reload.
   "$schema": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
   "name": "my-theme",
   "vars": { "primary": "#00aaff", "secondary": 242 },
-  "colors": { /* all 51 color tokens must be defined */ }
+  "colors": {
+    /* all 51 color tokens must be defined */
+  }
 }
 ```
 
 ### 51 Color Token Categories
 
-| Category | Count | Examples |
-|----------|-------|---------|
-| Core UI | 11 | accent, border, success, error, warning, muted, dim, text... |
-| Backgrounds & Content | 11 | selectedBg, userMessageBg, toolPendingBg, toolTitle... |
-| Markdown | 10 | mdHeading, mdLink, mdCode, mdCodeBlock... |
-| Tool Diffs | 3 | toolDiffAdded, toolDiffRemoved, toolDiffContext |
-| Syntax Highlighting | 9 | syntaxComment, syntaxKeyword, syntaxFunction... |
-| Thinking Level Borders | 6 | thinkingOff ~ thinkingXhigh |
-| Bash Mode | 1 | bashMode |
+| Category               | Count | Examples                                                     |
+| ---------------------- | ----- | ------------------------------------------------------------ |
+| Core UI                | 11    | accent, border, success, error, warning, muted, dim, text... |
+| Backgrounds & Content  | 11    | selectedBg, userMessageBg, toolPendingBg, toolTitle...       |
+| Markdown               | 10    | mdHeading, mdLink, mdCode, mdCodeBlock...                    |
+| Tool Diffs             | 3     | toolDiffAdded, toolDiffRemoved, toolDiffContext              |
+| Syntax Highlighting    | 9     | syntaxComment, syntaxKeyword, syntaxFunction...              |
+| Thinking Level Borders | 6     | thinkingOff ~ thinkingXhigh                                  |
+| Bash Mode              | 1     | bashMode                                                     |
 
 ### Color Value Formats
 
-| Format | Example | Description |
-|--------|---------|-------------|
-| Hex | `"#ff0000"` | 6-digit RGB |
-| 256-color | `39` | xterm 256-color index |
-| Variable | `"primary"` | Reference from vars |
-| Default | `""` | Terminal default color |
+| Format    | Example     | Description            |
+| --------- | ----------- | ---------------------- |
+| Hex       | `"#ff0000"` | 6-digit RGB            |
+| 256-color | `39`        | xterm 256-color index  |
+| Variable  | `"primary"` | Reference from vars    |
+| Default   | `""`        | Terminal default color |
 
 ---
 
@@ -196,13 +199,15 @@ Try temporarily: `pi -e npm:@foo/bar`
 }
 ```
 
-Without a `pi` manifest, `extensions/`, `skills/`, `prompts/`, `themes/` directories are auto-discovered.
+Without a `pi` manifest, `extensions/`, `skills/`, `prompts/`, `themes/` directories are
+auto-discovered.
 
 ### Dependency Handling
 
 - Runtime deps go in `dependencies`
-- Pi core packages go in `peerDependencies` with `"*"` range:
-  `@mariozechner/pi-ai`, `@mariozechner/pi-agent-core`, `@mariozechner/pi-coding-agent`, `@mariozechner/pi-tui`, `@sinclair/typebox`
+- Pi core packages go in `peerDependencies` with `"*"` range: `@mariozechner/pi-ai`,
+  `@mariozechner/pi-agent-core`, `@mariozechner/pi-coding-agent`, `@mariozechner/pi-tui`,
+  `@sinclair/typebox`
 - Other pi packages must be bundled: put in `dependencies` + `bundledDependencies`
 
 ### Package Filtering
@@ -210,7 +215,12 @@ Without a `pi` manifest, `extensions/`, `skills/`, `prompts/`, `themes/` directo
 ```json
 {
   "packages": [
-    { "source": "npm:my-package", "extensions": ["ext/*.ts"], "skills": [], "prompts": ["prompts/review.md"] }
+    {
+      "source": "npm:my-package",
+      "extensions": ["ext/*.ts"],
+      "skills": [],
+      "prompts": ["prompts/review.md"]
+    }
   ]
 }
 ```

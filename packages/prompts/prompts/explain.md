@@ -1,6 +1,7 @@
 ---
 description: Explain code or concept clearly, from simple to detailed
 ---
+
 Explain the following code or concept. Structure your explanation as:
 
 1. **One-liner** — What it does in one sentence
