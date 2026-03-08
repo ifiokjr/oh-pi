@@ -902,6 +902,41 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		},
 	});
 
+	// ═══ Command: /colony ═══
+	pi.registerCommand("colony", {
+		description: "Launch an ant colony swarm to accomplish a goal",
+		async handler(args, ctx) {
+			if (activeColony) {
+				ctx.ui.notify("A colony is already running. Use /colony-stop to cancel it first.", "warning");
+				return;
+			}
+
+			const goal = args.trim();
+			if (!goal) {
+				ctx.ui.notify("Usage: /colony <goal> — describe what the colony should accomplish", "warning");
+				return;
+			}
+
+			const currentModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : null;
+			if (!currentModel) {
+				ctx.ui.notify("Colony failed: no model available in current session.", "error");
+				return;
+			}
+
+			launchBackgroundColony(
+				{
+					cwd: ctx.cwd,
+					goal,
+					currentModel,
+					modelOverrides: {},
+					modelRegistry: ctx.modelRegistry ?? undefined,
+				},
+				ctx,
+			);
+			ctx.ui.notify(`🐜 Colony launched: ${goal.slice(0, 80)}${goal.length > 80 ? "..." : ""}`, "info");
+		},
+	});
+
 	// ═══ Command: /colony-status ═══
 	pi.registerCommand("colony-status", {
 		description: "Show current colony progress",
