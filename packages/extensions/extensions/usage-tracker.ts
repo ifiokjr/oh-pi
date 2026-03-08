@@ -55,6 +55,17 @@ interface RateWindow {
 	label: string;
 	percentLeft: number;
 	resetDescription: string | null;
+	windowMinutes: number | null;
+}
+
+/** Derived pace information for a rate-limit window. */
+interface WindowPace {
+	label: string;
+	deltaPercent: number;
+	expectedUsedPercent: number;
+	actualUsedPercent: number;
+	etaToExhaustionMs: number | null;
+	willLastToReset: boolean;
 }
 
 /** Rate limit snapshot from a provider CLI probe. */
@@ -62,6 +73,9 @@ interface ProviderRateLimits {
 	provider: "claude" | "codex";
 	windows: RateWindow[];
 	credits: number | null;
+	account: string | null;
+	plan: string | null;
+	note: string | null;
 	probedAt: number;
 	error: string | null;
 }
@@ -74,6 +88,9 @@ const PROBE_COOLDOWN_MS = 30_000;
 
 /** Probe timeout (15 seconds). */
 const PROBE_TIMEOUT_MS = 15_000;
+
+/** Ignore pace calculations until at least ~3% of a window should be consumed. */
+const PACE_MIN_EXPECTED_USED_PCT = 3;
 
 // ─── Formatting helpers ─────────────────────────────────────────────────────
 
@@ -132,6 +149,181 @@ function pctColor(pct: number): string {
 		return "warning";
 	}
 	return "success";
+}
+
+function clampPercent(value: number): number {
+	return Math.max(0, Math.min(100, value));
+}
+
+function inferWindowMinutes(provider: "claude" | "codex", label: string): number | null {
+	const lower = label.toLowerCase();
+	if (lower.includes("5-hour") || lower.includes("5h")) {
+		return 300;
+	}
+	if (lower.includes("weekly") || lower.includes("week")) {
+		return 10_080;
+	}
+	if (provider === "claude" && lower.includes("session")) {
+		// Claude session window is typically 5 hours.
+		return 300;
+	}
+	return null;
+}
+
+/** Parse countdown-like reset text such as "in 3d 2h" into milliseconds. */
+function parseResetCountdownMs(resetDescription: string | null): number | null {
+	if (!resetDescription) {
+		return null;
+	}
+
+	let normalized = resetDescription
+		.toLowerCase()
+		.replaceAll(",", " ")
+		.replaceAll("·", " ")
+		.replaceAll("|", " ")
+		.replaceAll(/\s+/g, " ")
+		.trim();
+
+	normalized = normalized
+		.replace(/^resets?\s*/i, "")
+		.replace(/^in\s*/i, "")
+		.trim();
+
+	if (!normalized || normalized === "now") {
+		return 0;
+	}
+
+	const units: Record<string, number> = {
+		w: 7 * 24 * 60 * 60 * 1000,
+		week: 7 * 24 * 60 * 60 * 1000,
+		weeks: 7 * 24 * 60 * 60 * 1000,
+		d: 24 * 60 * 60 * 1000,
+		day: 24 * 60 * 60 * 1000,
+		days: 24 * 60 * 60 * 1000,
+		h: 60 * 60 * 1000,
+		hr: 60 * 60 * 1000,
+		hrs: 60 * 60 * 1000,
+		hour: 60 * 60 * 1000,
+		hours: 60 * 60 * 1000,
+		m: 60 * 1000,
+		min: 60 * 1000,
+		mins: 60 * 1000,
+		minute: 60 * 1000,
+		minutes: 60 * 1000,
+	};
+
+	const matches = [
+		...normalized.matchAll(/(\d+(?:\.\d+)?)\s*(weeks?|w|days?|d|hours?|hrs?|hr|h|minutes?|mins?|min|m)\b/g),
+	];
+	if (matches.length === 0) {
+		return null;
+	}
+
+	let total = 0;
+	for (const match of matches) {
+		const value = Number.parseFloat(match[1]);
+		const unit = match[2].toLowerCase();
+		const multiplier = units[unit];
+		if (Number.isFinite(value) && multiplier) {
+			total += value * multiplier;
+		}
+	}
+
+	if (!Number.isFinite(total) || total <= 0) {
+		return null;
+	}
+	return Math.round(total);
+}
+
+function computeWindowPace(window: RateWindow): WindowPace | null {
+	if (!window.windowMinutes) {
+		return null;
+	}
+
+	const resetCountdownMs = parseResetCountdownMs(window.resetDescription);
+	if (resetCountdownMs === null) {
+		return null;
+	}
+
+	const totalWindowMs = window.windowMinutes * 60_000;
+	if (totalWindowMs <= 0 || resetCountdownMs <= 0 || resetCountdownMs > totalWindowMs) {
+		return null;
+	}
+
+	const elapsedMs = totalWindowMs - resetCountdownMs;
+	if (elapsedMs <= 0) {
+		return null;
+	}
+
+	const actualUsedPercent = clampPercent(100 - window.percentLeft);
+	const expectedUsedPercent = clampPercent((elapsedMs / totalWindowMs) * 100);
+	if (expectedUsedPercent < PACE_MIN_EXPECTED_USED_PCT) {
+		return null;
+	}
+
+	const deltaPercent = actualUsedPercent - expectedUsedPercent;
+	let etaToExhaustionMs: number | null = null;
+	let willLastToReset = false;
+
+	if (actualUsedPercent <= 0) {
+		willLastToReset = true;
+	} else {
+		const usagePerMs = actualUsedPercent / elapsedMs;
+		if (usagePerMs > 0) {
+			const remainingPercent = Math.max(0, 100 - actualUsedPercent);
+			const etaCandidate = remainingPercent / usagePerMs;
+			if (etaCandidate >= resetCountdownMs) {
+				willLastToReset = true;
+			} else {
+				etaToExhaustionMs = etaCandidate;
+			}
+		}
+	}
+
+	return {
+		label: window.label,
+		deltaPercent,
+		expectedUsedPercent,
+		actualUsedPercent,
+		etaToExhaustionMs,
+		willLastToReset,
+	};
+}
+
+function formatPaceLeft(pace: WindowPace): string {
+	const delta = Math.round(Math.abs(pace.deltaPercent));
+	if (delta <= 2) {
+		return "On pace";
+	}
+	if (pace.deltaPercent > 0) {
+		return `${delta}% in deficit`;
+	}
+	return `${delta}% in reserve`;
+}
+
+function formatPaceRight(pace: WindowPace): string {
+	if (pace.willLastToReset) {
+		return "Lasts until reset";
+	}
+	if (pace.etaToExhaustionMs === null) {
+		return "";
+	}
+	if (pace.etaToExhaustionMs <= 0) {
+		return "Runs out now";
+	}
+	return `Runs out in ${fmtDuration(pace.etaToExhaustionMs)}`;
+}
+
+function upsertWindow(windows: RateWindow[], nextWindow: RateWindow): RateWindow {
+	const existing = windows.find((window) => window.label === nextWindow.label);
+	if (existing) {
+		existing.percentLeft = nextWindow.percentLeft;
+		existing.resetDescription = nextWindow.resetDescription ?? existing.resetDescription;
+		existing.windowMinutes = nextWindow.windowMinutes ?? existing.windowMinutes;
+		return existing;
+	}
+	windows.push(nextWindow);
+	return nextWindow;
 }
 
 // ─── CLI probe — parse rate limits from `claude` and `codex` CLIs ────────
@@ -200,8 +392,59 @@ function extractPercentFromLine(line: string): number | null {
  * Extract reset description from a line, e.g. "resets in 3d 2h" → "in 3d 2h".
  */
 function extractResetFromLine(line: string): string | null {
-	const match = line.match(/resets?\s+(.*)/i);
-	return match ? match[1].trim() : null;
+	const match = line.match(/resets?\s*(?:in|at|on)?\s*([^|·]+)/i);
+	if (match?.[1]?.trim()) {
+		return match[1].trim();
+	}
+	const fallback = line.match(/reset\s*[:-]\s*([^|·]+)/i);
+	return fallback?.[1]?.trim() || null;
+}
+
+function extractLineValue(text: string, pattern: RegExp): string | null {
+	const match = text.match(pattern);
+	const value = match?.[1]?.trim();
+	if (!value) {
+		return null;
+	}
+	return value;
+}
+
+function detectClaudeWindowLabel(lowerLine: string): string | null {
+	if (
+		lowerLine.includes("current session") ||
+		(lowerLine.includes("session") && (lowerLine.includes("left") || lowerLine.includes("remaining")))
+	) {
+		return "Session";
+	}
+	if (
+		(lowerLine.includes("current week") || lowerLine.includes("weekly")) &&
+		(lowerLine.includes("all model") || lowerLine.includes("all models"))
+	) {
+		return "Weekly (all)";
+	}
+	if ((lowerLine.includes("current week") || lowerLine.includes("weekly")) && lowerLine.includes("opus")) {
+		return "Weekly (Opus)";
+	}
+	if ((lowerLine.includes("current week") || lowerLine.includes("weekly")) && lowerLine.includes("sonnet")) {
+		return "Weekly (Sonnet)";
+	}
+	if (lowerLine.includes("current week") || lowerLine.includes("weekly")) {
+		return "Weekly";
+	}
+	return null;
+}
+
+function detectCodexWindowLabel(lowerLine: string): string | null {
+	if (lowerLine.includes("5h limit") || lowerLine.includes("5-hour") || lowerLine.includes("five hour")) {
+		return "5-hour";
+	}
+	if (lowerLine.includes("weekly limit") || lowerLine.includes("weekly")) {
+		return "Weekly";
+	}
+	if (lowerLine.includes("session")) {
+		return "Session";
+	}
+	return null;
 }
 
 /**
@@ -215,6 +458,95 @@ function extractCredits(text: string): number | null {
 	return Number.parseFloat(match[1].replace(",", ""));
 }
 
+function parseJsonObjectFromText(text: string): Record<string, unknown> | null {
+	const clean = stripAnsi(text).trim();
+	if (!clean) {
+		return null;
+	}
+
+	try {
+		const direct = JSON.parse(clean) as unknown;
+		if (direct && typeof direct === "object") {
+			return direct as Record<string, unknown>;
+		}
+	} catch {
+		// Try extracting the first JSON object block below.
+	}
+
+	const start = clean.indexOf("{");
+	const end = clean.lastIndexOf("}");
+	if (start < 0 || end <= start) {
+		return null;
+	}
+	try {
+		const sliced = JSON.parse(clean.slice(start, end + 1)) as unknown;
+		if (sliced && typeof sliced === "object") {
+			return sliced as Record<string, unknown>;
+		}
+	} catch {
+		return null;
+	}
+	return null;
+}
+
+function hydrateClaudeAuthStatus(result: ProviderRateLimits, text: string): void {
+	const parsed = parseJsonObjectFromText(text);
+	if (!parsed) {
+		return;
+	}
+
+	const email = parsed.email;
+	if (typeof email === "string" && email.trim()) {
+		result.account ??= email.trim();
+	}
+
+	const subscriptionType = parsed.subscriptionType;
+	if (typeof subscriptionType === "string" && subscriptionType.trim()) {
+		result.plan ??= subscriptionType.trim();
+	}
+
+	const authMethod = parsed.authMethod;
+	if (!result.plan && typeof authMethod === "string" && authMethod.trim()) {
+		result.plan = authMethod.trim();
+	}
+}
+
+function hasProviderDisplayData(rl: ProviderRateLimits): boolean {
+	return rl.windows.length > 0 || rl.credits !== null || Boolean(rl.account || rl.plan || rl.note || rl.error);
+}
+
+function classifyClaudeUsageOutput(text: string): { error?: string; note?: string } {
+	const lower = text.toLowerCase();
+	if (
+		lower.includes("not logged in") ||
+		lower.includes("authentication_error") ||
+		lower.includes("token has expired")
+	) {
+		return { error: "Claude CLI authentication required or expired; run claude auth login." };
+	}
+	if (lower.includes("stdin is not a terminal")) {
+		return { note: "Claude usage windows require an interactive TTY in this environment." };
+	}
+	if (lower.includes('could you clarify what you mean by "usage"?') || lower.includes("unknown skill: usage")) {
+		return { note: "Claude CLI no longer exposes /usage rate-limit windows in this build." };
+	}
+	return {};
+}
+
+function classifyCodexUsageOutput(text: string): { error?: string; note?: string } {
+	const lower = text.toLowerCase();
+	if (lower.includes("stdin is not a terminal")) {
+		return { note: "Codex rate-limit windows require an interactive TTY in this environment." };
+	}
+	if (lower.includes("operation not permitted")) {
+		return { note: "Codex CLI usage probing is blocked by local OS permissions in this environment." };
+	}
+	if (lower.includes("not logged in") || lower.includes("login required")) {
+		return { error: "Codex CLI authentication required; run codex login." };
+	}
+	return {};
+}
+
 /**
  * Probe the Claude CLI for rate limit info.
  *
@@ -225,7 +557,7 @@ function extractCredits(text: string): number | null {
  *
  * This is the same approach CodexBar uses.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: CLI output parsing must handle multiple formats and fallbacks.
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: multi-source Claude probing (auth metadata + legacy usage windows) requires layered fallbacks.
 async function probeClaude(
 	exec: (cmd: string, args: string[], opts?: { timeout?: number }) => Promise<{ stdout: string; exitCode: number }>,
 ): Promise<ProviderRateLimits> {
@@ -233,70 +565,117 @@ async function probeClaude(
 		provider: "claude",
 		windows: [],
 		credits: null,
+		account: null,
+		plan: null,
+		note: null,
 		probedAt: Date.now(),
 		error: null,
 	};
 
 	try {
-		// Use `claude usage` subcommand to get rate limit info
+		const authStatus = await exec("claude", ["auth", "status"], { timeout: PROBE_TIMEOUT_MS });
+		hydrateClaudeAuthStatus(result, authStatus.stdout);
+	} catch {
+		// Best-effort metadata probe only.
+	}
+
+	let clean = "";
+	try {
+		// Legacy window probe (some Claude CLI builds still expose this shape).
 		const usage = await exec("claude", ["usage"], { timeout: PROBE_TIMEOUT_MS });
-		const clean = stripAnsi(usage.stdout);
-
-		if (!clean || clean.length < 10) {
-			result.error = "Empty output from claude CLI";
-			return result;
-		}
-
-		// Parse each rate limit section
-		const lines = clean.split("\n");
-		for (const line of lines) {
-			const lower = line.toLowerCase();
-			if (lower.includes("current session")) {
-				const pct = extractPercentFromLine(line);
-				if (pct !== null) {
-					result.windows.push({
-						label: "Session",
-						percentLeft: pct,
-						resetDescription: extractResetFromLine(line),
-					});
-				}
-			} else if (lower.includes("current week") && lower.includes("all model")) {
-				const pct = extractPercentFromLine(line);
-				if (pct !== null) {
-					result.windows.push({
-						label: "Weekly (all)",
-						percentLeft: pct,
-						resetDescription: extractResetFromLine(line),
-					});
-				}
-			} else if (lower.includes("current week") && (lower.includes("opus") || lower.includes("sonnet"))) {
-				const pct = extractPercentFromLine(line);
-				if (pct !== null) {
-					const model = lower.includes("opus") ? "Opus" : "Sonnet";
-					result.windows.push({
-						label: `Weekly (${model})`,
-						percentLeft: pct,
-						resetDescription: extractResetFromLine(line),
-					});
-				}
-			}
-		}
-
-		// If line-by-line didn't work, try ordered percentage extraction (fallback)
-		if (result.windows.length === 0) {
-			const allPcts = [...clean.matchAll(/(\d{1,3})\s*%/g)].map((m) => Number.parseInt(m[1], 10));
-			if (allPcts.length >= 1) {
-				result.windows.push({ label: "Session", percentLeft: allPcts[0], resetDescription: null });
-			}
-			if (allPcts.length >= 2) {
-				result.windows.push({ label: "Weekly (all)", percentLeft: allPcts[1], resetDescription: null });
-			}
-			if (allPcts.length >= 3) {
-				result.windows.push({ label: "Weekly (model)", percentLeft: allPcts[2], resetDescription: null });
-			}
-		}
+		clean = stripAnsi(usage.stdout);
 	} catch (e) {
-		result.error = e instanceof Error ? e.message : String(e);
+		const reason = e instanceof Error ? e.message : String(e);
+		if (result.account || result.plan) {
+			result.note = "Claude CLI usage windows are unavailable in this version.";
+		} else {
+			result.error = reason;
+		}
+		return result;
+	}
+
+	if (!clean || clean.length < 10) {
+		if (result.account || result.plan) {
+			result.note = "Claude CLI did not return rate-limit windows.";
+		} else {
+			result.error = "Empty output from claude CLI";
+		}
+		return result;
+	}
+
+	const classification = classifyClaudeUsageOutput(clean);
+	if (classification.error) {
+		result.error = classification.error;
+		return result;
+	}
+	if (classification.note) {
+		result.note = classification.note;
+		return result;
+	}
+
+	const lines = clean.split("\n");
+	let lastWindow: RateWindow | null = null;
+
+	for (const line of lines) {
+		const trimmed = line.trim();
+		if (!trimmed) {
+			continue;
+		}
+
+		result.account ??= extractLineValue(trimmed, /account\s*[:-]\s*(.+)$/i);
+		result.plan ??= extractLineValue(trimmed, /plan\s*[:-]\s*(.+)$/i);
+
+		const lower = trimmed.toLowerCase();
+		const pct = extractPercentFromLine(trimmed);
+		const label = detectClaudeWindowLabel(lower);
+		const resetDescription = extractResetFromLine(trimmed);
+
+		if (label && pct !== null) {
+			lastWindow = upsertWindow(result.windows, {
+				label,
+				percentLeft: clampPercent(pct),
+				resetDescription,
+				windowMinutes: inferWindowMinutes("claude", label),
+			});
+			continue;
+		}
+
+		if (resetDescription && lastWindow && !lastWindow.resetDescription) {
+			lastWindow.resetDescription = resetDescription;
+		}
+	}
+
+	// If line-by-line didn't work, try ordered percentage extraction (fallback)
+	if (result.windows.length === 0) {
+		const allPcts = [...clean.matchAll(/(\d{1,3})\s*%/g)].map((m) => Number.parseInt(m[1], 10));
+		if (allPcts.length >= 1) {
+			upsertWindow(result.windows, {
+				label: "Session",
+				percentLeft: clampPercent(allPcts[0]),
+				resetDescription: null,
+				windowMinutes: inferWindowMinutes("claude", "Session"),
+			});
+		}
+		if (allPcts.length >= 2) {
+			upsertWindow(result.windows, {
+				label: "Weekly (all)",
+				percentLeft: clampPercent(allPcts[1]),
+				resetDescription: null,
+				windowMinutes: inferWindowMinutes("claude", "Weekly (all)"),
+			});
+		}
+		if (allPcts.length >= 3) {
+			upsertWindow(result.windows, {
+				label: "Weekly (model)",
+				percentLeft: clampPercent(allPcts[2]),
+				resetDescription: null,
+				windowMinutes: inferWindowMinutes("claude", "Weekly (model)"),
+			});
+		}
+	}
+
+	if (result.windows.length === 0 && !result.note && !result.error) {
+		result.note = "No Claude rate-limit windows found in CLI output.";
 	}
 
 	return result;
@@ -305,10 +684,11 @@ async function probeClaude(
 /**
  * Probe the Codex CLI for rate limit info.
  *
- * Runs `codex /status` and parses for:
+ * Parses for:
  * - 5-hour limit % remaining
  * - Weekly limit % remaining
  * - Credits remaining
+ * - account/plan hints when available
  */
 async function probeCodex(
 	exec: (cmd: string, args: string[], opts?: { timeout?: number }) => Promise<{ stdout: string; exitCode: number }>,
@@ -317,46 +697,85 @@ async function probeCodex(
 		provider: "codex",
 		windows: [],
 		credits: null,
+		account: null,
+		plan: null,
+		note: null,
 		probedAt: Date.now(),
 		error: null,
 	};
+
+	try {
+		const loginStatus = await exec("codex", ["login", "status"], { timeout: PROBE_TIMEOUT_MS });
+		const loginClean = stripAnsi(loginStatus.stdout);
+		result.plan ??= extractLineValue(loginClean, /logged in using\s+(.+)$/im);
+		result.account ??= extractLineValue(loginClean, /account\s*[:-]\s*(.+)$/im);
+	} catch {
+		// Best-effort metadata probe only.
+	}
 
 	try {
 		const proc = await exec("codex", ["-s", "read-only", "-a", "untrusted"], { timeout: PROBE_TIMEOUT_MS });
 		const clean = stripAnsi(proc.stdout);
 
 		if (!clean || clean.length < 10) {
-			result.error = "Empty output from codex CLI";
+			if (result.plan || result.account) {
+				result.note = "Codex CLI did not return rate-limit windows.";
+			} else {
+				result.error = "Empty output from codex CLI";
+			}
+			return result;
+		}
+
+		const classification = classifyCodexUsageOutput(clean);
+		if (classification.error) {
+			result.error = classification.error;
+			return result;
+		}
+		if (classification.note) {
+			result.note = classification.note;
 			return result;
 		}
 
 		result.credits = extractCredits(clean);
 
 		const lines = clean.split("\n");
+		let lastWindow: RateWindow | null = null;
 		for (const line of lines) {
-			const lower = line.toLowerCase();
-			if (lower.includes("5h limit") || lower.includes("5-hour") || lower.includes("five hour")) {
-				const pct = extractPercentFromLine(line);
-				if (pct !== null) {
-					result.windows.push({
-						label: "5-hour",
-						percentLeft: pct,
-						resetDescription: extractResetFromLine(line),
-					});
-				}
-			} else if (lower.includes("weekly limit") || lower.includes("weekly")) {
-				const pct = extractPercentFromLine(line);
-				if (pct !== null) {
-					result.windows.push({
-						label: "Weekly",
-						percentLeft: pct,
-						resetDescription: extractResetFromLine(line),
-					});
-				}
+			const trimmed = line.trim();
+			if (!trimmed) {
+				continue;
+			}
+
+			result.account ??= extractLineValue(trimmed, /account\s*[:-]\s*(.+)$/i);
+			result.plan ??= extractLineValue(trimmed, /logged in using\s+(.+)$/i);
+			result.plan ??= extractLineValue(trimmed, /plan\s*[:-]\s*(.+)$/i);
+
+			const lower = trimmed.toLowerCase();
+			const pct = extractPercentFromLine(trimmed);
+			const label = detectCodexWindowLabel(lower);
+			const resetDescription = extractResetFromLine(trimmed);
+
+			if (label && pct !== null) {
+				lastWindow = upsertWindow(result.windows, {
+					label,
+					percentLeft: clampPercent(pct),
+					resetDescription,
+					windowMinutes: inferWindowMinutes("codex", label),
+				});
+				continue;
+			}
+
+			if (resetDescription && lastWindow && !lastWindow.resetDescription) {
+				lastWindow.resetDescription = resetDescription;
 			}
 		}
 	} catch (e) {
 		result.error = e instanceof Error ? e.message : String(e);
+		return result;
+	}
+
+	if (result.windows.length === 0 && !result.error) {
+		result.note = result.note ?? "No Codex rate-limit windows found in CLI output.";
 	}
 
 	return result;
@@ -448,18 +867,25 @@ export default function usageTracker(pi: ExtensionAPI) {
 	function getTotals() {
 		let input = 0;
 		let output = 0;
+		let cacheRead = 0;
+		let cacheWrite = 0;
 		let cost = 0;
 		let turns = 0;
 		for (const m of models.values()) {
 			input += m.input;
 			output += m.output;
+			cacheRead += m.cacheRead;
+			cacheWrite += m.cacheWrite;
 			cost += m.costTotal;
 			turns += m.turns;
 		}
-		return { input, output, cost, turns };
+		const totalTokens = input + output;
+		const avgTokensPerTurn = turns > 0 ? totalTokens / turns : 0;
+		const avgCostPerTurn = turns > 0 ? cost / turns : 0;
+		return { input, output, cacheRead, cacheWrite, cost, turns, totalTokens, avgTokensPerTurn, avgCostPerTurn };
 	}
 
-	function getPace(): { tokensPerMin: number } | null {
+	function getPace(): { tokensPerMin: number; costPerHour: number } | null {
 		if (turnHistory.length < 2) {
 			return null;
 		}
@@ -467,11 +893,15 @@ export default function usageTracker(pi: ExtensionAPI) {
 		if (spanMs < 10_000) {
 			return null;
 		}
-		let total = 0;
+		let tokenTotal = 0;
+		let costTotal = 0;
 		for (const t of turnHistory) {
-			total += t.tokens;
+			tokenTotal += t.tokens;
+			costTotal += t.cost;
 		}
-		return { tokensPerMin: Math.round(total / (spanMs / 60_000)) };
+		const tokensPerMin = Math.round(tokenTotal / (spanMs / 60_000));
+		const costPerHour = costTotal / (spanMs / 3_600_000);
+		return { tokensPerMin, costPerHour };
 	}
 
 	function checkThresholds(ctx: ExtensionContext): void {
@@ -507,10 +937,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 	 * Probe a provider for rate limit data (with cooldown).
 	 * Uses `pi.exec()` to run CLI commands.
 	 */
-	async function probeProvider(provider: "claude" | "codex"): Promise<void> {
+	async function probeProvider(provider: "claude" | "codex", force = false): Promise<void> {
 		const now = Date.now();
 		const last = lastProbeTime.get(provider) ?? 0;
-		if (now - last < PROBE_COOLDOWN_MS || probeInFlight.has(provider)) {
+		if ((!force && now - last < PROBE_COOLDOWN_MS) || probeInFlight.has(provider)) {
 			return;
 		}
 		probeInFlight.add(provider);
@@ -521,7 +951,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 			};
 			const limits = provider === "claude" ? await probeClaude(execFn) : await probeCodex(execFn);
 			rateLimits.set(provider, limits);
-			lastProbeTime.set(provider, now);
+			lastProbeTime.set(provider, Date.now());
 		} catch {
 			// Probe failed — keep stale data if any
 		} finally {
@@ -533,7 +963,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	 * Determine which providers to probe based on the current model.
 	 * Probes in the background (fire-and-forget) to not block the agent.
 	 */
-	function triggerProbe(ctx: ExtensionContext): void {
+	function triggerProbe(ctx: ExtensionContext, force = false): void {
 		const model = ctx.model;
 		if (!model) {
 			return;
@@ -541,10 +971,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 		const id = model.id.toLowerCase();
 		// Detect provider from model ID
 		if (id.includes("claude") || id.includes("sonnet") || id.includes("opus") || id.includes("haiku")) {
-			probeProvider("claude");
+			probeProvider("claude", force);
 		}
 		if (id.includes("gpt") || id.includes("o1") || id.includes("o3") || id.includes("o4") || id.includes("codex")) {
-			probeProvider("codex");
+			probeProvider("codex", force);
 		}
 	}
 
@@ -589,54 +1019,112 @@ export default function usageTracker(pi: ExtensionAPI) {
 	// ─── Report generation ────────────────────────────────────────────────
 
 	/** Render rate limit windows as plain text (for LLM tool). */
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: report composition intentionally handles multiple optional detail lines.
 	function renderRateLimitsPlain(): string {
 		const lines: string[] = [];
 		for (const [, rl] of rateLimits) {
+			if (!hasProviderDisplayData(rl)) {
+				continue;
+			}
+			const name = rl.provider.charAt(0).toUpperCase() + rl.provider.slice(1);
+			const windows = [...rl.windows].sort((a, b) => a.percentLeft - b.percentLeft);
+			lines.push(`${name} Rate Limits:`);
 			if (rl.error) {
-				lines.push(`${rl.provider}: Error — ${rl.error}`);
-				continue;
+				lines.push(`  Error: ${rl.error}`);
 			}
-			if (rl.windows.length === 0) {
-				continue;
-			}
-			lines.push(`${rl.provider.charAt(0).toUpperCase() + rl.provider.slice(1)} Rate Limits:`);
-			for (const w of rl.windows) {
+			for (const w of windows) {
 				const bar = progressBar(w.percentLeft, 20);
+				const usedPercent = clampPercent(100 - w.percentLeft);
 				const reset = w.resetDescription ? ` — resets ${w.resetDescription}` : "";
-				lines.push(`  ${w.label}: ${bar} ${w.percentLeft}% left${reset}`);
+				lines.push(`  ${w.label}: ${bar} ${w.percentLeft}% left (${usedPercent.toFixed(0)}% used)${reset}`);
+
+				const pace = computeWindowPace(w);
+				if (pace) {
+					const right = formatPaceRight(pace);
+					const rightText = right ? ` | ${right}` : "";
+					lines.push(
+						`    Pace: ${formatPaceLeft(pace)} | Expected ${pace.expectedUsedPercent.toFixed(0)}% used${rightText}`,
+					);
+				}
+			}
+
+			const most = windows[0];
+			if (most) {
+				lines.push(`  Most constrained: ${most.label} (${most.percentLeft}% left)`);
+			} else if (!rl.error) {
+				lines.push("  Windows: unavailable from current CLI output");
+			}
+			if (rl.note) {
+				lines.push(`  Note: ${rl.note}`);
+			}
+			if (rl.plan) {
+				lines.push(`  Plan: ${rl.plan}`);
+			}
+			if (rl.account) {
+				lines.push(`  Account: ${rl.account}`);
 			}
 			if (rl.credits !== null) {
 				lines.push(`  Credits: ${rl.credits.toFixed(2)} remaining`);
 			}
+			const age = Date.now() - rl.probedAt;
+			lines.push(`  Updated: ${fmtDuration(age)} ago`);
 			lines.push("");
 		}
 		return lines.join("\n");
 	}
 
 	/** Render rate limit windows with theme colors (for TUI). */
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: UI output path includes pace, metadata, and per-window fallbacks.
 	function renderRateLimitsRich(theme: { fg: (c: string, t: string) => string }): string[] {
 		const lines: string[] = [];
 
 		for (const [, rl] of rateLimits) {
-			if (rl.error) {
-				lines.push(`  ${theme.fg("error", `⚠ ${rl.provider}`)} ${theme.fg("dim", rl.error)}`);
-				continue;
-			}
-			if (rl.windows.length === 0) {
+			if (!hasProviderDisplayData(rl)) {
 				continue;
 			}
 
 			const name = rl.provider.charAt(0).toUpperCase() + rl.provider.slice(1);
+			const windows = [...rl.windows].sort((a, b) => a.percentLeft - b.percentLeft);
 			lines.push(`  ${theme.fg("accent", `▸ ${name} Rate Limits`)}`);
-
-			for (const w of rl.windows) {
-				const color = pctColor(w.percentLeft);
-				const bar = theme.fg(color, progressBar(w.percentLeft, 20));
-				const pct = theme.fg(color, `${w.percentLeft}% left`);
-				const reset = w.resetDescription ? theme.fg("dim", ` — resets ${w.resetDescription}`) : "";
-				lines.push(`    ${theme.fg("accent", w.label.padEnd(15))}${bar} ${pct}${reset}`);
+			if (rl.error) {
+				lines.push(`    ${theme.fg("error", "⚠ Error:")} ${theme.fg("dim", rl.error)}`);
 			}
 
+			for (const w of windows) {
+				const color = pctColor(w.percentLeft);
+				const usedPercent = clampPercent(100 - w.percentLeft);
+				const bar = theme.fg(color, progressBar(w.percentLeft, 20));
+				const pct = theme.fg(color, `${w.percentLeft}% left`);
+				const used = theme.fg("dim", `(${usedPercent.toFixed(0)}% used)`);
+				const reset = w.resetDescription ? theme.fg("dim", ` — resets ${w.resetDescription}`) : "";
+				lines.push(`    ${theme.fg("accent", w.label.padEnd(15))}${bar} ${pct} ${used}${reset}`);
+
+				const pace = computeWindowPace(w);
+				if (pace) {
+					const paceColor = pace.deltaPercent > 2 ? "warning" : pace.deltaPercent < -2 ? "success" : "accent";
+					const right = formatPaceRight(pace);
+					const rightText = right ? `${theme.fg("dim", " | ")}${theme.fg("dim", right)}` : "";
+					lines.push(
+						`      ${theme.fg("accent", "Pace")}${theme.fg("dim", ": ")}${theme.fg(paceColor, formatPaceLeft(pace))}${theme.fg("dim", ` | Expected ${pace.expectedUsedPercent.toFixed(0)}% used`)}${rightText}`,
+					);
+				}
+			}
+
+			const most = windows[0];
+			if (most) {
+				lines.push(`    ${theme.fg("dim", `Most constrained: ${most.label} (${most.percentLeft}% left)`)}`);
+			} else if (!rl.error) {
+				lines.push(`    ${theme.fg("dim", "Windows unavailable from current CLI output")}`);
+			}
+			if (rl.note) {
+				lines.push(`    ${theme.fg("dim", `Note: ${rl.note}`)}`);
+			}
+			if (rl.plan) {
+				lines.push(`    ${theme.fg("accent", "Plan".padEnd(15))}${theme.fg("warning", rl.plan)}`);
+			}
+			if (rl.account) {
+				lines.push(`    ${theme.fg("accent", "Account".padEnd(15))}${theme.fg("dim", rl.account)}`);
+			}
 			if (rl.credits !== null) {
 				lines.push(
 					`    ${theme.fg("accent", "Credits".padEnd(15))}${theme.fg("warning", `${rl.credits.toFixed(2)} remaining`)}`,
@@ -664,7 +1152,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 			const color = pctColor(most.percentLeft);
 			const bar = theme.fg(color, progressBar(most.percentLeft, 8));
 			const reset = most.resetDescription ? theme.fg("dim", ` ↻${most.resetDescription}`) : "";
-			parts.push(`${theme.fg("accent", name)} ${bar} ${theme.fg(color, `${most.percentLeft}%`)}${reset}`);
+			parts.push(
+				`${theme.fg("accent", name)} ${theme.fg("dim", `${most.label}:`)} ${bar} ${theme.fg(color, `${most.percentLeft}%`)}${reset}`,
+			);
 		}
 		return parts.join(theme.fg("dim", "  "));
 	}
@@ -691,10 +1181,23 @@ export default function usageTracker(pi: ExtensionAPI) {
 		lines.push("=== Session Usage ===");
 		lines.push("");
 		lines.push(`Duration: ${fmtDuration(elapsed)} | Turns: ${totals.turns}`);
-		lines.push(`Tokens: ${fmtTokens(totals.input)} in / ${fmtTokens(totals.output)} out`);
+		lines.push(
+			`Tokens: ${fmtTokens(totals.input)} in / ${fmtTokens(totals.output)} out (${fmtTokens(totals.totalTokens)} total)`,
+		);
 		lines.push(`Cost: ${fmtCost(totals.cost)}`);
+		if (totals.turns > 0) {
+			lines.push(
+				`Avg/turn: ${fmtTokens(Math.round(totals.avgTokensPerTurn))} tokens, ${fmtCost(totals.avgCostPerTurn)}`,
+			);
+		}
 		if (pace) {
-			lines.push(`Pace: ~${fmtTokens(pace.tokensPerMin)} tokens/min`);
+			lines.push(`Pace: ~${fmtTokens(pace.tokensPerMin)} tokens/min (${fmtCost(pace.costPerHour)}/hour)`);
+		}
+		if (totals.cacheRead > 0 || totals.cacheWrite > 0) {
+			const cacheRatio = totals.input > 0 ? (totals.cacheRead / totals.input) * 100 : 0;
+			lines.push(
+				`Cache: ${fmtTokens(totals.cacheRead)} read / ${fmtTokens(totals.cacheWrite)} write (${cacheRatio.toFixed(0)}% read vs input)`,
+			);
 		}
 		if (ctxUsage?.percent != null) {
 			lines.push(
@@ -707,15 +1210,22 @@ export default function usageTracker(pi: ExtensionAPI) {
 			lines.push("--- Per-Model ---");
 			const sorted = [...models.values()].sort((a, b) => b.costTotal - a.costTotal);
 			for (const m of sorted) {
+				const costShare = totals.cost > 0 ? (m.costTotal / totals.cost) * 100 : 0;
+				const modelTokens = m.input + m.output;
+				const avgTokens = m.turns > 0 ? modelTokens / m.turns : 0;
 				lines.push(
-					`  ${m.model} (${m.provider}): ${m.turns} turns, ${fmtTokens(m.input)} in / ${fmtTokens(m.output)} out, ${fmtCost(m.costTotal)}`,
+					`  ${m.model} (${m.provider}): ${m.turns} turns, ${fmtTokens(m.input)} in / ${fmtTokens(m.output)} out, ${fmtCost(m.costTotal)} (${costShare.toFixed(0)}% of session), avg ${fmtTokens(Math.round(avgTokens))}/turn`,
 				);
+				if (m.cacheRead > 0 || m.cacheWrite > 0) {
+					lines.push(`    cache: ${fmtTokens(m.cacheRead)} read / ${fmtTokens(m.cacheWrite)} write`);
+				}
 			}
 		}
 
 		return lines.join("\n");
 	}
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: rich dashboard aggregates multiple optional sections and formatting branches.
 	function generateRichReport(ctx: ExtensionContext, theme: { fg: (c: string, t: string) => string }): string[] {
 		const totals = getTotals();
 		const elapsed = Date.now() - sessionStart;
@@ -744,6 +1254,29 @@ export default function usageTracker(pi: ExtensionAPI) {
 			`  ${theme.fg("accent", "Session")}${sep}${fmtDuration(elapsed)}${sep}${totals.turns} turns${sep}${theme.fg("warning", fmtCost(totals.cost))}`,
 		);
 
+		lines.push(
+			`  ${theme.fg("accent", "Tokens ")}${sep}${theme.fg("success", fmtTokens(totals.input))} in${sep}${theme.fg("warning", fmtTokens(totals.output))} out${sep}${theme.fg("dim", fmtTokens(totals.totalTokens))} total`,
+		);
+
+		if (totals.turns > 0) {
+			lines.push(
+				`  ${theme.fg("accent", "Avg    ")}${sep}${fmtTokens(Math.round(totals.avgTokensPerTurn))} tok/turn${sep}${theme.fg("warning", fmtCost(totals.avgCostPerTurn))}/turn`,
+			);
+		}
+
+		if (pace) {
+			lines.push(
+				`  ${theme.fg("accent", "Pace   ")}${sep}~${fmtTokens(pace.tokensPerMin)} tok/min${sep}${theme.fg("warning", `${fmtCost(pace.costPerHour)}/h`)}`,
+			);
+		}
+
+		if (totals.cacheRead > 0 || totals.cacheWrite > 0) {
+			const cacheRatio = totals.input > 0 ? (totals.cacheRead / totals.input) * 100 : 0;
+			lines.push(
+				`  ${theme.fg("accent", "Cache  ")}${sep}${fmtTokens(totals.cacheRead)} read${sep}${fmtTokens(totals.cacheWrite)} write${sep}${theme.fg("dim", `${cacheRatio.toFixed(0)}% read/input`)}`,
+			);
+		}
+
 		if (ctxUsage?.percent != null) {
 			const pct = ctxUsage.percent;
 			const color = pctColor(100 - pct); // invert: low remaining = danger
@@ -751,15 +1284,6 @@ export default function usageTracker(pi: ExtensionAPI) {
 				`  ${theme.fg("accent", "Context")}${sep}${theme.fg(color, progressBar(100 - pct, 20))} ${theme.fg(color, `${(100 - pct).toFixed(0)}% free`)} of ${fmtTokens(ctxUsage.contextWindow)}`,
 			);
 		}
-
-		if (pace) {
-			lines.push(`  ${theme.fg("accent", "Pace   ")}${sep}~${fmtTokens(pace.tokensPerMin)} tok/min`);
-		}
-
-		// Tokens
-		lines.push(
-			`  ${theme.fg("accent", "Tokens ")}${sep}${theme.fg("success", fmtTokens(totals.input))} in${sep}${theme.fg("warning", fmtTokens(totals.output))} out${sep}${theme.fg("dim", fmtTokens(totals.input + totals.output))} total`,
-		);
 
 		// ── Per-model breakdown ──
 		if (models.size > 0) {
@@ -773,11 +1297,20 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 			for (const m of sorted) {
 				const costPct = maxCost > 0 ? (m.costTotal / maxCost) * 100 : 0;
+				const costShare = totals.cost > 0 ? (m.costTotal / totals.cost) * 100 : 0;
+				const modelTokens = m.input + m.output;
+				const avgTokens = m.turns > 0 ? modelTokens / m.turns : 0;
 				const bar = progressBar(costPct, 12);
 				lines.push(`  ${theme.fg("accent", "◆")} ${theme.fg("accent", m.model)} ${theme.fg("dim", `(${m.provider})`)}`);
 				lines.push(
-					`    ${bar} ${theme.fg("warning", fmtCost(m.costTotal))}${sep}${m.turns} turns${sep}${fmtTokens(m.input)} in / ${fmtTokens(m.output)} out`,
+					`    ${bar} ${theme.fg("warning", fmtCost(m.costTotal))}${sep}${m.turns} turns${sep}${fmtTokens(m.input)} in / ${fmtTokens(m.output)} out${sep}${theme.fg("dim", `${costShare.toFixed(0)}% of cost`)}`,
 				);
+				lines.push(`    ${theme.fg("dim", `avg ${fmtTokens(Math.round(avgTokens))} tok/turn`)}`);
+				if (m.cacheRead > 0 || m.cacheWrite > 0) {
+					lines.push(
+						`    ${theme.fg("dim", `cache ${fmtTokens(m.cacheRead)} read / ${fmtTokens(m.cacheWrite)} write`)}`,
+					);
+				}
 			}
 		}
 
@@ -863,7 +1396,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		description: "Show rate limits, token usage, and cost breakdown",
 		async handler(_args, ctx) {
 			// Force a fresh probe before showing
-			triggerProbe(ctx);
+			triggerProbe(ctx, true);
 			// Small delay to let probe complete
 			await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -923,7 +1456,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		async handler(_args, ctx) {
 			// Clear cooldowns to force fresh probes
 			lastProbeTime.clear();
-			triggerProbe(ctx);
+			triggerProbe(ctx, true);
 			ctx.ui.notify("Refreshing rate limits...", "info");
 		},
 	});
@@ -945,7 +1478,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			// Force a probe before reporting
-			triggerProbe(ctx);
+			triggerProbe(ctx, true);
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 
 			const format = params.format ?? "detailed";
@@ -954,9 +1487,8 @@ export default function usageTracker(pi: ExtensionAPI) {
 			if (format === "summary") {
 				const rlText = renderRateLimitsPlain();
 				const totals = getTotals();
-				text = rlText.trim()
-					? `${rlText}Session: ${fmtCost(totals.cost)} cost, ${totals.turns} turns`
-					: `No rate limit data available.\nSession: ${fmtCost(totals.cost)} cost, ${totals.turns} turns`;
+				const sessionLine = `Session: ${fmtCost(totals.cost)} cost, ${totals.turns} turns, ${fmtTokens(totals.input)} in / ${fmtTokens(totals.output)} out`;
+				text = rlText.trim() ? `${rlText}\n${sessionLine}` : `No rate limit data available.\n${sessionLine}`;
 			} else {
 				text = generatePlainReport(ctx);
 			}
@@ -970,7 +1502,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	pi.registerShortcut("ctrl+u", {
 		description: "Show usage dashboard (rate limits + costs)",
 		async handler(ctx) {
-			triggerProbe(ctx);
+			triggerProbe(ctx, true);
 			await new Promise((resolve) => setTimeout(resolve, 500));
 
 			await ctx.ui.custom(

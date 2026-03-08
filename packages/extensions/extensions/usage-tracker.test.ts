@@ -396,6 +396,91 @@ describe("usage-tracker extension", () => {
 			const text = result.content[0].text;
 			expect(text).toContain("Session:");
 			expect(text).toContain("1 turns");
+			expect(text).toContain("in /");
+		});
+
+		it("adds CodexBar-style detail lines (pace, constrained window, cache, plan)", async () => {
+			pi.exec.mockImplementation(async (cmd: string) => {
+				if (cmd === "claude") {
+					return {
+						stdout:
+							"Current session 72% remaining resets in 2h\nCurrent week all models 60% remaining resets in 3d 0h\nPlan: Pro\nAccount: dev@example.com",
+						exitCode: 0,
+					};
+				}
+				return { stdout: "", exitCode: 0 };
+			});
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: makeAssistantMessage(), toolResults: [] }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			const text = result.content[0].text;
+
+			expect(text).toContain("Most constrained:");
+			expect(text).toContain("Pace:");
+			expect(text).toContain("Avg/turn:");
+			expect(text).toContain("Cache:");
+			expect(text).toContain("Plan: Pro");
+		});
+
+		it("falls back to claude auth metadata when `claude usage` no longer exposes windows", async () => {
+			pi.exec.mockImplementation(async (cmd: string, args?: string[]) => {
+				if (cmd === "claude" && args?.[0] === "auth" && args?.[1] === "status") {
+					return {
+						stdout: JSON.stringify({
+							loggedIn: true,
+							email: "ifiokotung@gmail.com",
+							subscriptionType: "max",
+						}),
+						exitCode: 0,
+					};
+				}
+				if (cmd === "claude" && args?.[0] === "usage") {
+					return {
+						stdout: 'Could you clarify what you mean by "usage"?',
+						exitCode: 0,
+					};
+				}
+				return { stdout: "", exitCode: 0 };
+			});
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			const text = result.content[0].text;
+
+			expect(text).toContain("Plan: max");
+			expect(text).toContain("Account: ifiokotung@gmail.com");
+			expect(text).toContain("Windows: unavailable");
+		});
+
+		it("shows codex note when windows need an interactive TTY", async () => {
+			ctx.model = { id: "gpt-4o" } as any;
+			pi.exec.mockImplementation(async (cmd: string, args?: string[]) => {
+				if (cmd === "codex" && args?.[0] === "login" && args?.[1] === "status") {
+					return { stdout: "Logged in using ChatGPT", exitCode: 0 };
+				}
+				if (cmd === "codex") {
+					return { stdout: "Error: stdin is not a terminal", exitCode: 1 };
+				}
+				return { stdout: "", exitCode: 0 };
+			});
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			const text = result.content[0].text;
+
+			expect(text).toContain("Codex Rate Limits:");
+			expect(text).toContain("interactive TTY");
+			expect(text).toContain("Plan: ChatGPT");
 		});
 	});
 
@@ -437,12 +522,46 @@ describe("usage-tracker extension", () => {
 	});
 
 	describe("/usage command", () => {
-		it("shows overlay with rich report", async () => {
+		it("shows overlay with richer CodexBar-style detail sections", async () => {
+			pi.exec.mockImplementation(async (cmd: string) => {
+				if (cmd === "claude") {
+					return {
+						stdout:
+							"Current session 85% remaining resets in 3h\nCurrent week all models 65% remaining resets in 4d 0h\nPlan: Team",
+						exitCode: 0,
+					};
+				}
+				return { stdout: "", exitCode: 0 };
+			});
+
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: makeAssistantMessage(), toolResults: [] }, ctx);
+			vi.advanceTimersByTime(15_000);
+			pi._emit(
+				"turn_end",
+				{ type: "turn_end", turnIndex: 1, message: makeAssistantMessage({ costTotal: 0.015 }), toolResults: [] },
+				ctx,
+			);
 
 			await runWithTimers(() => pi._commands.get("usage").handler("", ctx));
 			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), { overlay: true });
+
+			const rendererFactory = (ctx.ui.custom as ReturnType<typeof vi.fn>).mock.calls[0][0] as (...args: unknown[]) => {
+				render: (width: number) => string[];
+			};
+			const component = rendererFactory(
+				{ requestRender: vi.fn() },
+				{ fg: (_color: string, text: string) => text },
+				{},
+				vi.fn(),
+			);
+			const rendered = component.render(220).join("\n");
+			expect(rendered).toContain("Most constrained:");
+			expect(rendered).toContain("Avg");
+			expect(rendered).toContain("Cache");
+			expect(rendered).toContain("Pace");
+			expect(rendered).toContain("used)");
 		});
 	});
 

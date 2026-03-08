@@ -140,6 +140,11 @@ Also tracks per-model token usage and session costs.
 usage from `AssistantMessage.usage` on every `turn_end` event. Alerts when session cost crosses
 $0.50, $1, $2, $5, $10+ thresholds.
 
+> Note: some newer Claude CLI builds no longer expose quota windows via `claude usage`, and some
+> Codex environments require an interactive TTY for rate-limit output. In those cases, oh-pi still
+> shows provider metadata (e.g. Claude account/plan from `claude auth status`) and clearly marks
+> windows as unavailable.
+
 **Widget** (always visible above editor):
 
 ```
@@ -152,17 +157,21 @@ Claude [████████░░░░] 67% ↻in 3d 2h │ 💰$0.42 │ 
 ╭─ Usage Dashboard ──────────────────────────────────────╮
 
   ▸ Claude Rate Limits
-    Session        [████████████████████] 92% left
-    Weekly (all)   [████████████░░░░░░░░] 67% left — resets in 3d 2h
-    Weekly (Opus)  [██████████████░░░░░░] 71% left — resets in 3d 2h
+    Weekly (all)   [████████████░░░░░░░░] 67% left (33% used) — resets in 3d 2h
+      Pace: On pace | Expected 31% used | Lasts until reset
+    Session        [████████████████░░░░] 82% left (18% used) — resets in 2h 5m
+    Most constrained: Weekly (all) (67% left)
 
   ──────────────────────────────────────────────────────────
   Session │ 23m12s │ 14 turns │ $0.42
   Tokens  │ 45.2k in │ 18.7k out │ 63.9k total
+  Avg     │ 4.6k tok/turn │ $0.030/turn
+  Cache   │ 12.4k read │ 1.8k write │ 27% read/input
 
   Per-Model Breakdown
   ◆ claude-sonnet-4 (anthropic)
-    [████████████] $0.38 │ 12 turns │ 40.1k in / 16.2k out
+    [████████████] $0.38 │ 12 turns │ 40.1k in / 16.2k out │ 90% of cost
+    avg 4.7k tok/turn
 ╰────────────────────────────────────────────────────────╯
 ```
 
