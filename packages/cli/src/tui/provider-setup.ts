@@ -67,6 +67,34 @@ interface FetchResult {
 	api?: string;
 }
 
+interface AnthropicModelResponseItem {
+	id: string;
+	// biome-ignore lint/style/useNamingConvention: External API field name.
+	owned_by?: string;
+	// biome-ignore lint/style/useNamingConvention: External API field name.
+	thinking_enabled?: boolean;
+	// biome-ignore lint/style/useNamingConvention: External API field name.
+	max_tokens?: number;
+}
+
+interface GoogleModelResponseItem {
+	name: string;
+	inputTokenLimit?: number;
+	outputTokenLimit?: number;
+}
+
+interface OpenAIModelResponseItem {
+	id: string;
+	// biome-ignore lint/style/useNamingConvention: External API field name.
+	thinking_enabled?: boolean;
+	// biome-ignore lint/style/useNamingConvention: External API field name.
+	context_window?: number;
+	// biome-ignore lint/style/useNamingConvention: External API field name.
+	max_tokens?: number;
+	// biome-ignore lint/style/useNamingConvention: External API field name.
+	max_output?: number;
+}
+
 type OpenAIApiMode = "auto" | "openai-responses" | "openai-completions";
 
 export interface ProviderSetupResult {
@@ -107,7 +135,7 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
 			signal: AbortSignal.timeout(8000),
 		});
 		if (res.ok) {
-			const json = (await res.json()) as { data?: any[] };
+			const json = (await res.json()) as { data?: AnthropicModelResponseItem[] };
 			const data = json.data ?? [];
 			if (data.length > 0 && data[0].owned_by === "anthropic") {
 				return {
@@ -137,13 +165,13 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
 				signal: AbortSignal.timeout(8000),
 			});
 			if (res.ok) {
-				const json = (await res.json()) as { models?: any[] };
-				const data = (json.models ?? []).filter((m: any) => m.name?.includes("gemini"));
+				const json = (await res.json()) as { models?: GoogleModelResponseItem[] };
+				const data = (json.models ?? []).filter((m) => m.name?.includes("gemini"));
 				if (data.length > 0) {
 					return {
 						api: "google-generative-ai",
 						models: data
-							.map((m: any) => ({
+							.map((m) => ({
 								id: m.name.replace("models/", ""),
 								reasoning: m.name.includes("thinking") || m.name.includes("2.5"),
 								input: ["text", "image"] as ("text" | "image")[],
@@ -162,17 +190,17 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
 	// Try OpenAI-compatible
 	try {
 		const res = await fetch(`${base}/v1/models`, {
-			headers: { Authorization: `Bearer ${resolvedKey}` },
+			headers: { authorization: `Bearer ${resolvedKey}` },
 			signal: AbortSignal.timeout(8000),
 		});
 		if (res.ok) {
-			const json = (await res.json()) as { data?: any[] };
+			const json = (await res.json()) as { data?: OpenAIModelResponseItem[] };
 			const data = json.data ?? [];
 			if (data.length > 0) {
 				return {
 					api: "openai-completions",
 					models: data
-						.map((m: any) => ({
+						.map((m) => ({
 							id: m.id,
 							reasoning: m.thinking_enabled ?? m.id.includes("o3"),
 							input: ["text", "image"] as ("text" | "image")[],
@@ -196,6 +224,7 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
  * @param env - Current environment info with detected providers
  * @returns Provider setup result with strategy and selected providers
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Interactive setup flow needs explicit branching per provider strategy.
 export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult> {
 	const entries = Object.entries(PROVIDERS);
 	let providerStrategy: ProviderSetupStrategy = "replace";
@@ -341,7 +370,11 @@ async function setupProviderChoice(choice: string): Promise<ProviderConfig | nul
 	}
 
 	const name = choice;
-	const info = PROVIDERS[name]!;
+	const info = PROVIDERS[name];
+	if (!info) {
+		p.log.error(`Unknown provider: ${name}`);
+		return null;
+	}
 	const envVal = process.env[info.env];
 
 	const useCustomUrl = await p.confirm({
@@ -425,7 +458,7 @@ async function selectOpenAIApiMode(
 	return resolveOpenAIApiMode(selected, defaultModel);
 }
 
-async function selectOpenAIApiModeWithHint(
+function selectOpenAIApiModeWithHint(
 	label: string,
 	defaultModel: string,
 ): Promise<"openai-responses" | "openai-completions"> {

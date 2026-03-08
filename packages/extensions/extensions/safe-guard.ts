@@ -28,6 +28,7 @@ export const PROTECTED_PATHS = [".env", ".git/", "node_modules/", ".pi/", "id_rs
  * dangerous bash commands and writes to protected paths.
  */
 export default function (pi: ExtensionAPI) {
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Safety policy intentionally branches by tool/action severity.
 	pi.on("tool_call", async (event, ctx) => {
 		// Check bash commands for dangerous patterns
 		if (event.toolName === "bash") {

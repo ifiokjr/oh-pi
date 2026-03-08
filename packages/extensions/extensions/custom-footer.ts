@@ -58,6 +58,7 @@ export default function (pi: ExtensionAPI) {
 				},
 				// biome-ignore lint/suspicious/noEmptyBlockStatements: Required by footer interface
 				invalidate() {},
+				// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Footer rendering combines multiple live metrics in one pass.
 				render(width: number): string[] {
 					let input = 0;
 					let output = 0;
@@ -72,7 +73,7 @@ export default function (pi: ExtensionAPI) {
 					}
 
 					const usage = ctx.getContextUsage();
-					const ctxWindow = usage?.contextWindow ?? 0;
+					const _ctxWindow = usage?.contextWindow ?? 0;
 					const pct = usage?.percent ?? 0;
 
 					const pctColor = pct > 75 ? "error" : pct > 50 ? "warning" : "success";

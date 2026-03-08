@@ -23,6 +23,7 @@ vi.mock("@mariozechner/pi-ai", () => ({ getModel: vi.fn() }));
 import { Nest } from "../extensions/ant-colony/nest.js";
 import {
 	classifyError,
+	createUsageLimitsTracker,
 	quorumMergeTasks,
 	shouldUseScoutQuorum,
 	validateExecutionPlan,
@@ -110,6 +111,39 @@ describe("validateExecutionPlan", () => {
 		const plan = validateExecutionPlan([mkTask({ id: "t-plan-2", caste: "scout" as any })]);
 		expect(plan.ok).toBe(false);
 		expect(plan.issues.some((i) => i.includes("invalid_caste"))).toBe(true);
+	});
+});
+
+describe("createUsageLimitsTracker", () => {
+	it("supports event buses without off()", () => {
+		const handlers: Array<(data: unknown) => void> = [];
+		const bus = {
+			on(_event: string, handler: (data: unknown) => void) {
+				handlers.push(handler);
+			},
+			emit(event: string) {
+				if (event === "usage:query") {
+					for (const handler of handlers) {
+						handler({ sessionCost: 1.25, providers: {}, perModel: {} });
+					}
+				}
+			},
+		};
+
+		const tracker = createUsageLimitsTracker(bus);
+		const snapshot = tracker.requestSnapshot();
+		expect(snapshot?.sessionCost).toBe(1.25);
+		expect(() => tracker.dispose()).not.toThrow();
+	});
+
+	it("unsubscribes when off() is available", () => {
+		const on = vi.fn();
+		const emit = vi.fn();
+		const off = vi.fn();
+		const tracker = createUsageLimitsTracker({ on, emit, off });
+		tracker.requestSnapshot();
+		tracker.dispose();
+		expect(off).toHaveBeenCalledWith("usage:limits", expect.any(Function));
 	});
 });
 

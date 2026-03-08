@@ -20,6 +20,7 @@ export function countExisting(env: EnvInfo, dir: string): number {
  * @param config - 用户选择的配置对象
  * @param env - 当前环境信息
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Interactive wizard confirmation flow with many user branches.
 export async function confirmApply(config: OhPConfig, env: EnvInfo) {
 	const keepProviders = config.providerStrategy === "keep";
 	const addProviders = config.providerStrategy === "add";

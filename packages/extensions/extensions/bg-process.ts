@@ -204,6 +204,7 @@ export default function (pi: ExtensionAPI) {
 			}),
 			pid: Type.Optional(Type.Number({ description: "PID of the process (required for log/stop)" })),
 		}),
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Command router for list/log/stop with validation.
 		async execute(_toolCallId, params) {
 			const { action, pid } = params;
 

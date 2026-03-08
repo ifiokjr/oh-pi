@@ -517,7 +517,7 @@ describe("usage-tracker extension", () => {
 
 		it("responds to usage:query by broadcasting current data", () => {
 			// Get the handler registered via pi.events.on("usage:query", handler)
-			const onCalls = (pi.events.on as ReturnType<typeof vi.fn>).mock.calls;
+			const _onCalls = (pi.events.on as ReturnType<typeof vi.fn>).mock.calls;
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 

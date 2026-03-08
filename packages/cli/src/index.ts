@@ -65,7 +65,7 @@ async function presetFlow(env: EnvInfo): Promise<OhPConfig> {
  * @param env - Detected environment info
  * @returns Fully customized config
  */
-async function customFlow(env: EnvInfo): Promise<OhPConfig> {
+function customFlow(env: EnvInfo): Promise<OhPConfig> {
 	const defaultExtensions = EXTENSIONS.filter((e) => e.default).map((e) => e.name);
 	const initial: WizardBaseConfig = {
 		theme: "dark",

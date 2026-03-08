@@ -11,7 +11,7 @@
 
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { Container, matchesKey, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { Nest } from "./nest.js";
@@ -62,7 +62,7 @@ interface BackgroundColony {
 	phase: string;
 	antStreams: Map<string, AntStreamState>;
 	logs: ColonyLogEntry[];
-	promise: Promise<ColonyState>;
+	promise?: Promise<ColonyState>;
 }
 
 export default function antColonyExtension(pi: ExtensionAPI) {
@@ -237,7 +237,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			currentModel: string;
 			modelOverrides: Record<string, string>;
 			cwd: string;
-			modelRegistry?: any;
+			modelRegistry?: ModelRegistry;
 		},
 		signal?: AbortSignal | null,
 	) {
@@ -281,7 +281,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			currentModel: string;
 			modelOverrides: Record<string, string>;
 			cwd: string;
-			modelRegistry?: any;
+			modelRegistry?: ModelRegistry;
 		},
 		resume = false,
 	): string {
@@ -295,7 +295,6 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			phase: "initializing",
 			antStreams: new Map(),
 			logs: [],
-			promise: null as any, // set below
 		};
 
 		pushLog(colony, { level: "info", text: `INITIALIZING · Colony [${colonyId}] launched in background` });
@@ -326,7 +325,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				pushLog(colony, { level: "info", text: `${statusLabel(phase)} · ${detail}` });
 				throttledRender();
 			},
-			onAntSpawn(ant, task) {
+			onAntSpawn(ant, _task) {
 				colony.antStreams.set(ant.id, {
 					antId: ant.id,
 					caste: ant.caste,
@@ -365,7 +364,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				}
 			},
 			onProgress(metrics) {
-				if (colony.state) colony.state.metrics = metrics;
+				if (colony.state) {
+					colony.state.metrics = metrics;
+				}
 				throttledRender();
 			},
 			onComplete(state) {
@@ -483,7 +484,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		const container = new Container();
 
 		// Extract key info for rendering
-		const statusMatch = content.match(/\*\*Status:\*\* (.+)/);
+		const _statusMatch = content.match(/\*\*Status:\*\* (.+)/);
 		const durationMatch = content.match(/\*\*Duration:\*\* (.+)/);
 		const ok = content.includes("✅ done");
 
@@ -539,14 +540,19 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 					const getSelectedColony = (): BackgroundColony | null => {
 						const ids = [...colonies.keys()];
-						if (ids.length === 0) return null;
+						if (ids.length === 0) {
+							return null;
+						}
 						const idx = selectedColonyIdx % ids.length;
 						return colonies.get(ids[idx]) ?? null;
 					};
 
+					// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Rich TUI view intentionally handles many tabs/states.
 					const buildLines = (width: number): string[] => {
 						const c = getSelectedColony();
-						if (!c) return [theme.fg("muted", "  No colony running.")];
+						if (!c) {
+							return [theme.fg("muted", "  No colony running.")];
+						}
 
 						const lines: string[] = [];
 						const w = width - 2; // padding
@@ -650,7 +656,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 											: "";
 									lines.push(`  ${icon} ${casteIcon(t.caste)} ${theme.fg("text", trim(t.title, w - 12))}${dur}`);
 								}
-								if (filtered.length > 16) lines.push(theme.fg("muted", `  ⋯ +${filtered.length - 16} more`));
+								if (filtered.length > 16) {
+									lines.push(theme.fg("muted", `  ⋯ +${filtered.length - 16} more`));
+								}
 							}
 							lines.push("");
 						}
@@ -669,7 +677,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 										`  ${casteIcon(s.caste)} ${theme.fg("muted", s.antId.slice(0, 12))} ${theme.fg("muted", `${formatTokens(s.tokens)}t`)} ${theme.fg("text", excerpt)}`,
 									);
 								}
-								if (streams.length > 10) lines.push(theme.fg("muted", `  ⋯ +${streams.length - 10} more streams`));
+								if (streams.length > 10) {
+									lines.push(theme.fg("muted", `  ⋯ +${streams.length - 10} more streams`));
+								}
 							}
 							lines.push("");
 						}
@@ -682,8 +692,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 								for (const t of failedTasks.slice(0, 4)) {
 									lines.push(`  ${theme.fg("error", "✗")} ${theme.fg("text", trim(t.title, w - 8))}`);
 								}
-								if (failedTasks.length > 4)
+								if (failedTasks.length > 4) {
 									lines.push(theme.fg("muted", `  ⋯ +${failedTasks.length - 4} more failed tasks`));
+								}
 								lines.push("");
 							}
 
@@ -727,7 +738,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 					return {
 						render(width: number): string[] {
-							if (cachedLines && cachedWidth === width) return cachedLines;
+							if (cachedLines && cachedWidth === width) {
+								return cachedLines;
+							}
 							cachedLines = buildLines(width);
 							cachedWidth = width;
 							return cachedLines;
@@ -737,6 +750,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 							cachedLines = undefined;
 							cleanup();
 						},
+						// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Keymap branch handling for panel controls.
 						handleInput(data: string) {
 							if (matchesKey(data, "escape")) {
 								cleanup();
@@ -744,15 +758,25 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 								return;
 							}
 
-							if (data === "1") currentTab = "tasks";
-							else if (data === "2") currentTab = "streams";
-							else if (data === "3") currentTab = "log";
-							else if (data === "0") taskFilter = "all";
-							else if (data.toLowerCase() === "a") taskFilter = "active";
-							else if (data.toLowerCase() === "d") taskFilter = "done";
-							else if (data.toLowerCase() === "f") taskFilter = "failed";
-							else if (data.toLowerCase() === "n") selectedColonyIdx++;
-							else return;
+							if (data === "1") {
+								currentTab = "tasks";
+							} else if (data === "2") {
+								currentTab = "streams";
+							} else if (data === "3") {
+								currentTab = "log";
+							} else if (data === "0") {
+								taskFilter = "all";
+							} else if (data.toLowerCase() === "a") {
+								taskFilter = "active";
+							} else if (data.toLowerCase() === "d") {
+								taskFilter = "done";
+							} else if (data.toLowerCase() === "f") {
+								taskFilter = "failed";
+							} else if (data.toLowerCase() === "n") {
+								selectedColonyIdx++;
+							} else {
+								return;
+							}
 
 							cachedWidth = undefined;
 							cachedLines = undefined;
@@ -803,9 +827,15 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			}
 
 			const modelOverrides: Record<string, string> = {};
-			if (params.scoutModel) modelOverrides.scout = params.scoutModel;
-			if (params.workerModel) modelOverrides.worker = params.workerModel;
-			if (params.soldierModel) modelOverrides.soldier = params.soldierModel;
+			if (params.scoutModel) {
+				modelOverrides.scout = params.scoutModel;
+			}
+			if (params.workerModel) {
+				modelOverrides.worker = params.workerModel;
+			}
+			if (params.soldierModel) {
+				modelOverrides.soldier = params.soldierModel;
+			}
 
 			const colonyParams = {
 				goal: params.goal,
@@ -836,16 +866,27 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		},
 
 		renderCall(args, theme) {
-			const goal = args.goal?.length > 70 ? args.goal.slice(0, 67) + "..." : args.goal;
+			const goal = args.goal?.length > 70 ? `${args.goal.slice(0, 67)}...` : args.goal;
 			let text = theme.fg("toolTitle", theme.bold("🐜 ant_colony"));
-			if (args.maxAnts) text += theme.fg("muted", ` ×${args.maxAnts}`);
-			if (args.maxCost) text += theme.fg("warning", ` $${args.maxCost}`);
-			text += "\n" + theme.fg("muted", `  ${goal || "..."}`);
+			if (args.maxAnts) {
+				text += theme.fg("muted", ` ×${args.maxAnts}`);
+			}
+			if (args.maxCost) {
+				text += theme.fg("warning", ` $${args.maxCost}`);
+			}
+			text += `\n${theme.fg("muted", `  ${goal || "..."}`)}`;
 			return new Text(text, 0, 0);
 		},
 
-		renderResult(result, { expanded }, theme) {
-			const text = result.content?.find((c: any) => c.type === "text")?.text || "";
+		renderResult(result, _options, theme) {
+			const textEntry = result.content?.find((entry): entry is { type: "text"; text: string } => {
+				if (typeof entry !== "object" || entry === null) {
+					return false;
+				}
+				const withType = entry as { type?: unknown; text?: unknown };
+				return withType.type === "text" && typeof withType.text === "string";
+			});
+			const text = textEntry?.text ?? "";
 			if (result.isError) {
 				return new Text(theme.fg("error", text), 0, 0);
 			}
@@ -887,17 +928,25 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			`${progressBar(progress, 18)} ${pct}%`,
 		];
 
-		if (c.phase && c.phase !== "initializing") lines.push(`Phase: ${trim(c.phase, 100)}`);
+		if (c.phase && c.phase !== "initializing") {
+			lines.push(`Phase: ${trim(c.phase, 100)}`);
+		}
 		const lastLog = c.logs[c.logs.length - 1];
-		if (lastLog) lines.push(`Last: ${trim(lastLog.text, 100)}`);
-		if (m && m.tasksFailed > 0) lines.push(`⚠ ${m.tasksFailed} failed`);
+		if (lastLog) {
+			lines.push(`Last: ${trim(lastLog.text, 100)}`);
+		}
+		if (m && m.tasksFailed > 0) {
+			lines.push(`⚠ ${m.tasksFailed} failed`);
+		}
 
 		return lines.join("\n");
 	}
 
 	/** Build a status summary for all running colonies. */
 	function buildStatusText(): string {
-		if (colonies.size === 0) return "No colonies are currently running.";
+		if (colonies.size === 0) {
+			return "No colonies are currently running.";
+		}
 		if (colonies.size === 1) {
 			const colony = colonies.values().next().value;
 			return colony ? buildColonyStatusText(colony) : "No colonies are currently running.";

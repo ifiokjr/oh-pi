@@ -225,6 +225,7 @@ function extractCredits(text: string): number | null {
  *
  * This is the same approach CodexBar uses.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: CLI output parsing must handle multiple formats and fallbacks.
 async function probeClaude(
 	exec: (cmd: string, args: string[], opts?: { timeout?: number }) => Promise<{ stdout: string; exitCode: number }>,
 ): Promise<ProviderRateLimits> {
@@ -615,7 +616,6 @@ export default function usageTracker(pi: ExtensionAPI) {
 	/** Render rate limit windows with theme colors (for TUI). */
 	function renderRateLimitsRich(theme: { fg: (c: string, t: string) => string }): string[] {
 		const lines: string[] = [];
-		const sep = theme.fg("dim", " │ ");
 
 		for (const [, rl] of rateLimits) {
 			if (rl.error) {
@@ -790,7 +790,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	// ─── Widget rendering ─────────────────────────────────────────────────
 
-	function renderWidget(ctx: ExtensionContext, theme: { fg: (c: string, t: string) => string }): string[] {
+	function renderWidget(_ctx: ExtensionContext, theme: { fg: (c: string, t: string) => string }): string[] {
 		if (!widgetVisible) {
 			return [];
 		}

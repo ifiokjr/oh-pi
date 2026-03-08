@@ -8,7 +8,8 @@ import type { EnvInfo } from "../utils/detect.js";
  * @param {EnvInfo} env - Detected environment info
  */
 export function welcome(env: EnvInfo) {
-	console.clear();
+	// Clear terminal without using console APIs (lint-safe).
+	process.stdout.write("\x1Bc");
 	p.intro(chalk.cyan.bold(" oh-pi ") + chalk.dim(t("welcome.title")));
 
 	if (env.piInstalled) {

@@ -6,10 +6,10 @@
 		"build:fast": "pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli run build:fast",
 		"typecheck": "pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli run typecheck",
 		"test": "vitest run",
-		"lint": "biome check .",
+		"lint": "biome check --error-on-warnings .",
 		"lint:fix": "biome check --fix .",
 		"format": "biome format --write .",
-		"check": "biome ci ."
+		"check": "biome ci --error-on-warnings ."
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.6",

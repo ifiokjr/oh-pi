@@ -208,28 +208,6 @@
 	},
 	"overrides": [
 		{
-			"includes": ["**/*.test.ts"],
-			"linter": {
-				"rules": {
-					"suspicious": {
-						"noExplicitAny": "off",
-						"noEmptyBlockStatements": "off",
-						"noConsole": "off"
-					},
-					"correctness": {
-						"noUnusedVariables": "off"
-					},
-					"style": {
-						"noNonNullAssertion": "off",
-						"useNamingConvention": "off"
-					},
-					"complexity": {
-						"noForEach": "off"
-					}
-				}
-			}
-		},
-		{
 			"includes": ["**/packages/extensions/extensions/**/*.ts", "**/packages/ant-colony/extensions/**/*.ts"],
 			"linter": {
 				"rules": {
@@ -249,6 +227,28 @@
 					},
 					"correctness": {
 						"noUnusedVariables": "warn"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["**/*.test.ts"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noExplicitAny": "off",
+						"noEmptyBlockStatements": "off",
+						"noConsole": "off"
+					},
+					"correctness": {
+						"noUnusedVariables": "off"
+					},
+					"style": {
+						"noNonNullAssertion": "off",
+						"useNamingConvention": "off"
+					},
+					"complexity": {
+						"noForEach": "off"
 					}
 				}
 			}

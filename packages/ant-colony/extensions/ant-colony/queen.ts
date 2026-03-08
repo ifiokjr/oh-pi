@@ -55,7 +55,8 @@ export interface QueenCallbacks {
 export interface ColonyEventBus {
 	emit(event: string, data?: unknown): void;
 	on(event: string, handler: (data: unknown) => void): void;
-	off(event: string, handler: (data: unknown) => void): void;
+	/** Optional in some pi runtimes (older event emitters may not expose `off`). */
+	off?(event: string, handler: (data: unknown) => void): void;
 }
 
 export interface QueenOptions {
@@ -75,6 +76,52 @@ export interface QueenOptions {
 
 function makeColonyId(): string {
 	return `colony-${Date.now().toString(36)}`;
+}
+
+interface UsageLimitsTracker {
+	requestSnapshot(): UsageLimitsEvent | null;
+	dispose(): void;
+}
+
+/**
+ * Query usage limits from usage-tracker through the shared event bus.
+ * Supports runtimes where the event bus only exposes `on/emit` (no `off`).
+ */
+export function createUsageLimitsTracker(eventBus?: ColonyEventBus): UsageLimitsTracker {
+	if (!eventBus) {
+		return {
+			requestSnapshot: () => null,
+			dispose: () => undefined,
+		};
+	}
+
+	let latestLimits: UsageLimitsEvent | null = null;
+	let subscribed = false;
+	const handler = (data: unknown) => {
+		latestLimits = data as UsageLimitsEvent;
+	};
+
+	const subscribeIfNeeded = () => {
+		if (subscribed) {
+			return;
+		}
+		eventBus.on("usage:limits", handler);
+		subscribed = true;
+	};
+
+	return {
+		requestSnapshot() {
+			subscribeIfNeeded();
+			eventBus.emit("usage:query");
+			return latestLimits;
+		},
+		dispose() {
+			if (subscribed && typeof eventBus.off === "function") {
+				eventBus.off("usage:limits", handler);
+			}
+			subscribed = false;
+		},
+	};
 }
 
 function makeInitialScoutTask(goal: string): Task {
@@ -354,6 +401,7 @@ export function classifyError(errStr: string): string {
  * Execute a wave of ants concurrently with adaptive concurrency control.
  * Manages rate limiting, error recovery, file locking, and budget enforcement.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Wave scheduler coordinates retries, budgets, and parallelism.
 async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 	const { nest, cwd, caste, signal, callbacks, currentModel, emitSignal } = opts;
 	const casteModel = opts.modelOverrides?.[caste] || currentModel;
@@ -375,6 +423,7 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 	// Bio 6: Corpse cleanup — error pattern tracking
 	const errorPatterns = new Map<string, { count: number; files: Set<string>; errors: string[] }>();
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Single-ant dispatch path handles many failure and retry modes.
 	const runOne = async (): Promise<"done" | "empty" | "rate_limited" | "budget"> => {
 		// Budget brake: don't dispatch if budget exhausted (drones are free, skip check)
 		const state = nest.getStateLight();
@@ -681,6 +730,7 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
  * Queen main loop — orchestrates the full colony lifecycle:
  * scouting → plan validation → working → reviewing → done/failed.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Top-level colony lifecycle orchestration across phases.
 export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 	if (!opts.goal?.trim()) {
 		throw new Error("Colony goal is empty or undefined. Please provide a clear goal.");
@@ -754,23 +804,10 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 	};
 
 	// ═══ Usage-aware budget planning ═══
-	// Query the usage-tracker extension for rate limit / cost data via the event bus.
-	// The result is used to cap concurrency, limit turns, and inject budget context into prompts.
+	// Query usage-tracker for rate limit / cost data via the event bus.
+	const usageLimitsTracker = createUsageLimitsTracker(opts.eventBus);
 	const refreshBudgetPlan = (): BudgetPlan | null => {
-		if (!opts.eventBus) {
-			// No event bus → plan based on colony metrics alone (no rate limit awareness)
-			return planBudget(null, nest.getStateLight().metrics, opts.maxCost ?? null, nest.getStateLight().concurrency);
-		}
-
-		// Request fresh data from usage-tracker (fire-and-forget, they respond via "usage:limits")
-		let latestLimits: UsageLimitsEvent | null = null;
-		const handler = (data: unknown) => {
-			latestLimits = data as UsageLimitsEvent;
-		};
-		opts.eventBus.on("usage:limits", handler);
-		opts.eventBus.emit("usage:query");
-		opts.eventBus.off("usage:limits", handler);
-
+		const latestLimits = usageLimitsTracker.requestSnapshot();
 		const state = nest.getStateLight();
 		return planBudget(latestLimits, state.metrics, opts.maxCost ?? null, state.concurrency);
 	};
@@ -988,6 +1025,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		emitSignal("failed", String(e).slice(0, 100));
 		return failState;
 	} finally {
+		usageLimitsTracker.dispose();
 		const finalStatus = nest.getState().status;
 		if (finalStatus === "done") {
 			cleanup();
@@ -1031,17 +1069,10 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 	};
 
 	// Budget plan for resumed colony
-	if (opts.eventBus) {
-		let latestLimits: UsageLimitsEvent | null = null;
-		const handler = (data: unknown) => {
-			latestLimits = data as UsageLimitsEvent;
-		};
-		opts.eventBus.on("usage:limits", handler);
-		opts.eventBus.emit("usage:query");
-		opts.eventBus.off("usage:limits", handler);
-		const state = nest.getStateLight();
-		waveBase.budgetPlan = planBudget(latestLimits, state.metrics, opts.maxCost ?? null, state.concurrency);
-	}
+	const usageLimitsTracker = createUsageLimitsTracker(opts.eventBus);
+	const latestLimits = usageLimitsTracker.requestSnapshot();
+	const state = nest.getStateLight();
+	waveBase.budgetPlan = planBudget(latestLimits, state.metrics, opts.maxCost ?? null, state.concurrency);
 
 	const cleanup = () => {
 		nest.destroy();
@@ -1115,6 +1146,7 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		emitSignal("failed", String(e).slice(0, 100));
 		return failState;
 	} finally {
+		usageLimitsTracker.dispose();
 		const finalStatus = nest.getState().status;
 		if (finalStatus === "done") {
 			cleanup();

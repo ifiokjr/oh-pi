@@ -86,8 +86,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Biome check (lint + format)
-        run: pnpm exec biome ci .
+      - name: Biome check (lint + format, warnings fail)
+        run: pnpm exec biome ci --error-on-warnings .
 
   typecheck:
     name: Type Check (tsgo)
