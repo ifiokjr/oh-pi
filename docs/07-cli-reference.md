@@ -1,199 +1,199 @@
-# Pi CLI 完整参考 & 目录结构
+# Pi CLI Reference & Directory Structure
 
-## 一、CLI 用法
+## 1. CLI Usage
 
 ```bash
 pi [options] [@files...] [messages...]
 ```
 
-### 文件参数
+### File Arguments
 
 ```bash
-pi @prompt.md "Answer this"           # 包含文件内容
-pi -p @screenshot.png "What's in this image?"  # 图片
-pi @code.ts @test.ts "Review these files"      # 多文件
+pi @prompt.md "Answer this"           # Include file content
+pi -p @screenshot.png "What's in this image?"  # Image
+pi @code.ts @test.ts "Review these files"      # Multiple files
 ```
 
-### 包管理命令
+### Package Management Commands
 
 ```bash
-pi install <source> [-l]    # 安装包，-l 项目级
-pi remove <source> [-l]     # 移除包
-pi update [source]          # 更新（跳过锁定版本）
-pi list                     # 列出已安装包
-pi config                   # 启用/禁用包资源
+pi install <source> [-l]    # Install package, -l for project-level
+pi remove <source> [-l]     # Remove package
+pi update [source]          # Update (skips locked versions)
+pi list                     # List installed packages
+pi config                   # Enable/disable package resources
 ```
 
-### 模式选项
+### Mode Options
 
-| Flag | 说明 |
-|------|------|
-| (默认) | 交互模式 |
-| `-p`, `--print` | 输出响应后退出 |
-| `--mode json` | JSON Lines 事件流 |
-| `--mode rpc` | RPC 进程集成 |
-| `--export <in> [out]` | 导出会话为 HTML |
+| Flag | Description |
+|------|-------------|
+| (default) | Interactive mode |
+| `-p`, `--print` | Output response and exit |
+| `--mode json` | JSON Lines event stream |
+| `--mode rpc` | RPC process integration |
+| `--export <in> [out]` | Export session as HTML |
 
-### 模型选项
+### Model Options
 
-| 选项 | 说明 |
-|------|------|
-| `--provider <name>` | 提供商 |
-| `--model <pattern>` | 模型（支持 `provider/id` 和 `:<thinking>`） |
+| Option | Description |
+|--------|-------------|
+| `--provider <name>` | Provider |
+| `--model <pattern>` | Model (supports `provider/id` and `:<thinking>`) |
 | `--api-key <key>` | API key |
 | `--thinking <level>` | off/minimal/low/medium/high/xhigh |
-| `--models <patterns>` | Ctrl+P 循环模型（逗号分隔） |
-| `--list-models [search]` | 列出可用模型 |
+| `--models <patterns>` | Ctrl+P cycle models (comma-separated) |
+| `--list-models [search]` | List available models |
 
-### 会话选项
+### Session Options
 
-| 选项 | 说明 |
-|------|------|
-| `-c`, `--continue` | 继续最近会话 |
-| `-r`, `--resume` | 浏览选择会话 |
-| `--session <path>` | 指定会话文件或部分 UUID |
-| `--session-dir <dir>` | 自定义会话存储目录 |
-| `--no-session` | 临时模式 |
+| Option | Description |
+|--------|-------------|
+| `-c`, `--continue` | Continue most recent session |
+| `-r`, `--resume` | Browse and select session |
+| `--session <path>` | Specify session file or partial UUID |
+| `--session-dir <dir>` | Custom session storage directory |
+| `--no-session` | Ephemeral mode |
 
-### 工具选项
+### Tool Options
 
-| 选项 | 说明 |
-|------|------|
-| `--tools <list>` | 启用指定内置工具（默认 read,bash,edit,write） |
-| `--no-tools` | 禁用所有内置工具 |
+| Option | Description |
+|--------|-------------|
+| `--tools <list>` | Enable specified built-in tools (default: read,bash,edit,write) |
+| `--no-tools` | Disable all built-in tools |
 
-可用内置工具: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`
+Available built-in tools: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`
 
-### 资源选项
+### Resource Options
 
-| 选项 | 说明 |
-|------|------|
-| `-e`, `--extension <source>` | 加载扩展（可重复） |
-| `--no-extensions` | 禁用扩展发现 |
-| `--skill <path>` | 加载技能（可重复） |
-| `--no-skills` | 禁用技能发现 |
-| `--prompt-template <path>` | 加载模板（可重复） |
-| `--no-prompt-templates` | 禁用模板发现 |
-| `--theme <path>` | 加载主题（可重复） |
-| `--no-themes` | 禁用主题发现 |
+| Option | Description |
+|--------|-------------|
+| `-e`, `--extension <source>` | Load extension (repeatable) |
+| `--no-extensions` | Disable extension discovery |
+| `--skill <path>` | Load skill (repeatable) |
+| `--no-skills` | Disable skill discovery |
+| `--prompt-template <path>` | Load template (repeatable) |
+| `--no-prompt-templates` | Disable template discovery |
+| `--theme <path>` | Load theme (repeatable) |
+| `--no-themes` | Disable theme discovery |
 
-`--no-*` 可与显式 flag 组合，精确控制加载内容。
+`--no-*` flags can be combined with explicit flags for precise control.
 
-### 其他选项
+### Other Options
 
-| 选项 | 说明 |
-|------|------|
-| `--system-prompt <text>` | 替换默认 system prompt |
-| `--append-system-prompt <text>` | 追加到 system prompt |
-| `--verbose` | 强制详细启动 |
-| `-h`, `--help` | 帮助 |
-| `-v`, `--version` | 版本 |
+| Option | Description |
+|--------|-------------|
+| `--system-prompt <text>` | Replace default system prompt |
+| `--append-system-prompt <text>` | Append to system prompt |
+| `--verbose` | Force verbose startup |
+| `-h`, `--help` | Help |
+| `-v`, `--version` | Version |
 
-### 常用示例
+### Common Examples
 
 ```bash
-pi "List all .ts files in src/"              # 交互+初始 prompt
-pi -p "Summarize this codebase"              # 非交互
-pi --model openai/gpt-4o "Help me refactor"  # 指定模型
-pi --model sonnet:high "Solve this"          # 模型+thinking
-pi --models "claude-*,gpt-4o"                # 限制循环模型
-pi --tools read,grep,find,ls -p "Review"     # 只读模式
-pi --thinking high "Complex problem"         # 高 thinking
+pi "List all .ts files in src/"              # Interactive + initial prompt
+pi -p "Summarize this codebase"              # Non-interactive
+pi --model openai/gpt-4o "Help me refactor"  # Specify model
+pi --model sonnet:high "Solve this"          # Model + thinking
+pi --models "claude-*,gpt-4o"                # Restrict cycle models
+pi --tools read,grep,find,ls -p "Review"     # Read-only mode
+pi --thinking high "Complex problem"         # High thinking
 ```
 
 ---
 
-## 二、目录结构总览
+## 2. Directory Structure Overview
 
-### 全局配置 (`~/.pi/agent/`)
+### Global Config (`~/.pi/agent/`)
 
 ```
 ~/.pi/agent/
-├── settings.json          # 全局设置
+├── settings.json          # Global settings
 ├── auth.json              # API keys & OAuth tokens (0600)
-├── models.json            # 自定义模型/提供商
-├── keybindings.json       # 自定义快捷键
-├── AGENTS.md              # 全局 context file
-├── SYSTEM.md              # 替换默认 system prompt (可选)
-├── APPEND_SYSTEM.md       # 追加 system prompt (可选)
-├── extensions/            # 全局扩展
+├── models.json            # Custom models/providers
+├── keybindings.json       # Custom keybindings
+├── AGENTS.md              # Global context file
+├── SYSTEM.md              # Replace default system prompt (optional)
+├── APPEND_SYSTEM.md       # Append to system prompt (optional)
+├── extensions/            # Global extensions
 │   ├── my-ext.ts
 │   └── my-ext-dir/
 │       └── index.ts
-├── skills/                # 全局技能
+├── skills/                # Global skills
 │   └── my-skill/
 │       └── SKILL.md
-├── prompts/               # 全局模板
+├── prompts/               # Global templates
 │   └── review.md
-├── themes/                # 全局主题
+├── themes/                # Global themes
 │   └── my-theme.json
-├── sessions/              # 会话存储
+├── sessions/              # Session storage
 │   └── --path--/
 │       └── <timestamp>_<uuid>.jsonl
-├── git/                   # git 包安装目录
-└── npm/                   # npm 包安装目录 (项目级用 .pi/npm/)
+├── git/                   # Git package install directory
+└── npm/                   # npm package install directory (project-level uses .pi/npm/)
 ```
 
-### 项目配置 (`.pi/`)
+### Project Config (`.pi/`)
 
 ```
 <project>/.pi/
-├── settings.json          # 项目设置（覆盖全局）
-├── SYSTEM.md              # 项目 system prompt
-├── APPEND_SYSTEM.md       # 项目追加 prompt
-├── extensions/            # 项目扩展
-├── skills/                # 项目技能
-├── prompts/               # 项目模板
-├── themes/                # 项目主题
-├── git/                   # 项目级 git 包
-└── npm/                   # 项目级 npm 包
+├── settings.json          # Project settings (overrides global)
+├── SYSTEM.md              # Project system prompt
+├── APPEND_SYSTEM.md       # Project append prompt
+├── extensions/            # Project extensions
+├── skills/                # Project skills
+├── prompts/               # Project templates
+├── themes/                # Project themes
+├── git/                   # Project-level git packages
+└── npm/                   # Project-level npm packages
 ```
 
-### Context Files 加载顺序
+### Context File Load Order
 
-1. `~/.pi/agent/AGENTS.md` (全局)
-2. 从 cwd 向上遍历每个父目录的 `AGENTS.md`
-3. 当前目录的 `AGENTS.md`
+1. `~/.pi/agent/AGENTS.md` (global)
+2. Traverse up from cwd, loading `AGENTS.md` from each parent directory
+3. Current directory's `AGENTS.md`
 
-所有匹配文件拼接。也支持 `CLAUDE.md` 文件名。
+All matching files are concatenated. `CLAUDE.md` filenames are also supported.
 
 ---
 
-## 三、Pi Package 结构
+## 3. Pi Package Structure
 
 ```
 my-pi-package/
-├── package.json           # 含 "pi" manifest 和 "pi-package" keyword
-├── extensions/            # 扩展 (.ts/.js)
-├── skills/                # 技能 (SKILL.md 子目录)
-├── prompts/               # 模板 (.md)
-└── themes/                # 主题 (.json)
+├── package.json           # With "pi" manifest and "pi-package" keyword
+├── extensions/            # Extensions (.ts/.js)
+├── skills/                # Skills (SKILL.md subdirectories)
+├── prompts/               # Templates (.md)
+└── themes/                # Themes (.json)
 ```
 
 ---
 
-## 四、平台支持
+## 4. Platform Support
 
-| 平台 | 说明 |
-|------|------|
-| macOS / Linux | 原生支持 |
-| Windows | 需要 bash (Git Bash / Cygwin / WSL) |
-| Android (Termux) | 通过 Termux 运行，无图片剪贴板 |
+| Platform | Notes |
+|----------|-------|
+| macOS / Linux | Native support |
+| Windows | Requires bash (Git Bash / Cygwin / WSL) |
+| Android (Termux) | Runs via Termux, no image clipboard |
 
 ---
 
-## 五、关键数字
+## 5. Key Numbers
 
-| 指标 | 值 |
-|------|-----|
-| 内置工具 | 7 个 (read, bash, edit, write, grep, find, ls) |
-| 默认启用 | 4 个 (read, bash, edit, write) |
-| 主题 color tokens | 51 个 |
-| 支持的 API 提供商 | 17+ |
-| 订阅提供商 | 5 个 |
-| 工具输出截断 | 50KB / 2000 行 |
-| 会话格式 | JSONL 树结构 v3 |
-| 压缩保留 token | 20000 (默认) |
-| 压缩预留 token | 16384 (默认) |
-| 重试次数 | 3 (默认) |
-| Node.js 要求 | >= 20.0.0 |
+| Metric | Value |
+|--------|-------|
+| Built-in tools | 7 (read, bash, edit, write, grep, find, ls) |
+| Default enabled | 4 (read, bash, edit, write) |
+| Theme color tokens | 51 |
+| Supported API providers | 17+ |
+| Subscription providers | 5 |
+| Tool output truncation | 50KB / 2000 lines |
+| Session format | JSONL tree v3 |
+| Compaction keep tokens | 20000 (default) |
+| Compaction reserve tokens | 16384 (default) |
+| Retry count | 3 (default) |
+| Node.js requirement | >= 20.0.0 |

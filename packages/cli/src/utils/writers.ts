@@ -1,0 +1,264 @@
+import { copyFileSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { KEYBINDING_SCHEMES, MODEL_CAPABILITIES, PROVIDERS } from "@ifi/oh-pi-core";
+import type { OhPConfig } from "@ifi/oh-pi-core";
+import { ensureDir, syncDir } from "./install.js";
+import { resources } from "./resources.js";
+
+const ANT_COLONY_AUTOTRIGGER_GUIDE = `## Ant Colony Auto-Trigger
+If the ant_colony tool is available, automatically use it when the task is complex:
+- 3 or more files likely need changes
+- 2 or more independent workstreams exist
+- large refactor / migration / feature implementation
+
+For simple one-file tasks, execute directly without colony overhead.
+After launching ant_colony, use passive mode: wait for COLONY_SIGNAL updates and do not poll bg_colony_status unless the user explicitly asks for a manual snapshot.
+`;
+
+function readJson<T>(file: string): T | null {
+	try {
+		return JSON.parse(readFileSync(file, "utf8")) as T;
+	} catch {
+		return null;
+	}
+}
+
+/** Generate auth.json (API keys) and settings.json (model, theme, compaction). */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Provider setup must handle many strategy/override combinations
+export function writeProviderEnv(agentDir: string, config: OhPConfig) {
+	if (config.providerStrategy === "keep") {
+		return;
+	}
+	const strategy = config.providerStrategy ?? "replace";
+	const authPath = join(agentDir, "auth.json");
+	const settingsPath = join(agentDir, "settings.json");
+
+	// auth.json
+	const authProviders = config.providers.filter((p) => !p.baseUrl && p.apiKey !== "none");
+	if (authProviders.length > 0) {
+		const auth: Record<string, { type: string; key: string }> =
+			strategy === "add" ? (readJson<Record<string, { type: string; key: string }>>(authPath) ?? {}) : {};
+		for (const p of authProviders) {
+			auth[p.name] = { type: "api_key", key: p.apiKey };
+		}
+		writeFileSync(authPath, JSON.stringify(auth, null, 2), { mode: 0o600 });
+	}
+
+	// settings.json
+	const existingSettings = strategy === "add" ? (readJson<Record<string, unknown>>(settingsPath) ?? {}) : {};
+	const primary = config.providers.find((p) => p.baseUrl && p.defaultModel) ?? config.providers[0];
+	const providerInfo = primary ? PROVIDERS[primary.name] : undefined;
+	const primaryModelId = primary?.defaultModel ?? providerInfo?.models[0];
+	const caps = primaryModelId ? MODEL_CAPABILITIES[primaryModelId] : undefined;
+	const ctxWindow = caps?.contextWindow ?? primary?.contextWindow ?? 128000;
+	const reserveTokens = Math.max(16384, Math.round(ctxWindow * 0.15));
+	const keepRecentTokens = Math.max(16384, Math.round(ctxWindow * 0.15));
+	const primaryModel = primary?.defaultModel ?? providerInfo?.models[0];
+
+	const defaultProviderModel =
+		strategy === "add"
+			? !existingSettings.defaultProvider && primary
+				? { defaultProvider: primary.name, defaultModel: primaryModel }
+				: {}
+			: primary
+				? { defaultProvider: primary.name, defaultModel: primaryModel }
+				: {};
+
+	const settings: Record<string, unknown> = {
+		...existingSettings,
+		...defaultProviderModel,
+		defaultThinkingLevel: config.thinking,
+		theme: config.theme,
+		enableSkillCommands: true,
+		compaction: { enabled: true, reserveTokens, keepRecentTokens },
+		retry: { enabled: true, maxRetries: 3 },
+		quietStartup: true,
+	};
+
+	const nextEnabledModels = config.providers.flatMap((p) => {
+		if (p.discoveredModels?.length) {
+			return p.discoveredModels.map((m) => m.id);
+		}
+		const info = PROVIDERS[p.name];
+		return info ? info.models : [];
+	});
+	if (strategy === "add") {
+		const current = Array.isArray(existingSettings.enabledModels) ? (existingSettings.enabledModels as string[]) : [];
+		const merged = [...new Set([...current, ...nextEnabledModels])];
+		if (merged.length > 0) {
+			settings.enabledModels = merged;
+		}
+	} else if (config.providers.length > 1) {
+		settings.enabledModels = nextEnabledModels;
+	}
+	writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+}
+
+/** Generate models.json for custom endpoints and API mode overrides. */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Model config must handle builtin/custom/discovered model combinations
+export function writeModelConfig(agentDir: string, config: OhPConfig) {
+	if (config.providerStrategy === "keep") {
+		return;
+	}
+	const strategy = config.providerStrategy ?? "replace";
+	const modelsPath = join(agentDir, "models.json");
+
+	// Persist custom endpoints and API mode overrides (e.g. built-in OpenAI responses/completions choice).
+	const modelProviders = config.providers.filter((p) => p.baseUrl || (!!p.api && !!PROVIDERS[p.name]));
+	if (modelProviders.length === 0) {
+		return;
+	}
+
+	const providers: Record<string, unknown> =
+		strategy === "add" ? (readJson<{ providers?: Record<string, unknown> }>(modelsPath)?.providers ?? {}) : {};
+	for (const cp of modelProviders) {
+		const isBuiltin = !!PROVIDERS[cp.name];
+		if (!cp.baseUrl && isBuiltin && cp.api) {
+			providers[cp.name] = { api: cp.api };
+			continue;
+		}
+
+		if (!cp.baseUrl) {
+			continue;
+		}
+
+		if (isBuiltin && !cp.discoveredModels?.length) {
+			const entry: Record<string, unknown> = { baseUrl: cp.baseUrl };
+			if (cp.api) {
+				entry.api = cp.api;
+			}
+			if (cp.apiKey !== "none") {
+				entry.apiKey = cp.apiKey;
+			}
+			providers[cp.name] = entry;
+		} else {
+			const entry: Record<string, unknown> = {
+				baseUrl: cp.baseUrl,
+				api: cp.api ?? "openai-completions",
+			};
+			if (cp.apiKey !== "none") {
+				entry.apiKey = cp.apiKey;
+			}
+
+			if (cp.discoveredModels?.length) {
+				entry.models = cp.discoveredModels.map((m) => ({
+					id: m.id,
+					name: m.id,
+					reasoning: m.reasoning,
+					input: m.input,
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+					contextWindow: m.contextWindow,
+					maxTokens: m.maxTokens,
+				}));
+			} else if (cp.defaultModel) {
+				const caps = MODEL_CAPABILITIES[cp.defaultModel];
+				entry.models = [
+					{
+						id: cp.defaultModel,
+						name: cp.defaultModel,
+						reasoning: cp.reasoning ?? caps?.reasoning ?? false,
+						input: cp.multimodal ? ["text", "image"] : (caps?.input ?? ["text"]),
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+						contextWindow: cp.contextWindow ?? caps?.contextWindow ?? 128000,
+						maxTokens: cp.maxTokens ?? caps?.maxTokens ?? 8192,
+					},
+				];
+			}
+			providers[cp.name] = entry;
+		}
+	}
+	writeFileSync(modelsPath, JSON.stringify({ providers }, null, 2));
+}
+
+/** Generate keybindings.json from the selected keybinding scheme. */
+export function writeKeybindings(agentDir: string, config: OhPConfig) {
+	const kb = KEYBINDING_SCHEMES[config.keybindings];
+	if (kb && Object.keys(kb).length > 0) {
+		writeFileSync(join(agentDir, "keybindings.json"), JSON.stringify(kb, null, 2));
+	}
+}
+
+/** Generate AGENTS.md from the selected agent template. */
+export function writeAgents(agentDir: string, config: OhPConfig) {
+	const agentsSrc = resources.agent(config.agents);
+	try {
+		let content = readFileSync(agentsSrc, "utf8");
+		if (config.locale && config.locale !== "en") {
+			const langNames: Record<string, string> = { zh: "Chinese (中文)", fr: "French (Français)" };
+			const lang = langNames[config.locale] ?? config.locale;
+			content = `## Language\nAlways respond in ${lang}. Use the user's language for all conversations and explanations. Code, commands, and technical terms can remain in English.\n\n${content}`;
+		}
+		if (config.extensions.includes("ant-colony") && config.agents !== "colony-operator") {
+			content = `${content.trimEnd()}\n\n${ANT_COLONY_AUTOTRIGGER_GUIDE}`;
+		}
+		writeFileSync(join(agentDir, "AGENTS.md"), content);
+	} catch {
+		/* template not found, skip */
+	}
+}
+
+/** Copy selected extensions to the agent directory. */
+export function writeExtensions(agentDir: string, config: OhPConfig) {
+	const extDir = join(agentDir, "extensions");
+	ensureDir(extDir);
+	for (const ext of config.extensions) {
+		// ant-colony lives in its own package
+		if (ext === "ant-colony") {
+			const colonySrc = resources.antColonyDir();
+			if (existsSync(colonySrc)) {
+				syncDir(colonySrc, join(extDir, "ant-colony"));
+			}
+			continue;
+		}
+		const dirSrc = resources.extension(ext);
+		const fileSrc = resources.extensionFile(ext);
+		if (existsSync(dirSrc) && statSync(dirSrc).isDirectory()) {
+			syncDir(dirSrc, join(extDir, ext));
+		} else {
+			try {
+				copyFileSync(fileSrc, join(extDir, `${ext}.ts`));
+			} catch {
+				/* skip */
+			}
+		}
+	}
+}
+
+/** Copy selected prompt templates to the agent directory. */
+export function writePrompts(agentDir: string, config: OhPConfig) {
+	const promptDir = join(agentDir, "prompts");
+	ensureDir(promptDir);
+	for (const p of config.prompts) {
+		const src = resources.prompt(p);
+		try {
+			copyFileSync(src, join(promptDir, `${p}.md`));
+		} catch {
+			/* skip */
+		}
+	}
+}
+
+/** Sync all skills to the agent directory. */
+export function writeSkills(agentDir: string, _config: OhPConfig) {
+	const skillDir = join(agentDir, "skills");
+	const skillsSrcDir = resources.skillsDir();
+	try {
+		if (existsSync(skillsSrcDir)) {
+			syncDir(skillsSrcDir, skillDir);
+		}
+	} catch {
+		/* skills dir not found, skip */
+	}
+}
+
+/** Copy the selected theme to the agent directory. */
+export function writeTheme(agentDir: string, config: OhPConfig) {
+	const themeDir = join(agentDir, "themes");
+	ensureDir(themeDir);
+	const themeSrc = resources.theme(config.theme);
+	try {
+		copyFileSync(themeSrc, join(themeDir, `${config.theme}.json`));
+	} catch {
+		/* built-in theme */
+	}
+}

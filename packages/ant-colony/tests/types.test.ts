@@ -1,0 +1,38 @@
+import { describe, expect, it } from "vitest";
+import { DEFAULT_ANT_CONFIGS } from "../extensions/ant-colony/types.js";
+import type { AntCaste } from "../extensions/ant-colony/types.js";
+
+describe("DEFAULT_ANT_CONFIGS", () => {
+	const castes: AntCaste[] = ["scout", "worker", "soldier", "drone"];
+
+	it("has all castes", () => {
+		for (const c of castes) {
+			expect(DEFAULT_ANT_CONFIGS).toHaveProperty(c);
+		}
+	});
+
+	it("each config has caste/model/tools/maxTurns", () => {
+		for (const c of castes) {
+			const cfg = DEFAULT_ANT_CONFIGS[c];
+			expect(cfg.caste).toBe(c);
+			expect(typeof cfg.model).toBe("string");
+			expect(Array.isArray(cfg.tools)).toBe(true);
+			expect(cfg.maxTurns).toBeGreaterThan(0);
+		}
+	});
+
+	it("scout has no write tools", () => {
+		expect(DEFAULT_ANT_CONFIGS.scout.tools).not.toContain("edit");
+		expect(DEFAULT_ANT_CONFIGS.scout.tools).not.toContain("write");
+	});
+
+	it("worker has edit and write", () => {
+		expect(DEFAULT_ANT_CONFIGS.worker.tools).toContain("edit");
+		expect(DEFAULT_ANT_CONFIGS.worker.tools).toContain("write");
+	});
+
+	it("drone only has bash with 1 turn", () => {
+		expect(DEFAULT_ANT_CONFIGS.drone.tools).toEqual(["bash"]);
+		expect(DEFAULT_ANT_CONFIGS.drone.maxTurns).toBe(1);
+	});
+});

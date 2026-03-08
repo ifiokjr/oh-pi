@@ -1,78 +1,78 @@
-# 贡献指南 | Contributing Guide
+# Contributing Guide
 
-感谢你对 oh-pi 的关注！欢迎任何形式的贡献。
+Thank you for your interest in oh-pi! All forms of contributions are welcome.
 
-Thank you for your interest in oh-pi! Contributions of all kinds are welcome.
-
-## 开发环境 | Development Setup
+## Development Setup
 
 ```bash
 git clone https://github.com/telagod/oh-pi.git
 cd oh-pi
-npm install
-npm run build
+pnpm install
+pnpm build
+pnpm test
 ```
 
-## 提交规范 | Commit Convention
+## Commit Convention
 
-使用 [Conventional Commits](https://www.conventionalcommits.org/)：
+Use [Conventional Commits](https://www.conventionalcommits.org/):
 
-| 前缀 | 用途 |
-|------|------|
-| `feat` | 新功能 |
-| `fix` | 修复 bug |
-| `docs` | 文档变更 |
-| `refactor` | 重构（不改变行为） |
-| `test` | 添加或修改测试 |
-| `chore` | 构建、依赖等杂项 |
+| Prefix | Purpose |
+|--------|---------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation changes |
+| `refactor` | Refactor (no behavior change) |
+| `test` | Add or modify tests |
+| `chore` | Build, dependency, and other chores |
 
-示例：
+Examples:
 
 ```
-feat: add support for new provider
-fix: resolve race condition in ant colony
-docs: update README with new examples
+feat(ant-colony): add planning recovery loop
+fix(spawner): handle 429 rate limits gracefully
+docs: update README with new extension list
 ```
 
-## 分支策略 | Branch Strategy
+## Branch Strategy
 
-- `main` — 稳定分支，禁止 force push
-- 功能分支从 `main` 创建，命名格式：`feat/xxx`、`fix/xxx`、`docs/xxx`
-- 通过 Pull Request 合并，至少需要一次 review
+- `main` — stable branch, no force pushes
+- Feature branches created from `main`, named: `feat/xxx`, `fix/xxx`, `docs/xxx`
+- Merge via Pull Request, at least one review required
 
-## Pull Request 流程
+## Pull Request Process
 
-1. Fork 本仓库
-2. 创建功能分支：`git checkout -b feat/your-feature`
-3. 提交你的修改（遵循提交规范）
-4. 确保代码能正常构建：`npm run build`
-5. 推送并创建 PR
+1. Fork this repository
+2. Create a feature branch: `git checkout -b feat/your-feature`
+3. Commit your changes (follow the commit convention)
+4. Ensure the build passes: `pnpm build`
+5. Ensure lint passes: `pnpm lint`
+6. Push and create a PR
 
-### PR 要求
+### PR Requirements
 
-- 标题遵循 Conventional Commits 格式
-- 描述清楚改动内容和原因
-- 一个 PR 只解决一个问题
-- 不要包含无关的代码变更
+- Title follows Conventional Commits format
+- Description clearly explains the change and rationale
+- One PR addresses one issue
+- No unrelated code changes
 
-## 代码规范 | Code Style
+## Code Style
 
-- 遵循项目现有风格
-- 使用有意义的变量名
-- 函数不超过 50 行
-- 仅在复杂逻辑处添加注释
-- 不要硬编码密钥或敏感信息
-- 显式处理错误，不要静默失败
+- Follow existing project style (enforced by Biome)
+- Use meaningful variable names
+- Keep functions under 50 lines where possible
+- Add comments only for complex logic
+- Never hardcode keys or sensitive information
+- Handle errors explicitly — don't fail silently
 
-## 报告问题 | Reporting Issues
+## Reporting Issues
 
-请使用 [Issue 模板](https://github.com/telagod/oh-pi/issues/new/choose) 提交问题，包含：
+Use the [Issue templates](https://github.com/telagod/oh-pi/issues/new/choose) and include:
 
-- 清晰的问题描述
-- 复现步骤
-- 预期行为与实际行为
-- 环境信息（OS、Node.js 版本等）
+- Clear problem description
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment info (OS, Node.js version, etc.)
 
-## 许可证 | License
+## License
 
-提交贡献即表示你同意你的代码以 [MIT](./LICENSE) 许可证发布。
+By submitting a contribution, you agree that your code will be released under the [MIT](./LICENSE) license.

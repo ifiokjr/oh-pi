@@ -1,99 +1,99 @@
-# 模块依赖图与单一职责分析
+# Module Dependency Graph & Single Responsibility Analysis
 
-> 生成时间: 2026-02-16 | 重构后更新
-> 基于 commit 46c1d85 (refactor: 单一职责重构)
+> Generated: 2026-02-16 | Updated after refactoring
+> Based on commit 46c1d85 (refactor: single responsibility refactoring)
 
 ---
 
-## 一、完整 ASCII 模块依赖图
+## 1. Full ASCII Module Dependency Graph
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║                        oh-pi 完整模块依赖关系图                              ║
+║                      oh-pi Full Module Dependency Graph                      ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                              ║
-║  ┌─────────────────────── src/ 层 (TUI 配置工具) ───────────────────────┐    ║
-║  │                                                                       │    ║
-║  │              ┌──────────────┐                                         │    ║
-║  │              │ src/index.ts │ ◄── 主入口 (96行)                       │    ║
-║  │              └──────┬───────┘                                         │    ║
-║  │                     │                                                 │    ║
-║  │         ┌───────────┼───────────────┐                                 │    ║
-║  │         │           │               │                                 │    ║
-║  │         ▼           ▼               ▼                                 │    ║
-║  │  ┌──────────┐ ┌──────────┐ ┌────────────────┐                        │    ║
-║  │  │ i18n.ts  │ │ types.ts │ │ utils/detect.ts│                        │    ║
-║  │  │  (61行)  │ │  (69行)  │ │    (112行)     │                        │    ║
-║  │  └────┬─────┘ └──────────┘ └────────────────┘                        │    ║
-║  │       │                                                               │    ║
-║  │       ▼                                                               │    ║
-║  │  ┌────────────┐  ┌──────────────┐                                    │    ║
-║  │  │ locales.ts │  │ registry.ts  │                                    │    ║
-║  │  │  (420行)   │  │   (77行)     │                                    │    ║
-║  │  └────────────┘  └──────┬───────┘                                    │    ║
-║  │                         │ (被 tui/*.ts + writers.ts import)           │    ║
-║  │                         ▼                                             │    ║
-║  │            ┌────────────────┐     ┌──────────────────┐               │    ║
-║  │            │utils/install.ts│────▶│ utils/resources.ts│              │    ║
-║  │            │    (98行)      │     │     (19行)        │              │    ║
-║  │            └───────┬────────┘     └──────────────────┘               │    ║
-║  │                    │                                                  │    ║
-║  │                    ▼                                                  │    ║
-║  │            ┌────────────────┐                                        │    ║
-║  │            │utils/writers.ts│ ◄── 8个独立 writer 函数                │    ║
-║  │            │    (152行)     │                                        │    ║
-║  │            └────────────────┘                                        │    ║
-║  │                                                                       │    ║
-║  │  ※ src/index.ts 还 import 了 9 个 tui/* 模块（图中省略）             │    ║
-║  │    welcome, mode-select, provider-setup, preset-select,               │    ║
-║  │    theme-select, keybinding-select, extension-select,                 │    ║
-║  │    agents-select, confirm-apply                                       │    ║
-║  │                                                                       │    ║
-║  └───────────────────────────────────────────────────────────────────────┘    ║
+║  ┌─────────────────── src/ layer (TUI Configuration Tool) ──────────────┐   ║
+║  │                                                                       │   ║
+║  │              ┌──────────────┐                                         │   ║
+║  │              │ src/index.ts │ ◄── Main entry (96 lines)               │   ║
+║  │              └──────┬───────┘                                         │   ║
+║  │                     │                                                 │   ║
+║  │         ┌───────────┼───────────────┐                                 │   ║
+║  │         │           │               │                                 │   ║
+║  │         ▼           ▼               ▼                                 │   ║
+║  │  ┌──────────┐ ┌──────────┐ ┌────────────────┐                        │   ║
+║  │  │ i18n.ts  │ │ types.ts │ │ utils/detect.ts│                        │   ║
+║  │  │  (61 ln) │ │  (69 ln) │ │    (112 ln)    │                        │   ║
+║  │  └────┬─────┘ └──────────┘ └────────────────┘                        │   ║
+║  │       │                                                               │   ║
+║  │       ▼                                                               │   ║
+║  │  ┌────────────┐  ┌──────────────┐                                    │   ║
+║  │  │ locales.ts │  │ registry.ts  │                                    │   ║
+║  │  │  (420 ln)  │  │   (77 ln)    │                                    │   ║
+║  │  └────────────┘  └──────┬───────┘                                    │   ║
+║  │                         │ (imported by tui/*.ts + writers.ts)          │   ║
+║  │                         ▼                                             │   ║
+║  │            ┌────────────────┐     ┌──────────────────┐               │   ║
+║  │            │utils/install.ts│────▶│ utils/resources.ts│              │   ║
+║  │            │    (98 ln)     │     │     (19 ln)       │              │   ║
+║  │            └───────┬────────┘     └──────────────────┘               │   ║
+║  │                    │                                                  │   ║
+║  │                    ▼                                                  │   ║
+║  │            ┌────────────────┐                                        │   ║
+║  │            │utils/writers.ts│ ◄── 8 independent writer functions     │   ║
+║  │            │    (152 ln)    │                                        │   ║
+║  │            └────────────────┘                                        │   ║
+║  │                                                                       │   ║
+║  │  ※ src/index.ts also imports 9 tui/* modules (omitted from graph)    │   ║
+║  │    welcome, mode-select, provider-setup, preset-select,               │   ║
+║  │    theme-select, keybinding-select, extension-select,                 │   ║
+║  │    agents-select, confirm-apply                                       │   ║
+║  │                                                                       │   ║
+║  └───────────────────────────────────────────────────────────────────────┘   ║
 ║                                                                              ║
-║                          ║ 无直接 import ║                                   ║
-║                          ║ 通过 pi 扩展  ║                                   ║
-║                          ║ API 桥接      ║                                   ║
-║                          ▼               ▼                                   ║
+║                          ║ No direct imports ║                                ║
+║                          ║ Bridged via pi     ║                               ║
+║                          ║ Extension API      ║                               ║
+║                          ▼                    ▼                               ║
 ║                                                                              ║
-║  ┌──────────── ant-colony/ 层 (蚁群多 Agent 系统) ──────────────────────┐    ║
-║  │                                                                       │    ║
-║  │              ┌───────────────────┐                                    │    ║
-║  │              │ ant-colony/       │ ◄── 扩展入口 (600行)               │    ║
-║  │              │   index.ts        │                                    │    ║
-║  │              └───────┬───────────┘                                    │    ║
-║  │                      │                                                │    ║
-║  │          ┌───────────┼────────────┬──────────┐                        │    ║
-║  │          │           │            │          │                        │    ║
-║  │          ▼           ▼            ▼          ▼                        │    ║
-║  │   ┌───────────┐ ┌─────────┐ ┌──────────┐ ┌───────┐                  │    ║
-║  │   │ queen.ts  │ │ nest.ts │ │ types.ts │ │ ui.ts │                  │    ║
-║  │   │  (640行)  │ │ (298行) │ │ (144行)  │ │ (46行)│                  │    ║
-║  │   └─────┬─────┘ └─────────┘ └──────────┘ └───────┘                  │    ║
-║  │         │                         ▲                                   │    ║
-║  │         │ imports                 │ (被所有模块依赖)                   │    ║
-║  │    ┌────┼────┬────────┐           │                                   │    ║
-║  │    │    │    │        │           │                                   │    ║
-║  │    ▼    ▼    ▼        ▼           │                                   │    ║
-║  │ ┌──────────┐┌──────────┐┌─────────────────┐                          │    ║
-║  │ │spawner.ts││  deps.ts ││ concurrency.ts  │                          │    ║
-║  │ │  (309行) ││  (94行)  ││    (120行)      │                          │    ║
-║  │ └────┬─────┘└──────────┘└─────────────────┘                          │    ║
-║  │      │                                                                │    ║
-║  │  ┌───┴────────┐                                                      │    ║
-║  │  │             │                                                      │    ║
-║  │  ▼             ▼                                                      │    ║
-║  │ ┌───────────┐ ┌──────────┐                                           │    ║
-║  │ │prompts.ts │ │parser.ts │                                           │    ║
-║  │ │  (98行)   │ │  (72行)  │                                           │    ║
-║  │ └───────────┘ └──────────┘                                           │    ║
-║  │                                                                       │    ║
-║  └───────────────────────────────────────────────────────────────────────┘    ║
+║  ┌──────────── ant-colony/ layer (Multi-Agent Swarm System) ────────────┐   ║
+║  │                                                                       │   ║
+║  │              ┌───────────────────┐                                    │   ║
+║  │              │ ant-colony/       │ ◄── Extension entry (600 ln)       │   ║
+║  │              │   index.ts        │                                    │   ║
+║  │              └───────┬───────────┘                                    │   ║
+║  │                      │                                                │   ║
+║  │          ┌───────────┼────────────┬──────────┐                        │   ║
+║  │          │           │            │          │                        │   ║
+║  │          ▼           ▼            ▼          ▼                        │   ║
+║  │   ┌───────────┐ ┌─────────┐ ┌──────────┐ ┌───────┐                  │   ║
+║  │   │ queen.ts  │ │ nest.ts │ │ types.ts │ │ ui.ts │                  │   ║
+║  │   │  (640 ln) │ │(298 ln) │ │ (144 ln) │ │(46 ln)│                  │   ║
+║  │   └─────┬─────┘ └─────────┘ └──────────┘ └───────┘                  │   ║
+║  │         │                         ▲                                   │   ║
+║  │         │ imports                 │ (depended on by all modules)       │   ║
+║  │    ┌────┼────┬────────┐           │                                   │   ║
+║  │    │    │    │        │           │                                   │   ║
+║  │    ▼    ▼    ▼        ▼           │                                   │   ║
+║  │ ┌──────────┐┌──────────┐┌─────────────────┐                          │   ║
+║  │ │spawner.ts││  deps.ts ││ concurrency.ts  │                          │   ║
+║  │ │ (309 ln) ││  (94 ln) ││    (120 ln)     │                          │   ║
+║  │ └────┬─────┘└──────────┘└─────────────────┘                          │   ║
+║  │      │                                                                │   ║
+║  │  ┌───┴────────┐                                                      │   ║
+║  │  │             │                                                      │   ║
+║  │  ▼             ▼                                                      │   ║
+║  │ ┌───────────┐ ┌──────────┐                                           │   ║
+║  │ │prompts.ts │ │parser.ts │                                           │   ║
+║  │ │  (98 ln)  │ │  (72 ln) │                                           │   ║
+║  │ └───────────┘ └──────────┘                                           │   ║
+║  │                                                                       │   ║
+║  └───────────────────────────────────────────────────────────────────────┘   ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
 
-### 详细依赖边列表
+### Detailed Dependency Edge List
 
 ```
 src/index.ts
@@ -105,9 +105,6 @@ src/index.ts
 src/i18n.ts
   ├──▶ src/types.ts             (type Locale)
   └──▶ src/locales.ts           (messages)
-
-src/locales.ts
-  └──▶ src/types.ts             (type Locale)
 
 src/registry.ts
   └──▶ src/types.ts             (type ModelCapabilities)
@@ -135,227 +132,117 @@ src/utils/writers.ts
   ├──▶ src/utils/resources.ts   (resources)
   └──▶ src/utils/install.ts     (ensureDir, syncDir)
 
-src/utils/detect.ts
-  └──▶ (无内部依赖，仅 node:* 标准库)
-
-src/utils/resources.ts
-  └──▶ (无内部依赖，仅 node:path, node:url)
-
-src/types.ts
-  └──▶ (零依赖，纯叶节点)
-
 ant-colony/index.ts
   ├──▶ ant-colony/queen.ts      (runColony, resumeColony, QueenCallbacks)
   ├──▶ ant-colony/nest.ts       (Nest)
   ├──▶ ant-colony/types.ts      (ColonyState, ColonyMetrics, AntStreamEvent)
   └──▶ ant-colony/ui.ts         (formatDuration, formatCost, formatTokens, statusIcon, casteIcon)
 
-ant-colony/queen.ts              ◄── 最高扇出 (5 个内部依赖)
-  ├──▶ ant-colony/types.ts      (ColonyState, Task, Ant, AntCaste, ...)
-  ├──▶ ant-colony/nest.ts       (Nest)
-  ├──▶ ant-colony/spawner.ts    (spawnAnt, runDrone, makeTaskId, makePheromoneId)
-  ├──▶ ant-colony/concurrency.ts(adapt, sampleSystem, defaultConcurrency)
-  └──▶ ant-colony/deps.ts       (buildImportGraph, taskDependsOn)
+ant-colony/queen.ts              ◄── Highest fan-out (5 internal deps)
+  ├──▶ ant-colony/types.ts
+  ├──▶ ant-colony/nest.ts
+  ├──▶ ant-colony/spawner.ts
+  ├──▶ ant-colony/concurrency.ts
+  └──▶ ant-colony/deps.ts
 
 ant-colony/spawner.ts
-  ├──▶ ant-colony/types.ts      (Ant, AntCaste, AntConfig, Task, AntStreamEvent)
-  ├──▶ ant-colony/nest.ts       (Nest)
-  ├──▶ ant-colony/prompts.ts    (CASTE_PROMPTS, buildPrompt)
-  └──▶ ant-colony/parser.ts     (parseSubTasks, extractPheromones, ParsedSubTask)
-
-ant-colony/prompts.ts
-  └──▶ ant-colony/types.ts      (AntCaste, Task)
+  ├──▶ ant-colony/types.ts
+  ├──▶ ant-colony/nest.ts
+  ├──▶ ant-colony/prompts.ts
+  └──▶ ant-colony/parser.ts
 
 ant-colony/parser.ts
-  ├──▶ ant-colony/types.ts      (AntCaste, Pheromone, PheromoneType)
+  ├──▶ ant-colony/types.ts
   └──▶ ant-colony/spawner.ts    (makePheromoneId)
-
-ant-colony/ui.ts
-  └──▶ ant-colony/types.ts      (ColonyState)
-
-ant-colony/nest.ts
-  └──▶ ant-colony/types.ts      (ColonyState, Task, Pheromone, Ant, ...)
-
-ant-colony/concurrency.ts
-  └──▶ ant-colony/types.ts      (ConcurrencyConfig, ConcurrencySample)
-
-ant-colony/deps.ts
-  └──▶ (零内部依赖，仅 node:fs, node:path)
 ```
 
 ---
 
-## 二、扇入/扇出分析
+## 2. Fan-In/Fan-Out Analysis
 
-| 模块 | 扇入 (被依赖数) | 扇出 (依赖数) | 行数 | 角色 |
-|------|:---:|:---:|:---:|------|
-| `ant-colony/types.ts` | **8** | 0 | 144 | 纯叶节点，全层基础类型 |
-| `src/types.ts` | **5** | 0 | 69 | 纯叶节点，接口定义 |
-| `src/registry.ts` | **3** | 1 | 77 | 运行时常量注册表 |
-| `ant-colony/nest.ts` | 3 | 1 | 298 | 共享状态管理 |
-| `ant-colony/queen.ts` | 1 | **5** | 640 | 最高扇出，调度编排核心 |
-| `ant-colony/spawner.ts` | 2 | **4** | 309 | Agent 生命周期管理 |
-| `ant-colony/index.ts` | 0 (外部入口) | 4 | 600 | 扩展注册入口 |
-| `src/index.ts` | 0 (外部入口) | 3+9 tui | 96 | TUI 流程编排 |
-| `src/utils/install.ts` | 2 | 1 | 98 | 配置编排 |
-| `src/utils/writers.ts` | 1 | 4 | 152 | 配置文件生成 |
-| `src/utils/resources.ts` | 2 | 0 | 19 | 纯路径解析 |
-| `src/utils/detect.ts` | 1 | 0 | 112 | 环境检测 |
-| `src/i18n.ts` | 1+ | 2 | 61 | 国际化逻辑 |
-| `src/locales.ts` | 1 | 1 | 420 | 翻译数据 |
-| `ant-colony/concurrency.ts` | 1 | 1 | 120 | 自适应并发 |
-| `ant-colony/deps.ts` | 1 | 0 | 94 | 依赖图分析 |
-| `ant-colony/prompts.ts` | 1 | 1 | 98 | 角色提示词 |
-| `ant-colony/parser.ts` | 1 | 2 | 72 | 输出解析 |
-| `ant-colony/ui.ts` | 1 | 1 | 46 | UI 格式化 |
+| Module | Fan-In | Fan-Out | Lines | Role |
+|--------|:------:|:-------:|:-----:|------|
+| `ant-colony/types.ts` | **8** | 0 | 144 | Pure leaf, foundational types |
+| `src/types.ts` | **5** | 0 | 69 | Pure leaf, interface definitions |
+| `src/registry.ts` | **3** | 1 | 77 | Runtime constant registry |
+| `ant-colony/nest.ts` | 3 | 1 | 298 | Shared state management |
+| `ant-colony/queen.ts` | 1 | **5** | 640 | Highest fan-out, scheduling core |
+| `ant-colony/spawner.ts` | 2 | **4** | 309 | Agent lifecycle management |
+| `ant-colony/index.ts` | 0 (entry) | 4 | 600 | Extension registration entry |
+| `src/index.ts` | 0 (entry) | 3+9 tui | 96 | TUI flow orchestration |
 
 ---
 
-## 三、各模块核心职责与 SRP 评估
+## 3. SRP Assessment Per Module
 
-### src/ 层 (19 个模块, ~1,732 行)
+### src/ layer (19 modules, ~1,732 lines)
 
-#### 1. `src/index.ts` — TUI 流程编排器 (96行)
-- **职责**: 检测环境 → 选语言 → 欢迎 → 选模式 → 执行对应流程 → 确认应用
-- **SRP 评估**: ✅ **符合** — 纯编排逻辑，每个步骤委托给专门模块
+| Module | Lines | Assessment | Notes |
+|--------|:-----:|:----------:|-------|
+| `src/index.ts` | 96 | ✅ | Pure orchestration, delegates each step |
+| `src/types.ts` | 69 | ✅ | Pure types, zero runtime code |
+| `src/registry.ts` | 77 | ✅ | Single responsibility: configurable item registry |
+| `src/i18n.ts` | 61 | ✅ | Translation data separated to locales.ts |
+| `src/locales.ts` | 420 | ✅ | Pure data, new languages only edit this file |
+| `src/utils/detect.ts` | 112 | ✅ | Single responsibility: environment info collection |
+| `src/utils/install.ts` | 98 | ✅ | 8-line orchestration after refactor |
+| `src/utils/writers.ts` | 152 | ✅ | 8 independent writer functions |
+| `src/utils/resources.ts` | 19 | ✅ | Pure function, zero side effects |
 
-#### 2. `src/types.ts` — 纯类型定义 (69行)
-- **职责**: 定义 `Locale`、`DiscoveredModel`、`ProviderConfig`、`OhPConfig`、`ModelCapabilities` 接口
-- **SRP 评估**: ✅ **符合** — 重构后只含接口/类型定义，零运行时代码
+### ant-colony/ layer (10 modules, ~2,421 lines)
 
-#### 3. `src/registry.ts` — 运行时常量注册表 (77行)
-- **职责**: 5 个运行时常量：MODEL_CAPABILITIES、PROVIDERS、THEMES、EXTENSIONS、KEYBINDING_SCHEMES
-- **SRP 评估**: ✅ **符合** — 从 types.ts 拆出后，单一职责：可配置项的注册表
-
-#### 4. `src/i18n.ts` — 国际化逻辑 (61行)
-- **职责**: `t()` 插值函数、语言检测、语言选择交互
-- **SRP 评估**: ✅ **符合** — 重构后翻译数据已迁移到 locales.ts，只保留逻辑
-
-#### 5. `src/locales.ts` — 翻译数据 (420行)
-- **职责**: 3 种语言（en/zh/fr）的翻译字典
-- **SRP 评估**: ✅ **符合** — 纯数据，新增语言只改此文件
-
-#### 6. `src/utils/detect.ts` — 环境检测 (112行)
-- **职责**: 检测 pi 安装状态、版本、已有配置、终端信息、已配置 provider
-- **SRP 评估**: ✅ **符合** — 单一职责：收集环境信息
-
-#### 7. `src/utils/install.ts` — 配置编排 (98行)
-- **职责**: `applyConfig()` 编排 8 个 writer、`ensureDir`/`syncDir` 工具函数、`installPi`、`backupConfig`
-- **SRP 评估**: ✅ **符合** — 重构后 applyConfig 仅 8 行编排调用，不含文件生成细节
-
-#### 8. `src/utils/writers.ts` — 配置文件生成 (152行)
-- **职责**: 8 个独立 writer 函数，每个负责一种配置文件的生成
-- **SRP 评估**: ✅ **符合** — 每个函数职责单一，按文件类型隔离
-
-#### 9. `src/utils/resources.ts` — 资源路径解析 (19行)
-- **职责**: 将逻辑资源名映射到 `pi-package/` 下的物理路径
-- **SRP 评估**: ✅ **符合** — 纯函数，零副作用
+| Module | Lines | Assessment | Notes |
+|--------|:-----:|:----------:|-------|
+| `index.ts` | 600 | ⚠️ Minor | Panel building coupled with registration (acceptable for extension entry) |
+| `queen.ts` | 640 | ⚠️ Minor | Rate limiting mixed with orchestration (acceptable for Orchestrator pattern) |
+| `spawner.ts` | 309 | ✅ | Prompts and parsing extracted out |
+| `prompts.ts` | 98 | ✅ | Single responsibility: caste prompt management |
+| `parser.ts` | 72 | ✅ | Single responsibility: structured output parsing |
+| `ui.ts` | 46 | ✅ | Pure display logic, zero side effects |
+| `nest.ts` | 298 | ✅ | All methods around nest state CRUD |
+| `concurrency.ts` | 120 | ✅ | Pure functions, zero internal dependencies |
+| `deps.ts` | 94 | ✅ | Pure functions, zero internal dependencies |
+| `types.ts` | 144 | ✅ | Type aggregation module |
 
 ---
 
-### ant-colony/ 层 (10 个模块, ~2,421 行)
-
-#### 10. `ant-colony/index.ts` — 扩展入口 (600行)
-- **职责**: 注册工具/命令、管理后台蚁群生命周期、实时 UI 面板
-- **SRP 评估**: ⚠️ **轻微违反** — 作为扩展入口注册逻辑不可避免集中。UI 格式化已抽到 ui.ts，剩余的面板构建逻辑（buildLines）与入口耦合较深，进一步拆分收益有限。
-
-#### 11. `ant-colony/queen.ts` — 蚁群调度核心 (640行)
-- **职责**: 4 阶段流水线调度（侦察→工作→审查→完成）+ 限流退避 + 冲突检测
-- **SRP 评估**: ⚠️ **轻微违反** — Orchestrator 模式下编排集中是合理的。限流退避与 wave 循环深度耦合，强拆反增复杂度。
-
-#### 12. `ant-colony/spawner.ts` — Agent 生命周期管理 (309行)
-- **职责**: ID 生成、SDK Session 创建与执行（spawnAnt）、Drone 规则执行（runDrone）
-- **SRP 评估**: ✅ **符合** — 重构后提示词和解析器已拆出，只保留 session 管理
-
-#### 13. `ant-colony/prompts.ts` — 角色提示词 (98行)
-- **职责**: CASTE_PROMPTS 定义 + buildPrompt 构建
-- **SRP 评估**: ✅ **符合** — 单一职责：蚂蚁角色提示词管理
-
-#### 14. `ant-colony/parser.ts` — 输出解析 (72行)
-- **职责**: parseSubTasks（子任务解析）+ extractPheromones（信息素提取）
-- **SRP 评估**: ✅ **符合** — 单一职责：蚂蚁输出的结构化解析
-
-#### 15. `ant-colony/ui.ts` — UI 格式化 (46行)
-- **职责**: formatDuration、formatCost、formatTokens、statusIcon、casteIcon、buildReport
-- **SRP 评估**: ✅ **符合** — 纯展示逻辑，零副作用
-
-#### 16. `ant-colony/nest.ts` — 共享状态管理 (298行)
-- **职责**: 基于文件系统的跨进程状态协调
-- **SRP 评估**: ✅ **符合** — 所有方法围绕蚁巢状态 CRUD
-
-#### 17. `ant-colony/concurrency.ts` — 自适应并发控制 (120行)
-- **职责**: 系统负载采样 + 自适应并发调节算法
-- **SRP 评估**: ✅ **符合** — 纯函数，零内部依赖
-
-#### 18. `ant-colony/deps.ts` — 依赖图分析 (94行)
-- **职责**: 静态分析 import 语句构建依赖图
-- **SRP 评估**: ✅ **符合** — 纯函数，零内部依赖
-
-#### 19. `ant-colony/types.ts` — 蚁群类型系统 (144行)
-- **职责**: 定义蚁群所有类型 + DEFAULT_ANT_CONFIGS 常量
-- **SRP 评估**: ✅ **基本符合** — 类型聚合模块，集中定义合理
-
----
-
-## 四、SRP 合规度总览
-
-### 重构前 vs 重构后
-
-| 模块 | 重构前 | 重构后 | 改进 |
-|------|:---:|:---:|------|
-| `src/types.ts` | 🟠 中等违反 | ✅ 符合 | 常量迁移到 registry.ts |
-| `src/utils/install.ts` | 🔴 严重违反 | ✅ 符合 | 9 种生成拆到 writers.ts |
-| `ant-colony/spawner.ts` | 🟡 中度违反 | ✅ 符合 | 提示词→prompts.ts, 解析→parser.ts |
-| `ant-colony/index.ts` | 🟡 中度违反 | ⚠️ 轻微 | 格式化函数→ui.ts |
-| `src/i18n.ts` | 🟢 轻微违反 | ✅ 符合 | 翻译数据→locales.ts |
-| `ant-colony/queen.ts` | 🟢 轻微违反 | ⚠️ 轻微 | 保持不变（强拆收益不足） |
-
-### 当前 SRP 违反排序
-
-| 排名 | 模块 | 严重度 | 说明 |
-|:---:|------|:---:|------|
-| 1 | `ant-colony/index.ts` | ⚠️ 轻微 | 面板构建与入口注册混合（扩展入口可接受） |
-| 2 | `ant-colony/queen.ts` | ⚠️ 轻微 | 限流退避与编排混合（Orchestrator 模式可接受） |
-
----
-
-## 五、两层解耦分析
+## 4. Two-Layer Decoupling Analysis
 
 ```
-  src/ 层 (19模块, ~1,732行)       ant-colony/ 层 (10模块, ~2,421行)
-  ┌─────────┐                      ┌──────────────┐
-  │ TUI 配置 │ ══ 零 import ══════ │ 蚁群多Agent  │
-  │ 工具     │                      │ 系统         │
-  └─────────┘                      └──────────────┘
-       │                                  │
-       │  install.ts 复制                  │  pi 扩展 API
-       │  扩展文件到                       │  (registerTool,
-       │  ~/.pi/agent/extensions/         │   registerCommand,
-       │                                  │   sendMessage, ...)
-       ▼                                  ▼
-  ┌─────────────────────────────────────────────┐
-  │        @mariozechner/pi-coding-agent        │
-  │              (运行时宿主)                     │
-  └─────────────────────────────────────────────┘
+  src/ layer (19 modules, ~1,732 lines)    ant-colony/ layer (10 modules, ~2,421 lines)
+  ┌─────────┐                              ┌──────────────┐
+  │ TUI      │ ══ Zero imports ═══════════ │ Multi-Agent  │
+  │ Config   │                              │ Swarm System │
+  └─────────┘                              └──────────────┘
+       │                                          │
+       │  install.ts copies                       │  pi Extension API
+       │  extension files to                      │  (registerTool,
+       │  ~/.pi/agent/extensions/                 │   registerCommand,
+       │                                          │   sendMessage, ...)
+       ▼                                          ▼
+  ┌─────────────────────────────────────────────────────┐
+  │          @mariozechner/pi-coding-agent               │
+  │                (runtime host)                         │
+  └─────────────────────────────────────────────────────┘
 ```
 
-**关键发现**: src/ 层与 ant-colony/ 层之间**零直接 import**，完全通过 pi 扩展 API 桥接。这是优秀的架构解耦——两层可以独立演进，互不影响。唯一的耦合点是 `install.ts` 将扩展文件物理复制到用户目录。
+**Key finding**: src/ and ant-colony/ have **zero direct imports** — fully bridged via the pi Extension API. This is excellent architectural decoupling — both layers can evolve independently. The only coupling point is `install.ts` physically copying extension files to the user directory.
 
 ---
 
-## 六、循环依赖检测
+## 5. Circular Dependency Detection
 
 ```
-⚠️ 发现 1 处循环依赖：
+⚠️ Found 1 circular dependency:
 
   src/utils/install.ts ──▶ src/utils/writers.ts
                      ◀──
-  (install.ts export ensureDir/syncDir, writers.ts import 它们)
-  (install.ts import writers.ts 的 8 个 writer 函数)
+  (install.ts exports ensureDir/syncDir; writers.ts imports them)
+  (install.ts imports writers.ts's 8 writer functions)
 
-  严重度: 🟢 低 — 这是工具函数与消费者之间的双向依赖，
-  TypeScript 可以正确处理（非运行时循环）。
-  如需消除：将 ensureDir/syncDir 抽到 src/utils/fs-helpers.ts。
+  Severity: 🟢 Low — bidirectional dependency between utility functions
+  and their consumer. TypeScript handles this correctly (not a runtime cycle).
+  To eliminate: extract ensureDir/syncDir to src/utils/fs-helpers.ts.
 
-其余模块均无循环依赖。
+All other modules have no circular dependencies.
 ```

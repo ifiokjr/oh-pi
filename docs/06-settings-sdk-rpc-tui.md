@@ -1,111 +1,111 @@
-# Pi Settings、SDK、RPC、TUI 组件
+# Pi Settings, SDK, RPC, and TUI Components
 
-## 一、Settings（配置）
+## 1. Settings
 
-### 文件位置
+### File Locations
 
-| 位置 | 范围 |
-|------|------|
-| `~/.pi/agent/settings.json` | 全局 |
-| `.pi/settings.json` | 项目级（覆盖全局） |
+| Location | Scope |
+|----------|-------|
+| `~/.pi/agent/settings.json` | Global |
+| `.pi/settings.json` | Project-level (overrides global) |
 
-嵌套对象合并，项目覆盖全局。
+Nested objects are merged; project overrides global.
 
-### 全部配置项
+### All Settings
 
-#### 模型与 Thinking
+#### Model & Thinking
 
-| 设置 | 类型 | 默认 | 说明 |
-|------|------|------|------|
-| `defaultProvider` | string | - | 默认提供商 |
-| `defaultModel` | string | - | 默认模型 ID |
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `defaultProvider` | string | - | Default provider |
+| `defaultModel` | string | - | Default model ID |
 | `defaultThinkingLevel` | string | - | off/minimal/low/medium/high/xhigh |
-| `hideThinkingBlock` | boolean | false | 隐藏 thinking 输出 |
-| `thinkingBudgets` | object | - | 各级别 token 预算 |
+| `hideThinkingBlock` | boolean | false | Hide thinking output |
+| `thinkingBudgets` | object | - | Token budgets per level |
 
-#### UI 与显示
+#### UI & Display
 
-| 设置 | 类型 | 默认 | 说明 |
-|------|------|------|------|
-| `theme` | string | "dark" | 主题名 |
-| `quietStartup` | boolean | false | 隐藏启动头 |
-| `doubleEscapeAction` | string | "tree" | 双击 Escape 动作: tree/fork/none |
-| `editorPaddingX` | number | 0 | 编辑器水平内边距 (0-3) |
-| `autocompleteMaxVisible` | number | 5 | 自动补全最大可见项 (3-20) |
-| `showHardwareCursor` | boolean | false | 显示终端光标 |
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `theme` | string | "dark" | Theme name |
+| `quietStartup` | boolean | false | Hide startup header |
+| `doubleEscapeAction` | string | "tree" | Double-escape action: tree/fork/none |
+| `editorPaddingX` | number | 0 | Editor horizontal padding (0-3) |
+| `autocompleteMaxVisible` | number | 5 | Max autocomplete items visible (3-20) |
+| `showHardwareCursor` | boolean | false | Show terminal cursor |
 
-#### 压缩
+#### Compaction
 
-| 设置 | 默认 | 说明 |
-|------|------|------|
-| `compaction.enabled` | true | 启用自动压缩 |
-| `compaction.reserveTokens` | 16384 | LLM 响应预留 token |
-| `compaction.keepRecentTokens` | 20000 | 保留的近期 token |
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `compaction.enabled` | true | Enable automatic compaction |
+| `compaction.reserveTokens` | 16384 | Tokens reserved for LLM response |
+| `compaction.keepRecentTokens` | 20000 | Recent tokens to keep |
 
-#### 重试
+#### Retry
 
-| 设置 | 默认 | 说明 |
-|------|------|------|
-| `retry.enabled` | true | 启用自动重试 |
-| `retry.maxRetries` | 3 | 最大重试次数 |
-| `retry.baseDelayMs` | 2000 | 指数退避基础延迟 |
-| `retry.maxDelayMs` | 60000 | 最大服务端请求延迟 |
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `retry.enabled` | true | Enable automatic retry |
+| `retry.maxRetries` | 3 | Maximum retry count |
+| `retry.baseDelayMs` | 2000 | Exponential backoff base delay |
+| `retry.maxDelayMs` | 60000 | Maximum server request delay |
 
-#### 消息投递
+#### Message Delivery
 
-| 设置 | 默认 | 说明 |
-|------|------|------|
-| `steeringMode` | "one-at-a-time" | steering 消息投递方式 |
-| `followUpMode` | "one-at-a-time" | follow-up 消息投递方式 |
-| `transport` | "sse" | 传输偏好: sse/websocket/auto |
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `steeringMode` | "one-at-a-time" | Steering message delivery mode |
+| `followUpMode` | "one-at-a-time" | Follow-up message delivery mode |
+| `transport` | "sse" | Transport preference: sse/websocket/auto |
 
-#### 终端与图片
+#### Terminal & Images
 
-| 设置 | 默认 | 说明 |
-|------|------|------|
-| `terminal.showImages` | true | 终端内显示图片 |
-| `images.autoResize` | true | 自动缩放到 2000x2000 |
-| `images.blockImages` | false | 阻止图片发送给 LLM |
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `terminal.showImages` | true | Display images in terminal |
+| `images.autoResize` | true | Auto-resize to 2000x2000 |
+| `images.blockImages` | false | Block images from being sent to LLM |
 
 #### Shell
 
-| 设置 | 说明 |
-|------|------|
-| `shellPath` | 自定义 shell 路径 |
-| `shellCommandPrefix` | 每条 bash 命令前缀（如启用 aliases） |
+| Setting | Description |
+|---------|-------------|
+| `shellPath` | Custom shell path |
+| `shellCommandPrefix` | Prefix for every bash command (e.g. enabling aliases) |
 
-#### 模型循环
+#### Model Cycling
 
 ```json
 { "enabledModels": ["claude-*", "gpt-4o", "gemini-2*"] }
 ```
 
-#### 资源路径
+#### Resource Paths
 
-| 设置 | 说明 |
-|------|------|
-| `packages` | npm/git 包列表 |
-| `extensions` | 本地扩展路径 |
-| `skills` | 本地技能路径 |
-| `prompts` | 本地模板路径 |
-| `themes` | 本地主题路径 |
-| `enableSkillCommands` | 注册 `/skill:name` 命令 (默认 true) |
+| Setting | Description |
+|---------|-------------|
+| `packages` | npm/git package list |
+| `extensions` | Local extension paths |
+| `skills` | Local skill paths |
+| `prompts` | Local template paths |
+| `themes` | Local theme paths |
+| `enableSkillCommands` | Register `/skill:name` commands (default true) |
 
-### 环境变量
+### Environment Variables
 
-| 变量 | 说明 |
-|------|------|
-| `PI_CODING_AGENT_DIR` | 覆盖配置目录 (默认 `~/.pi/agent`) |
-| `PI_PACKAGE_DIR` | 覆盖包目录 |
-| `PI_SKIP_VERSION_CHECK` | 跳过启动版本检查 |
-| `PI_CACHE_RETENTION` | 设为 `long` 延长 prompt cache |
-| `VISUAL`, `EDITOR` | Ctrl+G 外部编辑器 |
+| Variable | Description |
+|----------|-------------|
+| `PI_CODING_AGENT_DIR` | Override config directory (default `~/.pi/agent`) |
+| `PI_PACKAGE_DIR` | Override package directory |
+| `PI_SKIP_VERSION_CHECK` | Skip startup version check |
+| `PI_CACHE_RETENTION` | Set to `long` for extended prompt caching |
+| `VISUAL`, `EDITOR` | Ctrl+G external editor |
 
 ---
 
-## 二、SDK（编程式使用）
+## 2. SDK (Programmatic Usage)
 
-### 快速开始
+### Quick Start
 
 ```typescript
 import { AuthStorage, createAgentSession, ModelRegistry, SessionManager } from "@mariozechner/pi-coding-agent";
@@ -128,142 +128,142 @@ session.subscribe((event) => {
 await session.prompt("What files are in the current directory?");
 ```
 
-### createAgentSession 选项
+### createAgentSession Options
 
-| 选项 | 说明 |
-|------|------|
-| `cwd` | 工作目录 |
-| `agentDir` | 全局配置目录 |
-| `model` | 指定模型 |
-| `thinkingLevel` | thinking 级别 |
-| `scopedModels` | Ctrl+P 循环模型列表 |
-| `tools` | 内置工具集 |
-| `customTools` | 自定义工具 |
-| `resourceLoader` | 资源加载器 |
-| `sessionManager` | 会话管理器 |
-| `settingsManager` | 设置管理器 |
-| `authStorage` | 认证存储 |
-| `modelRegistry` | 模型注册表 |
+| Option | Description |
+|--------|-------------|
+| `cwd` | Working directory |
+| `agentDir` | Global config directory |
+| `model` | Specify model |
+| `thinkingLevel` | Thinking level |
+| `scopedModels` | Ctrl+P model cycle list |
+| `tools` | Built-in tool set |
+| `customTools` | Custom tools |
+| `resourceLoader` | Resource loader |
+| `sessionManager` | Session manager |
+| `settingsManager` | Settings manager |
+| `authStorage` | Auth storage |
+| `modelRegistry` | Model registry |
 
 ### AgentSession API
 
-| 方法 | 说明 |
-|------|------|
-| `prompt(text, opts)` | 发送 prompt |
-| `steer(text)` | 中断式消息 |
-| `followUp(text)` | 等待式消息 |
-| `subscribe(listener)` | 订阅事件 |
-| `setModel(model)` | 切换模型 |
-| `newSession(opts)` | 新建会话 |
-| `fork(entryId)` | Fork 会话 |
-| `navigateTree(targetId, opts)` | 树导航 |
-| `compact(instructions)` | 手动压缩 |
-| `abort()` | 中止当前操作 |
-| `dispose()` | 清理 |
+| Method | Description |
+|--------|-------------|
+| `prompt(text, opts)` | Send prompt |
+| `steer(text)` | Interrupt-style message |
+| `followUp(text)` | Wait-style message |
+| `subscribe(listener)` | Subscribe to events |
+| `setModel(model)` | Switch model |
+| `newSession(opts)` | Create new session |
+| `fork(entryId)` | Fork session |
+| `navigateTree(targetId, opts)` | Tree navigation |
+| `compact(instructions)` | Manual compaction |
+| `abort()` | Abort current operation |
+| `dispose()` | Cleanup |
 
-### SessionManager 静态方法
+### SessionManager Static Methods
 
-| 方法 | 说明 |
-|------|------|
-| `SessionManager.create(cwd)` | 新建会话 |
-| `SessionManager.open(path)` | 打开已有会话 |
-| `SessionManager.continueRecent(cwd)` | 继续最近会话 |
-| `SessionManager.inMemory()` | 内存会话（不持久化） |
-| `SessionManager.list(cwd)` | 列出目录下会话 |
-| `SessionManager.listAll()` | 列出所有会话 |
+| Method | Description |
+|--------|-------------|
+| `SessionManager.create(cwd)` | Create new session |
+| `SessionManager.open(path)` | Open existing session |
+| `SessionManager.continueRecent(cwd)` | Continue most recent session |
+| `SessionManager.inMemory()` | In-memory session (no persistence) |
+| `SessionManager.list(cwd)` | List sessions for directory |
+| `SessionManager.listAll()` | List all sessions |
 
-### 事件类型
+### Event Types
 
-| 事件 | 说明 |
-|------|------|
-| `message_update` | 流式文本/thinking/toolcall |
-| `tool_execution_start/update/end` | 工具执行生命周期 |
-| `agent_start/end` | Agent 生命周期 |
-| `turn_start/end` | 轮次生命周期 |
-| `message_start/end` | 消息生命周期 |
-| `auto_compaction_start/end` | 自动压缩 |
-| `auto_retry_start/end` | 自动重试 |
+| Event | Description |
+|-------|-------------|
+| `message_update` | Streaming text/thinking/toolcall |
+| `tool_execution_start/update/end` | Tool execution lifecycle |
+| `agent_start/end` | Agent lifecycle |
+| `turn_start/end` | Turn lifecycle |
+| `message_start/end` | Message lifecycle |
+| `auto_compaction_start/end` | Auto compaction |
+| `auto_retry_start/end` | Auto retry |
 
-### 运行模式工具
+### Mode Utilities
 
-| 类 | 说明 |
-|---|------|
-| `InteractiveMode` | 完整 TUI 交互模式 |
-| `runPrintMode()` | 单次输出模式 |
-| `runRpcMode()` | RPC 子进程模式 |
+| Class | Description |
+|-------|-------------|
+| `InteractiveMode` | Full TUI interactive mode |
+| `runPrintMode()` | Single-output mode |
+| `runRpcMode()` | RPC subprocess mode |
 
 ---
 
-## 三、RPC 模式
+## 3. RPC Mode
 
-通过 stdin/stdout JSON 协议实现无头操作。
+Headless operation via stdin/stdout JSON protocol.
 
 ```bash
 pi --mode rpc [options]
 ```
 
-### 命令列表
+### Commands
 
-| 命令 | 说明 |
-|------|------|
-| `prompt` | 发送 prompt（支持 streamingBehavior: steer/followUp） |
-| `steer` | 排队中断消息 |
-| `follow_up` | 排队等待消息 |
-| `abort` | 中止当前操作 |
-| `new_session` | 新建会话 |
-| `get_state` | 获取会话状态 |
-| `get_messages` | 获取所有消息 |
-| `set_model` | 切换模型 |
-| `cycle_model` | 循环模型 |
-| `get_available_models` | 列出可用模型 |
-| `set_thinking_level` | 设置 thinking level |
-| `compact` | 手动压缩 |
-| `bash` | 执行 shell 命令 |
-| `get_session_stats` | 获取 token/费用统计 |
-| `export_html` | 导出 HTML |
-| `switch_session` | 切换会话 |
-| `fork` | Fork 会话 |
-| `get_commands` | 获取可用命令 |
-| `set_session_name` | 设置会话名 |
+| Command | Description |
+|---------|-------------|
+| `prompt` | Send prompt (supports streamingBehavior: steer/followUp) |
+| `steer` | Queue interrupt message |
+| `follow_up` | Queue wait message |
+| `abort` | Abort current operation |
+| `new_session` | Create new session |
+| `get_state` | Get session state |
+| `get_messages` | Get all messages |
+| `set_model` | Switch model |
+| `cycle_model` | Cycle model |
+| `get_available_models` | List available models |
+| `set_thinking_level` | Set thinking level |
+| `compact` | Manual compaction |
+| `bash` | Execute shell command |
+| `get_session_stats` | Get token/cost statistics |
+| `export_html` | Export HTML |
+| `switch_session` | Switch session |
+| `fork` | Fork session |
+| `get_commands` | Get available commands |
+| `set_session_name` | Set session name |
 
-### Extension UI 子协议
+### Extension UI Sub-protocol
 
-扩展的 `ctx.ui.select/confirm/input/editor` 在 RPC 模式下转为 `extension_ui_request` / `extension_ui_response` 请求响应对。
+Extension `ctx.ui.select/confirm/input/editor` calls become `extension_ui_request` / `extension_ui_response` request-response pairs in RPC mode.
 
-`notify/setStatus/setWidget/setTitle/set_editor_text` 为 fire-and-forget，不需要响应。
+`notify/setStatus/setWidget/setTitle/set_editor_text` are fire-and-forget (no response needed).
 
 ---
 
-## 四、TUI 组件系统
+## 4. TUI Component System
 
-来自 `@mariozechner/pi-tui` 包。
+From the `@mariozechner/pi-tui` package.
 
-### Component 接口
+### Component Interface
 
 ```typescript
 interface Component {
-  render(width: number): string[];  // 每行不超过 width
+  render(width: number): string[];  // Each line must not exceed width
   handleInput?(data: string): void;
   invalidate(): void;
 }
 ```
 
-### 内置组件
+### Built-in Components
 
-| 组件 | 说明 |
-|------|------|
-| `Text` | 多行文本，自动换行 |
-| `Box` | 带 padding 和背景色的容器 |
-| `Container` | 垂直组合子组件 |
-| `Spacer` | 空行 |
-| `Markdown` | Markdown 渲染 + 语法高亮 |
-| `Image` | 终端内图片渲染 |
-| `SelectList` | 选择列表 |
-| `SettingsList` | 设置切换列表 |
-| `Input` | 文本输入 |
-| `Editor` | 多行编辑器 |
+| Component | Description |
+|-----------|-------------|
+| `Text` | Multi-line text with word wrap |
+| `Box` | Container with padding and background |
+| `Container` | Vertical layout for child components |
+| `Spacer` | Empty lines |
+| `Markdown` | Markdown renderer + syntax highlighting |
+| `Image` | In-terminal image rendering |
+| `SelectList` | Selection list |
+| `SettingsList` | Settings toggle list |
+| `Input` | Text input |
+| `Editor` | Multi-line editor |
 
-### 键盘输入
+### Keyboard Input
 
 ```typescript
 import { matchesKey, Key } from "@mariozechner/pi-tui";
@@ -273,17 +273,17 @@ if (matchesKey(data, Key.enter)) { ... }
 if (matchesKey(data, Key.ctrl("c"))) { ... }
 ```
 
-### 常用模式
+### Common Patterns
 
-1. **SelectList + DynamicBorder** — 选择对话框
-2. **BorderedLoader** — 异步操作 + 取消
-3. **SettingsList** — 设置切换
-4. **setStatus** — Footer 状态指示
-5. **setWidget** — 编辑器上下方 widget
-6. **setFooter** — 自定义 footer
-7. **CustomEditor** — 自定义编辑器（如 Vim 模式）
+1. **SelectList + DynamicBorder** — Selection dialogs
+2. **BorderedLoader** — Async operations + cancel
+3. **SettingsList** — Settings toggles
+4. **setStatus** — Footer status indicator
+5. **setWidget** — Editor-adjacent widgets
+6. **setFooter** — Custom footer
+7. **CustomEditor** — Custom editor (e.g. Vim mode)
 
-### Overlay 模式
+### Overlay Mode
 
 ```typescript
 ctx.ui.custom(component, {
@@ -295,22 +295,22 @@ ctx.ui.custom(component, {
 });
 ```
 
-### 主题化
+### Theming
 
-工具渲染中使用 `theme` 参数：
+Use `theme` parameter in tool rendering:
 ```typescript
-theme.fg("success", "✓ Done")  // 前景色
-theme.bg("toolSuccessBg", text) // 背景色
-theme.bold("text")              // 粗体
+theme.fg("success", "✓ Done")  // Foreground color
+theme.bg("toolSuccessBg", text) // Background color
+theme.bold("text")              // Bold
 ```
 
 ---
 
-## 五、自定义模型 (models.json)
+## 5. Custom Models (models.json)
 
-`~/.pi/agent/models.json`，编辑后无需重启，打开 `/model` 时自动重载。
+Located at `~/.pi/agent/models.json`. Auto-reloaded when opening `/model`; no restart needed.
 
-### 最简示例（Ollama）
+### Minimal Example (Ollama)
 
 ```json
 {
@@ -328,24 +328,24 @@ theme.bold("text")              // 粗体
 }
 ```
 
-### 支持的 API 类型
+### Supported API Types
 
-| API | 用途 |
-|-----|------|
-| `openai-completions` | OpenAI Chat Completions（最通用） |
+| API | Use Case |
+|-----|----------|
+| `openai-completions` | OpenAI Chat Completions (most universal) |
 | `openai-responses` | OpenAI Responses API |
 | `anthropic-messages` | Anthropic Messages API |
 | `google-generative-ai` | Google Generative AI |
 | `bedrock-converse-stream` | Amazon Bedrock |
 
-### 覆盖内置提供商
+### Overriding Built-in Providers
 
-仅改 baseUrl（保留所有内置模型）：
+Change only the baseUrl (keeps all built-in models):
 ```json
 { "providers": { "anthropic": { "baseUrl": "https://my-proxy.com/v1" } } }
 ```
 
-### 自定义提供商（Extension）
+### Custom Provider (Extension)
 
 ```typescript
 pi.registerProvider("my-provider", {
@@ -354,20 +354,20 @@ pi.registerProvider("my-provider", {
   api: "openai-completions",
   models: [{ id: "my-model", name: "My Model", reasoning: false, input: ["text"], ... }],
   oauth: { name: "My SSO", login(...) { ... }, refreshToken(...) { ... }, getApiKey(...) { ... } },
-  streamSimple: myStreamFn, // 非标准 API 自定义流
+  streamSimple: myStreamFn, // Custom stream for non-standard APIs
 });
 ```
 
 ---
 
-## 六、Context Files
+## 6. Context Files
 
-Pi 启动时加载 `AGENTS.md`（或 `CLAUDE.md`）：
-- `~/.pi/agent/AGENTS.md` — 全局
-- 从 cwd 向上遍历父目录
-- 当前目录
+Pi loads `AGENTS.md` (or `CLAUDE.md`) at startup:
+- `~/.pi/agent/AGENTS.md` — Global
+- Traverses parent directories from cwd
+- Current directory
 
-### System Prompt 替换
+### System Prompt Replacement
 
-- `.pi/SYSTEM.md` 或 `~/.pi/agent/SYSTEM.md` — 替换默认 system prompt
-- `APPEND_SYSTEM.md` — 追加而不替换
+- `.pi/SYSTEM.md` or `~/.pi/agent/SYSTEM.md` — Replaces default system prompt
+- `APPEND_SYSTEM.md` — Appends without replacing

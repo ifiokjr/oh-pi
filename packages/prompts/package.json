@@ -1,0 +1,11 @@
+{
+	"name": "@ifi/oh-pi-prompts",
+	"version": "0.2.0",
+	"description": "Prompt templates for pi: review, fix, explain, refactor, test, commit, and more.",
+	"keywords": ["pi-package"],
+	"pi": {
+		"prompts": ["./prompts"]
+	},
+	"files": ["prompts", "README.md"],
+	"license": "MIT"
+}

@@ -1,167 +1,167 @@
-# Pi 扩展系统 (Extensions)
+# Pi Extension System
 
-## 一、概述
+## 1. Overview
 
-Extensions 是 TypeScript 模块，通过 jiti 加载（无需编译）。可以：
-- 注册自定义工具（LLM 可调用）
-- 拦截/修改工具调用和结果
-- 注册命令、快捷键、CLI flags
-- 用户交互（对话框、通知、自定义 UI 组件）
-- 自定义渲染（工具调用/结果、消息）
-- 会话状态持久化
-- 替换内置工具
-- 注册自定义模型提供商
+Extensions are TypeScript modules loaded via jiti (no compilation needed). They can:
+- Register custom tools (callable by the LLM)
+- Intercept/modify tool calls and results
+- Register commands, shortcuts, and CLI flags
+- User interaction (dialogs, notifications, custom UI components)
+- Custom rendering (tool calls/results, messages)
+- Persist session state
+- Replace built-in tools
+- Register custom model providers
 
-## 二、放置位置
+## 2. Locations
 
-| 位置 | 范围 |
-|------|------|
-| `~/.pi/agent/extensions/*.ts` | 全局 |
-| `~/.pi/agent/extensions/*/index.ts` | 全局（子目录） |
-| `.pi/extensions/*.ts` | 项目级 |
-| `.pi/extensions/*/index.ts` | 项目级（子目录） |
-| `settings.json` 的 `extensions` 数组 | 额外路径 |
-| `pi -e ./path.ts` | 临时加载（快速测试） |
+| Location | Scope |
+|----------|-------|
+| `~/.pi/agent/extensions/*.ts` | Global |
+| `~/.pi/agent/extensions/*/index.ts` | Global (subdirectory) |
+| `.pi/extensions/*.ts` | Project-level |
+| `.pi/extensions/*/index.ts` | Project-level (subdirectory) |
+| `settings.json` `extensions` array | Additional paths |
+| `pi -e ./path.ts` | Temporary load (quick testing) |
 
-## 三、基本结构
+## 3. Basic Structure
 
 ```typescript
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {
-  // 订阅事件
+  // Subscribe to events
   pi.on("event_name", async (event, ctx) => { ... });
 
-  // 注册工具
+  // Register a tool
   pi.registerTool({ name: "my_tool", ... });
 
-  // 注册命令
+  // Register a command
   pi.registerCommand("name", { handler: async (args, ctx) => { ... } });
 
-  // 注册快捷键
+  // Register a shortcut
   pi.registerShortcut("ctrl+shift+p", { handler: async (ctx) => { ... } });
 }
 ```
 
-### 可用导入
+### Available Imports
 
-| 包 | 用途 |
-|---|------|
-| `@mariozechner/pi-coding-agent` | Extension 类型 |
-| `@sinclair/typebox` | 工具参数 Schema |
-| `@mariozechner/pi-ai` | AI 工具（StringEnum 等） |
-| `@mariozechner/pi-tui` | TUI 组件 |
-| Node.js 内置模块 | `node:fs`, `node:path` 等 |
-| npm 依赖 | 需在扩展目录放 package.json 并 npm install |
+| Package | Use |
+|---------|-----|
+| `@mariozechner/pi-coding-agent` | Extension types |
+| `@sinclair/typebox` | Tool parameter schemas |
+| `@mariozechner/pi-ai` | AI utilities (StringEnum, etc.) |
+| `@mariozechner/pi-tui` | TUI components |
+| Node.js built-ins | `node:fs`, `node:path`, etc. |
+| npm dependencies | Requires package.json + install in extension directory |
 
-## 四、事件生命周期
+## 4. Event Lifecycle
 
 ```
-pi 启动 → session_start
-用户发送 prompt:
-  → input (可拦截/转换)
-  → before_agent_start (可注入消息/修改 system prompt)
+pi starts → session_start
+User sends prompt:
+  → input (can intercept/transform)
+  → before_agent_start (can inject messages/modify system prompt)
   → agent_start
   → message_start / message_update / message_end
-  → [turn 循环]:
+  → [turn loop]:
       turn_start → context → tool_call → tool_execution_* → tool_result → turn_end
   → agent_end
-模型切换 → model_select
-会话操作 → session_before_switch/switch, session_before_fork/fork
-压缩 → session_before_compact/compact
-树导航 → session_before_tree/tree
-退出 → session_shutdown
+Model switch → model_select
+Session ops → session_before_switch/switch, session_before_fork/fork
+Compaction → session_before_compact/compact
+Tree nav → session_before_tree/tree
+Exit → session_shutdown
 ```
 
-### 关键事件
+### Key Events
 
-| 事件 | 可返回 | 用途 |
-|------|--------|------|
-| `tool_call` | `{ block: true, reason }` | 拦截危险操作 |
-| `tool_result` | `{ content, details, isError }` | 修改工具结果 |
-| `input` | `{ action: "transform"/"handled"/"continue" }` | 拦截/转换用户输入 |
-| `before_agent_start` | `{ message, systemPrompt }` | 注入消息/修改 system prompt |
-| `context` | `{ messages }` | 修改发送给 LLM 的消息 |
-| `session_before_compact` | `{ cancel }` 或 `{ compaction }` | 自定义压缩 |
-| `session_before_tree` | `{ cancel }` 或 `{ summary }` | 自定义分支摘要 |
+| Event | Can Return | Use |
+|-------|------------|-----|
+| `tool_call` | `{ block: true, reason }` | Intercept dangerous operations |
+| `tool_result` | `{ content, details, isError }` | Modify tool results |
+| `input` | `{ action: "transform"/"handled"/"continue" }` | Intercept/transform user input |
+| `before_agent_start` | `{ message, systemPrompt }` | Inject messages/modify system prompt |
+| `context` | `{ messages }` | Modify messages sent to LLM |
+| `session_before_compact` | `{ cancel }` or `{ compaction }` | Custom compaction |
+| `session_before_tree` | `{ cancel }` or `{ summary }` | Custom branch summary |
 
-## 五、ExtensionAPI 方法
+## 5. ExtensionAPI Methods
 
-### 核心
+### Core
 
-| 方法 | 说明 |
-|------|------|
-| `pi.on(event, handler)` | 订阅事件 |
-| `pi.registerTool(def)` | 注册自定义工具 |
-| `pi.registerCommand(name, opts)` | 注册 `/command` |
-| `pi.registerShortcut(key, opts)` | 注册快捷键 |
-| `pi.registerFlag(name, opts)` | 注册 CLI flag |
-| `pi.registerProvider(name, config)` | 注册/覆盖模型提供商 |
-| `pi.registerMessageRenderer(type, renderer)` | 自定义消息渲染 |
+| Method | Description |
+|--------|-------------|
+| `pi.on(event, handler)` | Subscribe to event |
+| `pi.registerTool(def)` | Register custom tool |
+| `pi.registerCommand(name, opts)` | Register `/command` |
+| `pi.registerShortcut(key, opts)` | Register keybinding |
+| `pi.registerFlag(name, opts)` | Register CLI flag |
+| `pi.registerProvider(name, config)` | Register/override model provider |
+| `pi.registerMessageRenderer(type, renderer)` | Custom message rendering |
 
-### 消息注入
+### Message Injection
 
-| 方法 | 说明 |
-|------|------|
-| `pi.sendMessage(msg, opts)` | 注入自定义消息（steer/followUp/nextTurn） |
-| `pi.sendUserMessage(content, opts)` | 发送用户消息 |
-| `pi.appendEntry(type, data)` | 持久化扩展状态（不参与 LLM 上下文） |
+| Method | Description |
+|--------|-------------|
+| `pi.sendMessage(msg, opts)` | Inject custom message (steer/followUp/nextTurn) |
+| `pi.sendUserMessage(content, opts)` | Send user message |
+| `pi.appendEntry(type, data)` | Persist extension state (not in LLM context) |
 
-### 工具管理
+### Tool Management
 
-| 方法 | 说明 |
-|------|------|
-| `pi.getActiveTools()` | 获取当前活跃工具 |
-| `pi.getAllTools()` | 获取所有工具 |
-| `pi.setActiveTools(names)` | 设置活跃工具 |
+| Method | Description |
+|--------|-------------|
+| `pi.getActiveTools()` | Get currently active tools |
+| `pi.getAllTools()` | Get all registered tools |
+| `pi.setActiveTools(names)` | Set active tool list |
 
-### 模型控制
+### Model Control
 
-| 方法 | 说明 |
-|------|------|
-| `pi.setModel(model)` | 设置模型 |
-| `pi.getThinkingLevel()` | 获取 thinking level |
-| `pi.setThinkingLevel(level)` | 设置 thinking level |
+| Method | Description |
+|--------|-------------|
+| `pi.setModel(model)` | Set model |
+| `pi.getThinkingLevel()` | Get thinking level |
+| `pi.setThinkingLevel(level)` | Set thinking level |
 
-### 其他
+### Other
 
-| 方法 | 说明 |
-|------|------|
-| `pi.exec(cmd, args, opts)` | 执行 shell 命令 |
-| `pi.events` | 扩展间事件总线 |
-| `pi.setSessionName(name)` | 设置会话名 |
-| `pi.setLabel(entryId, label)` | 设置/清除条目标签 |
-| `pi.getCommands()` | 获取可用命令列表 |
+| Method | Description |
+|--------|-------------|
+| `pi.exec(cmd, args, opts)` | Execute shell command |
+| `pi.events` | Inter-extension event bus |
+| `pi.setSessionName(name)` | Set session name |
+| `pi.setLabel(entryId, label)` | Set/clear entry label |
+| `pi.getCommands()` | Get available commands |
 
-## 六、ExtensionContext (ctx)
+## 6. ExtensionContext (ctx)
 
-每个事件处理器接收 `ctx`：
+Each event handler receives `ctx`:
 
-| 属性/方法 | 说明 |
-|-----------|------|
-| `ctx.ui` | UI 交互方法 |
-| `ctx.hasUI` | 是否有 UI（print/json 模式为 false） |
-| `ctx.cwd` | 当前工作目录 |
-| `ctx.sessionManager` | 只读会话状态 |
-| `ctx.modelRegistry` / `ctx.model` | 模型访问 |
-| `ctx.isIdle()` / `ctx.abort()` | 控制流 |
-| `ctx.shutdown()` | 请求优雅关闭 |
-| `ctx.getContextUsage()` | 上下文使用情况 |
-| `ctx.compact(opts)` | 触发压缩 |
-| `ctx.getSystemPrompt()` | 获取当前 system prompt |
+| Property/Method | Description |
+|-----------------|-------------|
+| `ctx.ui` | UI interaction methods |
+| `ctx.hasUI` | Whether UI is available (false in print/json mode) |
+| `ctx.cwd` | Current working directory |
+| `ctx.sessionManager` | Read-only session state |
+| `ctx.modelRegistry` / `ctx.model` | Model access |
+| `ctx.isIdle()` / `ctx.abort()` | Flow control |
+| `ctx.shutdown()` | Request graceful shutdown |
+| `ctx.getContextUsage()` | Context usage info |
+| `ctx.compact(opts)` | Trigger compaction |
+| `ctx.getSystemPrompt()` | Get current system prompt |
 
-### ExtensionCommandContext（命令处理器额外方法）
+### ExtensionCommandContext (additional for command handlers)
 
-| 方法 | 说明 |
-|------|------|
-| `ctx.waitForIdle()` | 等待 Agent 空闲 |
-| `ctx.newSession(opts)` | 创建新会话 |
-| `ctx.fork(entryId)` | Fork 会话 |
-| `ctx.navigateTree(targetId, opts)` | 树导航 |
-| `ctx.reload()` | 重载资源 |
+| Method | Description |
+|--------|-------------|
+| `ctx.waitForIdle()` | Wait for agent idle |
+| `ctx.newSession(opts)` | Create new session |
+| `ctx.fork(entryId)` | Fork session |
+| `ctx.navigateTree(targetId, opts)` | Tree navigation |
+| `ctx.reload()` | Reload resources |
 
-## 七、自定义工具
+## 7. Custom Tools
 
 ```typescript
 import { Type } from "@sinclair/typebox";
@@ -170,9 +170,9 @@ import { StringEnum } from "@mariozechner/pi-ai";
 pi.registerTool({
   name: "my_tool",
   label: "My Tool",
-  description: "工具描述（LLM 可见）",
+  description: "Tool description (visible to LLM)",
   parameters: Type.Object({
-    action: StringEnum(["list", "add"] as const), // Google 兼容
+    action: StringEnum(["list", "add"] as const), // Google-compatible
     text: Type.Optional(Type.String()),
   }),
   async execute(toolCallId, params, signal, onUpdate, ctx) {
@@ -182,65 +182,65 @@ pi.registerTool({
       details: { result: "..." },
     };
   },
-  renderCall(args, theme) { ... },    // 可选：自定义渲染
+  renderCall(args, theme) { ... },    // Optional: custom rendering
   renderResult(result, opts, theme) { ... },
 });
 ```
 
-**重要**: 枚举用 `StringEnum`（不是 `Type.Union`），否则 Google API 不兼容。
+**Important**: Use `StringEnum` for enums (not `Type.Union`) — otherwise Google API is incompatible.
 
-### 输出截断
+### Output Truncation
 
-内置限制: 50KB / 2000 行。自定义工具必须自行截断输出。使用导出的工具函数：
-- `truncateHead(output, opts)` — 保留开头
-- `truncateTail(output, opts)` — 保留结尾
+Built-in limit: 50KB / 2000 lines. Custom tools must truncate output themselves. Use exported utility functions:
+- `truncateHead(output, opts)` — Keep the beginning
+- `truncateTail(output, opts)` — Keep the end
 
-### 覆盖内置工具
+### Overriding Built-in Tools
 
-注册同名工具即可覆盖 `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`。
+Register a tool with the same name to override `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`.
 
-### 远程执行
+### Remote Execution
 
-内置工具支持可插拔 Operations 接口，可委托到 SSH/容器等远程系统。
+Built-in tools support a pluggable Operations interface for delegation to SSH/container/remote systems.
 
-## 八、UI 交互
+## 8. UI Interaction
 
-### 对话框
-
-```typescript
-const choice = await ctx.ui.select("标题", ["A", "B", "C"]);
-const ok = await ctx.ui.confirm("删除?", "不可撤销");
-const name = await ctx.ui.input("名称:", "placeholder");
-const text = await ctx.ui.editor("编辑:", "预填内容");
-ctx.ui.notify("完成!", "info"); // "info" | "warning" | "error"
-```
-
-支持 `timeout` 选项自动倒计时关闭。
-
-### 持久化 UI
+### Dialogs
 
 ```typescript
-ctx.ui.setStatus("key", "文本");           // Footer 状态
-ctx.ui.setWidget("key", ["行1", "行2"]);   // 编辑器上方 widget
-ctx.ui.setWidget("key", lines, { placement: "belowEditor" }); // 下方
-ctx.ui.setFooter((tui, theme, data) => ({ ... })); // 自定义 footer
-ctx.ui.setEditorComponent((tui, theme, kb) => new VimEditor(...)); // 自定义编辑器
+const choice = await ctx.ui.select("Title", ["A", "B", "C"]);
+const ok = await ctx.ui.confirm("Delete?", "This cannot be undone");
+const name = await ctx.ui.input("Name:", "placeholder");
+const text = await ctx.ui.editor("Edit:", "pre-filled content");
+ctx.ui.notify("Done!", "info"); // "info" | "warning" | "error"
 ```
 
-### 自定义组件
+Supports `timeout` option for auto-dismiss countdown.
+
+### Persistent UI
+
+```typescript
+ctx.ui.setStatus("key", "text");           // Footer status
+ctx.ui.setWidget("key", ["line1", "line2"]); // Widget above editor
+ctx.ui.setWidget("key", lines, { placement: "belowEditor" }); // Below
+ctx.ui.setFooter((tui, theme, data) => ({ ... })); // Custom footer
+ctx.ui.setEditorComponent((tui, theme, kb) => new VimEditor(...)); // Custom editor
+```
+
+### Custom Components
 
 ```typescript
 const result = await ctx.ui.custom<T>((tui, theme, keybindings, done) => {
   return { render(w) { ... }, invalidate() { ... }, handleInput(data) { ... } };
-}, { overlay: true }); // overlay 模式可选
+}, { overlay: true }); // overlay mode optional
 ```
 
-## 九、状态管理
+## 9. State Management
 
-扩展状态应存储在工具结果的 `details` 中，以支持分支：
+Extension state should be stored in tool result `details` to support branching:
 
 ```typescript
-// 从会话重建状态
+// Rebuild state from session
 pi.on("session_start", async (_event, ctx) => {
   for (const entry of ctx.sessionManager.getBranch()) {
     if (entry.type === "message" && entry.message.role === "toolResult"
@@ -251,27 +251,27 @@ pi.on("session_start", async (_event, ctx) => {
 });
 ```
 
-## 十、示例扩展索引
+## 10. Example Extensions Index
 
-| 扩展 | 功能 |
-|------|------|
-| `hello.ts` | 最简示例 |
-| `confirm-destructive.ts` | 危险命令确认 |
-| `protected-paths.ts` | 路径保护 |
-| `git-checkpoint.ts` | Git 检查点 |
-| `auto-commit-on-exit.ts` | 退出时自动提交 |
-| `permission-gate.ts` | 权限门控 |
-| `tool-override.ts` | 覆盖内置工具 |
-| `custom-compaction.ts` | 自定义压缩 |
-| `plan-mode/` | 计划模式 |
-| `subagent/` | 子代理系统 |
-| `ssh.ts` | SSH 远程执行 |
-| `sandbox/` | 沙箱执行 |
-| `snake.ts` | 贪吃蛇游戏 |
-| `doom-overlay/` | Doom 游戏 |
-| `modal-editor.ts` | Vim 模式编辑器 |
-| `todo.ts` | Todo 列表工具 |
-| `preset.ts` | 预设切换 |
-| `pirate.ts` | 海盗语气 |
-| `claude-rules.ts` | Claude 规则兼容 |
-| `custom-provider-*` | 自定义提供商示例 |
+| Extension | Functionality |
+|-----------|---------------|
+| `hello.ts` | Minimal example |
+| `confirm-destructive.ts` | Dangerous command confirmation |
+| `protected-paths.ts` | Path protection |
+| `git-checkpoint.ts` | Git checkpoints |
+| `auto-commit-on-exit.ts` | Auto-commit on exit |
+| `permission-gate.ts` | Permission gating |
+| `tool-override.ts` | Override built-in tools |
+| `custom-compaction.ts` | Custom compaction |
+| `plan-mode/` | Plan mode |
+| `subagent/` | Sub-agent system |
+| `ssh.ts` | SSH remote execution |
+| `sandbox/` | Sandbox execution |
+| `snake.ts` | Snake game |
+| `doom-overlay/` | Doom game |
+| `modal-editor.ts` | Vim-mode editor |
+| `todo.ts` | Todo list tool |
+| `preset.ts` | Preset switching |
+| `pirate.ts` | Pirate voice |
+| `claude-rules.ts` | Claude rules compatibility |
+| `custom-provider-*` | Custom provider examples |

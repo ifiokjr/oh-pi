@@ -1,0 +1,33 @@
+{
+	"name": "@ifi/oh-pi",
+	"version": "0.2.0",
+	"description": "One-click setup for pi-coding-agent — extensions, themes, prompts, skills, and ant-colony swarm. Like oh-my-zsh for pi.",
+	"keywords": ["pi-package", "pi-coding-agent", "configuration", "setup", "tui"],
+	"pi": {
+		"extensions": [
+			"node_modules/@ifi/oh-pi-extensions/extensions",
+			"node_modules/@ifi/oh-pi-ant-colony/extensions"
+		],
+		"themes": ["node_modules/@ifi/oh-pi-themes/themes"],
+		"prompts": ["node_modules/@ifi/oh-pi-prompts/prompts"],
+		"skills": ["node_modules/@ifi/oh-pi-skills/skills"]
+	},
+	"files": ["README.md"],
+	"license": "MIT",
+	"dependencies": {
+		"@ifi/oh-pi-extensions": "workspace:*",
+		"@ifi/oh-pi-ant-colony": "workspace:*",
+		"@ifi/oh-pi-themes": "workspace:*",
+		"@ifi/oh-pi-prompts": "workspace:*",
+		"@ifi/oh-pi-skills": "workspace:*",
+		"@ifi/oh-pi-agents": "workspace:*"
+	},
+	"bundledDependencies": [
+		"@ifi/oh-pi-extensions",
+		"@ifi/oh-pi-ant-colony",
+		"@ifi/oh-pi-themes",
+		"@ifi/oh-pi-prompts",
+		"@ifi/oh-pi-skills",
+		"@ifi/oh-pi-agents"
+	]
+}

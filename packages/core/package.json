@@ -1,0 +1,29 @@
+{
+	"name": "@ifi/oh-pi-core",
+	"version": "0.2.0",
+	"description": "Shared types, registries, and i18n for oh-pi packages.",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"files": ["dist", "README.md"],
+	"scripts": {
+		"clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist',{ recursive: true, force: true }))\"",
+		"build": "pnpm clean && tsc -b",
+		"build:fast": "pnpm clean && tsgo --project tsconfig.json",
+		"typecheck": "tsgo --project tsconfig.json --noEmit"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@clack/prompts": "^1.0.1",
+		"chalk": "^5.4.0"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	}
+}

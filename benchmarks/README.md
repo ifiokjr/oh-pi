@@ -1,49 +1,49 @@
-# Benchmarks（空框架）
+# Benchmarks (Scaffold)
 
-本目录用于建立基准测试的**统一模板**，用于对比：
+This directory provides a **unified template** for benchmarking comparisons between:
 
-- 单 agent
-- 蚁群协作（multi-agent colony）
+- Single agent
+- Multi-agent colony (ant colony)
 
-> 当前阶段仅提供文档框架，不包含任何实现脚本。
+> Current phase provides documentation scaffolding only — no implementation scripts.
 
-## 目标
+## Goals
 
-围绕以下维度进行对比评估：
+Comparative evaluation across these dimensions:
 
-1. 完成率（Success Rate）
-2. 时长（Duration）
-3. 成本（Cost）
-4. 回滚率（Rollback Rate）
+1. Success Rate
+2. Duration
+3. Cost
+4. Rollback Rate
 
-并按照任务复杂度分级：
+Stratified by task complexity:
 
-- S（Small）
-- M（Medium）
-- L（Large）
+- S (Small)
+- M (Medium)
+- L (Large)
 
-## 文件说明
+## Files
 
-- `scenarios.md`：场景清单模板（按 S/M/L 分级）
-- `results-template.md`：结果记录模板（单 agent vs 蚁群）
+- `scenarios.md`: Scenario list template (by S/M/L tier)
+- `results-template.md`: Results recording template (single agent vs colony)
 
-## 建议执行流程（手工版）
+## Suggested Execution Flow (Manual)
 
-1. 在 `scenarios.md` 中挑选一个场景（含复杂度级别）。
-2. 使用同一场景分别运行：
-   - 单 agent
-   - 蚁群协作
-3. 将每次运行结果填写到 `results-template.md`。
-4. 统计每个复杂度级别下的四项指标差异。
+1. Pick a scenario from `scenarios.md` (with complexity level).
+2. Run the same scenario with both:
+   - Single agent
+   - Ant colony
+3. Record each run's results in `results-template.md`.
+4. Aggregate the four metrics per complexity level.
 
-## 填写约束
+## Recording Constraints
 
-- 同一场景下，尽量保持输入与验收标准一致。
-- 成本口径需一致（例如都按 token / API 花费估算）。
-- 回滚率需明确定义（例如“需要人工回退或重做的运行占比”）。
+- Keep inputs and acceptance criteria consistent for the same scenario.
+- Cost measurement must be consistent (e.g. both estimated by tokens / API spend).
+- Rollback rate needs clear definition (e.g. "proportion of runs requiring manual revert or redo").
 
-## 后续扩展（未来）
+## Future Extensions
 
-- 增加自动化采集脚本。
-- 增加可视化报表。
-- 将结果接入 CI 周期性回归。
+- Add automated data collection scripts.
+- Add visualization reports.
+- Integrate results into CI periodic regression.

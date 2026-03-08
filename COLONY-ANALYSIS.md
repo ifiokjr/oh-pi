@@ -1,426 +1,240 @@
-# 🐜 Oh-Pi 蚁群仿生架构深度分析报告
+# 🐜 Oh-Pi Colony Biomimicry Architecture — Deep Analysis Report
 
-> 生成时间：2026-02-16 14:14 GMT+8（修订版，基于源码逐行校验）
-> 基于 scout 全量情报编写 | ant-colony worker 产出
-
----
-
-## 目录
-
-1. [项目架构总览](#1-项目架构总览)
-2. [蚁群仿生映射方案](#2-蚁群仿生映射方案)
-3. ["简单逻辑，智能涌现"可行性评估](#3-简单逻辑智能涌现可行性评估)
-4. [具体改进建议](#4-具体改进建议)
-5. [风险点与需保留的非蚁群部分](#5-风险点与需保留的非蚁群部分)
+> Generated: 2026-02-16 14:14 GMT+8 (revised, verified line-by-line against source)
+> Written from scout intelligence | ant-colony worker output
 
 ---
 
-## 1. 项目架构总览
+## Table of Contents
 
-### 1.1 代码规模
+1. [Project Architecture Overview](#1-project-architecture-overview)
+2. [Colony Biomimicry Mapping](#2-colony-biomimicry-mapping)
+3. [Simple Rules → Emergent Intelligence: Feasibility Assessment](#3-simple-rules--emergent-intelligence-feasibility-assessment)
+4. [Specific Improvement Suggestions](#4-specific-improvement-suggestions)
+5. [Risk Points & Non-Colony Parts to Preserve](#5-risk-points--non-colony-parts-to-preserve)
 
-| 层级 | 模块数 | 关键文件 | 总行数 |
-|------|--------|----------|--------|
-| `src/` 核心 | 16 | bin(1) + index + types + i18n + utils(3) + tui(9) | ~1,731 |
-| `ant-colony` 扩展 | 7 (含 index) | types + nest + queen + spawner + concurrency + deps + index | ~2,373 |
-| `pi-package` 资源 | 40 | extensions(9) + agents(5) + prompts(10) + skills(10) + themes(6) | — |
+---
 
-### 1.2 ASCII 模块关系图
+## 1. Project Architecture Overview
+
+### 1.1 Code Scale
+
+| Layer | Modules | Key Files | Total Lines |
+|-------|---------|-----------|-------------|
+| `src/` core | 16 | bin(1) + index + types + i18n + utils(3) + tui(9) | ~1,731 |
+| `ant-colony` extension | 7 (incl. index) | types + nest + queen + spawner + concurrency + deps + index | ~2,373 |
+| `pi-package` resources | 40 | extensions(9) + agents(5) + prompts(10) + skills(10) + themes(6) | — |
+
+### 1.2 Data Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         oh-pi 项目全景                               │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌──────────── src/ 核心层 ────────────┐                            │
-│  │                                     │                            │
-│  │  bin/oh-pi.ts ─── CLI 入口          │                            │
-│  │       │                             │                            │
-│  │       ▼                             │                            │
-│  │  index.ts ─── 主编排器              │                            │
-│  │       │                             │                            │
-│  │       ├──▶ types.ts (接口+注册表)   │                            │
-│  │       ├──▶ i18n.ts  (国际化)        │                            │
-│  │       │                             │                            │
-│  │       ├──▶ utils/                   │                            │
-│  │       │    ├─ detect.ts   环境探测  │                            │
-│  │       │    ├─ install.ts  配置安装  │                            │
-│  │       │    └─ resources.ts 资源加载 │                            │
-│  │       │                             │                            │
-│  │       └──▶ tui/ (9 个交互界面)      │                            │
-│  │            ├─ welcome.ts            │                            │
-│  │            ├─ mode-select.ts        │                            │
-│  │            ├─ provider-setup.ts     │                            │
-│  │            ├─ agents-select.ts      │                            │
-│  │            ├─ extension-select.ts   │                            │
-│  │            ├─ preset-select.ts      │                            │
-│  │            ├─ keybinding-select.ts  │                            │
-│  │            ├─ theme-select.ts       │                            │
-│  │            └─ confirm-apply.ts      │                            │
-│  └─────────────────────────────────────┘                            │
-│       │ 加载                                                        │
-│       ▼                                                             │
-│  ┌──────────── pi-package/ 资源层 ─────────────────────────┐        │
-│  │                                                         │        │
-│  │  extensions/          agents/         prompts/          │        │
-│  │  ├─ ant-colony/ ◀━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓   │        │
-│  │  ├─ auto-session-name   ├─ colony-operator    (×10) ┃   │        │
-│  │  ├─ auto-update         ├─ data-ai-engineer         ┃   │        │
-│  │  ├─ bg-process          ├─ fullstack-developer      ┃   │        │
-│  │  ├─ compact-header      ├─ general-developer        ┃   │        │
-│  │  ├─ custom-footer       └─ security-researcher      ┃   │        │
-│  │  ├─ git-guard                                       ┃   │        │
-│  │  ├─ safe-guard      skills/ (×10)    themes/ (×6)   ┃   │        │
-│  │                     ├─ claymorphism   ├─ nord       ┃   │        │
-│  │                      ├─ context7       ├─ cyberpunk  ┃   │        │
-│  │                      ├─ debug-helper   ├─ gruvbox    ┃   │        │
-│  │                      ├─ git-workflow   ├─ tokyo      ┃   │        │
-│  │                      ├─ web-search     ├─ oh-p-dark  ┃   │        │
-│  │                      └─ ...            └─ catppuccin ┃   │        │
-│  └─────────────────────────────────────────────────────┘   │        │
-│                                                             │        │
-│  ┌══════════ ant-colony 内部架构 ══════════════════════┐    │        │
-│  ║                                                     ║    │        │
-│  ║  types.ts ◀──── 全局类型 (144行, 接口定义)           ║    │        │
-│  ║     ▲                                               ║    │        │
-│  ║     │                                               ║    │        │
-│  ║  index.ts (627行) ─── 扩展入口/生命周期管理         ║    │        │
-│  ║     │                                               ║    │        │
-│  ║     ├──▶ queen.ts (617行) ─── 任务分解/调度中枢     ║    │        │
-│  ║     │      │                                        ║    │        │
-│  ║     │      ├──▶ nest.ts (295行) ─── 信息素读写/衰减 ║    │        │
-│  ║     │      │      └──▶ .pheromone.jsonl             ║    │        │
-│  ║     │      │                                        ║    │        │
-│  ║     │      ├──▶ spawner.ts (474行) ─── 蚂蚁孵化器   ║    │        │
-│  ║     │      │      └──▶ pi SDK (18 API imports)      ║    │        │
-│  ║     │      │                                        ║    │        │
-│  ║     │      └──▶ concurrency.ts (120行) ─── 并发控制  ║    │        │
-│  ║     │                                               ║    │        │
-│  ║     └──▶ deps.ts (94行) ─── import graph 依赖分析   ║    │        │
-│  ║                                                     ║    │        │
-│  ╚═════════════════════════════════════════════════════╝    │        │
-└─────────────────────────────────────────────────────────────────────┘
-
-数据流:
-  用户输入 ──▶ queen 分解任务 ──▶ spawner 孵化蚂蚁 ──▶ 蚂蚁执行
-       ▲                                                    │
-       └──── nest 信息素反馈 ◀──────────────────────────────┘
+User input ──▶ queen decomposes tasks ──▶ spawner hatches ants ──▶ ants execute
+     ▲                                                               │
+     └──── nest pheromone feedback ◀─────────────────────────────────┘
 ```
 
 ---
 
-## 2. 蚁群仿生映射方案
+## 2. Colony Biomimicry Mapping
 
-### 2.1 现有模块 → 蚁群角色映射
+### 2.1 Module → Colony Role Mapping
 
-| 现有模块 | 蚁群角色 | 映射理由 |
-|----------|----------|----------|
-| **ant-colony/queen.ts** | 🐜 蚁后 (Queen) | 任务分解中枢，子任务注入巢穴（queen.ts:201-210），触发再探索循环（queen.ts:485-500） |
-| **ant-colony/nest.ts** | 🏠 蚁巢 (Nest) | 信息素 JSONL 存储与衰减（10min 半衰期），ε-greedy 加权调度（nest.ts:121-145） |
-| **ant-colony/spawner.ts** | 🥚 孵化室 (Nursery) | 根据任务类型孵化 scout/worker/soldier/drone，调用 pi SDK 创建 AI 实例 |
-| **ant-colony/concurrency.ts** | 🚦 交通管制 (Traffic) | 探索/稳态双阶段自适应并发（concurrency.ts:57-120） |
-| **ant-colony/deps.ts** | 🗺️ 侦察地图 (Map) | import graph 构建，文件锁依赖感知，防止冲突 |
-| **ant-colony/types.ts** | 📜 基因编码 (DNA) | 全局接口定义（144行），决定蚁群行为边界 |
-| **src/index.ts** | 🌍 生态系统 (Ecosystem) | 主编排器，蚁群在其中作为一个扩展运行 |
-| **src/types.ts** | 🧬 生态基因 | 宿主类型系统，蚁群需适配的外部接口 |
-| **src/tui/\*** (9个) | 👁️ 感官器官 (Sensory) | 用户交互界面，相当于蚁群与外界的触角 |
-| **src/utils/detect.ts** | 🔍 环境侦察兵 | 探测运行环境，类似蚂蚁的化学感受器 |
-| **src/utils/install.ts** | 🔧 工蚁建筑师 | 配置安装（applyConfig 100+行单体函数），巢穴构建 |
-| **src/utils/resources.ts** | 📦 食物搬运工 | 资源加载，类似工蚁的食物采集 |
-| **src/i18n.ts** | 🗣️ 信号翻译器 | 国际化 = 不同蚁群间的化学信号翻译 |
-| **pi-package/extensions/\*** (8个) | 🧩 共生生物 | 独立扩展，与蚁群形成互利共生关系 |
-| **pi-package/agents/\*** (5个) | 🎭 蚁群特化形态 | 不同 agent = 不同兵种的行为模板 |
-| **pi-package/prompts/\*** (10个) | 📋 信息素配方 | 预定义 prompt = 特定信息素化学配方 |
-| **pi-package/skills/\*** (10个) | 🛠️ 工具使用能力 | 技能 = 蚂蚁使用工具的后天习得行为 |
-| **pi-package/themes/\*** (6个) | 🎨 巢穴装饰 | 纯表现层，不影响蚁群核心逻辑 |
+| Module | Colony Role | Mapping Rationale |
+|--------|-------------|-------------------|
+| **queen.ts** | 🐜 Queen | Task decomposition hub, sub-task injection into nest, triggers re-exploration |
+| **nest.ts** | 🏠 Nest | Pheromone JSONL storage & decay (10-min half-life), ε-greedy weighted scheduling |
+| **spawner.ts** | 🥚 Nursery | Hatches scout/worker/soldier/drone per task type via pi SDK |
+| **concurrency.ts** | 🚦 Traffic Control | Exploration/steady-state dual-phase adaptive concurrency |
+| **deps.ts** | 🗺️ Scout Map | Import graph construction, file lock dependency awareness |
+| **types.ts** | 📜 DNA | Global interface definitions, defines colony behavior boundaries |
 
-### 2.2 蚂蚁生命周期映射
+### 2.2 Ant Lifecycle Mapping
 
 ```
 scout → worker → soldier → (drone)
   │        │         │         │
-  │        │         │         └─ 零成本 bash 执行 (execSync)
-  │        │         └─ 处理复杂/冲突任务，需要更多上下文
-  │        └─ 执行具体编码任务，读写文件
-  └─ 侦察代码库，收集信息素（只读）
+  │        │         │         └─ Zero-cost bash execution (execSync)
+  │        │         └─ Handles complex/conflict tasks, needs more context
+  │        └─ Executes concrete coding tasks, reads/writes files
+  └─ Scouts the codebase, collects pheromones (read-only)
 
-生命周期: 任务分配 → 信息素读取 → 执行 → 信息素写入 → 死亡/升级
+Lifecycle: task assignment → pheromone read → execute → pheromone write → death/upgrade
 ```
 
 ---
 
-## 3. "简单逻辑，智能涌现"可行性评估
+## 3. Simple Rules → Emergent Intelligence: Feasibility Assessment
 
-### 3.1 核心命题
+### 3.1 Core Proposition
 
-> 每只蚂蚁只遵循简单规则，但群体行为涌现出智能。
+> Each ant follows simple rules, but group behavior produces emergent intelligence.
 
-### 3.2 现有涌现点分析
+### 3.2 Current Emergence Points
 
-| 涌现机制 | 位置 | 简单规则 | 涌现效果 | 成熟度 |
-|----------|------|----------|----------|--------|
-| **信息素加权调度** | nest.ts:121-145 | 读取 JSONL → 按权重排序 → ε-greedy 选择 | 群体自动聚焦高价值区域，10%随机避免拥挤 | ⭐⭐⭐⭐ |
-| **负信息素惩罚** | nest.ts:139-140 | warning ×2 / repellent ×3 惩罚 | 失败路径自动被群体回避 | ⭐⭐⭐ |
-| **子任务递归产生** | spawner.ts:162+, queen.ts:201 | 蚂蚁输出 → parseSubTasks → 注入巢穴 | 复杂问题自动分治 | ⭐⭐⭐⭐ |
-| **自适应并发** | concurrency.ts:57-120 | 探索期高并发 → 稳态期收敛 → CPU/内存硬约束 | 资源利用自动优化 | ⭐⭐⭐ |
-| **再探索循环** | queen.ts:485-500 | 发现数 > 完成数 → 再派 scout → 补充信息素 | 持续探索自愈能力 | ⭐⭐⭐ |
-| **ε-greedy 随机觅食** | nest.ts:127-129 | 10% 概率随机选任务 | 避免局部最优，保持探索多样性 | ⭐⭐⭐ |
+| Mechanism | Location | Simple Rule | Emergent Effect | Maturity |
+|-----------|----------|-------------|-----------------|----------|
+| **Pheromone-weighted scheduling** | nest.ts | Read JSONL → sort by weight → ε-greedy select | Colony auto-focuses on high-value areas; 10% random avoids crowding | ⭐⭐⭐⭐ |
+| **Negative pheromone penalty** | nest.ts | warning ×2 / repellent ×3 penalty | Failed paths auto-avoided by subsequent ants | ⭐⭐⭐ |
+| **Recursive sub-task spawning** | spawner.ts, queen.ts | Ant output → parseSubTasks → inject into nest | Complex problems auto-decomposed | ⭐⭐⭐⭐ |
+| **Adaptive concurrency** | concurrency.ts | Exploration high → steady-state converge → CPU/memory hard limits | Resource utilization auto-optimized | ⭐⭐⭐ |
+| **Re-exploration loop** | queen.ts | discoveries > completions → re-dispatch scouts | Continuous exploration self-healing | ⭐⭐⭐ |
+| **ε-greedy random foraging** | nest.ts | 10% probability random task selection | Avoids local optima, maintains exploration diversity | ⭐⭐⭐ |
 
-### 3.3 可行性评分：8.0/10 ✅ 可行
+### 3.3 Feasibility Score: 8.0/10 ✅ Feasible
 
-**已具备的条件（+）：**
+**What's already in place (+):**
 
-1. **信息素机制已落地** — JSONL 追加写入 + 10min 半衰期衰减（nest.ts:155），这是蚁群算法的核心。信息素的时间衰减确保系统不会被过时信息锁定，直接对应 ACO 中的蒸发系数 ρ。
+1. **Pheromone mechanism is live** — JSONL append-write + 10-min half-life decay. This is the core of ant colony optimization. Time decay prevents the system from being locked by stale info, mapping to the ACO evaporation coefficient ρ.
 
-2. **负信息素已实现** — warning 类型惩罚 ×2、repellent 类型惩罚 ×3（nest.ts:139-140），失败路径会被后续蚂蚁自动回避，这是真实蚁群中"危险信号"的直接映射。
+2. **Negative pheromones implemented** — warning type penalty ×2, repellent type penalty ×3. Failed paths are auto-avoided by subsequent ants — a direct mapping of real ant "danger signals."
 
-3. **ε-greedy 随机觅食** — 10% 概率随机选择任务（nest.ts:127-129），避免所有蚂蚁挤同一条路，保持探索多样性。这对应真实蚁群中个体的随机偏差行为。
+3. **ε-greedy random foraging** — 10% probability random task selection avoids all ants crowding the same path, maintaining exploration diversity. Maps to individual random deviation behavior in real colonies.
 
-4. **四阶段生命周期清晰** — scout→worker→soldier→drone 的渐进式任务处理，每个阶段职责单一，符合"简单规则"原则。
+4. **Clear four-phase lifecycle** — scout→worker→soldier→drone progressive task handling, each phase with single responsibility, following the "simple rules" principle.
 
-5. **依赖感知避免冲突** — deps.ts 的 import graph + 文件锁机制（queen.ts:205-210），相当于蚂蚁的"领地标记"，防止多只蚂蚁同时修改同一文件。
+5. **Dependency-aware conflict prevention** — deps.ts import graph + file lock mechanism, equivalent to ant "territory marking," preventing multiple ants from modifying the same file.
 
-6. **双阶段并发** — 探索/稳态切换（concurrency.ts:57-120）模拟了真实蚁群的"觅食/搬运"行为模式切换，含 CPU/内存硬约束保护。
+6. **Dual-phase concurrency** — Exploration/steady-state switching models real ant colony foraging/hauling behavior mode switching, with CPU/memory hard constraints.
 
-**尚缺的条件（−）：**
+**What's missing (−):**
 
-1. **正反馈循环不完整** — 当前信息素有"写入"、"衰减"和"负反馈"，但缺少基于任务成功率的**累积强化**机制。真实蚁群中，成功路径的信息素会被多只蚂蚁反复加强，形成"高速公路"。
+1. **Incomplete positive feedback loop** — Current pheromones have write, decay, and negative feedback, but lack **cumulative reinforcement** based on task success rate. In real colonies, successful paths get reinforced by multiple ants, forming "highways."
 
-2. **去中心化程度不足** — queen.ts 仍是中心化调度器（617行），所有阶段编排逻辑集中于此。真正的蚁群没有"指挥官"，每只蚂蚁独立决策。
+2. **Insufficient decentralization** — queen.ts is still a centralized scheduler. All phase orchestration logic is concentrated here. Real colonies have no "commander" — each ant decides independently.
 
-3. **蚂蚁间通信仅通过信息素** — 缺少"直接接触"通信（tandem running），即蚂蚁之间无法直接传递上下文，只能通过 JSONL 间接通信。
+3. **Ants communicate only via pheromones** — Missing "direct contact" communication (tandem running). Ants can't directly pass context; they only communicate indirectly via JSONL.
 
-4. **drone 的 execSync 是同步阻塞**（spawner.ts:290-292）— 违背了蚁群的异步并行本质。
+4. **Drone execSync is synchronous blocking** — Violates the async parallel nature of ant colonies.
 
-### 3.4 与真实蚁群的差距矩阵
+### 3.4 Gap Matrix vs Real Ant Colonies
 
 ```
-真实蚁群特征              当前实现                          差距
-──────────────────────────────────────────────────────────────────
-信息素沉积/蒸发           ✅ JSONL+10min半衰期               小
-负信息素(危险信号)        ✅ warning×2 + repellent×3         小
-随机觅食(探索多样性)      ✅ ε-greedy 10%随机                小
-正反馈循环(路径强化)      ⚠️ 有负反馈，缺累积正强化          中
-去中心化决策              ❌ queen.ts 中心化编排              大
-大量简单个体              ✅ scout/worker/soldier/drone       小
-环境感知                  ✅ deps.ts + detect.ts              小
-自组织                    ⚠️ 并发自适应 + 再探索循环          中
-涌现行为                  ⚠️ 6个涌现点已识别，正反馈待补全   中
+Real Colony Feature          Current Implementation             Gap
+────────────────────────────────────────────────────────────────────
+Pheromone deposit/evaporate  ✅ JSONL + 10-min half-life        Small
+Negative pheromone (danger)  ✅ warning×2 + repellent×3         Small
+Random foraging (diversity)  ✅ ε-greedy 10% random             Small
+Positive feedback (path)     ⚠️ Has negative, missing positive  Medium
+Decentralized decisions      ❌ queen.ts centralized            Large
+Many simple individuals      ✅ scout/worker/soldier/drone      Small
+Environmental sensing        ✅ deps.ts + detect.ts             Small
+Self-organization            ⚠️ Adaptive concurrency + re-explore Medium
+Emergent behavior            ⚠️ 6 points identified, positive FB pending Medium
 ```
 
 ---
 
-## 4. 具体改进建议
+## 4. Specific Improvement Suggestions
 
-### 4.1 信息素机制增强
+### 4.1 Pheromone Mechanism Enhancement
 
-#### A. 引入信息素强化系数
+#### A. Introduce Pheromone Reinforcement Coefficient
 
-当前 nest.ts 只有衰减，建议增加成功反馈强化：
+Current nest.ts only has decay. Recommend adding success-based reinforcement for a positive feedback loop.
 
-```
-当前流程:
-  蚂蚁完成任务 → 写入信息素(固定权重) → 自然衰减
+#### B. Multi-Dimensional Pheromones
 
-建议流程:
-  蚂蚁完成任务 → 评估成功度 → 写入信息素(成功度×基础权重)
-                                         │
-                                         ▼
-                              后续蚂蚁读取 → 高权重路径被优先选择
-                                         │
-                                         ▼
-                              更多蚂蚁走该路径 → 权重进一步增强
-                                         │
-                                         ▼
-                                    正反馈循环形成 ✅
-```
+| Dimension | Meaning | Use |
+|-----------|---------|-----|
+| α path pheromone | "This file was successfully modified" | Guide workers to prioritize |
+| β danger pheromone | "Modifying this file caused failure" | Warn subsequent ants |
+| γ food pheromone | "This area has many pending tasks" | Attract more scouts |
 
-**具体实现建议（nest.ts）：**
-- 在 `Pheromone` 类型中增加 `successRate: number` 字段
-- 信息素写入时，权重 = `baseWeight × (1 + successRate)`
-- 同一文件/模块的信息素可叠加，模拟多只蚂蚁加强同一路径
+#### C. Pheromone Diffusion
 
-#### B. 多维信息素
+Current pheromones only mark exact files. Recommend adding **diffusion**: successful pheromone on `foo.ts` should spread with decay to `foo.test.ts` and `foo`'s import dependencies (reuse deps.ts import graph).
 
-当前信息素是单维度的，建议扩展为多维：
+### 4.2 Positive Feedback Loop
 
-| 维度 | 含义 | 用途 |
-|------|------|------|
-| α 路径信息素 | "这个文件被成功修改过" | 引导 worker 优先处理 |
-| β 危险信息素 | "这个文件修改后导致失败" | 警告后续蚂蚁避开 |
-| γ 食物信息素 | "这个区域有大量待处理任务" | 吸引更多 scout |
-
-#### C. 信息素扩散
-
-当前信息素只标记精确文件，建议增加**扩散**：修改 `foo.ts` 的成功信息素应以衰减系数扩散到 `foo.test.ts`、`foo` 的 import 依赖等相邻节点（可复用 deps.ts 的 import graph）。
-
-### 4.2 正反馈循环
-
-#### A. 蚂蚁评分系统
+#### A. Ant Scoring System
 
 ```
-任务完成 → 自动评估:
-  ├─ 编译通过？ +2 分
-  ├─ 测试通过？ +3 分
-  ├─ 无文件冲突？ +1 分
-  └─ 子任务全部完成？ +2 分
+Task complete → auto-evaluate:
+  ├─ Compiles? +2 points
+  ├─ Tests pass? +3 points
+  ├─ No file conflicts? +1 point
+  └─ All sub-tasks complete? +2 points
 
-评分 → 反馈到:
-  ├─ 信息素权重（高分 = 强信息素）
-  ├─ 蚂蚁类型选择（高分路径优先派 worker 而非 scout）
-  └─ 并发度调整（高分区域增加并发）
+Score feeds back to:
+  ├─ Pheromone weight (high score = strong pheromone)
+  ├─ Ant type selection (high-score paths prioritize workers over scouts)
+  └─ Concurrency adjustment (increase concurrency in high-score areas)
 ```
 
-#### B. 成功模式记忆
+### 4.3 Decentralization
 
-在 nest.ts 中增加"模式库"：当某种任务分解模式反复成功时，将该模式固化为"高速公路"（永不衰减的信息素），类似蚁群中稳定的觅食路径。
-
-### 4.3 去中心化决策
-
-#### A. Queen 职责拆分（最关键改进）
-
-当前 queen.ts 617 行，承担了过多职责。建议拆分：
+#### A. Queen Responsibility Split (Most Critical Improvement)
 
 ```
-当前 (中心化):
-  queen.ts ── 任务分解 + 调度 + 监控 + 再探索
+Current (centralized):
+  queen.ts — decompose + schedule + monitor + re-explore
 
-建议 (去中心化):
-  queen.ts (精简为 ~200行)
-     └── 仅负责初始任务分解
-
-  forager.ts (新增 ~150行)
-     └── 蚂蚁自主选择任务（基于信息素浓度）
-
-  evaluator.ts (新增 ~100行)
-     └── 任务完成后的评估与信息素更新
-
-  recruiter.ts (新增 ~80行)
-     └── 再探索/招募逻辑（从 queen.ts:485-500 抽出）
+Proposed (decentralized):
+  queen.ts (slimmed to ~200 lines) — initial task decomposition only
+  forager.ts (new ~150 lines) — ants autonomously select tasks by pheromone
+  evaluator.ts (new ~100 lines) — post-completion evaluation & pheromone update
+  recruiter.ts (new ~80 lines) — re-exploration/recruitment logic
 ```
 
-#### B. 蚂蚁自主决策
+### 4.4 Other Improvements
 
-当前蚂蚁被 queen 分配任务，建议改为：
-
-```
-当前: queen 分配任务 → 蚂蚁执行
-建议: 蚂蚁读取信息素 → 自主选择最高浓度任务 → 执行 → 更新信息素
-
-伪代码:
-  while (任务池非空) {
-    pheromones = nest.read()
-    task = selectByPheromoneWeight(pheromones)  // 概率选择，非贪心
-    result = execute(task)
-    nest.write(task, result.score)
-  }
-```
-
-这样即使没有 queen，蚂蚁群体也能自组织完成任务。
-
-### 4.4 其他改进
-
-| 改进项 | 优先级 | 说明 |
-|--------|--------|------|
-| types.ts 拆分 | P2 | 144行含全部类型定义，应按职责拆为 `task.ts` + `ant.ts` + `pheromone.ts` 等 |
-| install.ts 重构 | P2 | applyConfig 100+行单体函数，应拆为管道式小函数 |
-| drone 异步化 | P2 | execSync → spawn + Promise，保持蚁群异步本质 |
-| 信息素可视化 | P3 | 增加 TUI 面板实时显示信息素浓度热力图 |
-| 蚂蚁日志标准化 | P3 | 统一 `[caste:id] action → result` 格式 |
+| Improvement | Priority | Description |
+|-------------|----------|-------------|
+| types.ts split | P2 | 144 lines of all types — split into `task.ts` + `ant.ts` + `pheromone.ts` |
+| drone async | P2 | execSync → spawn + Promise, maintain colony's async nature |
+| Pheromone visualization | P3 | TUI panel showing real-time pheromone concentration heatmap |
+| Ant log standardization | P3 | Unified `[caste:id] action → result` format |
 
 ---
 
-## 5. 风险点与需保留的非蚁群部分
+## 5. Risk Points & Non-Colony Parts to Preserve
 
-### 5.1 高风险点
+### 5.1 High Risk Points
 
-#### 🔴 风险 1：Drone 命令注入（spawner.ts:180-210）
+#### 🔴 Risk 1: Drone Command Injection (spawner.ts)
 
-```
-严重程度: 🔴 高
-位置: spawner.ts:272-300, execSync 调用 (行290-292)
-问题: drone 蚂蚁直接执行 bash 命令，若任务描述被注入恶意命令，
-      可导致任意代码执行。
-现状: "零成本 bash 执行" 意味着没有沙箱隔离。
-建议:
-  1. 命令白名单机制（仅允许 git, npm, tsc 等预定义命令）
-  2. 参数转义/验证
-  3. 可选的 Docker 沙箱模式
-```
+Drone ants directly execute bash commands. If task descriptions are injected with malicious commands, arbitrary code execution is possible. Recommendations: command allowlist, argument escaping, optional Docker sandbox.
 
-#### 🔴 风险 2：types.ts 单文件承载全部类型（144行）
+#### 🟡 Risk 2: Pi SDK Tight Coupling (spawner.ts — 18 API imports)
 
-```
-严重程度: 🔴 高
-位置: ant-colony/types.ts (144行)
-问题: 单文件承载全部类型定义，任何类型变更都会
-      触发全量重编译，且多蚂蚁同时修改时极易冲突。
-建议: 拆分为 interfaces/ 目录，按职责分离（如 task.ts, ant.ts, pheromone.ts）。
-```
+No adapter layer. SDK version upgrades could cause widespread breakage. Recommendation: add pi-adapter.ts abstraction layer.
 
-#### 🟡 风险 3：Pi SDK 强依赖（spawner.ts 18 API imports）
+### 5.2 Parts to Preserve (NOT Colony-ize)
 
-```
-严重程度: 🟡 中
-位置: spawner.ts 头部 import 区 (行1-30)
-问题: 18 个 pi SDK API 直接导入（17 from pi-coding-agent + 1 from pi-ai），
-      SDK 版本升级可能导致大面积破坏。无适配层/抽象层。
-建议: 增加 pi-adapter.ts 适配层，隔离 SDK 变更影响。
-```
+| Module | Reason to Preserve |
+|--------|-------------------|
+| **src/tui/\*** (9 screens) | User interaction is synchronous and deterministic; not suited for async emergence. TUI needs strict state machine control. |
+| **src/i18n.ts** | Pure mapping logic, no need for intelligent scheduling. |
+| **src/bin/oh-pi.ts** | CLI entry point must be deterministic — can't "emerge" different startup behaviors. |
+| **pi-package/themes/\*** | Pure static JSON config, no behavioral logic. |
+| **pi-package/prompts/\*** | Predefined text templates — should stay human-curated, not auto-generated. |
+| **src/utils/detect.ts** | Environment detection needs deterministic results. |
 
-#### 🟡 风险 4：install.ts 单体函数
-
-```
-严重程度: 🟡 中
-位置: src/utils/install.ts (240行), applyConfig 函数 100+行
-问题: 单一函数处理所有配置安装逻辑，难以测试和维护。
-建议: 拆分为 pipeline 模式:
-  applyConfig = pipe(
-    validateConfig,
-    mergeDefaults,
-    writeFiles,
-    verifyInstall
-  )
-```
-
-### 5.2 需保留的非蚁群部分
-
-以下模块**不应**被蚁群化，应保持现有架构：
-
-| 模块 | 保留理由 |
-|------|----------|
-| **src/tui/\*** (9个界面) | 用户交互是同步、确定性的流程，不适合蚁群的异步涌现模式。TUI 需要严格的状态机控制。 |
-| **src/i18n.ts** | 国际化是纯映射逻辑，无需智能调度。 |
-| **src/bin/oh-pi.ts** | CLI 入口点必须是确定性的，不能"涌现"出不同的启动行为。 |
-| **pi-package/themes/\*** | 纯静态 JSON 配置，无行为逻辑。 |
-| **pi-package/prompts/\*** | 预定义文本模板，应保持人工精调而非自动生成。 |
-| **src/utils/detect.ts** | 环境探测需要确定性结果，不能因信息素浓度不同而返回不同的环境信息。 |
-
-### 5.3 蚁群化边界建议
+### 5.3 Colony Boundary Recommendation
 
 ```
                     ┌─────────────────────┐
-                    │   确定性层 (保留)     │
-                    │                     │
+                    │  Deterministic Layer │
+                    │  (preserve as-is)   │
                     │  bin/ tui/ i18n     │
                     │  detect themes      │
                     │  prompts            │
                     └────────┬────────────┘
-                             │ 调用
+                             │ calls
                              ▼
                     ┌─────────────────────┐
-                    │   蚁群层 (增强)      │
-                    │                     │
+                    │  Colony Layer       │
+                    │  (enhance)          │
                     │  queen nest spawner │
                     │  concurrency deps   │
-                    │  + forager (新增)    │
-                    │  + evaluator (新增)  │
+                    │  + forager (new)    │
+                    │  + evaluator (new)  │
                     └────────┬────────────┘
-                             │ 使用
+                             │ uses
                              ▼
                     ┌─────────────────────┐
-                    │   资源层 (被消费)     │
-                    │                     │
+                    │  Resource Layer     │
+                    │  (consumed)         │
                     │  agents skills      │
                     │  extensions         │
                     └─────────────────────┘
@@ -428,21 +242,21 @@ scout → worker → soldier → (drone)
 
 ---
 
-## 附录：关键数据速查
+## Appendix: Key Data Quick Reference
 
-| 指标 | 值 |
-|------|-----|
-| ant-colony 总代码行 | ~2,373 行 |
-| 最大单文件 | index.ts (627行), queen.ts (617行) |
-| 信息素半衰期 | 10 分钟 |
-| 蚂蚁种姓 | scout, worker, soldier, drone |
-| 并发阶段 | 探索期 (高并发) → 稳态期 (收敛) |
-| pi SDK 依赖数 | 18 API imports (17+1) |
-| 涌现点数量 | 6 个已识别 |
-| 高风险点 | 2 个 (drone注入, types单文件) |
-| 中风险点 | 2 个 (SDK强依赖, install单体) |
+| Metric | Value |
+|--------|-------|
+| ant-colony total code | ~2,373 lines |
+| Largest single file | index.ts (627 ln), queen.ts (617 ln) |
+| Pheromone half-life | 10 minutes |
+| Ant castes | scout, worker, soldier, drone |
+| Concurrency phases | Exploration (high) → Steady state (convergent) |
+| pi SDK dependencies | 18 API imports (17+1) |
+| Emergence points | 6 identified |
+| High risk points | 2 (drone injection, types single-file) |
+| Medium risk points | 2 (SDK coupling, install monolith) |
 
 ---
 
-*本报告由蚁群 worker 蚂蚁自动生成，基于 scout 侦察情报。*
-*如需更新，请派遣新的 scout 重新侦察后再生成。*
+*This report was auto-generated by colony worker ants, based on scout intelligence.*
+*To update, dispatch new scouts for fresh reconnaissance.*

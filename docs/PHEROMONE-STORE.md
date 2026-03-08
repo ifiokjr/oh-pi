@@ -1,29 +1,29 @@
-# PheromoneStore 接口草案（Phase B 起步）
+# PheromoneStore Interface Draft (Phase B)
 
-> 目标：将信息素读写从 `nest.ts` 的 JSONL 细节中抽离，先定义稳定接口，再逐步实现 Jsonl/SQLite 可替换存储。
+> Goal: Extract pheromone read/write from `nest.ts` JSONL implementation details. Define a stable interface first, then implement swappable Jsonl/SQLite storage.
 
-## 1. 设计目标
+## 1. Design Goals
 
-- **可替换**：默认 JSONL，不改 queen 调度逻辑即可切换实现。
-- **可观测**：能拿到存储规模、衰减后有效条目、写入失败等统计。
-- **可配置**：支持全局与按任务类型（scout/worker/soldier）衰减策略。
-- **可渐进迁移**：先适配现有行为，再引入 SQLite/Redis（后续）。
+- **Swappable**: Default JSONL; can switch implementations without changing queen scheduling logic.
+- **Observable**: Expose storage size, active entries after decay, write failure stats, etc.
+- **Configurable**: Support global and per-caste (scout/worker/soldier) decay policies.
+- **Incremental migration**: Adapt existing behavior first, then introduce SQLite/Redis later.
 
-## 2. 非目标（当前阶段）
+## 2. Non-Goals (Current Phase)
 
-- 不做分布式一致性保证。
-- 不做跨机器共享锁。
-- 不改变现有任务调度与优先级算法。
+- No distributed consistency guarantees.
+- No cross-machine shared locks.
+- No changes to existing task scheduling or priority algorithms.
 
-## 3. 建议接口（TypeScript）
+## 3. Proposed Interface (TypeScript)
 
 ```ts
 export interface DecayPolicy {
-  // 默认半衰期（毫秒），例如 10 * 60 * 1000
+  // Default half-life in milliseconds (e.g. 10 * 60 * 1000)
   defaultHalfLifeMs: number;
-  // 可选：按角色覆盖
+  // Optional: per-caste override
   perCasteHalfLifeMs?: Partial<Record<"scout" | "worker" | "soldier" | "drone", number>>;
-  // 强度阈值，低于阈值视为过期
+  // Strength threshold — entries below this are considered expired
   minStrength?: number; // default: 0.05
 }
 
@@ -51,39 +51,39 @@ export interface PheromoneStore {
 }
 ```
 
-## 4. 与现有 Nest 行为映射
+## 4. Mapping to Existing Nest Behavior
 
-当前 `nest.ts` 中信息素相关职责：
-- `dropPheromone`：追加写入 JSONL
-- `getAllPheromones`：增量读取 + 衰减 + 过滤 + 定期 GC
-- `countWarnings/getPheromoneContext`：查询视图
+Current pheromone responsibilities in `nest.ts`:
+- `dropPheromone`: Append-write to JSONL
+- `getAllPheromones`: Incremental read + decay + filter + periodic GC
+- `countWarnings/getPheromoneContext`: Query views
 
-迁移策略：
-1. 保留 `Nest` 对外方法不变。
-2. 将 JSONL 细节下沉到 `JsonlPheromoneStore`。
-3. `Nest` 只依赖 `PheromoneStore` 接口。
+Migration strategy:
+1. Keep `Nest` public methods unchanged.
+2. Push JSONL details down into `JsonlPheromoneStore`.
+3. `Nest` depends only on the `PheromoneStore` interface.
 
-## 5. 迁移步骤（建议）
+## 5. Migration Steps (Recommended)
 
-### Step 1：接口引入（不改行为）
-- 新建 `pi-package/extensions/ant-colony/pheromone-store.ts`（仅类型 + 工厂）。
-- 现有逻辑先继续在 `nest.ts`，但通过适配层调用。
+### Step 1: Interface Introduction (no behavior change)
+- Create `pi-package/extensions/ant-colony/pheromone-store.ts` (types + factory only).
+- Existing logic stays in `nest.ts` but calls through the adapter layer.
 
-### Step 2：JSONL 默认实现
-- 提取 `nest.ts` 现有 JSONL 读写逻辑到 `jsonl-pheromone-store.ts`。
-- 保持现有半衰期与阈值默认值，确保回归测试通过。
+### Step 2: JSONL Default Implementation
+- Extract existing JSONL read/write logic from `nest.ts` into `jsonl-pheromone-store.ts`.
+- Keep existing half-life and threshold defaults; ensure regression tests pass.
 
-### Step 3：SQLite 实验实现
-- 新增 `sqlite-pheromone-store.ts`（feature flag 启用）。
-- 对比同任务集下：读取延迟、文件体积、GC 耗时。
+### Step 3: SQLite Experimental Implementation
+- Add `sqlite-pheromone-store.ts` (behind feature flag).
+- Compare for the same task set: read latency, file size, GC duration.
 
-## 6. 验收标准（Phase B）
+## 6. Acceptance Criteria (Phase B)
 
-- 切换存储实现不影响 queen 调度结果。
-- 回归测试中 `planning_recovery` 流程行为一致。
-- 长会话（高频写入）下无数据损坏与明显性能退化。
+- Swapping storage implementation doesn't affect queen scheduling results.
+- `planning_recovery` flow behavior is identical in regression tests.
+- No data corruption or significant performance degradation under long sessions (high-frequency writes).
 
-## 7. 风险与回滚
+## 7. Risks & Rollback
 
-- 风险：接口抽象不完整导致 `Nest` 泄漏实现细节。
-- 回滚策略：保留 JSONL 旧路径开关（`PHEROMONE_STORE=jsonl-legacy`）在一段过渡期内可快速切回。
+- Risk: Incomplete interface abstraction causes `Nest` to leak implementation details.
+- Rollback: Keep JSONL legacy path switch (`PHEROMONE_STORE=jsonl-legacy`) during a transition period.

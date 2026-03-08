@@ -1,0 +1,7 @@
+{
+	"name": "@ifi/oh-pi-agents",
+	"version": "0.2.0",
+	"description": "AGENTS.md templates for pi: general-developer, fullstack, security-researcher, and more.",
+	"files": ["agents", "README.md"],
+	"license": "MIT"
+}

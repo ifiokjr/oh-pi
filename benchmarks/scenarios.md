@@ -1,71 +1,71 @@
-# Benchmark Scenarios（模板）
+# Benchmark Scenarios (Template)
 
-> 目的：维护统一的任务场景池，支持 S/M/L 复杂度分级。
+> Purpose: Maintain a unified task scenario pool, stratified by S/M/L complexity.
 
-## 复杂度定义（草案）
+## Complexity Definitions (Draft)
 
-- **S（Small）**：单文件或小范围修改，依赖关系少，步骤短。
-- **M（Medium）**：跨多个文件或模块，需一定上下文整合。
-- **L（Large）**：跨子系统协作，依赖复杂，失败恢复成本高。
+- **S (Small)**: Single file or small-scope change, few dependencies, short steps.
+- **M (Medium)**: Cross-file or cross-module, requires context integration.
+- **L (Large)**: Cross-subsystem collaboration, complex dependencies, high failure recovery cost.
 
 ---
 
-## S 级场景
+## S-Tier Scenarios
 
 ### S-01
-- 标题：
-- 背景：
-- 输入：
-- 验收标准：
-- 备注：
+- Title:
+- Background:
+- Input:
+- Acceptance criteria:
+- Notes:
 
 ### S-02
-- 标题：
-- 背景：
-- 输入：
-- 验收标准：
-- 备注：
+- Title:
+- Background:
+- Input:
+- Acceptance criteria:
+- Notes:
 
 ---
 
-## M 级场景
+## M-Tier Scenarios
 
 ### M-01
-- 标题：
-- 背景：
-- 输入：
-- 验收标准：
-- 备注：
+- Title:
+- Background:
+- Input:
+- Acceptance criteria:
+- Notes:
 
 ### M-02
-- 标题：
-- 背景：
-- 输入：
-- 验收标准：
-- 备注：
+- Title:
+- Background:
+- Input:
+- Acceptance criteria:
+- Notes:
 
 ---
 
-## L 级场景
+## L-Tier Scenarios
 
 ### L-01
-- 标题：
-- 背景：
-- 输入：
-- 验收标准：
-- 备注：
+- Title:
+- Background:
+- Input:
+- Acceptance criteria:
+- Notes:
 
 ### L-02
-- 标题：
-- 背景：
-- 输入：
-- 验收标准：
-- 备注：
+- Title:
+- Background:
+- Input:
+- Acceptance criteria:
+- Notes:
 
 ---
 
-## 使用说明
+## Usage Guidelines
 
-- 每个场景必须可复现（输入明确、验收标准明确）。
-- 单 agent 与蚁群模式必须使用同一场景定义。
-- 如需修改场景，请保留变更记录（可在 PR 描述中补充）。
+- Each scenario must be reproducible (explicit inputs and acceptance criteria).
+- Single agent and colony mode must use the same scenario definition.
+- When modifying scenarios, preserve a change log (can be added in PR description).

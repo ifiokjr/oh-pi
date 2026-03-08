@@ -1,50 +1,50 @@
-# Benchmark Results Template（模板）
+# Benchmark Results Template
 
-> 用于记录“单 agent vs 蚁群”在同一场景下的对比结果。
+> Records "single agent vs colony" comparison results for the same scenario.
 
-## 记录头信息
+## Run Header
 
-- 日期：
-- 执行人：
-- 模式：单 agent / 蚁群
-- 场景 ID：
-- 复杂度级别：S / M / L
-- 运行次数：
-
----
-
-## 指标定义（请保持口径一致）
-
-- **完成率**：达到验收标准的运行占比。
-- **时长**：从任务开始到完成（或失败终止）的总耗时。
-- **成本**：本次运行的资源消耗（如 token 或 API 花费）。
-- **回滚率**：结果需要人工回退/重做的运行占比。
+- Date:
+- Executor:
+- Mode: Single agent / Colony
+- Scenario ID:
+- Complexity level: S / M / L
+- Run count:
 
 ---
 
-## 对比结果表（可复制）
+## Metric Definitions (keep measurement consistent)
 
-| 场景 ID | 级别 | 模式 | 完成率 | 平均时长 | 平均成本 | 回滚率 | 备注 |
+- **Success Rate**: Proportion of runs that met acceptance criteria.
+- **Duration**: Total elapsed time from task start to completion (or failure).
+- **Cost**: Resource consumption for this run (e.g. tokens or API spend).
+- **Rollback Rate**: Proportion of runs requiring manual revert/redo.
+
+---
+
+## Comparison Results Table (copy and fill)
+
+| Scenario ID | Level | Mode | Success Rate | Avg Duration | Avg Cost | Rollback Rate | Notes |
 |---|---|---|---:|---:|---:|---:|---|
-| S-01 | S | 单 agent |  |  |  |  |  |
-| S-01 | S | 蚁群 |  |  |  |  |  |
-| M-01 | M | 单 agent |  |  |  |  |  |
-| M-01 | M | 蚁群 |  |  |  |  |  |
-| L-01 | L | 单 agent |  |  |  |  |  |
-| L-01 | L | 蚁群 |  |  |  |  |  |
+| S-01 | S | Single agent |  |  |  |  |  |
+| S-01 | S | Colony |  |  |  |  |  |
+| M-01 | M | Single agent |  |  |  |  |  |
+| M-01 | M | Colony |  |  |  |  |  |
+| L-01 | L | Single agent |  |  |  |  |  |
+| L-01 | L | Colony |  |  |  |  |  |
 
 ---
 
-## 结论摘要（模板）
+## Conclusion Summary (Template)
 
-- 本轮覆盖场景：
-- 主要观察：
-- 单 agent 优势：
-- 蚁群优势：
-- 异常与失败样本：
-- 下轮改进建议：
+- Scenarios covered this round:
+- Key observations:
+- Single agent advantages:
+- Colony advantages:
+- Anomalies and failure samples:
+- Improvement suggestions for next round:
 
-## 附注
+## Notes
 
-- 建议至少记录 3 次重复运行后再比较平均值。
-- 若场景中途变更，需单独标注，避免污染对比结果。
+- Record at least 3 repeated runs before comparing averages.
+- If a scenario is modified mid-run, annotate separately to avoid polluting comparison results.

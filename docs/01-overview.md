@@ -1,44 +1,44 @@
-# Pi Coding Agent 完整参考文档
+# Pi Coding Agent — Complete Reference
 
-## 一、项目概览
+## 1. Project Overview
 
-- **名称**: `@mariozechner/pi-coding-agent`
-- **版本**: 0.52.12
-- **作者**: Mario Zechner
-- **协议**: MIT
-- **仓库**: https://github.com/badlogic/pi-mono (packages/coding-agent)
-- **官网**: https://shittycodingagent.ai / https://pi.dev
-- **Node 要求**: >= 20.0.0
+- **Name**: `@mariozechner/pi-coding-agent`
+- **Version**: 0.52.12
+- **Author**: Mario Zechner
+- **License**: MIT
+- **Repository**: https://github.com/badlogic/pi-mono (packages/coding-agent)
+- **Website**: https://shittycodingagent.ai / https://pi.dev
+- **Node requirement**: >= 20.0.0
 
-### 定位
+### Positioning
 
-Pi 是一个**极简终端编码代理工具**（Terminal Coding Harness）。核心理念是"适配你的工作流，而不是反过来"。通过 TypeScript Extensions、Skills、Prompt Templates、Themes 进行扩展，不需要 fork 修改内部代码。
+Pi is a **minimalist terminal coding agent harness**. Core philosophy: "adapts to your workflow, not the other way around." Extends via TypeScript Extensions, Skills, Prompt Templates, and Themes — no need to fork or modify internals.
 
-### 设计哲学
+### Design Philosophy
 
-- **No MCP** — 用 Skills 或 Extensions 替代
-- **No Sub-agents** — 用 Extensions 自建或安装第三方包
-- **No Permission Popups** — 用 Extensions 自建确认流程
-- **No Plan Mode** — 用 Extensions 自建
-- **No Built-in Todos** — 用 TODO.md 文件
-- **No Background Bash** — 用 tmux
+- **No MCP** — Use Skills or Extensions instead
+- **No Sub-agents** — Use Extensions to build or install third-party packages
+- **No Permission Popups** — Use Extensions to build confirmation flows
+- **No Plan Mode** — Use Extensions to build
+- **No Built-in Todos** — Use TODO.md files
+- **No Background Bash** — Use tmux
 
-### 包架构
+### Package Architecture
 
 ```
-@mariozechner/pi-ai          → LLM 提供商抽象层
-@mariozechner/pi-agent-core  → Agent 循环和消息类型
-@mariozechner/pi-tui         → 终端 UI 组件库
-@mariozechner/pi-coding-agent → CLI 和交互模式（主包）
+@mariozechner/pi-ai          → LLM provider abstraction layer
+@mariozechner/pi-agent-core  → Agent loop and message types
+@mariozechner/pi-tui         → Terminal UI component library
+@mariozechner/pi-coding-agent → CLI and interactive mode (main package)
 ```
 
-## 二、安装与启动
+## 2. Installation & Setup
 
 ```bash
 npm install -g @mariozechner/pi-coding-agent
 ```
 
-### 认证方式
+### Authentication
 
 **API Key:**
 ```bash
@@ -46,50 +46,50 @@ export ANTHROPIC_API_KEY=sk-ant-...
 pi
 ```
 
-**订阅 OAuth:**
+**Subscription OAuth:**
 ```bash
 pi
-/login  # 选择提供商
+/login  # Select provider
 ```
 
-### 四种运行模式
+### Run Modes
 
-| 模式 | 启动方式 | 用途 |
-|------|----------|------|
-| Interactive | `pi` (默认) | 完整 TUI 交互 |
-| Print | `pi -p "prompt"` | 单次输出后退出 |
-| JSON | `pi --mode json "prompt"` | JSON Lines 事件流 |
-| RPC | `pi --mode rpc` | stdin/stdout JSON 协议，嵌入其他应用 |
-| SDK | TypeScript import | 编程式嵌入 |
+| Mode | Launch | Use Case |
+|------|--------|----------|
+| Interactive | `pi` (default) | Full TUI interaction |
+| Print | `pi -p "prompt"` | Single output, then exit |
+| JSON | `pi --mode json "prompt"` | JSON Lines event stream |
+| RPC | `pi --mode rpc` | stdin/stdout JSON protocol, embed in other apps |
+| SDK | TypeScript import | Programmatic embedding |
 
-## 三、内置工具
+## 3. Built-in Tools
 
-默认 4 个工具: `read`, `bash`, `edit`, `write`
+Default 4 tools: `read`, `bash`, `edit`, `write`
 
-可选工具: `grep`, `find`, `ls`
+Optional tools: `grep`, `find`, `ls`
 
 ```bash
-pi --tools read,bash,edit,write    # 默认
-pi --tools read,grep,find,ls       # 只读模式
-pi --no-tools                      # 禁用所有内置工具
+pi --tools read,bash,edit,write    # Default
+pi --tools read,grep,find,ls       # Read-only mode
+pi --no-tools                      # Disable all built-in tools
 ```
 
-## 四、支持的提供商
+## 4. Supported Providers
 
-### 订阅 (OAuth /login)
+### Subscription (OAuth /login)
 
-| 提供商 | 说明 |
-|--------|------|
-| Anthropic Claude Pro/Max | Claude 系列 |
+| Provider | Description |
+|----------|-------------|
+| Anthropic Claude Pro/Max | Claude series |
 | OpenAI ChatGPT Plus/Pro | GPT + Codex |
-| GitHub Copilot | VS Code 联动 |
+| GitHub Copilot | VS Code integration |
 | Google Gemini CLI | Cloud Code Assist |
 | Google Antigravity | Gemini 3 + Claude + GPT-OSS |
 
 ### API Key
 
-| 提供商 | 环境变量 |
-|--------|----------|
+| Provider | Environment Variable |
+|----------|---------------------|
 | Anthropic | `ANTHROPIC_API_KEY` |
 | OpenAI | `OPENAI_API_KEY` |
 | Azure OpenAI | `AZURE_OPENAI_API_KEY` |
@@ -108,20 +108,20 @@ pi --no-tools                      # 禁用所有内置工具
 | Kimi For Coding | `KIMI_API_KEY` |
 | MiniMax | `MINIMAX_API_KEY` |
 
-### 自定义提供商
+### Custom Providers
 
-- **models.json**: `~/.pi/agent/models.json` 添加 Ollama/vLLM/LM Studio 等
-- **Extensions**: 用 `pi.registerProvider()` 实现自定义 API/OAuth
+- **models.json**: `~/.pi/agent/models.json` for Ollama/vLLM/LM Studio etc.
+- **Extensions**: Use `pi.registerProvider()` for custom API/OAuth
 
-### API Key 解析优先级
+### API Key Resolution Priority
 
 1. CLI `--api-key`
-2. `auth.json` (API key 或 OAuth token)
-3. 环境变量
-4. `models.json` 自定义 key
+2. `auth.json` (API key or OAuth token)
+3. Environment variables
+4. `models.json` custom key
 
-### auth.json Key 格式
+### auth.json Key Formats
 
-- Shell 命令: `"!security find-generic-password -ws 'anthropic'"`
-- 环境变量名: `"MY_ANTHROPIC_KEY"`
-- 字面值: `"sk-ant-..."`
+- Shell command: `"!security find-generic-password -ws 'anthropic'"`
+- Environment variable name: `"MY_ANTHROPIC_KEY"`
+- Literal value: `"sk-ant-..."`

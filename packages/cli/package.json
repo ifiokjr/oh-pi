@@ -1,0 +1,37 @@
+{
+	"name": "@ifi/oh-pi-cli",
+	"version": "0.2.0",
+	"description": "Interactive TUI configurator for pi-coding-agent.",
+	"type": "module",
+	"bin": {
+		"oh-pi": "dist/bin/oh-pi.js"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"scripts": {
+		"clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist',{ recursive: true, force: true }))\"",
+		"build": "pnpm clean && tsc -b",
+		"build:fast": "pnpm clean && tsgo --project tsconfig.json",
+		"typecheck": "tsgo --project tsconfig.json --noEmit",
+		"start": "node dist/bin/oh-pi.js"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@clack/prompts": "^1.1.0",
+		"@ifi/oh-pi-agents": "workspace:*",
+		"@ifi/oh-pi-ant-colony": "workspace:*",
+		"@ifi/oh-pi-core": "workspace:*",
+		"@ifi/oh-pi-extensions": "workspace:*",
+		"@ifi/oh-pi-prompts": "workspace:*",
+		"@ifi/oh-pi-skills": "workspace:*",
+		"@ifi/oh-pi-themes": "workspace:*",
+		"chalk": "^5.6.2"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	}
+}

@@ -1,0 +1,56 @@
+[github]
+owner = "ifiokjr"
+repo = "oh-pi"
+
+# All packages share the same version (lockstep releases).
+# Knope bumps all versioned_files together.
+[package]
+versioned_files = [
+  "packages/core/package.json",
+  "packages/cli/package.json",
+  "packages/extensions/package.json",
+  "packages/ant-colony/package.json",
+  "packages/themes/package.json",
+  "packages/prompts/package.json",
+  "packages/skills/package.json",
+  "packages/agents/package.json",
+  "packages/oh-pi/package.json",
+]
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "release"
+help_text = "Bump versions, update CHANGELOG.md, create git tag, and push"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "git add ."
+
+[[workflows.steps]]
+type = "Command"
+command = "git commit -m 'chore: release $version'"
+
+[[workflows.steps]]
+type = "Command"
+command = "git push"
+
+[[workflows.steps]]
+type = "Release"
+
+[[workflows]]
+name = "document-change"
+help_text = "Create a new changeset file for the next release"
+
+[[workflows.steps]]
+type = "CreateChangeFile"
+
+[[workflows]]
+name = "get-version"
+help_text = "Print the current version"
+
+[[workflows.steps]]
+type = "Command"
+command = "echo $version"

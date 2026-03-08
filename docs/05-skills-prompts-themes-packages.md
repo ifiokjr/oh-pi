@@ -1,34 +1,34 @@
-# Pi Skills、Prompt Templates、Themes、Packages
+# Pi Skills, Prompt Templates, Themes, and Packages
 
-## 一、Skills（技能包）
+## 1. Skills
 
-Skills 是按需加载的能力包，遵循 [Agent Skills 标准](https://agentskills.io)。
+Skills are on-demand capability packs following the [Agent Skills Standard](https://agentskills.io).
 
-### 放置位置
+### Locations
 
-| 位置 | 范围 |
-|------|------|
-| `~/.pi/agent/skills/` | 全局 |
-| `.pi/skills/` | 项目级 |
-| Packages 的 `skills/` 目录 | 包级 |
-| `settings.json` 的 `skills` 数组 | 额外路径 |
-| `--skill <path>` | CLI 指定 |
+| Location | Scope |
+|----------|-------|
+| `~/.pi/agent/skills/` | Global |
+| `.pi/skills/` | Project-level |
+| Package `skills/` directory | Package-level |
+| `settings.json` `skills` array | Additional paths |
+| `--skill <path>` | CLI override |
 
-发现规则：根目录直接 `.md` 文件 + 子目录递归 `SKILL.md`。
+Discovery: root-level `.md` files + recursive `SKILL.md` in subdirectories.
 
-### 工作原理
+### How It Works
 
-1. 启动时扫描，提取 name 和 description
-2. System prompt 中以 XML 格式列出可用 skills
-3. 任务匹配时，Agent 用 `read` 加载完整 SKILL.md
-4. Agent 按指令执行，使用相对路径引用脚本和资源
+1. Scanned at startup; name and description extracted
+2. Available skills listed in system prompt as XML
+3. When a task matches, the agent loads the full SKILL.md via `read`
+4. Agent follows instructions, using relative paths for scripts and resources
 
-### SKILL.md 格式
+### SKILL.md Format
 
 ```markdown
 ---
 name: my-skill
-description: 技能描述，决定何时被加载。要具体。
+description: Skill description — determines when it's loaded. Be specific.
 ---
 
 # My Skill
@@ -44,70 +44,70 @@ cd /path/to/skill && npm install
 \`\`\`
 ```
 
-### Frontmatter 字段
+### Frontmatter Fields
 
-| 字段 | 必需 | 说明 |
-|------|------|------|
-| `name` | ✅ | ≤64字符，小写+数字+连字符，须匹配父目录名 |
-| `description` | ✅ | ≤1024字符，描述功能和触发场景 |
-| `license` | ❌ | 许可证 |
-| `compatibility` | ❌ | 环境要求 |
-| `metadata` | ❌ | 任意键值对 |
-| `disable-model-invocation` | ❌ | true 时隐藏于 system prompt，只能 `/skill:name` 调用 |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | ✅ | ≤64 chars, lowercase + digits + hyphens, must match parent directory name |
+| `description` | ✅ | ≤1024 chars, describes functionality and trigger scenarios |
+| `license` | ❌ | License |
+| `compatibility` | ❌ | Environment requirements |
+| `metadata` | ❌ | Arbitrary key-value pairs |
+| `disable-model-invocation` | ❌ | When true, hidden from system prompt; only callable via `/skill:name` |
 
-### Skill 命令
+### Skill Commands
 
 ```bash
-/skill:brave-search           # 加载并执行
-/skill:pdf-tools extract      # 带参数
+/skill:brave-search           # Load and execute
+/skill:pdf-tools extract      # With arguments
 ```
 
-可在 `/settings` 或 `settings.json` 中切换 `enableSkillCommands`。
+Toggle `enableSkillCommands` in `/settings` or `settings.json`.
 
-### 跨工具 Skills
+### Cross-Tool Skills
 
-可加载 Claude Code 或 OpenAI Codex 的 skills：
+Load skills from Claude Code or OpenAI Codex:
 ```json
 { "skills": ["~/.claude/skills", "~/.codex/skills"] }
 ```
 
 ---
 
-## 二、Prompt Templates（提示模板）
+## 2. Prompt Templates
 
-Markdown 片段，输入 `/name` 展开。
+Markdown snippets expanded by typing `/name`.
 
-### 放置位置
+### Locations
 
-| 位置 | 范围 |
-|------|------|
-| `~/.pi/agent/prompts/*.md` | 全局 |
-| `.pi/prompts/*.md` | 项目级 |
-| Packages 的 `prompts/` 目录 | 包级 |
-| `--prompt-template <path>` | CLI 指定 |
+| Location | Scope |
+|----------|-------|
+| `~/.pi/agent/prompts/*.md` | Global |
+| `.pi/prompts/*.md` | Project-level |
+| Package `prompts/` directory | Package-level |
+| `--prompt-template <path>` | CLI override |
 
-发现规则：非递归，仅 prompts/ 根目录。
+Discovery: non-recursive, only the `prompts/` root directory.
 
-### 格式
+### Format
 
 ```markdown
 ---
-description: 审查 staged git 变更
+description: Review staged git changes
 ---
-审查 staged changes (`git diff --cached`)。关注：
-- Bug 和逻辑错误
-- 安全问题
-- 错误处理缺失
+Review staged changes (`git diff --cached`). Focus on:
+- Bugs and logic errors
+- Security issues
+- Missing error handling
 ```
 
-文件名即命令名：`review.md` → `/review`
+Filename becomes command name: `review.md` → `/review`
 
-### 参数支持
+### Parameter Support
 
-- `$1`, `$2`, ... — 位置参数
-- `$@` 或 `$ARGUMENTS` — 所有参数
-- `${@:N}` — 从第 N 个开始
-- `${@:N:L}` — 从第 N 个取 L 个
+- `$1`, `$2`, ... — Positional parameters
+- `$@` or `$ARGUMENTS` — All arguments
+- `${@:N}` — From the Nth argument onward
+- `${@:N:L}` — L arguments starting from Nth
 
 ```
 /component Button "onClick handler" "disabled support"
@@ -115,32 +115,32 @@ description: 审查 staged git 变更
 
 ---
 
-## 三、Themes（主题）
+## 3. Themes
 
-JSON 文件定义 TUI 颜色。支持热重载。
+JSON files defining TUI colors. Supports hot reload.
 
-### 放置位置
+### Locations
 
-- 内置: `dark`, `light`
-- 全局: `~/.pi/agent/themes/*.json`
-- 项目: `.pi/themes/*.json`
+- Built-in: `dark`, `light`
+- Global: `~/.pi/agent/themes/*.json`
+- Project: `.pi/themes/*.json`
 - Packages / settings / CLI
 
-### 主题格式
+### Theme Format
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
   "name": "my-theme",
   "vars": { "primary": "#00aaff", "secondary": 242 },
-  "colors": { /* 必须定义全部 51 个 color token */ }
+  "colors": { /* all 51 color tokens must be defined */ }
 }
 ```
 
-### 51 个 Color Token 分类
+### 51 Color Token Categories
 
-| 分类 | 数量 | 示例 |
-|------|------|------|
+| Category | Count | Examples |
+|----------|-------|---------|
 | Core UI | 11 | accent, border, success, error, warning, muted, dim, text... |
 | Backgrounds & Content | 11 | selectedBg, userMessageBg, toolPendingBg, toolTitle... |
 | Markdown | 10 | mdHeading, mdLink, mdCode, mdCodeBlock... |
@@ -149,39 +149,39 @@ JSON 文件定义 TUI 颜色。支持热重载。
 | Thinking Level Borders | 6 | thinkingOff ~ thinkingXhigh |
 | Bash Mode | 1 | bashMode |
 
-### 颜色值格式
+### Color Value Formats
 
-| 格式 | 示例 | 说明 |
-|------|------|------|
-| Hex | `"#ff0000"` | 6位 RGB |
-| 256-color | `39` | xterm 256 色索引 |
-| Variable | `"primary"` | 引用 vars |
-| Default | `""` | 终端默认色 |
+| Format | Example | Description |
+|--------|---------|-------------|
+| Hex | `"#ff0000"` | 6-digit RGB |
+| 256-color | `39` | xterm 256-color index |
+| Variable | `"primary"` | Reference from vars |
+| Default | `""` | Terminal default color |
 
 ---
 
-## 四、Pi Packages（包管理）
+## 4. Pi Packages
 
-打包 Extensions、Skills、Prompts、Themes 通过 npm 或 git 分享。
+Bundle Extensions, Skills, Prompts, and Themes for distribution via npm or git.
 
-### 安装管理
+### Installation & Management
 
 ```bash
-pi install npm:@foo/bar@1.0.0       # npm（带版本锁定）
-pi install git:github.com/user/repo@v1  # git（带 ref 锁定）
+pi install npm:@foo/bar@1.0.0       # npm (version-locked)
+pi install git:github.com/user/repo@v1  # git (ref-locked)
 pi install https://github.com/user/repo # HTTPS
-pi install ./local/path              # 本地路径
+pi install ./local/path              # Local path
 pi remove npm:@foo/bar
-pi list                              # 列出已安装
-pi update                            # 更新（跳过锁定版本）
-pi config                            # 启用/禁用资源
+pi list                              # List installed
+pi update                            # Update (skips locked versions)
+pi config                            # Enable/disable resources
 ```
 
-`-l` 参数安装到项目级（`.pi/`），否则全局（`~/.pi/agent/`）。
+`-l` installs to project-level (`.pi/`), otherwise global (`~/.pi/agent/`).
 
-临时试用：`pi -e npm:@foo/bar`
+Try temporarily: `pi -e npm:@foo/bar`
 
-### 创建包
+### Creating a Package
 
 ```json
 {
@@ -196,16 +196,16 @@ pi config                            # 启用/禁用资源
 }
 ```
 
-无 `pi` manifest 时自动发现 `extensions/`, `skills/`, `prompts/`, `themes/` 目录。
+Without a `pi` manifest, `extensions/`, `skills/`, `prompts/`, `themes/` directories are auto-discovered.
 
-### 依赖处理
+### Dependency Handling
 
-- 运行时依赖放 `dependencies`
-- Pi 核心包放 `peerDependencies` 用 `"*"` 范围：
+- Runtime deps go in `dependencies`
+- Pi core packages go in `peerDependencies` with `"*"` range:
   `@mariozechner/pi-ai`, `@mariozechner/pi-agent-core`, `@mariozechner/pi-coding-agent`, `@mariozechner/pi-tui`, `@sinclair/typebox`
-- 其他 pi 包需 bundle：放 `dependencies` + `bundledDependencies`
+- Other pi packages must be bundled: put in `dependencies` + `bundledDependencies`
 
-### 包过滤
+### Package Filtering
 
 ```json
 {
@@ -215,4 +215,4 @@ pi config                            # 启用/禁用资源
 }
 ```
 
-`[]` = 不加载该类型，`!pattern` = 排除，`+path` = 强制包含。
+`[]` = don't load that type, `!pattern` = exclude, `+path` = force include.

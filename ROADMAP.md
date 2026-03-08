@@ -1,66 +1,60 @@
-# oh-pi 路线图（2026 H1）
+# oh-pi Roadmap (2026 H1)
 
-> 当前判断：最大风险不是技术实现，而是**定位与增长**。
+> Key judgment: the biggest risk isn't technical implementation — it's **positioning and growth**.
 
-## 1) 产品定位（先拉直）
+## 1) Product Positioning (Straighten First)
 
-### 主定位
-- **oh-pi**：一键配置与体验入口（安装、初始化、主题/扩展/技能装配）
-- **ant-colony**：可选高级多智能体扩展（复杂任务并行执行）
+### Primary Positioning
+- **oh-pi**: One-click configuration and onboarding portal (install, initialize, theme/extension/skill assembly)
+- **ant-colony**: Optional advanced multi-agent extension (parallel execution of complex tasks)
 
-### 对外表达原则
-1. 首页先讲「30 秒配置成功」
-2. 再讲「2 分钟看到蚁群价值」
-3. 最后才讲架构与仿生细节
+### Communication Principles
+1. Homepage leads with "30-second setup success"
+2. Then shows "2-minute ant colony value demo"
+3. Architecture and biomimicry details come last
 
----
+## 2) Near-Term Milestones
 
-## 2) 近期里程碑
+### M1 (1–2 weeks): Experience & Narrative
+- [ ] README homepage information architecture rewrite (entry value first)
+- [ ] Publish 2-minute demo (asciinema + script)
+- [ ] Add "When NOT to use Ant Colony" section to reduce misuse cost
 
-### M1（1~2 周）：体验与叙事
-- [ ] README 首页信息架构重排（入口价值优先）
-- [ ] 发布 2 分钟演示（asciinema + 脚本）
-- [ ] 新增“何时不该用蚁群”说明，降低误用成本
+**Success Metrics**
+- New user first-run completion rate (install to `pi` usable)
+- First session "perceived value" trigger rate (subjective feedback)
 
-**成功指标**
-- 新用户首次运行完成率（安装到 `pi` 可用）
-- 首次会话内触发“有感知价值”的比例（主观反馈）
+### M2 (2–4 weeks): Evolvable Foundation
+- [ ] Abstract `PheromoneStore` interface (JSONL as default implementation)
+- [ ] Make pheromone decay strategy configurable (per task type)
+- [ ] Add SQLite implementation (optional)
 
-### M2（2~4 周）：可演进底座
-- [ ] 抽象 `PheromoneStore` 接口（JSONL 默认实现）
-- [ ] 信息素衰减策略改为可配置（按任务类型）
-- [ ] 加入 SQLite 实现（可选）
+**Success Metrics**
+- Storage layer swap doesn't affect queen/nest main flow
+- State file growth stays controlled during long sessions
 
-**成功指标**
-- 存储层切换不影响 queen/nest 主流程
-- 长会话下状态文件增长可控
+### M3 (4–6 weeks): SDK Resilience
+- [ ] Introduce `PiAdapter` (anti-corruption layer)
+- [ ] `spawner` depends only on adapter layer, no direct scattered SDK calls
+- [ ] Add SDK compatibility smoke tests
 
-### M3（4~6 周）：抗上游变化
-- [ ] 引入 `PiAdapter`（anti-corruption layer）
-- [ ] `spawner` 仅依赖适配层，不直接散落 SDK 调用
-- [ ] 增加 SDK 兼容性 smoke tests
+**Success Metrics**
+- Minor upstream SDK version upgrades only require adapter layer fixes
 
-**成功指标**
-- 上游 SDK 小版本升级后，修复范围限制在适配层
+### M4 (6–8 weeks): Evidence-Driven Growth
+- [ ] Publish benchmark: single agent vs colony (varying task complexity)
+- [ ] Open evaluation methodology and reproducible experiment scripts
+- [ ] Community focus: build density in one community first
 
-### M4（6~8 周）：证据驱动增长
-- [ ] 发布 benchmark：单 agent vs 蚁群（不同任务复杂度）
-- [ ] 公开评测方法与复现实验脚本
-- [ ] 社区聚焦中文圈层（先打透一个社区）
+**Success Metrics**
+- Reproducible data proving colony benefit boundaries (when it helps, when it doesn't)
 
-**成功指标**
-- 有可复现数据证明蚁群收益边界（何时收益，何时不收益）
+## 3) Non-Goals (Current Phase)
+- No distributed colony clusters
+- No broad multi-language community operations
+- No complex monetization features
 
----
-
-## 3) 非目标（当前阶段不做）
-- 不优先做分布式蚁群集群
-- 不优先扩展过多语言社区运营
-- 不优先引入复杂商业化功能
-
----
-
-## 4) 发布节奏
-- 小步快跑：每周 docs/ux 小版本
-- 能力发布：按里程碑输出 feature release
-- 每个版本都包含“适用场景 + 不适用场景”
+## 4) Release Cadence
+- Small fast steps: weekly docs/UX minor releases
+- Capability releases: per-milestone feature releases
+- Every version includes "suitable scenarios + unsuitable scenarios"

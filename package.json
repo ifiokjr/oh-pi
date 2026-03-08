@@ -1,59 +1,24 @@
 {
-  "name": "oh-pi",
-  "version": "0.1.85",
-  "description": "One-click setup for pi-coding-agent. Like oh-my-zsh for pi.",
-  "type": "module",
-  "bin": {
-    "oh-pi": "dist/bin/oh-pi.js"
-  },
-  "main": "./dist/index.js",
-  "files": [
-    "dist",
-    "pi-package",
-    "README.md",
-    "!**/*.test.ts",
-    "!**/*.spec.ts"
-  ],
-  "scripts": {
-    "clean": "node -e \"require('node:fs').rmSync('dist',{ recursive: true, force: true })\"",
-    "build": "npm run clean && tsc",
-    "dev": "tsc --watch",
-    "start": "node dist/bin/oh-pi.js",
-    "test": "vitest run",
-    "prepublishOnly": "npm run build"
-  },
-  "keywords": [
-    "pi-package",
-    "pi-coding-agent",
-    "configuration",
-    "setup",
-    "tui"
-  ],
-  "license": "MIT",
-  "pi": {
-    "extensions": [
-      "./pi-package/extensions"
-    ],
-    "skills": [
-      "./pi-package/skills"
-    ],
-    "prompts": [
-      "./pi-package/prompts"
-    ],
-    "themes": [
-      "./pi-package/themes"
-    ]
-  },
-  "dependencies": {
-    "@clack/prompts": "^1.0.1",
-    "chalk": "^5.4.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "^5.7.0",
-    "vitest": "^3.0.0"
-  },
-  "engines": {
-    "node": ">=20.0.0"
-  }
+	"private": true,
+	"packageManager": "pnpm@10.30.2",
+	"scripts": {
+		"build": "pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli run build",
+		"build:fast": "pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli run build:fast",
+		"typecheck": "pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli run typecheck",
+		"test": "vitest run",
+		"lint": "biome check .",
+		"lint:fix": "biome check --fix .",
+		"format": "biome format --write .",
+		"check": "biome ci ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.0",
+		"@types/node": "^22.0.0",
+		"@typescript/native-preview": "7.0.0-dev.20260305.1",
+		"typescript": "^5.7.0",
+		"vitest": "^3.0.0"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	}
 }

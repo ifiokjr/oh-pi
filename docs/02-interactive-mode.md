@@ -1,68 +1,68 @@
-# Pi Interactive Mode 详解
+# Pi Interactive Mode Reference
 
-## 一、界面布局（从上到下）
+## 1. UI Layout (Top to Bottom)
 
-1. **Startup Header** — 快捷键、加载的 AGENTS.md、Prompt Templates、Skills、Extensions
-2. **Messages** — 用户消息、助手回复、工具调用/结果、通知、错误、扩展 UI
-3. **Editor** — 输入区域，边框颜色指示 thinking level
-4. **Footer** — 工作目录、会话名、Token/缓存用量、费用、上下文使用率、当前模型
+1. **Startup Header** — Keybindings, loaded AGENTS.md, Prompt Templates, Skills, Extensions
+2. **Messages** — User messages, assistant replies, tool calls/results, notifications, errors, extension UI
+3. **Editor** — Input area, border color indicates thinking level
+4. **Footer** — Working directory, session name, token/cache usage, cost, context utilization, current model
 
-## 二、编辑器功能
+## 2. Editor Features
 
-| 功能 | 操作 |
-|------|------|
-| 文件引用 | 输入 `@` 模糊搜索项目文件 |
-| 路径补全 | Tab 补全路径 |
-| 多行输入 | Shift+Enter (Windows Terminal: Ctrl+Enter) |
-| 图片粘贴 | Ctrl+V 或拖拽到终端 |
-| Bash 命令 | `!command` 运行并发送输出给 LLM，`!!command` 运行但不发送 |
+| Feature | Operation |
+|---------|-----------|
+| File reference | Type `@` to fuzzy-search project files |
+| Path completion | Tab to complete paths |
+| Multi-line input | Shift+Enter (Windows Terminal: Ctrl+Enter) |
+| Paste image | Ctrl+V or drag into terminal |
+| Bash commands | `!command` runs and sends output to LLM, `!!command` runs but doesn't send |
 
-## 三、命令系统
+## 3. Command System
 
-输入 `/` 触发命令。Extensions 可注册自定义命令，Skills 通过 `/skill:name` 调用，Prompt Templates 通过 `/templatename` 展开。
+Type `/` to trigger commands. Extensions can register custom commands, Skills are invoked via `/skill:name`, Prompt Templates expand via `/templatename`.
 
-### 内置命令
+### Built-in Commands
 
-| 命令 | 说明 |
-|------|------|
-| `/login`, `/logout` | OAuth 认证 |
-| `/model` | 切换模型 |
-| `/scoped-models` | 启用/禁用 Ctrl+P 循环的模型 |
-| `/settings` | thinking level、主题、消息投递、传输方式 |
-| `/resume` | 从历史会话中选择恢复 |
-| `/new` | 新建会话 |
-| `/name <name>` | 设置会话显示名 |
-| `/session` | 显示会话信息（路径、token、费用） |
-| `/tree` | 跳转到会话树任意节点并从该处继续 |
-| `/fork` | 从当前分支创建新会话文件 |
-| `/compact [prompt]` | 手动压缩上下文 |
-| `/copy` | 复制最后一条助手消息到剪贴板 |
-| `/export [file]` | 导出会话为 HTML |
-| `/share` | 上传为 GitHub Gist |
-| `/reload` | 重载 Extensions、Skills、Prompts、Context Files |
-| `/hotkeys` | 显示所有快捷键 |
-| `/changelog` | 显示版本历史 |
-| `/quit`, `/exit` | 退出 |
+| Command | Description |
+|---------|-------------|
+| `/login`, `/logout` | OAuth authentication |
+| `/model` | Switch model |
+| `/scoped-models` | Enable/disable models for Ctrl+P cycling |
+| `/settings` | Thinking level, theme, message delivery, transport |
+| `/resume` | Resume from session history |
+| `/new` | New session |
+| `/name <name>` | Set session display name |
+| `/session` | Show session info (path, tokens, cost) |
+| `/tree` | Jump to any node in the session tree |
+| `/fork` | Create new session file from current branch |
+| `/compact [prompt]` | Manually compact context |
+| `/copy` | Copy last assistant message to clipboard |
+| `/export [file]` | Export session as HTML |
+| `/share` | Upload as GitHub Gist |
+| `/reload` | Reload Extensions, Skills, Prompts, Context Files |
+| `/hotkeys` | Show all keybindings |
+| `/changelog` | Show version history |
+| `/quit`, `/exit` | Exit |
 
-## 四、常用快捷键
+## 4. Common Keybindings
 
-| 键 | 动作 |
-|----|------|
-| Ctrl+C | 清空编辑器 |
-| Ctrl+C 两次 | 退出 |
-| Escape | 取消/中止 |
-| Escape 两次 | 打开 `/tree` |
-| Ctrl+L | 打开模型选择器 |
-| Ctrl+P / Shift+Ctrl+P | 循环切换模型 |
-| Shift+Tab | 循环 thinking level |
-| Ctrl+O | 折叠/展开工具输出 |
-| Ctrl+T | 折叠/展开 thinking blocks |
-| Alt+Enter | 排队 follow-up 消息 |
-| Alt+Up | 取回排队消息到编辑器 |
+| Key | Action |
+|-----|--------|
+| Ctrl+C | Clear editor |
+| Ctrl+C twice | Exit |
+| Escape | Cancel/abort |
+| Escape twice | Open `/tree` |
+| Ctrl+L | Open model selector |
+| Ctrl+P / Shift+Ctrl+P | Cycle models |
+| Shift+Tab | Cycle thinking level |
+| Ctrl+O | Collapse/expand tool output |
+| Ctrl+T | Collapse/expand thinking blocks |
+| Alt+Enter | Queue follow-up message |
+| Alt+Up | Retrieve queued message to editor |
 
-### 自定义快捷键
+### Custom Keybindings
 
-编辑 `~/.pi/agent/keybindings.json`：
+Edit `~/.pi/agent/keybindings.json`:
 
 ```json
 {
@@ -72,61 +72,61 @@
 }
 ```
 
-每个 action 可绑定单个键或键数组。支持 `ctrl`, `shift`, `alt` 修饰符组合。
+Each action can be bound to a single key or array of keys. Supports `ctrl`, `shift`, `alt` modifier combinations.
 
-### 完整 Action 列表
+### Complete Action List
 
-**光标移动**: cursorUp, cursorDown, cursorLeft, cursorRight, cursorWordLeft, cursorWordRight, cursorLineStart, cursorLineEnd, jumpForward, jumpBackward, pageUp, pageDown
+**Cursor movement**: cursorUp, cursorDown, cursorLeft, cursorRight, cursorWordLeft, cursorWordRight, cursorLineStart, cursorLineEnd, jumpForward, jumpBackward, pageUp, pageDown
 
-**删除**: deleteCharBackward, deleteCharForward, deleteWordBackward, deleteWordForward, deleteToLineStart, deleteToLineEnd
+**Deletion**: deleteCharBackward, deleteCharForward, deleteWordBackward, deleteWordForward, deleteToLineStart, deleteToLineEnd
 
-**输入**: newLine, submit, tab
+**Input**: newLine, submit, tab
 
-**Kill Ring**: yank, yankPop, undo
+**Kill ring**: yank, yankPop, undo
 
-**剪贴板**: copy, pasteImage
+**Clipboard**: copy, pasteImage
 
-**应用**: interrupt, clear, exit, suspend, externalEditor
+**Application**: interrupt, clear, exit, suspend, externalEditor
 
-**会话**: newSession, tree, fork, resume
+**Session**: newSession, tree, fork, resume
 
-**模型**: selectModel, cycleModelForward, cycleModelBackward, cycleThinkingLevel
+**Model**: selectModel, cycleModelForward, cycleModelBackward, cycleThinkingLevel
 
-**显示**: expandTools, toggleThinking
+**Display**: expandTools, toggleThinking
 
-**消息队列**: followUp, dequeue
+**Message queue**: followUp, dequeue
 
-## 五、消息队列
+## 5. Message Queue
 
-在 Agent 工作时可提交消息：
+You can submit messages while the agent is working:
 
-- **Enter** — 排队 steering 消息，当前工具执行完后投递（中断剩余工具）
-- **Alt+Enter** — 排队 follow-up 消息，Agent 完成所有工作后才投递
-- **Escape** — 中止并恢复排队消息到编辑器
-- **Alt+Up** — 取回排队消息到编辑器
+- **Enter** — Queue a steering message, delivered after current tool finishes (interrupts remaining tools)
+- **Alt+Enter** — Queue a follow-up message, delivered only after agent completes all work
+- **Escape** — Abort and restore queued message to editor
+- **Alt+Up** — Retrieve queued message to editor
 
-### 投递模式配置
+### Delivery Mode Configuration
 
-| 设置 | 默认 | 说明 |
-|------|------|------|
-| `steeringMode` | `"one-at-a-time"` | steering 消息投递方式 |
-| `followUpMode` | `"one-at-a-time"` | follow-up 消息投递方式 |
-| `transport` | `"sse"` | 传输偏好: `"sse"`, `"websocket"`, `"auto"` |
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `steeringMode` | `"one-at-a-time"` | Steering message delivery mode |
+| `followUpMode` | `"one-at-a-time"` | Follow-up message delivery mode |
+| `transport` | `"sse"` | Transport preference: `"sse"`, `"websocket"`, `"auto"` |
 
-## 六、终端兼容性
+## 6. Terminal Compatibility
 
-### 开箱即用
+### Works Out of the Box
 - Kitty, iTerm2
 
-### 需要配置
-- **Ghostty**: 需添加 keybind 配置
-- **WezTerm**: 需启用 `enable_kitty_keyboard`
-- **VS Code Terminal**: 需添加 Shift+Enter keybinding
-- **Windows Terminal**: 需添加 Shift+Enter action
-- **IntelliJ IDEA**: 有限支持，建议用独立终端
+### Requires Configuration
+- **Ghostty**: Needs keybind configuration
+- **WezTerm**: Enable `enable_kitty_keyboard`
+- **VS Code Terminal**: Add Shift+Enter keybinding
+- **Windows Terminal**: Add Shift+Enter action
+- **IntelliJ IDEA**: Limited support, recommend standalone terminal
 
-### 图片支持
-支持 Kitty、iTerm2、Ghostty、WezTerm 终端内显示图片。
+### Image Support
+Kitty, iTerm2, Ghostty, WezTerm support in-terminal image display.
 
-### 颜色
-使用 24-bit RGB 颜色。旧终端自动降级到 256 色近似。
+### Colors
+Uses 24-bit RGB colors. Legacy terminals auto-degrade to 256-color approximation.

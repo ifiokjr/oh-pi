@@ -1,43 +1,43 @@
-# Colony UI 优化计划（Phase A.5）
+# Colony UI Improvement Plan (Phase A.5)
 
-> 背景：当前蚁群能力已可用，但可视化层的信息层级与可读性不足，影响“第一眼价值感知”。
+> Background: The colony functionality works, but the visualization layer lacks information hierarchy and readability, hurting "first-glance value perception."
 
-## 1) 已落地的 Quick Wins
+## 1) Completed Quick Wins
 
-- 状态栏增加阶段标签（`SCOUTING/WORKING/...`）与进度百分比。
-- 状态栏增加活跃蚂蚁数（`⚡N`）。
-- `/colony-status` 文本增加进度条、阶段细节（Phase message）与最近事件（Last）。
-- 详情面板 Header 增加：阶段标签 + 任务进度 + 百分比 + 活跃蚂蚁 + 进度条。
-- 详情面板补充“Active Ant Streams”列表（角色图标 + antId + token 数 + 最新输出摘要）。
-- 详情面板新增“Recent Signals”区域（最近 6 条信号日志）。
-- 详情面板新增“Warnings”区域（失败任务快速聚焦）。
-- `ant-colony-progress` 消息新增自定义渲染，减少纯文本噪音并统一阶段标签。
+- Status bar: added phase label (`SCOUTING/WORKING/...`) and progress percentage.
+- Status bar: added active ant count (`⚡N`).
+- `/colony-status` text: added progress bar, phase details, and most recent event.
+- Details panel header: phase label + task progress + percentage + active ants + progress bar.
+- Details panel: "Active Ant Streams" list (role icon + antId + token count + latest output summary).
+- Details panel: "Recent Signals" section (last 6 signal log entries).
+- Details panel: "Warnings" section (quick focus on failed tasks).
+- `ant-colony-progress` messages: custom rendering to reduce text noise and unify phase labels.
 
-## 2) 下一步优化（按优先级）
+## 2) Next Optimizations (by priority)
 
-### P1：信息架构
-- [x] 统一“主信息四元组”：`阶段 / 进度 / 成本 / 时间`。
-- [ ] 将错误与预算超限显示固定到顶部警示区（避免被任务列表淹没）。
+### P1: Information Architecture
+- [x] Unify the "primary info quartet": Phase / Progress / Cost / Time.
+- [ ] Pin errors and budget-exceeded warnings to a top alert area (prevent them from being buried in task lists).
 
-### P2：交互体验
-- [x] 增加详情面板分页（Tasks / Streams / Log）。
-- [x] 支持按任务状态过滤（done/active/failed/all）。
+### P2: Interaction Experience
+- [x] Add details panel pagination (Tasks / Streams / Log).
+- [x] Support filtering tasks by status (done/active/failed/all).
 
-### P3：视觉一致性
-- [x] 统一信号文本与 UI 标签命名（如 `PLANNING_RECOVERY` / `BUDGET_EXCEEDED` 的展示文案）。
-- [x] 完成首轮主题对比度巡检并收敛色阶用法（见 `docs/COLONY-UI-CONTRAST-AUDIT.md`）。
+### P3: Visual Consistency
+- [x] Unify signal text and UI label naming (e.g. display text for `PLANNING_RECOVERY` / `BUDGET_EXCEEDED`).
+- [x] Complete round-1 theme contrast audit and converge color tier usage (see `docs/COLONY-UI-CONTRAST-AUDIT.md`).
 
-## 3) 验收标准
+## 3) Acceptance Criteria
 
-- 新用户在 10 秒内能回答：
-  1) 现在处于哪个阶段？
-  2) 已完成多少任务？
-  3) 是否有失败？
-- `/colony-status` 不看日志也能判断是否卡住。
-- 详情面板能看到“活跃蚂蚁正在输出什么”。
+- New users can answer within 10 seconds:
+  1) What phase is the colony in?
+  2) How many tasks are complete?
+  3) Are there any failures?
+- `/colony-status` allows judging whether the colony is stuck without reading logs.
+- Details panel shows "what active ants are currently outputting."
 
-## 4) 非目标
+## 4) Non-Goals
 
-- 本阶段不重构调度逻辑。
-- 本阶段不引入新状态机。
-- 本阶段不做跨进程可视化同步协议改造。
+- No scheduler logic refactoring in this phase.
+- No new state machines in this phase.
+- No cross-process visualization sync protocol changes in this phase.

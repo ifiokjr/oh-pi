@@ -1,0 +1,18 @@
+{
+	"name": "@ifi/oh-pi-ant-colony",
+	"version": "0.2.0",
+	"description": "Autonomous multi-agent swarm extension for pi — adaptive concurrency, pheromone communication.",
+	"keywords": ["pi-package"],
+	"pi": {
+		"extensions": ["./extensions"]
+	},
+	"files": ["extensions", "README.md", "!**/*.test.ts"],
+	"license": "MIT",
+	"peerDependencies": {
+		"@mariozechner/pi-ai": "*",
+		"@mariozechner/pi-agent-core": "*",
+		"@mariozechner/pi-coding-agent": "*",
+		"@mariozechner/pi-tui": "*",
+		"@sinclair/typebox": "*"
+	}
+}
