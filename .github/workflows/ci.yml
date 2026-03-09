@@ -25,7 +25,10 @@ jobs:
           PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+'
 
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            COMMITS=$(git log --format='%s' origin/${{ github.base_ref }}..${{ github.sha }})
+            BASE_SHA='${{ github.event.pull_request.base.sha }}'
+            HEAD_SHA='${{ github.event.pull_request.head.sha }}'
+            # Validate only real PR commits (exclude synthetic merge commits from refs/pull/*/merge).
+            COMMITS=$(git log --format='%s' --no-merges "${BASE_SHA}..${HEAD_SHA}")
           else
             # On push, check only the head commit
             COMMITS=$(git log --format='%s' -1)

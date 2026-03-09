@@ -59,6 +59,10 @@ help_text = "Create a new changeset file for the next release"
 [[workflows.steps]]
 type = "CreateChangeFile"
 
+[[workflows.steps]]
+type = "Command"
+command = "pnpm format"
+
 [[workflows]]
 name = "get-version"
 help_text = "Print the current version"
