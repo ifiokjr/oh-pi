@@ -15,7 +15,7 @@ features:
 | `@ifi/oh-pi-ant-colony` | `pi install npm:@ifi/oh-pi-ant-colony` | Multi-agent swarm extension                                                                 |
 | `@ifi/oh-pi-themes`     | `pi install npm:@ifi/oh-pi-themes`     | cyberpunk, nord, gruvbox, tokyo-night, catppuccin, oh-p-dark                                |
 | `@ifi/oh-pi-prompts`    | `pi install npm:@ifi/oh-pi-prompts`    | review, fix, explain, refactor, test, commit, pr, and more                                  |
-| `@ifi/oh-pi-skills`     | `pi install npm:@ifi/oh-pi-skills`     | web-search, debug-helper, git-workflow, and more                                            |
+| `@ifi/oh-pi-skills`     | `pi install npm:@ifi/oh-pi-skills`     | web-search, debug-helper, git-workflow, rust-workspace-bootstrap, and more                  |
 
 ## TUI Configurator
 

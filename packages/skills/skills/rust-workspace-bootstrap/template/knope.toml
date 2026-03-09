@@ -1,0 +1,73 @@
+[changes]
+ignore_conventional_commits = true
+
+[package]
+versioned_files = [
+	"Cargo.toml",
+	{ dependency = "__CORE_CRATE__", path = "Cargo.lock" },
+	{ dependency = "__CORE_CRATE__", path = "Cargo.toml" },
+	{ dependency = "__CLI_CRATE__", path = "Cargo.lock" },
+	{ dependency = "__CLI_CRATE__", path = "Cargo.toml" },
+]
+scopes = ["core", "cli"]
+changelog = "changelog.md"
+extra_changelog_sections = [
+	{ name = "Notes", types = ["note"] },
+	{ name = "Documentation", types = ["docs"] },
+]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "dprint fmt"
+
+[[workflows.steps]]
+type = "Command"
+command = "cargo check --workspace --locked"
+
+[[workflows.steps]]
+type = "Command"
+command = "git add --all"
+
+[[workflows.steps]]
+type = "Command"
+command = 'git commit -m "chore: prepare releases $version"'
+
+[[workflows.steps]]
+type = "Command"
+command = "git push"
+
+[[workflows.steps]]
+type = "Release"
+
+[[workflows]]
+name = "document-change"
+
+[[workflows.steps]]
+type = "CreateChangeFile"
+
+[[workflows.steps]]
+type = "Command"
+command = "dprint fmt .changeset/* --allow-no-files"
+
+[[workflows]]
+name = "forced-release"
+
+[[workflows.steps]]
+type = "Release"
+
+[[workflows]]
+name = "publish"
+
+[[workflows.steps]]
+type = "Command"
+command = "cargo publish --workspace"
+
+[github]
+owner = "__GITHUB_OWNER__"
+repo = "__GITHUB_REPO__"

@@ -1,0 +1,20 @@
+[package]
+name = "__CLI_CRATE__"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "CLI for __PROJECT_NAME__"
+
+[[bin]]
+name = "__PROJECT_NAME__"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+clap.workspace = true
+__CORE_CRATE__.workspace = true

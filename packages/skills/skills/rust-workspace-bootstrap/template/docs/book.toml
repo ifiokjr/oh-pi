@@ -1,0 +1,6 @@
+[book]
+authors = ["__GITHUB_OWNER__"]
+language = "en"
+multilingual = false
+src = "src"
+title = "__PROJECT_TITLE__"

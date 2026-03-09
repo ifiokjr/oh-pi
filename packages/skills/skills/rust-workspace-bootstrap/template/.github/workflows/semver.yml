@@ -1,0 +1,63 @@
+name: "semver"
+permissions:
+  contents: read
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semver-checks:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: setup
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: run semver-checks
+        id: semver
+        continue-on-error: true
+        run: cargo semver-checks check-release --workspace
+        shell: devenv shell -c -- bash -e {0}
+
+      - name: evaluate semver results
+        if: steps.semver.outcome == 'failure'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "::warning::semver-checks detected breaking changes"
+
+          title_acknowledged=false
+          if echo "$PR_TITLE" | grep -qE '^[a-zA-Z]+(\(.+\))?!:'; then
+            title_acknowledged=true
+            echo "PR title contains '!' — breaking change acknowledged via title"
+          fi
+
+          changeset_acknowledged=false
+          if ls .changeset/*.md 1>/dev/null 2>&1; then
+            if grep -lE '^[a-zA-Z_]+: major$' .changeset/*.md 1>/dev/null 2>&1; then
+              changeset_acknowledged=true
+              echo "Found major changeset — breaking change acknowledged via changeset"
+            fi
+          fi
+
+          if [ "$title_acknowledged" = true ] || [ "$changeset_acknowledged" = true ]; then
+            echo "::notice::Breaking changes are acknowledged."
+            exit 0
+          fi
+
+          echo "::error::Breaking changes detected but not acknowledged."
+          echo "Add '!' to PR title or create a major changeset via 'knope document-change'."
+          exit 1
+        shell: bash

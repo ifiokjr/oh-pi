@@ -1,0 +1,130 @@
+name: "ci"
+permissions:
+  contents: read
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  commit-lint:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: validate commit messages
+        run: |
+          PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+'
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA='${{ github.event.pull_request.base.sha }}'
+            HEAD_SHA='${{ github.event.pull_request.head.sha }}'
+            COMMITS=$(git log --format='%s' --no-merges "${BASE_SHA}..${HEAD_SHA}")
+          else
+            COMMITS=$(git log --format='%s' -1)
+          fi
+
+          FAILED=0
+          while IFS= read -r msg; do
+            [ -z "$msg" ] && continue
+            if ! echo "$msg" | grep -qE "$PATTERN"; then
+              echo "::error::Invalid commit message: '$msg'"
+              FAILED=1
+            fi
+          done <<< "$COMMITS"
+
+          if [ "$FAILED" -eq 1 ]; then
+            exit 1
+          fi
+
+  changeset:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || !startsWith(github.event.head_commit.message, 'chore: prepare releases')
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: check for changeset
+        run: |
+          CHANGESETS=$(find .changeset -name '*.md' ! -name 'README.md' 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$CHANGESETS" -eq 0 ]; then
+            echo "::error::No changeset found. Run 'knope document-change'."
+            exit 1
+          fi
+          echo "✅ Found $CHANGESETS changeset(s)"
+
+  lint:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: lint
+        run: lint:all
+        shell: devenv shell -c -- bash -e {0}
+
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: run tests
+        run: test:all
+        shell: devenv shell -c -- bash -e {0}
+
+  build:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    needs: [commit-lint, changeset, lint, test]
+    if: ${{ !failure() && !cancelled() }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: setup
+        uses: ./.github/actions/devenv
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: build default features
+        run: build:default
+        shell: devenv shell -c -- bash -e {0}
+
+      - name: build all features
+        run: build:all
+        shell: devenv shell -c -- bash -e {0}
+
+  security:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2

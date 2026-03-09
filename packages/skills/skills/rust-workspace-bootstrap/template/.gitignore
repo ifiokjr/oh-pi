@@ -1,0 +1,14 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Tooling
+/.devenv
+/.direnv
+/.bin
+/node_modules
+
+# OS / editor
+.DS_Store
+.vscode
+.idea

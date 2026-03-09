@@ -1,0 +1,42 @@
+name: devenv
+description: Setup development environment with devenv
+inputs:
+  github-token:
+    description: Provide a GitHub token
+    required: true
+  cache-version:
+    description: Cache version for dependency keys
+    required: false
+    default: "v1"
+
+runs:
+  using: composite
+  steps:
+    - name: cache rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: "${{ inputs.cache-version }}"
+
+    - name: cache cargo binaries
+      uses: actions/cache@v4
+      with:
+        path: ./.bin
+        key: ${{ runner.os }}-cargo-bin-${{ inputs.cache-version }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-bin-${{ inputs.cache-version }}-
+
+    - name: install nix
+      uses: cachix/install-nix-action@v31
+      with:
+        github_access_token: ${{ inputs.github-token }}
+
+    - name: setup nix environment
+      run: |
+        nix profile add --accept-flake-config nixpkgs#cachix
+        cachix use devenv
+        nix profile add nixpkgs#devenv
+      shell: bash
+
+    - name: install dependencies
+      run: install:cargo:bin
+      shell: devenv shell -- bash -e {0}

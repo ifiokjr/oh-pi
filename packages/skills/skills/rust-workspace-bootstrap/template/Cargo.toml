@@ -1,0 +1,64 @@
+[workspace]
+resolver = "2"
+members = ["crates/__CORE_CRATE__", "crates/__CLI_CRATE__"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["__GITHUB_OWNER__"]
+edition = "2024"
+license = "MIT"
+readme = "readme.md"
+repository = "https://github.com/__GITHUB_OWNER__/__GITHUB_REPO__"
+homepage = "https://github.com/__GITHUB_OWNER__/__GITHUB_REPO__"
+rust-version = "1.86.0"
+description = "__DESCRIPTION__"
+
+[workspace.dependencies]
+clap = { default-features = false, version = "^4", features = ["derive", "std"] }
+thiserror = { default-features = false, version = "^2" }
+__CORE_CRATE__ = { path = "crates/__CORE_CRATE__", version = "0.1.0" }
+
+[workspace.metadata.bin]
+cargo-deny = { version = "0.19.0" }
+cargo-llvm-cov = { version = "0.8.4" }
+cargo-nextest = { version = "0.9.129" }
+cargo-semver-checks = { version = "0.46.0" }
+cargo-workspaces = { version = "0.4.2" }
+knope = { version = "0.22.3", bins = ["knope"] }
+
+[workspace.lints.rust]
+rust_2021_compatibility = { level = "warn", priority = -1 }
+rust_2024_compatibility = { level = "warn", priority = -1 }
+unsafe_code = "deny"
+unstable_features = "deny"
+unused_extern_crates = "warn"
+unused_import_braces = "warn"
+unused_lifetimes = "warn"
+unused_macro_rules = "warn"
+unused_qualifications = "warn"
+variant_size_differences = "warn"
+edition_2024_expr_fragment_specifier = "allow"
+
+[workspace.lints.clippy]
+complexity = { level = "warn", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+
+blocks_in_conditions = "allow"
+cargo_common_metadata = "allow"
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+items_after_statements = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+no_effect_underscore_binding = "allow"
+too_many_lines = "allow"
+wildcard_dependencies = "deny"
+wildcard_imports = "allow"
