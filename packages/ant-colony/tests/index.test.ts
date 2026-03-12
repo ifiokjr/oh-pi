@@ -98,6 +98,28 @@ vi.mock("../extensions/ant-colony/queen.js", () => ({
 	createUsageLimitsTracker: queenMocks.createUsageLimitsTrackerMock,
 }));
 
+vi.mock("../extensions/ant-colony/worktree.js", async (importActual) => {
+	const actual = await importActual<typeof import("../extensions/ant-colony/worktree.js")>();
+
+	const mkShared = (cwd: string) => ({
+		mode: "shared" as const,
+		originCwd: cwd,
+		executionCwd: cwd,
+		repoRoot: null,
+		worktreeRoot: null,
+		branch: null,
+		baseBranch: null,
+		note: null,
+	});
+
+	return {
+		...actual,
+		prepareColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
+		resumeColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
+		cleanupIsolatedWorktree: () => null,
+	};
+});
+
 vi.mock("@sinclair/typebox", () => ({
 	Type: {
 		Object: (schema: any) => schema,
