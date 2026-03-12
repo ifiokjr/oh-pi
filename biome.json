@@ -13,7 +13,8 @@
 			"packages/cli/src/**/*.ts",
 			"packages/extensions/extensions/**/*.ts",
 			"packages/ant-colony/extensions/**/*.ts",
-			"packages/ant-colony/tests/**/*.ts"
+			"packages/ant-colony/tests/**/*.ts",
+			"packages/subagents/tests/**/*.ts"
 		]
 	},
 	"formatter": {

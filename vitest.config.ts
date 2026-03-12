@@ -6,6 +6,7 @@ export default defineConfig({
 			"packages/cli/src/**/*.test.ts",
 			"packages/extensions/extensions/**/*.test.ts",
 			"packages/ant-colony/tests/**/*.test.ts",
+			"packages/subagents/tests/**/*.test.ts",
 		],
 	},
 });

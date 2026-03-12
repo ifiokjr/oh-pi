@@ -76,21 +76,22 @@ knope publish
 ```
 
 This bumps all package versions in lockstep, updates `CHANGELOG.md`, creates a git tag, pushes
-to GitHub, and publishes all 9 packages to npm under the `@ifi` scope.
+to GitHub, and publishes all workspace packages to npm under the `@ifi` scope.
 
 ## Project Structure
 
 ```
 packages/
-  core/          → @ifi/oh-pi-core (compiled library: types, registry, i18n)
-  cli/           → @ifi/oh-pi-cli (compiled binary: TUI configurator)
-  extensions/    → @ifi/oh-pi-extensions (raw .ts: 9 pi extensions)
-  ant-colony/    → @ifi/oh-pi-ant-colony (raw .ts: multi-agent swarm)
-  themes/        → @ifi/oh-pi-themes (JSON theme files)
-  prompts/       → @ifi/oh-pi-prompts (markdown prompt templates)
-  skills/        → @ifi/oh-pi-skills (skill directories)
-  agents/        → @ifi/oh-pi-agents (AGENTS.md templates)
-  oh-pi/         → @ifi/oh-pi (installer CLI: `npx @ifi/oh-pi`)
+  core/                   → @ifi/oh-pi-core (compiled library: types, registry, i18n)
+  cli/                    → @ifi/oh-pi-cli (compiled binary: TUI configurator)
+  extensions/             → @ifi/oh-pi-extensions (raw .ts: 9 pi extensions)
+  ant-colony/             → @ifi/oh-pi-ant-colony (raw .ts: multi-agent swarm)
+  themes/                 → @ifi/oh-pi-themes (JSON theme files)
+  prompts/                → @ifi/oh-pi-prompts (markdown prompt templates)
+  skills/                 → @ifi/oh-pi-skills (skill directories)
+  agents/                 → @ifi/oh-pi-agents (AGENTS.md templates)
+  subagents/              → @ifi/pi-extension-subagents (raw .ts: subagent orchestration package)
+  oh-pi/                  → @ifi/oh-pi (installer CLI: `npx @ifi/oh-pi`)
 ```
 
 ## Install & Packaging
@@ -107,8 +108,8 @@ npx @ifi/oh-pi --local              # install to project .pi/settings.json
 npx @ifi/oh-pi --remove             # uninstall all oh-pi packages from pi
 ```
 
-The installer calls `pi install npm:@ifi/oh-pi-<name>` for each sub-package. Individual packages
-can also be installed directly:
+The installer calls `pi install` for each bundled package. Individual packages can also be
+installed directly:
 
 ```bash
 pi install npm:@ifi/oh-pi-extensions
@@ -116,6 +117,7 @@ pi install npm:@ifi/oh-pi-ant-colony
 pi install npm:@ifi/oh-pi-themes
 pi install npm:@ifi/oh-pi-prompts
 pi install npm:@ifi/oh-pi-skills
+pi install npm:@ifi/pi-extension-subagents
 ```
 
 **Do not use `bundledDependencies`** in the oh-pi package — pnpm's isolated linker does not support

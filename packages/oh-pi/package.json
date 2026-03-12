@@ -20,6 +20,7 @@
   "dependencies": {
     "@ifi/oh-pi-extensions": "workspace:*",
     "@ifi/oh-pi-ant-colony": "workspace:*",
+    "@ifi/pi-extension-subagents": "workspace:*",
     "@ifi/oh-pi-themes": "workspace:*",
     "@ifi/oh-pi-prompts": "workspace:*",
     "@ifi/oh-pi-skills": "workspace:*",

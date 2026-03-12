@@ -42,12 +42,13 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 | [`@ifi/oh-pi`](./packages/oh-pi)                 | One-command installer for all pkgs | `npx @ifi/oh-pi`                       |
 | [`@ifi/oh-pi-cli`](./packages/cli)               | Interactive TUI configurator       | `npx @ifi/oh-pi-cli`                   |
 | [`@ifi/oh-pi-core`](./packages/core)             | Shared types, registries, i18n     | (library, not installed directly)      |
-| [`@ifi/oh-pi-extensions`](./packages/extensions) | 9 extensions (see below)           | `pi install npm:@ifi/oh-pi-extensions` |
-| [`@ifi/oh-pi-ant-colony`](./packages/ant-colony) | Multi-agent swarm extension        | `pi install npm:@ifi/oh-pi-ant-colony` |
-| [`@ifi/oh-pi-themes`](./packages/themes)         | 6 color themes                     | `pi install npm:@ifi/oh-pi-themes`     |
-| [`@ifi/oh-pi-prompts`](./packages/prompts)       | 10 prompt templates                | `pi install npm:@ifi/oh-pi-prompts`    |
-| [`@ifi/oh-pi-skills`](./packages/skills)         | 12 skill packs                     | `pi install npm:@ifi/oh-pi-skills`     |
-| [`@ifi/oh-pi-agents`](./packages/agents)         | 5 AGENTS.md templates              | (used by CLI only)                     |
+| [`@ifi/oh-pi-extensions`](./packages/extensions)          | 9 extensions (see below)                    | `pi install npm:@ifi/oh-pi-extensions`      |
+| [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)          | Multi-agent swarm extension                 | `pi install npm:@ifi/oh-pi-ant-colony`      |
+| [`@ifi/pi-extension-subagents`](./packages/subagents)     | Full-featured subagent delegation extension | `pi install npm:@ifi/pi-extension-subagents` |
+| [`@ifi/oh-pi-themes`](./packages/themes)                  | 6 color themes                              | `pi install npm:@ifi/oh-pi-themes`          |
+| [`@ifi/oh-pi-prompts`](./packages/prompts)                | 10 prompt templates                         | `pi install npm:@ifi/oh-pi-prompts`         |
+| [`@ifi/oh-pi-skills`](./packages/skills)                  | 12 skill packs                              | `pi install npm:@ifi/oh-pi-skills`          |
+| [`@ifi/oh-pi-agents`](./packages/agents)                  | 5 AGENTS.md templates                       | (used by CLI only)                          |
 
 ### Installer Options
 
@@ -415,15 +416,16 @@ calling `knope release`. Use `--dry-run` to preview without making changes.
 ```
 oh-pi/
 ├── packages/
-│   ├── core/              Shared types, registry, i18n (compiled)
-│   ├── cli/               TUI configurator binary (compiled)
-│   ├── extensions/        9 pi extensions (raw .ts)
-│   ├── ant-colony/        Multi-agent swarm extension (raw .ts)
-│   ├── themes/            6 JSON theme files
-│   ├── prompts/           10 markdown prompt templates
-│   ├── skills/            12 skill directories
-│   ├── agents/            5 AGENTS.md templates
-│   └── oh-pi/             Installer CLI (npx @ifi/oh-pi)
+│   ├── core/                   Shared types, registry, i18n (compiled)
+│   ├── cli/                    TUI configurator binary (compiled)
+│   ├── extensions/             9 pi extensions (raw .ts)
+│   ├── ant-colony/             Multi-agent swarm extension (raw .ts)
+│   ├── subagents/              Subagent orchestration package (raw .ts)
+│   ├── themes/                 6 JSON theme files
+│   ├── prompts/                10 markdown prompt templates
+│   ├── skills/                 12 skill directories
+│   ├── agents/                 5 AGENTS.md templates
+│   └── oh-pi/                  Installer CLI (npx @ifi/oh-pi)
 ├── docs/                  Full documentation
 ├── benchmarks/            Performance benchmarks
 ├── .changeset/            Pending changesets (knope)

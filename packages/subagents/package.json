@@ -1,0 +1,50 @@
+{
+  "name": "@ifi/pi-extension-subagents",
+  "version": "0.2.12",
+  "description": "Full-featured subagent orchestration extension for pi, built on top of nicobailon/pi-subagents.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "subagents",
+    "agents",
+    "async",
+    "tui"
+  ],
+  "bin": {
+    "pi-extension-subagents": "install.mjs"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts",
+      "./notify.ts"
+    ]
+  },
+  "files": [
+    "*.ts",
+    "*.mjs",
+    "agents",
+    "README.md",
+    "banner.png",
+    "!*.test.ts",
+    "!test/**"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/subagents"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/subagents",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-agent-core": "*",
+    "@mariozechner/pi-ai": "*",
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
+    "@sinclair/typebox": "*"
+  }
+}

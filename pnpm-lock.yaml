@@ -127,10 +127,31 @@ importers:
       '@ifi/oh-pi-themes':
         specifier: workspace:*
         version: link:../themes
+      '@ifi/pi-extension-subagents':
+        specifier: workspace:*
+        version: link:../subagents
 
   packages/prompts: {}
 
   packages/skills: {}
+
+  packages/subagents:
+    dependencies:
+      '@mariozechner/pi-agent-core':
+        specifier: '*'
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-ai':
+        specifier: '*'
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-coding-agent':
+        specifier: '*'
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-tui':
+        specifier: '*'
+        version: 0.56.1
+      '@sinclair/typebox':
+        specifier: '*'
+        version: 0.34.48
 
   packages/themes: {}
 
