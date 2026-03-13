@@ -49,6 +49,44 @@ describe("parseSubTasks", () => {
 		expect(tasks[0].caste).toBe("scout");
 	});
 
+	it("parses JSON task arrays nested under a tasks key", () => {
+		const output =
+			'```json\n{"discoveries":["parser.ts"],"tasks":[{"title":"Task A","description":"Do A","files":["a.ts"],"caste":"worker","priority":1}]}\n```';
+		const tasks = parseSubTasks(output);
+		expect(tasks).toHaveLength(1);
+		expect(tasks[0]).toMatchObject({
+			title: "Task A",
+			description: "Do A",
+			files: ["a.ts"],
+			caste: "worker",
+			priority: 1,
+		});
+	});
+
+	it("defaults missing JSON description to the task title", () => {
+		const tasks = parseSubTasks('```json\n[{"title":"Task A","files":["a.ts"]}]\n```');
+		expect(tasks).toHaveLength(1);
+		expect(tasks[0].title).toBe("Task A");
+		expect(tasks[0].description).toBe("Task A");
+	});
+
+	it("defaults missing JSON title to the description", () => {
+		const tasks = parseSubTasks('```json\n[{"description":"Do A","files":["a.ts"]}]\n```');
+		expect(tasks).toHaveLength(1);
+		expect(tasks[0].title).toBe("Do A");
+		expect(tasks[0].description).toBe("Do A");
+	});
+
+	it("ignores JSON task entries missing both title and description", () => {
+		const tasks = parseSubTasks('```json\n[{"files":["a.ts"],"caste":"worker","priority":1}]\n```');
+		expect(tasks).toEqual([]);
+	});
+
+	it("ignores fenced JSON objects that are not task plans", () => {
+		const tasks = parseSubTasks('```json\n{"discoveries":["parser.ts"],"warnings":["be careful"]}\n```');
+		expect(tasks).toEqual([]);
+	});
+
 	it("defaults caste to worker for invalid", () => {
 		const tasks = parseSubTasks('```json\n[{"title":"X","caste":"invalid"}]\n```');
 		expect(tasks[0].caste).toBe("worker");

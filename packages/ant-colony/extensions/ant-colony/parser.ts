@@ -53,21 +53,49 @@ function extractFileLike(value: string): string[] {
 	return [...new Set(fileish)];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
+
+function hasNonEmptyText(value: unknown): boolean {
+	return typeof value === "string" && value.trim().length > 0;
+}
+
+function isJsonTaskLike(value: unknown): value is Record<string, unknown> {
+	return isRecord(value) && (hasNonEmptyText(value.title) || hasNonEmptyText(value.description));
+}
+
+function extractJsonTaskCandidates(parsed: unknown): Array<Record<string, unknown>> {
+	if (Array.isArray(parsed)) {
+		return parsed.filter(isJsonTaskLike);
+	}
+	if (isRecord(parsed) && Array.isArray(parsed.tasks)) {
+		return parsed.tasks.filter(isJsonTaskLike);
+	}
+	if (isJsonTaskLike(parsed)) {
+		return [parsed];
+	}
+	return [];
+}
+
 function normalizeJsonTasks(parsed: unknown): ParsedSubTask[] {
-	const arr = (Array.isArray(parsed) ? parsed : [parsed]) as Array<Record<string, unknown>>;
-	return arr.map((t) => ({
-		title: String(t.title || "Untitled"),
-		description: String(t.description || t.title || ""),
-		files: Array.isArray(t.files)
-			? t.files
-					.map(String)
-					.map((f) => f.trim())
-					.filter(Boolean)
-			: extractFileLike(String(t.files || "")),
-		caste: normalizeCaste(t.caste),
-		priority: normalizePriority(t.priority),
-		context: t.context ? String(t.context) : undefined,
-	}));
+	return extractJsonTaskCandidates(parsed).map((t) => {
+		const title = String(t.title || t.description || "Untitled").trim() || "Untitled";
+		const description = String(t.description || t.title || title).trim() || title;
+		return {
+			title,
+			description,
+			files: Array.isArray(t.files)
+				? t.files
+						.map(String)
+						.map((f) => f.trim())
+						.filter(Boolean)
+				: extractFileLike(String(t.files || "")),
+			caste: normalizeCaste(t.caste),
+			priority: normalizePriority(t.priority),
+			context: t.context ? String(t.context) : undefined,
+		};
+	});
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Parser must handle many field variants (en/zh) and edge cases
@@ -173,7 +201,10 @@ export function parseSubTasks(output: string): ParsedSubTask[] {
 	const jsonMatch = output.match(/```json\s*([\s\S]*?)```/i);
 	if (jsonMatch?.[1]) {
 		try {
-			return normalizeJsonTasks(JSON.parse(jsonMatch[1].trim()));
+			const jsonTasks = normalizeJsonTasks(JSON.parse(jsonMatch[1].trim()));
+			if (jsonTasks.length > 0) {
+				return jsonTasks;
+			}
 		} catch {
 			/* fallback */
 		}
