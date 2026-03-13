@@ -14,7 +14,9 @@
 			"packages/extensions/extensions/**/*.ts",
 			"packages/ant-colony/extensions/**/*.ts",
 			"packages/ant-colony/tests/**/*.ts",
-			"packages/subagents/tests/**/*.ts"
+			"packages/subagents/tests/**/*.ts",
+			"packages/plan/tests/**/*.ts",
+			"packages/shared-qna/tests/**/*.ts"
 		]
 	},
 	"formatter": {

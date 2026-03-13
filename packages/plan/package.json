@@ -1,0 +1,51 @@
+{
+  "name": "@ifi/pi-plan",
+  "version": "0.2.13",
+  "description": "Planning mode extension for pi with persistent plan files, branch-aware planning, and delegated research tasks.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "planning",
+    "plan-mode",
+    "tui"
+  ],
+  "bin": {
+    "pi-plan": "install.mjs"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "files": [
+    "*.ts",
+    "*.mjs",
+    "prompts",
+    "README.md",
+    "!**/*.test.ts",
+    "!tests/**"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/plan"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/plan",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  },
+  "dependencies": {
+    "@ifi/pi-extension-subagents": "workspace:*",
+    "@ifi/pi-shared-qna": "workspace:*"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-agent-core": "*",
+    "@mariozechner/pi-ai": "*",
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
+    "@sinclair/typebox": "*"
+  }
+}

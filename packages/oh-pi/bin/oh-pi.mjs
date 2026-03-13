@@ -5,7 +5,7 @@
  *
  * Usage:
  *   npx @ifi/oh-pi              # install latest versions
- *   npx @ifi/oh-pi --version 0.2.12  # install a specific version
+ *   npx @ifi/oh-pi --version 0.2.13  # install a specific version
  *   npx @ifi/oh-pi --local      # install to project .pi/settings.json
  *   npx @ifi/oh-pi --remove     # uninstall all oh-pi packages from pi
  */
@@ -16,6 +16,7 @@ const PACKAGES = [
 	"@ifi/oh-pi-extensions",
 	"@ifi/oh-pi-ant-colony",
 	"@ifi/pi-extension-subagents",
+	"@ifi/pi-plan",
 	"@ifi/oh-pi-themes",
 	"@ifi/oh-pi-prompts",
 	"@ifi/oh-pi-skills",

@@ -45,6 +45,8 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 | [`@ifi/oh-pi-extensions`](./packages/extensions)          | 9 extensions (see below)                    | `pi install npm:@ifi/oh-pi-extensions`      |
 | [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)          | Multi-agent swarm extension                 | `pi install npm:@ifi/oh-pi-ant-colony`      |
 | [`@ifi/pi-extension-subagents`](./packages/subagents)     | Full-featured subagent delegation extension | `pi install npm:@ifi/pi-extension-subagents` |
+| [`@ifi/pi-plan`](./packages/plan)                         | Branch-aware planning mode extension        | `pi install npm:@ifi/pi-plan`               |
+| [`@ifi/pi-shared-qna`](./packages/shared-qna)             | Shared Q&A TUI helpers                      | (library, not installed directly)           |
 | [`@ifi/oh-pi-themes`](./packages/themes)                  | 6 color themes                              | `pi install npm:@ifi/oh-pi-themes`          |
 | [`@ifi/oh-pi-prompts`](./packages/prompts)                | 10 prompt templates                         | `pi install npm:@ifi/oh-pi-prompts`         |
 | [`@ifi/oh-pi-skills`](./packages/skills)                  | 12 skill packs                              | `pi install npm:@ifi/oh-pi-skills`          |
@@ -54,7 +56,7 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 
 ```bash
 npx @ifi/oh-pi                      # install latest versions (global)
-npx @ifi/oh-pi --version 0.2.12     # pin to a specific version
+npx @ifi/oh-pi --version 0.2.13     # pin to a specific version
 npx @ifi/oh-pi --local              # install to project .pi/settings.json
 npx @ifi/oh-pi --remove             # uninstall all oh-pi packages from pi
 ```
@@ -436,6 +438,8 @@ oh-pi/
 │   ├── extensions/             9 pi extensions (raw .ts)
 │   ├── ant-colony/             Multi-agent swarm extension (raw .ts)
 │   ├── subagents/              Subagent orchestration package (raw .ts)
+│   ├── shared-qna/             Shared Q&A TUI helper library (raw .ts)
+│   ├── plan/                   Planning mode extension (raw .ts)
 │   ├── themes/                 6 JSON theme files
 │   ├── prompts/                10 markdown prompt templates
 │   ├── skills/                 12 skill directories

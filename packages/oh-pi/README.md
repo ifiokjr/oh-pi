@@ -15,7 +15,7 @@ can load extensions with proper module resolution.
 
 ```bash
 npx @ifi/oh-pi                      # install latest versions (global)
-npx @ifi/oh-pi --version 0.2.12     # pin to a specific version
+npx @ifi/oh-pi --version 0.2.13     # pin to a specific version
 npx @ifi/oh-pi --local              # install to project .pi/settings.json
 npx @ifi/oh-pi --remove             # uninstall all oh-pi packages from pi
 ```
@@ -25,9 +25,10 @@ npx @ifi/oh-pi --remove             # uninstall all oh-pi packages from pi
 | Package                 | Contents                                                                                    |
 | ----------------------- | ------------------------------------------------------------------------------------------- |
 | `@ifi/oh-pi-extensions`      | safe-guard, git-guard, auto-session, custom-footer, compact-header, auto-update, bg-process |
-| `@ifi/oh-pi-ant-colony`      | Multi-agent swarm extension (`/colony`, colony commands)                                    |
+| `@ifi/oh-pi-ant-colony`       | Multi-agent swarm extension (`/colony`, colony commands)                                     |
 | `@ifi/pi-extension-subagents` | Subagent orchestration extension (`subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`) |
-| `@ifi/oh-pi-themes`          | cyberpunk, nord, gruvbox, tokyo-night, catppuccin, oh-p-dark                                |
+| `@ifi/pi-plan`                | Planning mode extension (`/plan`, `Alt+P`, `task_agents`, `set_plan`)                       |
+| `@ifi/oh-pi-themes`           | cyberpunk, nord, gruvbox, tokyo-night, catppuccin, oh-p-dark                                 |
 | `@ifi/oh-pi-prompts`         | review, fix, explain, refactor, test, commit, pr, and more                                  |
 | `@ifi/oh-pi-skills`          | web-search, debug-helper, git-workflow, rust-workspace-bootstrap, and more                  |
 | `@ifi/oh-pi-agents`          | AGENTS.md templates for common roles                                                        |

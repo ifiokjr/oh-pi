@@ -1,0 +1,32 @@
+{
+  "name": "@ifi/pi-shared-qna",
+  "version": "0.2.13",
+  "description": "Shared TUI question-and-answer component for pi extensions.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "tui",
+    "qna"
+  ],
+  "files": [
+    "*.ts",
+    "README.md",
+    "!**/*.test.ts",
+    "!tests/**"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/shared-qna"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/shared-qna",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-tui": "*"
+  }
+}

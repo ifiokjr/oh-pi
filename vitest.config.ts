@@ -7,6 +7,8 @@ export default defineConfig({
 			"packages/extensions/extensions/**/*.test.ts",
 			"packages/ant-colony/tests/**/*.test.ts",
 			"packages/subagents/tests/**/*.test.ts",
+			"packages/plan/tests/**/*.test.ts",
+			"packages/shared-qna/tests/**/*.test.ts",
 		],
 	},
 });
