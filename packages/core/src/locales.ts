@@ -98,7 +98,7 @@ export const messages: Record<Locale, Record<string, string>> = {
 		// preset
 		"preset.select": "Choose a preset:",
 		"preset.full": "⚫ Full Power",
-		"preset.fullHint": "All features, extensions, and skills enabled",
+		"preset.fullHint": "Recommended extensions, bg-process, and ant-colony (safe-guard stays opt-in)",
 		"preset.clean": "✨ Clean",
 		"preset.cleanHint": "Minimal setup, just the essentials",
 		"preset.colony": "🐜 Colony",
@@ -276,7 +276,7 @@ export const messages: Record<Locale, Record<string, string>> = {
 
 		"preset.select": "选择预设方案：",
 		"preset.full": "⚫ 全功能",
-		"preset.fullHint": "所有功能，包括蚁群系统",
+		"preset.fullHint": "推荐扩展 + 后台进程 + 蚁群（safe-guard 需手动启用）",
 		"preset.clean": "🟢 简洁",
 		"preset.cleanHint": "核心功能，无蚁群",
 		"preset.colony": "🐜 蚁群",
@@ -448,7 +448,7 @@ export const messages: Record<Locale, Record<string, string>> = {
 
 		"preset.select": "Choisir un préréglage :",
 		"preset.full": "⚫ Complet",
-		"preset.fullHint": "Toutes les extensions et compétences",
+		"preset.fullHint": "Extensions recommandées, bg-process et colonie (safe-guard reste optionnel)",
 		"preset.clean": "🟢 Propre",
 		"preset.cleanHint": "Configuration minimale, aucune extension",
 		"preset.colony": "🐜 Colonie",

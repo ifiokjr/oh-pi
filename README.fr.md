@@ -84,7 +84,7 @@ un pilotage humain continu.
 
 |                | Inclut                                   |
 | -------------- | ---------------------------------------- |
-| 🟢 **Complet** | Toutes extensions + colonie + bg-process |
+| 🟢 **Complet** | Extensions recommandées + colonie + bg-process (`safe-guard` reste optionnel) |
 | 🔵 **Propre**  | Aucune extension                         |
 | 🟣 **Colonie** | Colonie uniquement                       |
 

@@ -287,7 +287,7 @@ The LLM automatically deploys the colony when appropriate:
 
 |                | Theme      | Thinking | Includes                                 |
 | -------------- | ---------- | -------- | ---------------------------------------- |
-| ⚫ Full Power  | oh-pi Dark | high     | All extensions + bg-process + ant-colony |
+| ⚫ Full Power  | oh-pi Dark | high     | Recommended extensions + bg-process + ant-colony (`safe-guard` stays opt-in) |
 | 🔴 Clean       | Default    | off      | No extensions, just core                 |
 | 🐜 Colony Only | oh-pi Dark | medium   | Ant-colony with minimal setup            |
 

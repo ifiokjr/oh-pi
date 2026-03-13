@@ -8,7 +8,7 @@ interface Preset extends Omit<OhPConfig, "providers"> {}
  * Registry of built-in configuration presets (Full Power / Clean / Colony).
  * Each entry maps a preset key to its i18n label/hint keys and a full {@link Preset} config object.
  */
-const PRESETS: Record<string, { labelKey: string; hintKey: string; config: Preset }> = {
+export const PRESETS: Record<string, { labelKey: string; hintKey: string; config: Preset }> = {
 	full: {
 		labelKey: "preset.full",
 		hintKey: "preset.fullHint",
@@ -17,7 +17,6 @@ const PRESETS: Record<string, { labelKey: string; hintKey: string; config: Prese
 			keybindings: "default",
 			thinking: "high",
 			extensions: [
-				"safe-guard",
 				"git-guard",
 				"auto-session-name",
 				"custom-footer",
