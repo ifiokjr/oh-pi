@@ -1,6 +1,5 @@
 ---
-"@ifi/oh-pi-extensions": minor
-"@ifi/oh-pi": minor
+default: minor
 ---
 
 Add scheduler extension with `/loop`, `/remind`, `/schedule`, and `/unschedule` commands:

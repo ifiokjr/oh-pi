@@ -1,6 +1,5 @@
 ---
-"@ifi/oh-pi-extensions": minor
-"@ifi/oh-pi": minor
+default: minor
 ---
 
 Enhance the usage tracker dashboard to provide CodexBar-style depth:

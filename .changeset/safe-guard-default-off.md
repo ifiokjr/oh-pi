@@ -1,7 +1,5 @@
 ---
-"@ifi/oh-pi": patch
-"@ifi/oh-pi-cli": patch
-"@ifi/oh-pi-core": patch
+default: patch
 ---
 
 Disable `safe-guard` as a default-enabled extension going forward:

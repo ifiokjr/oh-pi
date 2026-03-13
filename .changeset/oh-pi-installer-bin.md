@@ -1,5 +1,5 @@
 ---
-"@ifi/oh-pi": minor
+default: minor
 ---
 
 Add `bin` installer so `npx @ifi/oh-pi` registers all sub-packages with pi.

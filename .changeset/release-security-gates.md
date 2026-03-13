@@ -1,5 +1,5 @@
 ---
-"@ifi/oh-pi": patch
+default: patch
 ---
 
 Harden release safety with security gates:

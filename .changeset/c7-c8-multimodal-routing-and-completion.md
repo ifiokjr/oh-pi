@@ -1,6 +1,5 @@
 ---
-"@ifi/oh-pi-ant-colony": minor
-"@ifi/oh-pi": minor
+default: minor
 ---
 
 Add concrete multimodal/telemetry routing capabilities and completion verification coverage:

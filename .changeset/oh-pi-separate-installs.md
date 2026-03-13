@@ -1,5 +1,5 @@
 ---
-"@ifi/oh-pi": patch
+default: patch
 ---
 
 Drop `bundledDependencies` and the `pi` resource manifest from the meta-package.

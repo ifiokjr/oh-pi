@@ -74,6 +74,72 @@ jobs:
           fi
           echo "✅ Found $CHANGESETS changeset(s)"
 
+          python3 - <<'PY'
+          from pathlib import Path
+          import sys
+
+          allowed = {"major", "minor", "patch"}
+          failed = False
+
+          for path in sorted(Path(".changeset").glob("*.md")):
+              if path.name == "README.md":
+                  continue
+
+              text = path.read_text(encoding="utf-8")
+              if not text.startswith("---\n"):
+                  print(f"::error file={path}::Missing opening frontmatter delimiter '---'")
+                  failed = True
+                  continue
+
+              try:
+                  _, frontmatter, _ = text.split("---", 2)
+              except ValueError:
+                  print(f"::error file={path}::Invalid changeset frontmatter")
+                  failed = True
+                  continue
+
+              entries = []
+              invalid_lines = []
+              for raw_line in frontmatter.strip().splitlines():
+                  line = raw_line.strip()
+                  if not line:
+                      continue
+                  if ":" not in line:
+                      invalid_lines.append(raw_line)
+                      continue
+                  key, value = line.split(":", 1)
+                  key = key.strip().strip('"').strip("'")
+                  entries.append((key, value.strip()))
+
+              if invalid_lines:
+                  print(f"::error file={path}::Invalid frontmatter line(s): {' | '.join(invalid_lines)}")
+                  failed = True
+                  continue
+
+              if len(entries) != 1 or entries[0][0] != "default":
+                  found = ", ".join(key for key, _ in entries) or "(none)"
+                  print(
+                      f"::error file={path}::This repo uses lockstep knope versioning. "
+                      f"Changesets must use exactly one frontmatter key: default. Found: {found}"
+                  )
+                  failed = True
+                  continue
+
+              change_type = entries[0][1]
+              if change_type not in allowed:
+                  print(
+                      f"::error file={path}::Unsupported change type '{change_type}'. "
+                      "Use one of: major, minor, patch"
+                  )
+                  failed = True
+
+          if failed:
+              print("Changeset frontmatter must be:\n---\ndefault: patch|minor|major\n---")
+              sys.exit(1)
+
+          print("✅ All changesets use lockstep default frontmatter")
+          PY
+
   dependency-review:
     name: Dependency Review
     if: github.event_name == 'pull_request'

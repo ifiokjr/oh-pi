@@ -1,6 +1,5 @@
 ---
-"@ifi/oh-pi-skills": minor
-"@ifi/oh-pi": minor
+default: minor
 ---
 
 Add a new `rust-workspace-bootstrap` skill that scaffolds a Rust workspace template inspired by `mdt` and `pina`, including:

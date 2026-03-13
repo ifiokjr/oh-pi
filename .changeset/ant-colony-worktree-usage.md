@@ -1,7 +1,5 @@
 ---
-"@ifi/oh-pi-ant-colony": minor
-"@ifi/oh-pi-extensions": minor
-"@ifi/oh-pi": minor
+default: minor
 ---
 
 Improve colony isolation and cost visibility:

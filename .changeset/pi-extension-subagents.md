@@ -1,6 +1,5 @@
 ---
-"@ifi/pi-extension-subagents": minor
-"@ifi/oh-pi": minor
+default: minor
 ---
 
 Add `@ifi/pi-extension-subagents`, a full-featured subagent orchestration package built on top of

@@ -4,6 +4,7 @@ repo = "oh-pi"
 
 # All packages share the same version (lockstep releases).
 # Knope bumps all versioned_files together.
+# Changeset frontmatter must therefore use `default`, not package names.
 [package]
 versioned_files = [
   "packages/core/package.json",

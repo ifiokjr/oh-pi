@@ -1,6 +1,5 @@
 ---
-"@ifi/oh-pi-ant-colony": patch
-"@ifi/oh-pi": patch
+default: patch
 ---
 
 Fix ant-colony JSON task-plan parsing so malformed scout output no longer produces invalid execution plans:

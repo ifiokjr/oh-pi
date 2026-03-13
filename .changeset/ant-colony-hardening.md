@@ -1,6 +1,5 @@
 ---
-"@ifi/oh-pi-ant-colony": patch
-"@ifi/oh-pi": patch
+default: patch
 ---
 
 Harden and align ant-colony runtime behavior:

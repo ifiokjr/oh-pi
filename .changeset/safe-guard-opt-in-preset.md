@@ -1,7 +1,5 @@
 ---
-"@ifi/oh-pi-cli": patch
-"@ifi/oh-pi-core": patch
-"@ifi/oh-pi": patch
+default: patch
 ---
 
 Keep `safe-guard` opt-in across the configurator defaults by removing it from the "Full Power"

@@ -370,6 +370,8 @@ cd oh-pi
 pnpm install
 ```
 
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for contributor workflow, changeset requirements, and PR guidelines.
+
 ### Commands
 
 ```bash
@@ -390,7 +392,20 @@ pnpm format         # Format all files
 knope document-change
 ```
 
-This creates a file in `.changeset/` describing the change. Choose the change type:
+This creates a file in `.changeset/` describing the change. Because this repo uses lockstep
+versioning and a single knope `[package]`, changeset frontmatter must use **only** `default` as
+the key:
+
+```md
+---
+default: patch
+---
+```
+
+Do not use package names like `@ifi/oh-pi` or `@ifi/oh-pi-extensions` in changeset frontmatter
+here — knope ignores those entries in this repo.
+
+Choose the change type:
 
 - **`major`** — Breaking changes
 - **`minor`** — New features

@@ -1,6 +1,5 @@
 ---
-"@ifi/oh-pi-skills": minor
-"@ifi/oh-pi": minor
+default: minor
 ---
 
 Add a new `flutter-serverpod-mvp` skill for bootstrapping OpenBudget-style full-stack projects:

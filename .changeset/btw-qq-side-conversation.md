@@ -1,7 +1,5 @@
 ---
-"@ifi/oh-pi-extensions": minor
-"@ifi/oh-pi-skills": minor
-"@ifi/oh-pi": minor
+default: minor
 ---
 
 Add `/btw` and `/qq` side-conversation extension and skill:

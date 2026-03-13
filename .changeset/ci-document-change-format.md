@@ -1,5 +1,5 @@
 ---
-"@ifi/oh-pi": patch
+default: patch
 ---
 
 Improve project automation ergonomics:
