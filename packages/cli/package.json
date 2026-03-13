@@ -29,6 +29,9 @@
     "@ifi/oh-pi-prompts": "workspace:*",
     "@ifi/oh-pi-skills": "workspace:*",
     "@ifi/oh-pi-themes": "workspace:*",
+    "@ifi/pi-extension-subagents": "workspace:*",
+    "@ifi/pi-plan": "workspace:*",
+    "@ifi/pi-shared-qna": "workspace:*",
     "@ifi/pi-spec": "workspace:*",
     "chalk": "^5.6.2"
   },

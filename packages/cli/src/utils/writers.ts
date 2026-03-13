@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { OhPConfig } from "@ifi/oh-pi-core";
 import { KEYBINDING_SCHEMES, MODEL_CAPABILITIES, PROVIDERS } from "@ifi/oh-pi-core";
@@ -20,6 +20,30 @@ function readJson<T>(file: string): T | null {
 		return JSON.parse(readFileSync(file, "utf8")) as T;
 	} catch {
 		return null;
+	}
+}
+
+function syncPackageRoot(src: string, dest: string, excludedEntries: string[]) {
+	ensureDir(dest);
+	const allowedEntries = new Set<string>();
+	const excluded = new Set(excludedEntries);
+	for (const entry of readdirSync(src, { withFileTypes: true })) {
+		if (excluded.has(entry.name)) {
+			continue;
+		}
+		allowedEntries.add(entry.name);
+		const srcPath = join(src, entry.name);
+		const destPath = join(dest, entry.name);
+		if (entry.isDirectory()) {
+			syncDir(srcPath, destPath);
+		} else {
+			copyFileSync(srcPath, destPath);
+		}
+	}
+	for (const entry of readdirSync(dest, { withFileTypes: true })) {
+		if (!allowedEntries.has(entry.name)) {
+			rmSync(join(dest, entry.name), { recursive: true, force: true });
+		}
 	}
 }
 
@@ -197,24 +221,52 @@ export function writeAgents(agentDir: string, config: OhPConfig) {
 	}
 }
 
+function copyDedicatedExtension(extDir: string, extensionName: string, sourceDir: string) {
+	if (existsSync(sourceDir)) {
+		syncDir(sourceDir, join(extDir, extensionName));
+	}
+}
+
+function copyPlanExtension(extDir: string) {
+	const planDest = join(extDir, "plan");
+	const planSrc = resources.planDir();
+	if (!existsSync(planSrc)) {
+		return;
+	}
+
+	syncPackageRoot(planSrc, planDest, ["README.md", "install.mjs", "node_modules", "tests"]);
+	const vendoredPackageDir = join(planDest, "node_modules", "@ifi");
+	const sharedQnaSrc = resources.sharedQnaDir();
+	if (existsSync(sharedQnaSrc)) {
+		syncPackageRoot(sharedQnaSrc, join(vendoredPackageDir, "pi-shared-qna"), ["README.md", "tests"]);
+	}
+	const subagentsSrc = resources.subagentsDir();
+	if (existsSync(subagentsSrc)) {
+		syncPackageRoot(subagentsSrc, join(vendoredPackageDir, "pi-extension-subagents"), [
+			"README.md",
+			"banner.png",
+			"install.mjs",
+			"node_modules",
+			"tests",
+		]);
+	}
+}
+
 /** Copy selected extensions to the agent directory. */
 export function writeExtensions(agentDir: string, config: OhPConfig) {
 	const extDir = join(agentDir, "extensions");
 	ensureDir(extDir);
 	for (const ext of config.extensions) {
-		// ant-colony and spec live in dedicated packages
 		if (ext === "ant-colony") {
-			const colonySrc = resources.antColonyDir();
-			if (existsSync(colonySrc)) {
-				syncDir(colonySrc, join(extDir, "ant-colony"));
-			}
+			copyDedicatedExtension(extDir, "ant-colony", resources.antColonyDir());
+			continue;
+		}
+		if (ext === "plan") {
+			copyPlanExtension(extDir);
 			continue;
 		}
 		if (ext === "spec") {
-			const specSrc = resources.specDir();
-			if (existsSync(specSrc)) {
-				syncDir(specSrc, join(extDir, "spec"));
-			}
+			copyDedicatedExtension(extDir, "spec", resources.specDir());
 			continue;
 		}
 		const dirSrc = resources.extension(ext);

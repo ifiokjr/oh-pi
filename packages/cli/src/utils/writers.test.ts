@@ -33,6 +33,23 @@ afterEach(() => {
 });
 
 describe("writeExtensions", () => {
+	it("copies the dedicated plan package into the local extensions directory with vendored runtime deps", () => {
+		const dir = makeTempDir();
+		writeExtensions(
+			dir,
+			makeConfig({
+				extensions: ["plan"],
+			}),
+		);
+
+		expect(existsSync(join(dir, "extensions", "plan", "index.ts"))).toBe(true);
+		expect(existsSync(join(dir, "extensions", "plan", "prompts", "PLAN.prompt.md"))).toBe(true);
+		expect(existsSync(join(dir, "extensions", "plan", "node_modules", "@ifi", "pi-shared-qna", "index.ts"))).toBe(true);
+		expect(
+			existsSync(join(dir, "extensions", "plan", "node_modules", "@ifi", "pi-extension-subagents", "execution.ts")),
+		).toBe(true);
+	});
+
 	it("copies the dedicated spec package into the local extensions directory", () => {
 		const dir = makeTempDir();
 		writeExtensions(

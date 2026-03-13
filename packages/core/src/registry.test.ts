@@ -75,6 +75,12 @@ describe("EXTENSIONS", () => {
 		expect(safeGuard?.default).toBe(false);
 	});
 
+	it("exposes the optional plan mode extension", () => {
+		const plan = EXTENSIONS.find((ext) => ext.name === "plan");
+		expect(plan).toBeDefined();
+		expect(plan?.default).toBe(false);
+	});
+
 	it("exposes the optional spec workflow extension", () => {
 		const spec = EXTENSIONS.find((ext) => ext.name === "spec");
 		expect(spec).toBeDefined();
