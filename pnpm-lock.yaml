@@ -6,6 +6,7 @@ settings:
 
 overrides:
   file-type: 21.3.1
+  undici: 7.24.0
 
 importers:
 
@@ -73,6 +74,15 @@ importers:
       '@ifi/oh-pi-themes':
         specifier: workspace:*
         version: link:../themes
+      '@ifi/pi-extension-subagents':
+        specifier: workspace:*
+        version: link:../subagents
+      '@ifi/pi-plan':
+        specifier: workspace:*
+        version: link:../plan
+      '@ifi/pi-shared-qna':
+        specifier: workspace:*
+        version: link:../shared-qna
       '@ifi/pi-spec':
         specifier: workspace:*
         version: link:../spec
@@ -1840,8 +1850,8 @@ packages:
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
-  undici@7.22.0:
-    resolution: {integrity: sha512-RqslV2Us5BrllB+JeiZnK4peryVTndy9Dnqq62S3yYRRTj0tFQCwEniUy2167skdGOy3vqRzEvl1Dm4sV2ReDg==}
+  undici@7.24.0:
+    resolution: {integrity: sha512-jxytwMHhsbdpBXxLAcuu0fzlQeXCNnWdDyRHpvWsUl8vd98UwYdl9YTyn8/HcpcJPC3pwUveefsa3zTxyD/ERg==}
     engines: {node: '>=20.18.1'}
 
   vite-node@3.2.4:
@@ -2590,7 +2600,7 @@ snapshots:
       openai: 6.10.0(ws@8.19.0)(zod@3.25.76)
       partial-json: 0.1.7
       proxy-agent: 6.5.0
-      undici: 7.22.0
+      undici: 7.24.0
       zod-to-json-schema: 3.25.1(zod@3.25.76)
     transitivePeerDependencies:
       - '@modelcontextprotocol/sdk'
@@ -2620,7 +2630,7 @@ snapshots:
       minimatch: 10.2.4
       proper-lockfile: 4.1.2
       strip-ansi: 7.2.0
-      undici: 7.22.0
+      undici: 7.24.0
       yaml: 2.8.2
     optionalDependencies:
       '@mariozechner/clipboard': 0.3.2
@@ -3859,7 +3869,7 @@ snapshots:
 
   undici-types@6.21.0: {}
 
-  undici@7.22.0: {}
+  undici@7.24.0: {}
 
   vite-node@3.2.4(@types/node@22.19.13)(yaml@2.8.2):
     dependencies:

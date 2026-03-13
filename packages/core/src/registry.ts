@@ -75,6 +75,11 @@ export const EXTENSIONS = [
 		default: false,
 	},
 	{
+		name: "plan",
+		label: "🗺️ Plan Mode — Branch-aware planning and delegated research via /plan",
+		default: false,
+	},
+	{
 		name: "spec",
 		label: "📐 Spec Workflow — Native spec-driven planning and implementation via /spec",
 		default: false,

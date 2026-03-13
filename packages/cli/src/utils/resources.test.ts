@@ -20,6 +20,24 @@ describe("resources", () => {
 		expect(p.startsWith("/")).toBe(true);
 	});
 
+	it("planDir returns correct path", () => {
+		const p = resources.planDir();
+		expect(p).toContain("packages/plan");
+		expect(p.startsWith("/")).toBe(true);
+	});
+
+	it("sharedQnaDir returns correct path", () => {
+		const p = resources.sharedQnaDir();
+		expect(p).toContain("packages/shared-qna");
+		expect(p.startsWith("/")).toBe(true);
+	});
+
+	it("subagentsDir returns correct path", () => {
+		const p = resources.subagentsDir();
+		expect(p).toContain("packages/subagents");
+		expect(p.startsWith("/")).toBe(true);
+	});
+
 	it("prompt returns correct path", () => {
 		const p = resources.prompt("test");
 		expect(p).toContain("prompts/test.md");
