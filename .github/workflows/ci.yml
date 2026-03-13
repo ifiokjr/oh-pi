@@ -149,7 +149,32 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
 
+      - name: Check dependency graph availability
+        id: dependency-graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          OWNER="${REPOSITORY%/*}"
+          REPO="${REPOSITORY#*/}"
+          TOTAL_COUNT="$(gh api graphql \
+            -f query='query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { dependencyGraphManifests(first: 1) { totalCount } } }' \
+            -F owner="$OWNER" \
+            -F name="$REPO" \
+            --jq '.data.repository.dependencyGraphManifests.totalCount')"
+
+          echo "total-count=$TOTAL_COUNT" >> "$GITHUB_OUTPUT"
+
+          if [ "$TOTAL_COUNT" -gt 0 ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Dependency graph is available ($TOTAL_COUNT manifest(s) indexed)"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping dependency review because GitHub dependency graph manifests are unavailable for this repository. Enable Dependency graph in repository settings to enforce this check."
+          fi
+
       - name: Review dependency changes
+        if: steps.dependency-graph.outputs.available == 'true'
         uses: actions/dependency-review-action@v4.9.0
         with:
           fail-on-severity: moderate
