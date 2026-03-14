@@ -60,6 +60,14 @@ describe("discoverAgents", () => {
 		expect(names).toContain("planner");
 		expect(names).toContain("worker");
 		expect(names).toContain("reviewer");
+		expect(names).toContain("artist");
+		expect(names).toContain("frontend-designer");
+		expect(names).toContain("multimodal-summariser");
+
+		const byName = new Map(result.agents.map((agent) => [agent.name, agent]));
+		expect(byName.get("artist")?.model).toBe("gemini-3.1-pro-high");
+		expect(byName.get("frontend-designer")?.model).toBe("claude-opus-4-6");
+		expect(byName.get("multimodal-summariser")?.model).toBe("gemini-3-flash");
 		expect(result.projectAgentsDir).toBeNull();
 	});
 
