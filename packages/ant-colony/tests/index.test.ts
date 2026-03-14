@@ -289,6 +289,14 @@ describe("ant-colony extension commands", () => {
 		}
 	});
 
+	it("registers a non-conflicting shortcut for the colony details panel", () => {
+		expect(pi.registerShortcut).toHaveBeenCalledWith(
+			"ctrl+shift+c",
+			expect.objectContaining({ description: "Show ant colony details" }),
+		);
+		expect(pi.registerShortcut).not.toHaveBeenCalledWith("ctrl+shift+a", expect.anything());
+	});
+
 	it("/colony-stop all aborts all running colonies", async () => {
 		const colonyCmd = pi._commands.get("colony");
 		await colonyCmd.handler("First swarm goal", ctx);
