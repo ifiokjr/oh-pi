@@ -690,8 +690,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		return container;
 	});
 
-	// ═══ Shortcut: Ctrl+Shift+A opens colony details panel ═══
-	pi.registerShortcut("ctrl+shift+a", {
+	// ═══ Shortcut: Ctrl+Shift+C opens colony details panel ═══
+	pi.registerShortcut("ctrl+shift+c", {
 		description: "Show ant colony details",
 		async handler(ctx) {
 			if (colonies.size === 0) {
