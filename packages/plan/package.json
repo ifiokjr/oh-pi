@@ -1,6 +1,6 @@
 {
   "name": "@ifi/pi-plan",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Planning mode extension for pi with persistent plan files, branch-aware planning, and delegated research tasks.",
   "type": "module",
   "keywords": [

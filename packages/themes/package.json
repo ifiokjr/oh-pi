@@ -1,6 +1,6 @@
 {
   "name": "@ifi/oh-pi-themes",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Color themes for pi: cyberpunk, nord, gruvbox, tokyo-night, catppuccin, and more.",
   "keywords": [
     "pi-package"

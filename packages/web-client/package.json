@@ -1,6 +1,6 @@
 {
   "name": "@ifi/pi-web-client",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Platform-agnostic TypeScript client for pi-web remote sessions. Zero dependencies.",
   "type": "module",
   "main": "./dist/index.js",
