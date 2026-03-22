@@ -86,8 +86,13 @@ function makeAuthJson(overrides: Record<string, any> = {}) {
 	});
 }
 
-function makeFetchResponse(opts: { status?: number; ok?: boolean; headers?: Record<string, string> } = {}) {
-	const headers = new Map(Object.entries(opts.headers ?? {}));
+function makeFetchResponse(
+	opts: { status?: number; ok?: boolean; headers?: Record<string, string>; body?: unknown } = {},
+) {
+	const headers = new Map(
+		Object.entries(opts.headers ?? {}).map(([key, value]) => [key.toLowerCase(), value] as const),
+	);
+	const body = opts.body ?? {};
 	return {
 		ok:
 			opts.ok ?? (opts.status === undefined || (opts.status !== undefined && opts.status >= 200 && opts.status < 300)),
@@ -96,7 +101,7 @@ function makeFetchResponse(opts: { status?: number; ok?: boolean; headers?: Reco
 			get: (key: string) => headers.get(key.toLowerCase()) ?? null,
 			...headers,
 		},
-		json: async () => ({}),
+		json: async () => body,
 	};
 }
 
@@ -578,16 +583,22 @@ describe("usage-tracker extension", () => {
 			expect(text).toContain("30d:");
 		});
 
-		it("shows rate limit windows from Anthropic API response headers", async () => {
+		it("shows rate limit windows from Anthropic OAuth usage endpoint", async () => {
 			mockFetch.mockResolvedValue(
 				makeFetchResponse({
-					headers: {
-						"anthropic-ratelimit-requests-limit": "50",
-						"anthropic-ratelimit-requests-remaining": "36",
-						"anthropic-ratelimit-requests-reset": new Date(Date.now() + 30_000).toISOString(),
-						"anthropic-ratelimit-tokens-limit": "40000",
-						"anthropic-ratelimit-tokens-remaining": "24000",
-						"anthropic-ratelimit-tokens-reset": new Date(Date.now() + 30_000).toISOString(),
+					body: {
+						five_hour: {
+							utilization: 64,
+							resets_at: new Date(Date.now() + 30_000).toISOString(),
+						},
+						seven_day: {
+							utilization: 18,
+							resets_at: new Date(Date.now() + 3_600_000).toISOString(),
+						},
+						seven_day_sonnet: {
+							utilization: 33,
+							resets_at: new Date(Date.now() + 7_200_000).toISOString(),
+						},
 					},
 				}),
 			);
@@ -601,8 +612,8 @@ describe("usage-tracker extension", () => {
 			const text = result.content[0].text;
 
 			expect(text).toContain("Anthropic Rate Limits:");
-			expect(text).toContain("Requests");
-			expect(text).toContain("Tokens");
+			expect(text).toContain("5-hour");
+			expect(text).toContain("7-day");
 			expect(text).toContain("Most constrained:");
 			expect(text).toContain("Avg/turn:");
 			expect(text).toContain("Cache:");
@@ -648,6 +659,20 @@ describe("usage-tracker extension", () => {
 
 			expect(text).toContain("Anthropic auth token expired");
 			expect(text).toContain("re-authenticate in pi settings");
+		});
+
+		it("shows a non-auth note when Anthropic OAuth usage endpoint is rate-limited", async () => {
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			const text = result.content[0].text;
+
+			expect(text).toContain("Anthropic OAuth usage endpoint is rate-limited");
+			expect(text).not.toContain("Anthropic auth token expired");
 		});
 
 		it("shows OpenAI auth expired error when API returns 401", async () => {
@@ -751,13 +776,15 @@ describe("usage-tracker extension", () => {
 		it("shows overlay with rate limit detail sections from API probes", async () => {
 			mockFetch.mockResolvedValue(
 				makeFetchResponse({
-					headers: {
-						"anthropic-ratelimit-requests-limit": "50",
-						"anthropic-ratelimit-requests-remaining": "42",
-						"anthropic-ratelimit-requests-reset": new Date(Date.now() + 45_000).toISOString(),
-						"anthropic-ratelimit-tokens-limit": "40000",
-						"anthropic-ratelimit-tokens-remaining": "26000",
-						"anthropic-ratelimit-tokens-reset": new Date(Date.now() + 45_000).toISOString(),
+					body: {
+						five_hour: {
+							utilization: 58,
+							resets_at: new Date(Date.now() + 45_000).toISOString(),
+						},
+						seven_day: {
+							utilization: 21,
+							resets_at: new Date(Date.now() + 3_600_000).toISOString(),
+						},
 					},
 				}),
 			);

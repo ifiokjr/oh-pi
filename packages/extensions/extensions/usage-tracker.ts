@@ -604,12 +604,56 @@ function resetCountdown(isoOrDuration: string): string | null {
 
 // ─── Direct API probes ──────────────────────────────────────────────────────
 
+/** Anthropic OAuth usage endpoint constants (mirrors Claude Code/CodexBar behavior). */
+const ANTHROPIC_OAUTH_USAGE_PATH = "/api/oauth/usage";
+const ANTHROPIC_OAUTH_USAGE_BETA = "oauth-2025-04-20";
+const ANTHROPIC_OAUTH_USER_AGENT = "claude-code/2.1.0";
+
+function isAnthropicOAuthToken(token: string): boolean {
+	return token.trim().startsWith("sk-ant-oat");
+}
+
+function isAnthropicApiKeyToken(token: string): boolean {
+	return token.trim().startsWith("sk-ant-api");
+}
+
+function utilizationToPercentLeft(utilization: number): number {
+	const usedPercent = utilization <= 1 ? utilization * 100 : utilization;
+	return clampPercent(100 - usedPercent);
+}
+
+function maybeAddAnthropicOAuthWindow(
+	result: ProviderRateLimits,
+	entry: unknown,
+	label: string,
+	windowMinutes: number,
+): void {
+	if (!(entry && typeof entry === "object")) {
+		return;
+	}
+	// biome-ignore lint/style/useNamingConvention: Anthropic OAuth payload uses snake_case keys.
+	const typed = entry as { utilization?: unknown; resets_at?: unknown };
+	const utilization = typed.utilization;
+	if (!(typeof utilization === "number" && Number.isFinite(utilization))) {
+		return;
+	}
+	const resetRaw = typed.resets_at;
+	const reset = typeof resetRaw === "string" ? resetRaw : null;
+	upsertWindow(result.windows, {
+		label,
+		percentLeft: utilizationToPercentLeft(utilization),
+		resetDescription: reset ? resetCountdown(reset) : null,
+		windowMinutes,
+	});
+}
+
 /**
- * Probe Anthropic API for rate limits using pi-managed OAuth token.
+ * Probe Anthropic rate limits.
  *
- * Calls `POST /v1/messages/count_tokens` (free, no generation cost) and reads
- * rate limit info from the response headers.
+ * OAuth tokens (pi login) use `GET /api/oauth/usage`.
+ * API-key tokens use `POST /v1/messages/count_tokens` and headers.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Handles OAuth and API-key probe flows with provider-specific status semantics.
 async function probeAnthropicDirect(token: string): Promise<ProviderRateLimits> {
 	const result: ProviderRateLimits = {
 		provider: "anthropic",
@@ -623,14 +667,66 @@ async function probeAnthropicDirect(token: string): Promise<ProviderRateLimits> 
 	};
 
 	try {
+		if (isAnthropicOAuthToken(token)) {
+			const response = await fetch(`${PROVIDER_API_BASE.anthropic}${ANTHROPIC_OAUTH_USAGE_PATH}`, {
+				method: "GET",
+				headers: {
+					authorization: `Bearer ${token}`,
+					accept: "application/json",
+					"content-type": "application/json",
+					"anthropic-beta": ANTHROPIC_OAUTH_USAGE_BETA,
+					"user-agent": ANTHROPIC_OAUTH_USER_AGENT,
+				},
+				signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+			});
+
+			if (response.status === 401) {
+				result.error = "Anthropic auth token expired \u2014 re-authenticate in pi settings.";
+				return result;
+			}
+			if (response.status === 429) {
+				const retryAfter = Number.parseInt(response.headers.get("retry-after") ?? "", 10);
+				const retryHint = Number.isFinite(retryAfter)
+					? ` (retry in ${fmtDuration(Math.max(0, retryAfter) * 1000)})`
+					: "";
+				result.note = `Anthropic OAuth usage endpoint is rate-limited${retryHint}.`;
+				result.plan = "OAuth";
+				return result;
+			}
+			if (!response.ok) {
+				result.note = `Anthropic OAuth usage endpoint returned ${response.status} — rate limit details unavailable.`;
+				result.plan = "OAuth";
+				return result;
+			}
+
+			const payload = (await response.json()) as Record<string, unknown>;
+			maybeAddAnthropicOAuthWindow(result, payload.five_hour, "5-hour", 300);
+			maybeAddAnthropicOAuthWindow(result, payload.seven_day, "7-day", 10_080);
+			maybeAddAnthropicOAuthWindow(result, payload.seven_day_oauth_apps, "7-day OAuth Apps", 10_080);
+			maybeAddAnthropicOAuthWindow(result, payload.seven_day_sonnet, "7-day Sonnet", 10_080);
+			maybeAddAnthropicOAuthWindow(result, payload.seven_day_opus, "7-day Opus", 10_080);
+			result.plan = "OAuth";
+			if (result.windows.length === 0) {
+				result.note = "Anthropic OAuth usage response did not include window data.";
+			}
+			return result;
+		}
+
+		// Fallback path for API-key style Anthropic credentials.
+		const headers: Record<string, string> = {
+			"anthropic-version": "2023-06-01",
+			"anthropic-beta": "token-counting-2024-11-01",
+			"content-type": "application/json",
+		};
+		if (isAnthropicApiKeyToken(token)) {
+			headers["x-api-key"] = token;
+		} else {
+			headers.authorization = `Bearer ${token}`;
+		}
+
 		const response = await fetch(`${PROVIDER_API_BASE.anthropic}/v1/messages/count_tokens`, {
 			method: "POST",
-			headers: {
-				authorization: `Bearer ${token}`,
-				"anthropic-version": "2023-06-01",
-				"anthropic-beta": "token-counting-2024-11-01",
-				"content-type": "application/json",
-			},
+			headers,
 			body: JSON.stringify({
 				model: "claude-sonnet-4-20250514",
 				messages: [{ role: "user", content: "hi" }],
@@ -675,7 +771,7 @@ async function probeAnthropicDirect(token: string): Promise<ProviderRateLimits> 
 			});
 		}
 
-		result.plan = "OAuth";
+		result.plan = isAnthropicApiKeyToken(token) ? "API key" : "OAuth";
 	} catch (e) {
 		if (e instanceof Error && e.name === "TimeoutError") {
 			result.error = "Anthropic API probe timed out";
