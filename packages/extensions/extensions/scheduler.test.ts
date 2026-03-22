@@ -114,9 +114,12 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import schedulerExtension, {
 	computeNextCronRunAt,
 	DEFAULT_LOOP_INTERVAL,
+	DISPATCH_RATE_LIMIT_WINDOW_MS,
 	FIFTEEN_MINUTES,
 	formatDurationShort,
+	MAX_DISPATCHES_PER_WINDOW,
 	MAX_TASKS,
+	MIN_RECURRING_INTERVAL,
 	normalizeCronExpression,
 	normalizeDuration,
 	ONE_MINUTE,
@@ -280,6 +283,11 @@ describe("normalizeCronExpression", () => {
 		expect(result!.note).toBeUndefined();
 	});
 
+	it("rejects cron schedules faster than 1 minute", () => {
+		expect(normalizeCronExpression("*/30 * * * * *")).toBeUndefined();
+		expect(normalizeCronExpression("* * * * * *")).toBeUndefined();
+	});
+
 	it("rejects empty input", () => {
 		expect(normalizeCronExpression("")).toBeUndefined();
 	});
@@ -399,6 +407,10 @@ describe("parseLoopScheduleArgs", () => {
 		expect(parseLoopScheduleArgs("cron nope check deployment")).toBeUndefined();
 	});
 
+	it("rejects explicit cron schedules faster than 1 minute", () => {
+		expect(parseLoopScheduleArgs("cron */30 * * * * * check deployment")).toBeUndefined();
+	});
+
 	it("handles word-form duration: /loop check CI every 30 minutes", () => {
 		const result = parseLoopScheduleArgs("check CI every 30 minutes");
 		expect(result).toBeDefined();
@@ -485,6 +497,14 @@ describe("validateSchedulePromptAddInput", () => {
 
 	it("rejects invalid cron", () => {
 		const result = validateSchedulePromptAddInput({ kind: "recurring", cron: "not-a-cron" });
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.error).toBe("invalid_cron");
+		}
+	});
+
+	it("rejects recurring cron schedules faster than 1 minute", () => {
+		const result = validateSchedulePromptAddInput({ kind: "recurring", cron: "*/30 * * * * *" });
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.error).toBe("invalid_cron");
@@ -592,6 +612,12 @@ describe("SchedulerRuntime", () => {
 
 		it("returns undefined for invalid cron task", () => {
 			const task = runtime.addRecurringCronTask("check ci", "invalid");
+			expect(task).toBeUndefined();
+			expect(runtime.taskCount).toBe(0);
+		});
+
+		it("returns undefined for sub-minute cron task", () => {
+			const task = runtime.addRecurringCronTask("check ci", "*/30 * * * * *");
 			expect(task).toBeUndefined();
 			expect(runtime.taskCount).toBe(0);
 		});
@@ -920,6 +946,60 @@ describe("SchedulerRuntime", () => {
 			expect(task.nextRunAt).toBeGreaterThan(firstNextRun);
 		});
 
+		it("self-heals unsafe interval values when dispatching", () => {
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+
+			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
+			task.intervalMs = 0;
+			task.nextRunAt = Date.now();
+			task.pending = true;
+
+			runtime.dispatchTask(task);
+
+			expect(task.intervalMs).toBe(ONE_MINUTE);
+			expect(task.nextRunAt).toBeGreaterThan(Date.now());
+		});
+
+		it("applies a global dispatch rate limit fuse", () => {
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+
+			const tasks = Array.from({ length: MAX_DISPATCHES_PER_WINDOW + 2 }, (_, i) => {
+				const task = runtime.addRecurringIntervalTask(`check ${i}`, 5 * ONE_MINUTE);
+				task.pending = true;
+				return task;
+			});
+
+			for (const task of tasks) {
+				runtime.dispatchTask(task);
+			}
+
+			expect(pi._userMessages).toHaveLength(MAX_DISPATCHES_PER_WINDOW);
+			expect(tasks[MAX_DISPATCHES_PER_WINDOW].pending).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduler throttled"))).toBe(true);
+		});
+
+		it("resets dispatch capacity after the rate-limit window", () => {
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+
+			for (let i = 0; i < MAX_DISPATCHES_PER_WINDOW; i++) {
+				const task = runtime.addRecurringIntervalTask(`check ${i}`, 5 * ONE_MINUTE);
+				task.pending = true;
+				runtime.dispatchTask(task);
+			}
+			expect(pi._userMessages).toHaveLength(MAX_DISPATCHES_PER_WINDOW);
+
+			vi.advanceTimersByTime(DISPATCH_RATE_LIMIT_WINDOW_MS + 1_000);
+
+			const nextTask = runtime.addRecurringIntervalTask("after window", 5 * ONE_MINUTE);
+			nextTask.pending = true;
+			runtime.dispatchTask(nextTask);
+
+			expect(pi._userMessages).toHaveLength(MAX_DISPATCHES_PER_WINDOW + 1);
+		});
+
 		it("does not dispatch disabled task", () => {
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
@@ -1070,6 +1150,35 @@ describe("SchedulerRuntime", () => {
 							nextRunAt: now - ONE_MINUTE,
 							intervalMs: 5 * ONE_MINUTE,
 							expiresAt: now - ONE_MINUTE, // Already expired
+							jitterMs: 0,
+							runCount: 0,
+							pending: false,
+						},
+					],
+				}),
+			);
+
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+			expect(runtime.taskCount).toBe(0);
+		});
+
+		it("skips unsafe sub-minute cron tasks when loading from disk", () => {
+			const now = Date.now();
+			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
+				JSON.stringify({
+					version: 1,
+					tasks: [
+						{
+							id: "unsafe1",
+							prompt: "too frequent",
+							kind: "recurring",
+							enabled: true,
+							createdAt: now,
+							nextRunAt: now + ONE_MINUTE,
+							cronExpression: "*/30 * * * * *",
+							expiresAt: now + THREE_DAYS,
 							jitterMs: 0,
 							runCount: 0,
 							pending: false,
@@ -1772,6 +1881,15 @@ describe("constants", () => {
 
 	it("DEFAULT_LOOP_INTERVAL is 10 * ONE_MINUTE", () => {
 		expect(DEFAULT_LOOP_INTERVAL).toBe(10 * 60_000);
+	});
+
+	it("MIN_RECURRING_INTERVAL is 1 minute", () => {
+		expect(MIN_RECURRING_INTERVAL).toBe(ONE_MINUTE);
+	});
+
+	it("dispatch rate limit defaults to 6 tasks per minute", () => {
+		expect(DISPATCH_RATE_LIMIT_WINDOW_MS).toBe(ONE_MINUTE);
+		expect(MAX_DISPATCHES_PER_WINDOW).toBe(6);
 	});
 });
 

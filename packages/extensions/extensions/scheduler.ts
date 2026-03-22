@@ -25,6 +25,9 @@ export const ONE_MINUTE = 60_000;
 export const FIFTEEN_MINUTES = 15 * ONE_MINUTE;
 export const THREE_DAYS = 3 * 24 * 60 * ONE_MINUTE;
 export const DEFAULT_LOOP_INTERVAL = 10 * ONE_MINUTE;
+export const MIN_RECURRING_INTERVAL = ONE_MINUTE;
+export const DISPATCH_RATE_LIMIT_WINDOW_MS = ONE_MINUTE;
+export const MAX_DISPATCHES_PER_WINDOW = 6;
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -91,6 +94,12 @@ export function normalizeCronExpression(rawInput: string): { expression: string;
 		// biome-ignore lint/suspicious/noEmptyBlockStatements: Cron requires a callback
 		const cron = new Cron(expression, () => {});
 		cron.stop();
+
+		const cadenceMs = computeCronCadenceMs(expression);
+		if (cadenceMs !== undefined && cadenceMs < MIN_RECURRING_INTERVAL) {
+			return undefined;
+		}
+
 		return {
 			expression,
 			note: fields.length === 5 ? "Interpreted as 5-field cron and normalized by prepending seconds=0." : undefined,
@@ -107,6 +116,26 @@ export function computeNextCronRunAt(expression: string, fromTs = Date.now()): n
 		const next = cron.nextRun(new Date(fromTs));
 		cron.stop();
 		return next?.getTime();
+	} catch {
+		return undefined;
+	}
+}
+
+export function computeCronCadenceMs(expression: string, fromTs = Date.now()): number | undefined {
+	try {
+		// biome-ignore lint/suspicious/noEmptyBlockStatements: Cron requires a callback
+		const cron = new Cron(expression, () => {});
+		const firstRun = cron.nextRun(new Date(fromTs));
+		if (!firstRun) {
+			cron.stop();
+			return undefined;
+		}
+		const secondRun = cron.nextRun(new Date(firstRun.getTime() + 1));
+		cron.stop();
+		if (!secondRun) {
+			return undefined;
+		}
+		return secondRun.getTime() - firstRun.getTime();
 	} catch {
 		return undefined;
 	}
@@ -231,6 +260,16 @@ function extractLeadingCron(input: string): { cronExpression: string; prompt: st
 		if (tokens.length <= fieldCount) {
 			continue;
 		}
+
+		if (fieldCount === 5 && tokens.length >= 6) {
+			const sixthToken = tokens[5];
+			const sixthTokenLooksLikeCronField =
+				/^[\d*/?,#LWH-]+$/i.test(sixthToken) || /^[A-Z]{1,3}(?:,[A-Z]{1,3})*$/i.test(sixthToken);
+			if (sixthTokenLooksLikeCronField) {
+				continue;
+			}
+		}
+
 		const expressionCandidate = tokens.slice(0, fieldCount).join(" ");
 		const normalized = normalizeCronExpression(expressionCandidate);
 		if (!normalized) {
@@ -402,6 +441,8 @@ export class SchedulerRuntime {
 	private runtimeCtx: ExtensionContext | undefined;
 	private dispatching = false;
 	private storagePath: string | undefined;
+	private readonly dispatchTimestamps: number[] = [];
+	private lastRateLimitNoticeAt = 0;
 
 	constructor(private readonly pi: ExtensionAPI) {}
 
@@ -511,8 +552,11 @@ export class SchedulerRuntime {
 	addRecurringIntervalTask(prompt: string, intervalMs: number): ScheduleTask {
 		const id = this.createId();
 		const createdAt = Date.now();
-		const jitterMs = this.computeJitterMs(id, intervalMs);
-		const nextRunAt = createdAt + intervalMs + jitterMs;
+		const safeIntervalMs = Number.isFinite(intervalMs)
+			? Math.max(Math.floor(intervalMs), MIN_RECURRING_INTERVAL)
+			: MIN_RECURRING_INTERVAL;
+		const jitterMs = this.computeJitterMs(id, safeIntervalMs);
+		const nextRunAt = createdAt + safeIntervalMs + jitterMs;
 		const task: ScheduleTask = {
 			id,
 			prompt,
@@ -520,7 +564,7 @@ export class SchedulerRuntime {
 			enabled: true,
 			createdAt,
 			nextRunAt,
-			intervalMs,
+			intervalMs: safeIntervalMs,
 			expiresAt: createdAt + THREE_DAYS,
 			jitterMs,
 			runCount: 0,
@@ -533,9 +577,14 @@ export class SchedulerRuntime {
 	}
 
 	addRecurringCronTask(prompt: string, cronExpression: string): ScheduleTask | undefined {
+		const normalizedCron = normalizeCronExpression(cronExpression);
+		if (!normalizedCron) {
+			return undefined;
+		}
+
 		const id = this.createId();
 		const createdAt = Date.now();
-		const nextRunAt = computeNextCronRunAt(cronExpression, createdAt);
+		const nextRunAt = computeNextCronRunAt(normalizedCron.expression, createdAt);
 		if (!nextRunAt) {
 			return undefined;
 		}
@@ -547,7 +596,7 @@ export class SchedulerRuntime {
 			enabled: true,
 			createdAt,
 			nextRunAt,
-			cronExpression,
+			cronExpression: normalizedCron.expression,
 			expiresAt: createdAt + THREE_DAYS,
 			jitterMs: 0,
 			runCount: 0,
@@ -622,6 +671,37 @@ export class SchedulerRuntime {
 		this.runtimeCtx.ui.setStatus("pi-scheduler", text);
 	}
 
+	private pruneDispatchHistory(now: number) {
+		const cutoff = now - DISPATCH_RATE_LIMIT_WINDOW_MS;
+		while (this.dispatchTimestamps.length > 0 && this.dispatchTimestamps[0] <= cutoff) {
+			this.dispatchTimestamps.shift();
+		}
+	}
+
+	private hasDispatchCapacity(now: number): boolean {
+		this.pruneDispatchHistory(now);
+		return this.dispatchTimestamps.length < MAX_DISPATCHES_PER_WINDOW;
+	}
+
+	private recordDispatch(now: number) {
+		this.pruneDispatchHistory(now);
+		this.dispatchTimestamps.push(now);
+	}
+
+	private notifyRateLimit(now: number) {
+		if (!this.runtimeCtx?.hasUI) {
+			return;
+		}
+		if (now - this.lastRateLimitNoticeAt < ONE_MINUTE) {
+			return;
+		}
+		this.lastRateLimitNoticeAt = now;
+		this.runtimeCtx.ui.notify(
+			`Scheduler throttled: max ${MAX_DISPATCHES_PER_WINDOW} task runs per minute. Pending tasks will resume automatically.`,
+			"warning",
+		);
+	}
+
 	async tickScheduler() {
 		if (!this.runtimeCtx) {
 			return;
@@ -654,6 +734,10 @@ export class SchedulerRuntime {
 			return;
 		}
 		if (!this.runtimeCtx.isIdle() || this.runtimeCtx.hasPendingMessages()) {
+			return;
+		}
+		if (!this.hasDispatchCapacity(now)) {
+			this.notifyRateLimit(now);
 			return;
 		}
 
@@ -812,7 +896,10 @@ export class SchedulerRuntime {
 
 			const normalizedCron = normalizeCronExpression(raw);
 			if (!normalizedCron) {
-				ctx.ui.notify("Invalid input. Use interval like 5m or cron like 0 */10 * * * *.", "warning");
+				ctx.ui.notify(
+					"Invalid input. Use interval like 5m or cron like 0 */10 * * * * (minimum cron cadence is 1m).",
+					"warning",
+				);
 				return;
 			}
 
@@ -859,9 +946,15 @@ export class SchedulerRuntime {
 			return;
 		}
 		const now = Date.now();
+		if (!this.hasDispatchCapacity(now)) {
+			task.pending = true;
+			this.notifyRateLimit(now);
+			return;
+		}
 
 		try {
 			this.pi.sendUserMessage(task.prompt);
+			this.recordDispatch(now);
 		} catch {
 			task.pending = true;
 			task.lastStatus = "error";
@@ -895,11 +988,24 @@ export class SchedulerRuntime {
 			return;
 		}
 
-		const intervalMs = task.intervalMs ?? DEFAULT_LOOP_INTERVAL;
-		let next = task.nextRunAt;
-		while (next <= now) {
-			next += intervalMs;
+		const rawIntervalMs = task.intervalMs ?? DEFAULT_LOOP_INTERVAL;
+		const intervalMs = Number.isFinite(rawIntervalMs)
+			? Math.max(rawIntervalMs, MIN_RECURRING_INTERVAL)
+			: DEFAULT_LOOP_INTERVAL;
+		if (task.intervalMs !== intervalMs) {
+			task.intervalMs = intervalMs;
 		}
+
+		let next = Number.isFinite(task.nextRunAt) ? task.nextRunAt : now + intervalMs;
+		let guard = 0;
+		while (next <= now && guard < 10_000) {
+			next += intervalMs;
+			guard += 1;
+		}
+		if (!Number.isFinite(next) || guard >= 10_000) {
+			next = now + intervalMs;
+		}
+
 		task.nextRunAt = next;
 		this.persistTasks();
 		this.updateStatus();
@@ -971,9 +1077,13 @@ export class SchedulerRuntime {
 			const list = Array.isArray(parsed?.tasks) ? parsed.tasks : [];
 			const now = Date.now();
 			for (const task of list) {
+				if (this.tasks.size >= MAX_TASKS) {
+					break;
+				}
 				if (!(task?.id && task.prompt)) {
 					continue;
 				}
+
 				const normalized: ScheduleTask = {
 					...task,
 					enabled: task.enabled ?? true,
@@ -983,6 +1093,32 @@ export class SchedulerRuntime {
 				if (normalized.kind === "recurring" && normalized.expiresAt && now >= normalized.expiresAt) {
 					continue;
 				}
+
+				if (normalized.kind === "recurring" && normalized.cronExpression) {
+					const cron = normalizeCronExpression(normalized.cronExpression);
+					if (!cron) {
+						continue;
+					}
+					normalized.cronExpression = cron.expression;
+				}
+
+				if (normalized.kind === "recurring" && !normalized.cronExpression) {
+					const rawIntervalMs = normalized.intervalMs ?? DEFAULT_LOOP_INTERVAL;
+					normalized.intervalMs = Number.isFinite(rawIntervalMs)
+						? Math.max(rawIntervalMs, MIN_RECURRING_INTERVAL)
+						: DEFAULT_LOOP_INTERVAL;
+				}
+
+				if (!Number.isFinite(normalized.nextRunAt)) {
+					if (normalized.kind === "recurring" && normalized.cronExpression) {
+						normalized.nextRunAt = computeNextCronRunAt(normalized.cronExpression, now) ?? now + DEFAULT_LOOP_INTERVAL;
+					} else {
+						const fallbackDelay =
+							normalized.kind === "once" ? ONE_MINUTE : (normalized.intervalMs ?? DEFAULT_LOOP_INTERVAL);
+						normalized.nextRunAt = now + fallbackDelay;
+					}
+				}
+
 				this.tasks.set(normalized.id, normalized);
 			}
 		} catch {
@@ -1018,7 +1154,10 @@ function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 		handler: async (args, ctx) => {
 			const parsed = parseLoopScheduleArgs(args);
 			if (!parsed) {
-				ctx.ui.notify("Usage: /loop 5m check build OR /loop cron '*/5 * * * *' check build", "warning");
+				ctx.ui.notify(
+					"Usage: /loop 5m check build OR /loop cron '*/5 * * * *' check build (minimum cron cadence is 1m)",
+					"warning",
+				);
 				return;
 			}
 
@@ -1030,7 +1169,7 @@ function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			if (parsed.recurring.mode === "cron") {
 				const task = runtime.addRecurringCronTask(parsed.prompt, parsed.recurring.cronExpression);
 				if (!task) {
-					ctx.ui.notify("Invalid cron schedule; could not compute next run.", "error");
+					ctx.ui.notify("Invalid cron schedule. Cron tasks must run no more often than once per minute.", "error");
 					return;
 				}
 				ctx.ui.notify(`Scheduled cron ${task.cronExpression} (id: ${task.id}). Expires in 3 days.`, "info");
@@ -1320,7 +1459,7 @@ function validationErrorMessage(error: string): string {
 		case "conflicting_schedule_inputs":
 			return "Error: provide either duration or cron for recurring tasks, not both.";
 		case "invalid_cron":
-			return "Error: invalid cron expression.";
+			return "Error: invalid cron expression (minimum cadence is 1 minute).";
 		default:
 			return `Error: ${error}`;
 	}
@@ -1376,7 +1515,9 @@ function handleToolAdd(
 		const task = runtime.addRecurringCronTask(prompt, validated.plan.cronExpression);
 		if (!task) {
 			return {
-				content: [{ type: "text", text: "Error: could not compute next run for this cron expression." }],
+				content: [
+					{ type: "text", text: "Error: invalid cron expression or cadence is too frequent (minimum is 1 minute)." },
+				],
 				details: { action: "add", error: "cron_next_run_failed" },
 			};
 		}
