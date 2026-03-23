@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.2 (2026-03-23)
+
+### Fixes
+
+- add global dispatch rate limiter fuse (#14)
+- use Anthropic OAuth usage endpoint in usage tracker (#15)
+
+#### Fix Anthropic usage probing in the usage tracker for pi-managed OAuth tokens.
+
+- Use Anthropic's OAuth usage endpoint (`/api/oauth/usage`) for `sk-ant-oat...` tokens (matching Claude Code behavior).
+- Avoid false "auth token expired" errors when OAuth is valid but the old probe endpoint is unsupported.
+- Surface OAuth endpoint rate limiting as an informational note instead of an auth failure.
+- Keep API-key probe fallback via `count_tokens` for non-OAuth Anthropic credentials.
+- Silence a pre-existing scheduler lint warning by documenting intentional cognitive complexity in task deserialization.
+- Pin `fast-xml-parser` to a patched version via pnpm overrides to resolve the high-severity audit finding in CI.
+
+#### fix(scheduler): harden `/loop` against runaway recurring schedules
+
+- Reject cron schedules that run more frequently than once per minute
+- Prevent unsafe cron parsing fallback from misreading invalid 6-field cron as 5-field
+- Sanitize loaded scheduler tasks (cap to `MAX_TASKS`, drop unsafe cron entries, clamp unsafe intervals)
+- Harden recurring dispatch to self-heal invalid interval values and avoid pathological next-run loops
+- Add a global scheduler dispatch fuse (max 6 task dispatches per minute) to prevent burst floods
+- Improve cron-related error/help text to call out the 1-minute minimum cadence
+
 ## 0.3.1 (2026-03-15)
 
 ### Features

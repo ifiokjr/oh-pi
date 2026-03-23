@@ -1,6 +1,6 @@
 {
   "name": "@ifi/pi-web-remote",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Pi extension: /remote command for sharing sessions via web UI.",
   "type": "module",
   "keywords": [
