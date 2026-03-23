@@ -1062,6 +1062,7 @@ export class SchedulerRuntime {
 		return this.hashString(taskId) % (maxJitter + 1);
 	}
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Deserializes backward-compatible task shapes with runtime normalization guards.
 	loadTasksFromDisk() {
 		if (!this.storagePath) {
 			return;
