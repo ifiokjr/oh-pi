@@ -190,23 +190,6 @@ function clampPercent(value: number): number {
 	return Math.max(0, Math.min(100, value));
 }
 
-function inferWindowMinutes(label: string): number | null {
-	const lower = label.toLowerCase();
-	if (lower.includes("5-hour") || lower.includes("5h")) {
-		return 300;
-	}
-	if (lower.includes("weekly") || lower.includes("week")) {
-		return 10_080;
-	}
-	if (lower.includes("daily") || lower.includes("day")) {
-		return 1_440;
-	}
-	if (lower.includes("/min")) {
-		return 1;
-	}
-	return null;
-}
-
 /** Parse countdown-like reset text such as "in 3d 2h" into milliseconds. */
 function parseResetCountdownMs(resetDescription: string | null): number | null {
 	if (!resetDescription) {
@@ -428,11 +411,11 @@ const AUTH_KEY_TO_PROVIDER: Record<string, ProviderKey> = {
 	"google-gemini-cli": "google",
 };
 
-/** Provider API base URLs. */
+/** Provider API base URLs used by direct usage/rate-limit probes. */
 const PROVIDER_API_BASE: Record<ProviderKey, string> = {
 	anthropic: "https://api.anthropic.com",
-	openai: "https://api.openai.com",
-	google: "https://generativelanguage.googleapis.com",
+	openai: "https://chatgpt.com/backend-api",
+	google: "https://cloudcode-pa.googleapis.com",
 };
 
 /**
@@ -600,6 +583,52 @@ function resetCountdown(isoOrDuration: string): string | null {
 		return `in ${fmtDuration(totalMs)}`;
 	}
 	return isoOrDuration;
+}
+
+function parseFiniteNumber(value: unknown): number | null {
+	const parsed = typeof value === "number" ? value : Number(value);
+	if (!Number.isFinite(parsed)) {
+		return null;
+	}
+	return parsed;
+}
+
+function countdownFromSeconds(seconds: unknown): string | null {
+	const parsed = parseFiniteNumber(seconds);
+	if (parsed === null) {
+		return null;
+	}
+	if (parsed <= 0) {
+		return "now";
+	}
+	return `in ${fmtDuration(parsed * 1000)}`;
+}
+
+function windowLabelFromSeconds(seconds: number): string {
+	if (seconds <= 0 || !Number.isFinite(seconds)) {
+		return "window";
+	}
+	if (seconds % 604_800 === 0) {
+		const weeks = seconds / 604_800;
+		return `${weeks}w`;
+	}
+	if (seconds % 86_400 === 0) {
+		const days = seconds / 86_400;
+		return `${days}d`;
+	}
+	if (seconds % 3_600 === 0) {
+		const hours = seconds / 3_600;
+		return `${hours}h`;
+	}
+	if (seconds % 60 === 0) {
+		const minutes = seconds / 60;
+		return `${minutes}m`;
+	}
+	return `${Math.round(seconds)}s`;
+}
+
+function appendNote(existing: string | null, next: string): string {
+	return existing ? `${existing} ${next}` : next;
 }
 
 // ─── Direct API probes ──────────────────────────────────────────────────────
@@ -784,28 +813,81 @@ async function probeAnthropicDirect(token: string): Promise<ProviderRateLimits> 
 }
 
 /** Extract OpenAI account info from a JWT access token. */
-function hydrateOpenAIFromJwt(result: ProviderRateLimits, token: string): void {
+function hydrateOpenAIFromJwt(result: ProviderRateLimits, token: string): { accountId: string | null } {
 	const jwt = decodeJwtPayload(token);
 	if (!jwt) {
-		return;
+		return { accountId: null };
 	}
 	const profile = jwt["https://api.openai.com/profile"] as { email?: string } | undefined;
 	if (profile?.email) {
 		result.account = profile.email;
 	}
-	// biome-ignore lint/style/useNamingConvention: OpenAI JWT claim uses snake_case
-	const auth = jwt["https://api.openai.com/auth"] as { chatgpt_plan_type?: string } | undefined;
-	if (auth?.chatgpt_plan_type) {
-		result.plan = auth.chatgpt_plan_type;
+	const auth = jwt["https://api.openai.com/auth"] as Record<string, unknown> | undefined;
+	const planType = typeof auth?.chatgpt_plan_type === "string" ? auth.chatgpt_plan_type : null;
+	if (planType) {
+		result.plan = planType;
 	}
+	const accountId = typeof auth?.chatgpt_account_id === "string" ? auth.chatgpt_account_id : null;
+	return { accountId };
+}
+
+function maybeAddOpenAIWhamWindow(
+	result: ProviderRateLimits,
+	groupLabel: string,
+	windowLabel: string,
+	window: unknown,
+): void {
+	if (!(window && typeof window === "object")) {
+		return;
+	}
+
+	const typed = window as Record<string, unknown>;
+
+	const usedPercent = parseFiniteNumber(typed.used_percent);
+	if (usedPercent === null) {
+		return;
+	}
+
+	const windowSeconds = parseFiniteNumber(typed.limit_window_seconds);
+	const roundedWindowSeconds = windowSeconds !== null && windowSeconds > 0 ? Math.round(windowSeconds) : null;
+	const labelSuffix = roundedWindowSeconds ? windowLabelFromSeconds(roundedWindowSeconds) : windowLabel;
+	const resetFromDuration = countdownFromSeconds(typed.reset_after_seconds);
+	const resetAtSeconds = parseFiniteNumber(typed.reset_at);
+	const resetFromTimestamp = resetAtSeconds !== null ? countdownFromSeconds(resetAtSeconds - Date.now() / 1000) : null;
+
+	upsertWindow(result.windows, {
+		label: `${groupLabel} (${labelSuffix})`,
+		percentLeft: clampPercent(100 - usedPercent),
+		resetDescription: resetFromDuration ?? resetFromTimestamp,
+		windowMinutes: roundedWindowSeconds ? Math.max(1, Math.round(roundedWindowSeconds / 60)) : null,
+	});
+}
+
+function maybeAddOpenAIWhamRateLimitGroup(result: ProviderRateLimits, groupLabel: string, group: unknown): void {
+	if (!(group && typeof group === "object")) {
+		return;
+	}
+
+	const typed = group as Record<string, unknown>;
+
+	if (typed.allowed === false) {
+		result.note = appendNote(result.note, `${groupLabel} currently blocked.`);
+	}
+	if (typed.limit_reached === true) {
+		result.note = appendNote(result.note, `${groupLabel} limit reached.`);
+	}
+
+	maybeAddOpenAIWhamWindow(result, groupLabel, "primary", typed.primary_window);
+	maybeAddOpenAIWhamWindow(result, groupLabel, "secondary", typed.secondary_window);
 }
 
 /**
- * Probe OpenAI API for rate limits using pi-managed OAuth token.
+ * Probe OpenAI ChatGPT backend for Codex usage/rate limits.
  *
- * Calls `GET /v1/models` (free) and reads rate limit headers. Also decodes the
- * JWT to extract plan type and account email.
+ * Codex OAuth tokens can query `GET /backend-api/wham/usage`, which exposes
+ * the active 5-hour/weekly windows plus additional model-specific limits.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: provider probe handles endpoint status variants and nested window payloads.
 async function probeOpenAIDirect(token: string): Promise<ProviderRateLimits> {
 	const result: ProviderRateLimits = {
 		provider: "openai",
@@ -818,56 +900,81 @@ async function probeOpenAIDirect(token: string): Promise<ProviderRateLimits> {
 		error: null,
 	};
 
-	hydrateOpenAIFromJwt(result, token);
+	const { accountId } = hydrateOpenAIFromJwt(result, token);
 
 	try {
-		const response = await fetch(`${PROVIDER_API_BASE.openai}/v1/models`, {
+		const headers: Record<string, string> = {
+			authorization: `Bearer ${token}`,
+			accept: "application/json",
+		};
+		if (accountId) {
+			headers["chatgpt-account-id"] = accountId;
+		}
+
+		const response = await fetch(`${PROVIDER_API_BASE.openai}/wham/usage`, {
 			method: "GET",
-			headers: { authorization: `Bearer ${token}` },
+			headers,
 			signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
 		});
 
 		if (response.status === 401) {
-			result.error = "OpenAI auth token expired \u2014 re-authenticate in pi settings.";
+			result.error = "OpenAI auth token expired — re-authenticate in pi settings.";
 			return result;
 		}
-		if (response.status === 403) {
-			// ChatGPT/Codex subscription tokens can't access /v1/models but
-			// JWT info (plan, account) was already extracted above.
-			result.note = "Subscription auth \u2014 per-request rate limit windows unavailable.";
+		if (response.status === 429) {
+			const retryAfter = Number.parseInt(response.headers.get("retry-after") ?? "", 10);
+			const retryHint = Number.isFinite(retryAfter) ? ` (retry in ${fmtDuration(Math.max(0, retryAfter) * 1000)})` : "";
+			result.note = `OpenAI usage endpoint is rate-limited${retryHint}.`;
 			return result;
 		}
 		if (!response.ok) {
-			result.note = `OpenAI API returned ${response.status} \u2014 rate limit details unavailable.`;
+			result.note = `OpenAI usage endpoint returned ${response.status} — rate limit details unavailable.`;
 			return result;
 		}
 
-		// Extract rate limit info from response headers
-		const reqLimit = Number.parseInt(response.headers.get("x-ratelimit-limit-requests") ?? "", 10);
-		const reqRemaining = Number.parseInt(response.headers.get("x-ratelimit-remaining-requests") ?? "", 10);
-		const reqReset = response.headers.get("x-ratelimit-reset-requests");
-		const tokLimit = Number.parseInt(response.headers.get("x-ratelimit-limit-tokens") ?? "", 10);
-		const tokRemaining = Number.parseInt(response.headers.get("x-ratelimit-remaining-tokens") ?? "", 10);
-		const tokReset = response.headers.get("x-ratelimit-reset-tokens");
-
-		if (Number.isFinite(reqLimit) && Number.isFinite(reqRemaining) && reqLimit > 0) {
-			const percentLeft = clampPercent((reqRemaining / reqLimit) * 100);
-			upsertWindow(result.windows, {
-				label: `Requests (${fmtTokens(reqLimit)}/win)`,
-				percentLeft,
-				resetDescription: reqReset ? resetCountdown(reqReset) : null,
-				windowMinutes: inferWindowMinutes(`Requests (${fmtTokens(reqLimit)}/win)`),
-			});
+		const payload = (await response.json()) as Record<string, unknown>;
+		if (typeof payload.plan_type === "string") {
+			result.plan = payload.plan_type;
+		}
+		if (typeof payload.email === "string") {
+			result.account = payload.email;
 		}
 
-		if (Number.isFinite(tokLimit) && Number.isFinite(tokRemaining) && tokLimit > 0) {
-			const percentLeft = clampPercent((tokRemaining / tokLimit) * 100);
-			upsertWindow(result.windows, {
-				label: `Tokens (${fmtTokens(tokLimit)}/win)`,
-				percentLeft,
-				resetDescription: tokReset ? resetCountdown(tokReset) : null,
-				windowMinutes: inferWindowMinutes(`Tokens (${fmtTokens(tokLimit)}/win)`),
-			});
+		const credits = payload.credits;
+		if (credits && typeof credits === "object") {
+			const typedCredits = credits as { unlimited?: unknown; balance?: unknown };
+			if (typedCredits.unlimited === true) {
+				result.note = appendNote(result.note, "Credits are unlimited.");
+			} else {
+				const balance = parseFiniteNumber(typedCredits.balance);
+				if (balance !== null) {
+					result.credits = balance;
+				}
+			}
+		}
+
+		maybeAddOpenAIWhamRateLimitGroup(result, "Codex", payload.rate_limit);
+		maybeAddOpenAIWhamRateLimitGroup(result, "Code Review", payload.code_review_rate_limit);
+
+		const additionalRateLimits = payload.additional_rate_limits;
+		if (Array.isArray(additionalRateLimits)) {
+			for (const item of additionalRateLimits) {
+				if (!(item && typeof item === "object")) {
+					continue;
+				}
+				const typedItem = item as Record<string, unknown>;
+				const label =
+					typeof typedItem.limit_name === "string"
+						? typedItem.limit_name
+						: typeof typedItem.metered_feature === "string"
+							? typedItem.metered_feature
+							: "Additional";
+				maybeAddOpenAIWhamRateLimitGroup(result, label, typedItem.rate_limit);
+			}
+		}
+
+		if (result.windows.length === 0) {
+			result.note = appendNote(result.note, "OpenAI usage response did not include window data.");
 		}
 	} catch (e) {
 		if (e instanceof Error && e.name === "TimeoutError") {
@@ -880,11 +987,51 @@ async function probeOpenAIDirect(token: string): Promise<ProviderRateLimits> {
 	return result;
 }
 
+const GOOGLE_CLIENT_METADATA = {
+	ideType: "IDE_UNSPECIFIED",
+	platform: "PLATFORM_UNSPECIFIED",
+	pluginType: "GEMINI",
+};
+
+function googleCodeAssistHeaders(token: string): Record<string, string> {
+	return {
+		authorization: `Bearer ${token}`,
+		"content-type": "application/json",
+		"user-agent": "google-cloud-sdk vscode_cloudshelleditor/0.1",
+		"x-goog-api-client": "gl-node/22.17.0",
+		"client-metadata": JSON.stringify(GOOGLE_CLIENT_METADATA),
+	};
+}
+
+async function hydrateGoogleAccount(result: ProviderRateLimits, token: string): Promise<void> {
+	if (result.account) {
+		return;
+	}
+	try {
+		const response = await fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
+			method: "GET",
+			headers: { authorization: `Bearer ${token}` },
+			signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+		});
+		if (!response.ok) {
+			return;
+		}
+		const payload = (await response.json()) as { email?: unknown };
+		if (typeof payload.email === "string") {
+			result.account = payload.email;
+		}
+	} catch {
+		// Optional enrichment only.
+	}
+}
+
 /**
- * Probe Google AI API for rate limits using pi-managed OAuth token.
+ * Probe Google Cloud Code Assist for subscription/project metadata.
  *
- * Calls `GET /v1beta/models` (free) and reads any rate limit headers.
+ * OAuth tokens used by pi target Cloud Code Assist endpoints (not
+ * generativelanguage.googleapis.com), so we probe `loadCodeAssist`.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: provider probe handles auth status, tier parsing, and optional account hydration.
 async function probeGoogleDirect(token: string, authEntry?: PiAuthEntry): Promise<ProviderRateLimits> {
 	const result: ProviderRateLimits = {
 		provider: "google",
@@ -898,44 +1045,67 @@ async function probeGoogleDirect(token: string, authEntry?: PiAuthEntry): Promis
 	};
 
 	try {
-		const response = await fetch(`${PROVIDER_API_BASE.google}/v1beta/models`, {
-			method: "GET",
-			headers: { authorization: `Bearer ${token}` },
+		const body: Record<string, unknown> = {
+			metadata: {
+				...GOOGLE_CLIENT_METADATA,
+				...(authEntry?.projectId ? { duetProject: authEntry.projectId } : {}),
+			},
+			...(authEntry?.projectId ? { cloudaicompanionProject: authEntry.projectId } : {}),
+		};
+
+		const response = await fetch(`${PROVIDER_API_BASE.google}/v1internal:loadCodeAssist`, {
+			method: "POST",
+			headers: googleCodeAssistHeaders(token),
+			body: JSON.stringify(body),
 			signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
 		});
 
 		if (response.status === 401) {
-			result.error = "Google auth token expired \u2014 re-authenticate in pi settings.";
+			result.error = "Google auth token expired — re-authenticate in pi settings.";
 			return result;
 		}
 		if (!response.ok) {
-			result.error = `Google API returned ${response.status}`;
+			result.error = `Google Cloud Code Assist API returned ${response.status}`;
 			return result;
 		}
 
-		// Google's model listing typically doesn't include per-request rate limit
-		// headers, but check for them anyway.
-		const rateLimit = response.headers.get("x-ratelimit-limit");
-		const rateRemaining = response.headers.get("x-ratelimit-remaining");
-		const rateReset = response.headers.get("x-ratelimit-reset");
+		const payload = (await response.json()) as Record<string, unknown>;
+		const currentTier = payload.currentTier as { id?: unknown; name?: unknown } | undefined;
+		const tierId = typeof currentTier?.id === "string" ? currentTier.id : null;
+		const tierName = typeof currentTier?.name === "string" ? currentTier.name : null;
+		if (tierName && tierId) {
+			result.plan = `${tierName} (${tierId})`;
+		} else if (tierName) {
+			result.plan = tierName;
+		} else if (tierId) {
+			result.plan = tierId;
+		}
 
-		if (rateLimit && rateRemaining) {
-			const limit = Number.parseInt(rateLimit, 10);
-			const remaining = Number.parseInt(rateRemaining, 10);
-			if (Number.isFinite(limit) && Number.isFinite(remaining) && limit > 0) {
-				const percentLeft = clampPercent((remaining / limit) * 100);
-				upsertWindow(result.windows, {
-					label: `Requests (${fmtTokens(limit)}/win)`,
-					percentLeft,
-					resetDescription: rateReset ? resetCountdown(rateReset) : null,
-					windowMinutes: null,
-				});
-			}
+		const projectId =
+			typeof payload.cloudaicompanionProject === "string"
+				? payload.cloudaicompanionProject
+				: (authEntry?.projectId ?? null);
+		if (projectId) {
+			result.note = appendNote(result.note, `Project: ${projectId}.`);
+		}
+
+		const rateLimit = parseFiniteNumber(response.headers.get("x-ratelimit-limit"));
+		const rateRemaining = parseFiniteNumber(response.headers.get("x-ratelimit-remaining"));
+		const rateReset = response.headers.get("x-ratelimit-reset");
+		if (rateLimit !== null && rateRemaining !== null && rateLimit > 0) {
+			upsertWindow(result.windows, {
+				label: `Requests (${fmtTokens(Math.round(rateLimit))}/win)`,
+				percentLeft: clampPercent((rateRemaining / rateLimit) * 100),
+				resetDescription: rateReset ? resetCountdown(rateReset) : null,
+				windowMinutes: null,
+			});
 		}
 
 		if (result.windows.length === 0) {
-			result.note = "Google API authenticated successfully; rate limit details are project-scoped.";
+			result.note = appendNote(result.note, "Rate limit windows are project-scoped and not exposed by this API.");
 		}
+
+		await hydrateGoogleAccount(result, token);
 	} catch (e) {
 		if (e instanceof Error && e.name === "TimeoutError") {
 			result.error = "Google API probe timed out";

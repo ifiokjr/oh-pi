@@ -517,8 +517,22 @@ describe("usage-tracker extension", () => {
 			await vi.advanceTimersByTimeAsync(500);
 
 			const fetchCalls = mockFetch.mock.calls;
-			const openaiCall = fetchCalls.find((c: any[]) => String(c[0]).includes("api.openai.com"));
+			const openaiCall = fetchCalls.find((c: any[]) => String(c[0]).includes("chatgpt.com/backend-api/wham/usage"));
 			expect(openaiCall).toBeDefined();
+		});
+
+		it("triggers Google Cloud Code Assist probe when using Gemini model", async () => {
+			ctx.model = { id: "gemini-2.5-pro" } as any;
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			await vi.advanceTimersByTimeAsync(500);
+
+			const fetchCalls = mockFetch.mock.calls;
+			const googleCall = fetchCalls.find((c: any[]) =>
+				String(c[0]).includes("cloudcode-pa.googleapis.com/v1internal:loadCodeAssist"),
+			);
+			expect(googleCall).toBeDefined();
 		});
 
 		it("probes again on model_select", () => {
@@ -620,20 +634,35 @@ describe("usage-tracker extension", () => {
 			expect(text).toContain("Plan: OAuth");
 		});
 
-		it("shows OpenAI plan from JWT when auth is configured", async () => {
+		it("shows OpenAI windows from the ChatGPT usage endpoint", async () => {
 			ctx.model = { id: "gpt-4o" } as any;
-			mockFetch.mockResolvedValue(
-				makeFetchResponse({
-					headers: {
-						"x-ratelimit-limit-requests": "10000",
-						"x-ratelimit-remaining-requests": "9999",
-						"x-ratelimit-reset-requests": "6ms",
-						"x-ratelimit-limit-tokens": "200000",
-						"x-ratelimit-remaining-tokens": "199500",
-						"x-ratelimit-reset-tokens": "100ms",
-					},
-				}),
-			);
+			mockFetch.mockImplementation((url: string) => {
+				if (url.includes("chatgpt.com/backend-api/wham/usage")) {
+					return Promise.resolve(
+						makeFetchResponse({
+							body: {
+								email: "test@example.com",
+								plan_type: "pro",
+								rate_limit: {
+									allowed: true,
+									limit_reached: false,
+									primary_window: {
+										used_percent: 35,
+										limit_window_seconds: 18_000,
+										reset_after_seconds: 600,
+									},
+									secondary_window: {
+										used_percent: 10,
+										limit_window_seconds: 604_800,
+										reset_after_seconds: 3_600,
+									},
+								},
+							},
+						}),
+					);
+				}
+				return Promise.resolve(makeFetchResponse());
+			});
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
@@ -643,7 +672,50 @@ describe("usage-tracker extension", () => {
 			const text = result.content[0].text;
 
 			expect(text).toContain("OpenAI Rate Limits:");
+			expect(text).toContain("Codex (5h)");
+			expect(text).toContain("Codex (1w)");
 			expect(text).toContain("Plan: pro");
+			expect(text).toContain("Account: test@example.com");
+		});
+
+		it("uses Cloud Code Assist metadata endpoint for Google OAuth", async () => {
+			ctx.model = { id: "gemini-2.5-pro" } as any;
+			mockFetch.mockImplementation((url: string) => {
+				if (url.includes("cloudcode-pa.googleapis.com/v1internal:loadCodeAssist")) {
+					return Promise.resolve(
+						makeFetchResponse({
+							body: {
+								currentTier: {
+									id: "standard-tier",
+									name: "Gemini Code Assist",
+								},
+								cloudaicompanionProject: "test-project",
+							},
+						}),
+					);
+				}
+				if (url.includes("www.googleapis.com/oauth2/v1/userinfo")) {
+					return Promise.resolve(
+						makeFetchResponse({
+							body: {
+								email: "google@example.com",
+							},
+						}),
+					);
+				}
+				return Promise.resolve(makeFetchResponse());
+			});
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			const text = result.content[0].text;
+
+			expect(text).toContain("Google Rate Limits:");
+			expect(text).toContain("Plan: Gemini Code Assist (standard-tier)");
+			expect(text).toContain("Project: test-project");
 			expect(text).toContain("Account: test@example.com");
 		});
 
