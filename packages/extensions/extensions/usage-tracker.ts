@@ -2080,8 +2080,8 @@ export default function usageTracker(pi: ExtensionAPI) {
 				},
 				// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
 				invalidate() {},
-				render() {
-					return renderWidget(ctx, theme);
+				render(width: number) {
+					return renderWidget(ctx, theme).map((line) => truncateAnsi(line, width));
 				},
 			};
 		});
@@ -2154,8 +2154,8 @@ export default function usageTracker(pi: ExtensionAPI) {
 						},
 						// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
 						invalidate() {},
-						render() {
-							return renderWidget(ctx, theme);
+						render(width: number) {
+							return renderWidget(ctx, theme).map((line) => truncateAnsi(line, width));
 						},
 					};
 				});
