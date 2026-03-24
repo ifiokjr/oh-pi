@@ -212,6 +212,11 @@ async function runWithTimers<T>(fn: () => Promise<T>): Promise<T> {
 	return promise;
 }
 
+function stripAnsiForTest(text: string): string {
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes use control chars by definition
+	return text.replace(/\x1b\[[0-9;]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b\(B/g, "");
+}
+
 // ─── Import ──────────────────────────────────────────────────────────────────
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -804,14 +809,50 @@ describe("usage-tracker extension", () => {
 						tui: { requestRender: () => void },
 						theme: { fg: (_color: string, text: string) => string },
 				  ) => {
-						render: () => string[];
+						render: (width: number) => string[];
 				  })
 				| undefined;
 			expect(widgetFactory).toBeDefined();
 			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
-			const rendered = component?.render().join("\n") ?? "";
+			const rendered = component?.render(200).join("\n") ?? "";
 			expect(rendered).toContain("💰");
 			expect(rendered).toContain("30d:");
+		});
+
+		it("truncates widget output to terminal width", () => {
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage({
+						input: 50_000,
+						output: 25_000,
+						costTotal: 0.02,
+					}),
+					toolResults: [],
+				},
+				ctx,
+			);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						render: (width: number) => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
+			const width = 24;
+			const renderedLines = component?.render(width) ?? [];
+			expect(renderedLines.length).toBeGreaterThan(0);
+			for (const line of renderedLines) {
+				expect(stripAnsiForTest(line).length).toBeLessThanOrEqual(width);
+			}
 		});
 
 		it("removes widget via /usage-toggle", async () => {
