@@ -25,6 +25,7 @@ import {
 	classifyError,
 	createUsageLimitsTracker,
 	decidePromoteOrFinalize,
+	makeColonyId,
 	quorumMergeTasks,
 	shouldUseScoutQuorum,
 	validateExecutionPlan,
@@ -197,6 +198,25 @@ describe("createUsageLimitsTracker", () => {
 		tracker.requestSnapshot();
 		tracker.dispose();
 		expect(off).toHaveBeenCalledWith("usage:limits", expect.any(Function));
+	});
+});
+
+describe("makeColonyId", () => {
+	it("adds entropy so ids do not collide within the same millisecond", () => {
+		const nowSpy = vi.spyOn(Date, "now").mockReturnValue(123456789);
+		const randomSpy = vi.spyOn(Math, "random").mockReturnValueOnce(0.11111).mockReturnValueOnce(0.22222);
+
+		try {
+			const first = makeColonyId();
+			const second = makeColonyId();
+
+			expect(first).toMatch(/^colony-/);
+			expect(second).toMatch(/^colony-/);
+			expect(first).not.toBe(second);
+		} finally {
+			nowSpy.mockRestore();
+			randomSpy.mockRestore();
+		}
 	});
 });
 

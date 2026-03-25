@@ -33,6 +33,12 @@ const PHEROMONE_GC_INTERVAL = 10;
 /** Maximum age (ms) before a lock file is considered stale and can be broken. */
 const STALE_LOCK_THRESHOLD_MS = 30_000;
 
+/** Maximum time to wait for a live state lock before surfacing an error. */
+const STATE_LOCK_WAIT_MS = 3_000;
+
+/** Base spin duration while waiting for another process to release the state lock. */
+const STATE_LOCK_SPIN_MS = 5;
+
 /**
  * Score a task by combining its static priority with pheromone signals.
  * Higher scores are picked first by `claimNextTask`.
@@ -442,20 +448,25 @@ export class Nest {
 	 * processes) are automatically broken.
 	 */
 	private withStateLock<T>(fn: () => T): T {
-		const MAX_WAIT = 3000;
-		const SPIN_MS = 5;
 		const start = Date.now();
 		while (true) {
 			try {
 				fs.writeFileSync(this.lockFile, `${process.pid}:${Date.now()}`, { flag: "wx" });
 				break;
-			} catch {
-				if (Date.now() - start > MAX_WAIT) {
-					this.tryBreakStaleLock();
-					throw new Error(`[Nest] withStateLock timeout after ${MAX_WAIT}ms`);
+			} catch (error) {
+				if (!this.isLockContentionError(error)) {
+					throw new Error(
+						`[Nest] failed to acquire state lock at ${this.lockFile}: ${error instanceof Error ? error.message : String(error)}`,
+					);
 				}
-				// Busy-wait with jitter to avoid thundering herd
-				const until = Date.now() + SPIN_MS + Math.random() * SPIN_MS * 2;
+				if (this.tryBreakStaleLock()) {
+					continue;
+				}
+				if (Date.now() - start > STATE_LOCK_WAIT_MS) {
+					throw new Error(this.buildStateLockTimeoutMessage());
+				}
+				// Busy-wait with jitter to avoid thundering herd.
+				const until = Date.now() + STATE_LOCK_SPIN_MS + Math.random() * STATE_LOCK_SPIN_MS * 2;
 				while (Date.now() < until) {
 					/* spin */
 				}
@@ -472,11 +483,36 @@ export class Nest {
 		}
 	}
 
+	private isLockContentionError(error: unknown): boolean {
+		return typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST";
+	}
+
+	private buildStateLockTimeoutMessage(): string {
+		const details = this.describeLockHolder();
+		return `[Nest] withStateLock timeout after ${STATE_LOCK_WAIT_MS}ms${details ? ` (${details})` : ""}`;
+	}
+
+	private describeLockHolder(): string {
+		try {
+			const content = fs.readFileSync(this.lockFile, "utf-8").trim();
+			const [pidStr, tsStr] = content.split(":");
+			const holder = Number.parseInt(pidStr, 10);
+			const lockTime = Number.parseInt(tsStr, 10);
+			const parts = [Number.isFinite(holder) ? `pid ${holder}` : `raw ${JSON.stringify(content)}`];
+			if (Number.isFinite(lockTime)) {
+				parts.push(`age ${Date.now() - lockTime}ms`);
+			}
+			return parts.join(", ");
+		} catch {
+			return "lock metadata unavailable";
+		}
+	}
+
 	/**
 	 * Attempt to break a stale lock file. A lock is considered stale if it's
 	 * older than 30 seconds or the holding process is no longer alive.
 	 */
-	private tryBreakStaleLock(): void {
+	private tryBreakStaleLock(): boolean {
 		try {
 			const content = fs.readFileSync(this.lockFile, "utf-8");
 			const [pidStr, tsStr] = content.split(":");
@@ -484,20 +520,23 @@ export class Nest {
 			const lockTime = Number.parseInt(tsStr, 10);
 			if (lockTime && Date.now() - lockTime > STALE_LOCK_THRESHOLD_MS) {
 				fs.unlinkSync(this.lockFile);
-				return;
+				return true;
 			}
 			try {
 				process.kill(holder, 0);
+				return false;
 			} catch {
 				// Process is dead — safe to break the lock
 				fs.unlinkSync(this.lockFile);
+				return true;
 			}
 		} catch {
 			// Lock file unreadable or already gone
 			try {
 				fs.unlinkSync(this.lockFile);
+				return true;
 			} catch {
-				// Nothing to do
+				return false;
 			}
 		}
 	}

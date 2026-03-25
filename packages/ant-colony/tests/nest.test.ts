@@ -192,4 +192,19 @@ describe("withStateLock spin", () => {
 		const state = nest.getStateLight();
 		expect(state.status).toBe("reviewing");
 	});
+
+	it("breaks a stale lock and retries instead of timing out", () => {
+		const lockFile = (nest as any).lockFile as string;
+		fs.writeFileSync(lockFile, `999999:${Date.now()}`);
+
+		expect(() => nest.updateState({ status: "reviewing" })).not.toThrow();
+		expect(fs.existsSync(lockFile)).toBe(false);
+		expect(nest.getStateLight().status).toBe("reviewing");
+	});
+
+	it("surfaces non-contention lock errors immediately", () => {
+		fs.rmSync(nest.dir, { recursive: true, force: true });
+
+		expect(() => nest.updateState({ status: "reviewing" })).toThrow(/failed to acquire state lock/i);
+	});
 });
