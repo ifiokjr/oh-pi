@@ -1,6 +1,6 @@
 {
   "name": "@ifi/pi-shared-qna",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Shared TUI question-and-answer component for pi extensions.",
   "type": "module",
   "keywords": [

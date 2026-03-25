@@ -1,6 +1,6 @@
 {
   "name": "@ifi/pi-spec",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Native spec-kit workflow for pi with a /spec command, TypeScript scaffolding, and spec-driven prompts.",
   "type": "module",
   "keywords": [
