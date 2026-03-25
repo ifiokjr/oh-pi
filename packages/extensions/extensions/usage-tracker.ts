@@ -647,7 +647,9 @@ function isAnthropicApiKeyToken(token: string): boolean {
 }
 
 function utilizationToPercentLeft(utilization: number): number {
-	const usedPercent = utilization <= 1 ? utilization * 100 : utilization;
+	// Anthropic OAuth usage reports utilization as a percentage in [0,100]
+	// (e.g. 1.0 means 1% used, not 100% used).
+	const usedPercent = utilization;
 	return clampPercent(100 - usedPercent);
 }
 
@@ -1070,15 +1072,25 @@ async function probeGoogleDirect(token: string, authEntry?: PiAuthEntry): Promis
 		}
 
 		const payload = (await response.json()) as Record<string, unknown>;
-		const currentTier = payload.currentTier as { id?: unknown; name?: unknown } | undefined;
+		const currentTier = payload.currentTier as { id?: unknown; name?: unknown; description?: unknown } | undefined;
 		const tierId = typeof currentTier?.id === "string" ? currentTier.id : null;
 		const tierName = typeof currentTier?.name === "string" ? currentTier.name : null;
+		const tierDescription = typeof currentTier?.description === "string" ? currentTier.description : null;
 		if (tierName && tierId) {
 			result.plan = `${tierName} (${tierId})`;
 		} else if (tierName) {
 			result.plan = tierName;
 		} else if (tierId) {
 			result.plan = tierId;
+		}
+		if (tierDescription?.toLowerCase().includes("unlimited")) {
+			upsertWindow(result.windows, {
+				label: "Subscription quota",
+				percentLeft: 100,
+				resetDescription: null,
+				windowMinutes: null,
+			});
+			result.note = appendNote(result.note, "Tier reports unlimited coding assistant capacity.");
 		}
 
 		const projectId =
@@ -1119,6 +1131,14 @@ async function probeGoogleDirect(token: string, authEntry?: PiAuthEntry): Promis
 
 function hasProviderDisplayData(rl: ProviderRateLimits): boolean {
 	return rl.windows.length > 0 || rl.credits !== null || Boolean(rl.account || rl.plan || rl.note || rl.error);
+}
+
+function shouldPreserveStaleWindows(previous: ProviderRateLimits | undefined, next: ProviderRateLimits): boolean {
+	if (!previous || previous.windows.length === 0 || next.windows.length > 0 || next.error) {
+		return false;
+	}
+	const note = next.note?.toLowerCase() ?? "";
+	return note.includes("rate-limited") || note.includes("unavailable");
 }
 
 /** Map from ProviderKey to human-readable display name. */
@@ -1515,6 +1535,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	 * Reads credentials from `~/.pi/agent/auth.json` and calls the provider
 	 * API directly — no external CLI tools required.
 	 */
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: provider probe handles auth discovery, refresh, and stale window fallback semantics.
 	async function probeProvider(provider: ProviderKey, force = false): Promise<void> {
 		const now = Date.now();
 		const last = lastProbeTime.get(provider) ?? 0;
@@ -1579,6 +1600,14 @@ export default function usageTracker(pi: ExtensionAPI) {
 				case "google":
 					limits = await probeGoogleDirect(fresh.token, fresh.entry);
 					break;
+			}
+
+			const previous = rateLimits.get(provider);
+			if (shouldPreserveStaleWindows(previous, limits)) {
+				limits.windows = previous?.windows.map((window) => ({ ...window })) ?? [];
+				limits.note = limits.note
+					? `${limits.note} Showing last known window values.`
+					: "Showing last known window values.";
 			}
 
 			rateLimits.set(provider, limits);

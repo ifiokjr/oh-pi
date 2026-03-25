@@ -639,6 +639,62 @@ describe("usage-tracker extension", () => {
 			expect(text).toContain("Plan: OAuth");
 		});
 
+		it("treats Anthropic utilization 1.0 as 1% used (99% left)", async () => {
+			mockFetch.mockResolvedValue(
+				makeFetchResponse({
+					body: {
+						seven_day_sonnet: {
+							utilization: 1.0,
+							resets_at: new Date(Date.now() + 86_400_000).toISOString(),
+						},
+					},
+				}),
+			);
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			const text = result.content[0].text;
+			expect(text).toContain("7-day Sonnet");
+			expect(text).toContain("99% left");
+			expect(text).toContain("(1% used)");
+		});
+
+		it("keeps last Anthropic windows when a probe is rate-limited", async () => {
+			let anthropicCalls = 0;
+			mockFetch.mockImplementation((url: string) => {
+				if (url.includes("api.anthropic.com/api/oauth/usage")) {
+					anthropicCalls++;
+					if (anthropicCalls === 1) {
+						return Promise.resolve(
+							makeFetchResponse({
+								body: {
+									five_hour: {
+										utilization: 40,
+										resets_at: new Date(Date.now() + 30_000).toISOString(),
+									},
+								},
+							}),
+						);
+					}
+					return Promise.resolve(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "5" } }));
+				}
+				return Promise.resolve(makeFetchResponse());
+			});
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			const text = result.content[0].text;
+
+			expect(text).toContain("5-hour");
+			expect(text).toContain("60% left");
+		});
+
 		it("shows OpenAI windows from the ChatGPT usage endpoint", async () => {
 			ctx.model = { id: "gpt-4o" } as any;
 			mockFetch.mockImplementation((url: string) => {
@@ -722,6 +778,37 @@ describe("usage-tracker extension", () => {
 			expect(text).toContain("Plan: Gemini Code Assist (standard-tier)");
 			expect(text).toContain("Project: test-project");
 			expect(text).toContain("Account: test@example.com");
+		});
+
+		it("shows synthetic quota window when Google tier reports unlimited capacity", async () => {
+			ctx.model = { id: "gemini-2.5-pro" } as any;
+			mockFetch.mockImplementation((url: string) => {
+				if (url.includes("cloudcode-pa.googleapis.com/v1internal:loadCodeAssist")) {
+					return Promise.resolve(
+						makeFetchResponse({
+							body: {
+								currentTier: {
+									id: "standard-tier",
+									name: "Gemini Code Assist",
+									description: "Unlimited coding assistant with the most powerful Gemini models",
+								},
+								cloudaicompanionProject: "test-project",
+							},
+						}),
+					);
+				}
+				return Promise.resolve(makeFetchResponse());
+			});
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			const text = result.content[0].text;
+			expect(text).toContain("Subscription quota");
+			expect(text).toContain("100% left");
+			expect(text).toContain("Tier reports unlimited coding assistant capacity");
 		});
 
 		it("shows auth expired error when API returns 401", async () => {
