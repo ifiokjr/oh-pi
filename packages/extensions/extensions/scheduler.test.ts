@@ -19,7 +19,16 @@ vi.mock("node:fs", async (importOriginal) => {
 		readFileSync: vi.fn().mockReturnValue("{}"),
 		writeFileSync: vi.fn(),
 		renameSync: vi.fn(),
+		copyFileSync: vi.fn(),
+		rmSync: vi.fn(),
+		readdirSync: vi.fn().mockReturnValue([]),
+		rmdirSync: vi.fn(),
 	};
+});
+
+vi.mock("node:os", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:os")>();
+	return { ...actual, homedir: () => "/mock-home" };
 });
 
 vi.mock("@mariozechner/pi-coding-agent", () => ({}));
@@ -110,13 +119,24 @@ function createMockCtx(overrides: Record<string, any> = {}) {
 
 // ─── Imports ─────────────────────────────────────────────────────────────────
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	renameSync,
+	rmdirSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import schedulerExtension, {
 	computeNextCronRunAt,
 	DEFAULT_LOOP_INTERVAL,
 	DISPATCH_RATE_LIMIT_WINDOW_MS,
 	FIFTEEN_MINUTES,
 	formatDurationShort,
+	getSchedulerStoragePath,
 	MAX_DISPATCHES_PER_WINDOW,
 	MAX_TASKS,
 	MIN_RECURRING_INTERVAL,
@@ -567,6 +587,20 @@ describe("validateSchedulePromptAddInput", () => {
 
 // ─── SchedulerRuntime ────────────────────────────────────────────────────────
 
+describe("getSchedulerStoragePath", () => {
+	it("stores scheduler state under the shared pi agent directory", () => {
+		expect(getSchedulerStoragePath("/mock-project")).toBe(
+			"/mock-home/.pi/agent/scheduler/root/mock-project/scheduler.json",
+		);
+	});
+
+	it("mirrors nested repository paths for uniqueness", () => {
+		expect(getSchedulerStoragePath("/Users/test/work/repo")).toBe(
+			"/mock-home/.pi/agent/scheduler/root/Users/test/work/repo/scheduler.json",
+		);
+	});
+});
+
 describe("SchedulerRuntime", () => {
 	let pi: ReturnType<typeof createMockPi>;
 	let runtime: SchedulerRuntime;
@@ -579,6 +613,10 @@ describe("SchedulerRuntime", () => {
 		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		pi = createMockPi();
 		runtime = new SchedulerRuntime(pi as any);
 	});
@@ -1076,7 +1114,7 @@ describe("SchedulerRuntime", () => {
 	});
 
 	describe("persistence", () => {
-		it("persists tasks to disk on add", () => {
+		it("persists tasks to the shared pi scheduler store on add", () => {
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
 			runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
@@ -1087,6 +1125,8 @@ describe("SchedulerRuntime", () => {
 				(c: unknown[]) => typeof c[0] === "string" && (c[0] as string).includes("scheduler.json"),
 			);
 			expect(schedulerWrite).toBeDefined();
+			expect(schedulerWrite?.[0]).toContain("/mock-home/.pi/agent/scheduler/root/mock-project/scheduler.json.tmp");
+			expect(String(schedulerWrite?.[0])).not.toContain("/mock-project/.pi/scheduler.json");
 		});
 
 		it("uses atomic write (tmp + rename)", () => {
@@ -1100,7 +1140,7 @@ describe("SchedulerRuntime", () => {
 			expect(renameSync).toHaveBeenCalled();
 		});
 
-		it("loads tasks from disk on context set", () => {
+		it("loads tasks from the shared store on context set", () => {
 			const now = Date.now();
 			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
@@ -1132,6 +1172,7 @@ describe("SchedulerRuntime", () => {
 			expect(task).toBeDefined();
 			expect(task!.prompt).toBe("check build");
 			expect(task!.runCount).toBe(3);
+			expect(readFileSync).toHaveBeenCalledWith(getSchedulerStoragePath(ctx.cwd), "utf-8");
 		});
 
 		it("skips expired tasks when loading from disk", () => {
@@ -1161,6 +1202,7 @@ describe("SchedulerRuntime", () => {
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
 			expect(runtime.taskCount).toBe(0);
+			expect(rmSync).toHaveBeenCalledWith(getSchedulerStoragePath(ctx.cwd), { force: true });
 		});
 
 		it("skips unsafe sub-minute cron tasks when loading from disk", () => {
@@ -1264,6 +1306,35 @@ describe("SchedulerRuntime", () => {
 			expect(task!.pending).toBe(false);
 		});
 
+		it("migrates legacy .pi/scheduler.json into the shared store", () => {
+			const ctx = createMockCtx();
+			const sharedPath = getSchedulerStoragePath(ctx.cwd);
+			const legacyPath = `${ctx.cwd}/.pi/scheduler.json`;
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((filePath: string) => {
+				if (filePath === legacyPath) {
+					return true;
+				}
+				if (filePath === sharedPath) {
+					return false;
+				}
+				return false;
+			});
+
+			runtime.setRuntimeContext(ctx as any);
+			expect(copyFileSync).toHaveBeenCalledWith(legacyPath, sharedPath);
+		});
+
+		it("removes persisted scheduler files when tasks become defunct", () => {
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+			runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
+
+			(writeFileSync as ReturnType<typeof vi.fn>).mockClear();
+			runtime.clearTasks();
+
+			expect(rmSync).toHaveBeenCalledWith(getSchedulerStoragePath(ctx.cwd), { force: true });
+		});
+
 		it("does not persist without storage path", () => {
 			// Don't set runtime context (no storage path)
 			runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
@@ -1309,6 +1380,10 @@ describe("schedulerExtension registration", () => {
 		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		pi = createMockPi();
 	});
 
@@ -1353,6 +1428,10 @@ describe("command handlers", () => {
 		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		pi = createMockPi();
 		ctx = createMockCtx();
 		schedulerExtension(pi as any);
@@ -1565,6 +1644,10 @@ describe("schedule_prompt tool", () => {
 		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		pi = createMockPi();
 		ctx = createMockCtx();
 		schedulerExtension(pi as any);
@@ -1814,6 +1897,10 @@ describe("event wiring", () => {
 		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		pi = createMockPi();
 		schedulerExtension(pi as any);
 	});
@@ -1907,6 +1994,10 @@ describe("edge cases", () => {
 		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		pi = createMockPi();
 		ctx = createMockCtx();
 		schedulerExtension(pi as any);

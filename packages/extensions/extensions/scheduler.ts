@@ -9,10 +9,12 @@
  * Based on pi-scheduler by @manojlds (MIT).
  *
  * Tasks run only while pi is active and idle. Recurring tasks auto-expire
- * after 3 days. State is persisted to `.pi/scheduler.json`.
+ * after 3 days. State is persisted under `~/.pi/agent/scheduler/.../scheduler.json`
+ * using a path that mirrors the current workspace path.
  */
 
 import * as fs from "node:fs";
+import { homedir } from "node:os";
 import * as path from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
@@ -74,6 +76,27 @@ export type SchedulePromptAddPlan =
 interface SchedulerStore {
 	version: 1;
 	tasks: ScheduleTask[];
+}
+
+function getSchedulerStorageRoot(): string {
+	return path.join(homedir(), ".pi", "agent", "scheduler");
+}
+
+export function getSchedulerStoragePath(cwd: string): string {
+	const resolved = path.resolve(cwd);
+	const parsed = path.parse(resolved);
+	const relativeSegments = resolved.slice(parsed.root.length).split(path.sep).filter(Boolean);
+	const rootSegment = parsed.root
+		? parsed.root
+				.replaceAll(/[^a-zA-Z0-9]+/g, "-")
+				.replaceAll(/^-+|-+$/g, "")
+				.toLowerCase() || "root"
+		: "root";
+	return path.join(getSchedulerStorageRoot(), rootSegment, ...relativeSegments, "scheduler.json");
+}
+
+function getLegacySchedulerStoragePath(cwd: string): string {
+	return path.join(cwd, ".pi", "scheduler.json");
 }
 
 // ── Scheduling helpers ──────────────────────────────────────────────────────
@@ -456,9 +479,10 @@ export class SchedulerRuntime {
 			return;
 		}
 
-		const nextStorePath = path.join(ctx.cwd, ".pi", "scheduler.json");
+		const nextStorePath = getSchedulerStoragePath(ctx.cwd);
 		if (nextStorePath !== this.storagePath) {
 			this.storagePath = nextStorePath;
+			this.migrateLegacyStore(ctx.cwd);
 			this.loadTasksFromDisk();
 		}
 	}
@@ -1062,6 +1086,55 @@ export class SchedulerRuntime {
 		return this.hashString(taskId) % (maxJitter + 1);
 	}
 
+	private migrateLegacyStore(cwd: string) {
+		if (!this.storagePath) {
+			return;
+		}
+		const legacyPath = getLegacySchedulerStoragePath(cwd);
+		if (legacyPath === this.storagePath) {
+			return;
+		}
+		try {
+			if (!fs.existsSync(legacyPath) || fs.existsSync(this.storagePath)) {
+				return;
+			}
+			fs.mkdirSync(path.dirname(this.storagePath), { recursive: true });
+			fs.copyFileSync(legacyPath, this.storagePath);
+		} catch {
+			// Best-effort migration; runtime can continue from either empty state or new store.
+		}
+	}
+
+	private cleanupPersistedStore() {
+		if (!this.storagePath) {
+			return;
+		}
+		try {
+			fs.rmSync(this.storagePath, { force: true });
+		} catch {
+			// Best-effort cleanup.
+		}
+
+		const schedulerRoot = getSchedulerStorageRoot();
+		let currentDir = path.dirname(this.storagePath);
+		while (currentDir.startsWith(schedulerRoot) && currentDir !== schedulerRoot) {
+			try {
+				if (!fs.existsSync(currentDir)) {
+					currentDir = path.dirname(currentDir);
+					continue;
+				}
+				const entries = fs.readdirSync(currentDir);
+				if (entries.length > 0) {
+					break;
+				}
+				fs.rmdirSync(currentDir);
+				currentDir = path.dirname(currentDir);
+			} catch {
+				break;
+			}
+		}
+	}
+
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Deserializes backward-compatible task shapes with runtime normalization guards.
 	loadTasksFromDisk() {
 		if (!this.storagePath) {
@@ -1069,6 +1142,7 @@ export class SchedulerRuntime {
 		}
 
 		this.tasks.clear();
+		let mutated = false;
 		try {
 			if (!fs.existsSync(this.storagePath)) {
 				return;
@@ -1079,9 +1153,11 @@ export class SchedulerRuntime {
 			const now = Date.now();
 			for (const task of list) {
 				if (this.tasks.size >= MAX_TASKS) {
+					mutated = true;
 					break;
 				}
 				if (!(task?.id && task.prompt)) {
+					mutated = true;
 					continue;
 				}
 
@@ -1092,25 +1168,35 @@ export class SchedulerRuntime {
 					runCount: task.runCount ?? 0,
 				};
 				if (normalized.kind === "recurring" && normalized.expiresAt && now >= normalized.expiresAt) {
+					mutated = true;
 					continue;
 				}
 
 				if (normalized.kind === "recurring" && normalized.cronExpression) {
 					const cron = normalizeCronExpression(normalized.cronExpression);
 					if (!cron) {
+						mutated = true;
 						continue;
+					}
+					if (cron.expression !== normalized.cronExpression) {
+						mutated = true;
 					}
 					normalized.cronExpression = cron.expression;
 				}
 
 				if (normalized.kind === "recurring" && !normalized.cronExpression) {
 					const rawIntervalMs = normalized.intervalMs ?? DEFAULT_LOOP_INTERVAL;
-					normalized.intervalMs = Number.isFinite(rawIntervalMs)
+					const safeIntervalMs = Number.isFinite(rawIntervalMs)
 						? Math.max(rawIntervalMs, MIN_RECURRING_INTERVAL)
 						: DEFAULT_LOOP_INTERVAL;
+					if (normalized.intervalMs !== safeIntervalMs) {
+						mutated = true;
+					}
+					normalized.intervalMs = safeIntervalMs;
 				}
 
 				if (!Number.isFinite(normalized.nextRunAt)) {
+					mutated = true;
 					if (normalized.kind === "recurring" && normalized.cronExpression) {
 						normalized.nextRunAt = computeNextCronRunAt(normalized.cronExpression, now) ?? now + DEFAULT_LOOP_INTERVAL;
 					} else {
@@ -1125,6 +1211,9 @@ export class SchedulerRuntime {
 		} catch {
 			// Ignore corrupted store and continue with empty in-memory state.
 		}
+		if (mutated) {
+			this.persistTasks();
+		}
 		this.updateStatus();
 	}
 
@@ -1133,10 +1222,15 @@ export class SchedulerRuntime {
 			return;
 		}
 		try {
+			const tasks = this.getSortedTasks();
+			if (tasks.length === 0) {
+				this.cleanupPersistedStore();
+				return;
+			}
 			fs.mkdirSync(path.dirname(this.storagePath), { recursive: true });
 			const store: SchedulerStore = {
 				version: 1,
-				tasks: this.getSortedTasks(),
+				tasks,
 			};
 			const tempPath = `${this.storagePath}.tmp`;
 			fs.writeFileSync(tempPath, JSON.stringify(store, null, 2), "utf-8");
