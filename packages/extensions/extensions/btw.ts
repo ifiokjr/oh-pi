@@ -96,6 +96,61 @@ function toReasoning(level: SessionThinkingLevel): AiThinkingLevel | undefined {
 	return level === "off" ? undefined : level;
 }
 
+type CompatibleModelRegistry = {
+	getApiKey?: (model: NonNullable<ExtensionContext["model"]>) => Promise<string | undefined> | string | undefined;
+	getApiKeyForProvider?: (provider: string) => Promise<string | undefined> | string | undefined;
+	authStorage?: {
+		getApiKey?: (provider: string) => Promise<string | undefined> | string | undefined;
+	};
+};
+
+export async function resolveBtwApiKey(
+	model: NonNullable<ExtensionContext["model"]>,
+	modelRegistry: ExtensionContext["modelRegistry"] | CompatibleModelRegistry | undefined,
+): Promise<string | undefined> {
+	const registry = modelRegistry as CompatibleModelRegistry | undefined;
+
+	if (typeof registry?.getApiKey === "function") {
+		return await registry.getApiKey(model);
+	}
+
+	if (typeof registry?.getApiKeyForProvider === "function") {
+		return await registry.getApiKeyForProvider(model.provider);
+	}
+
+	if (typeof registry?.authStorage?.getApiKey === "function") {
+		return await registry.authStorage.getApiKey(model.provider);
+	}
+
+	try {
+		const piModule = (await import("@mariozechner/pi-coding-agent")) as Record<string, unknown>;
+		const authStorageModule = Reflect.get(piModule, "AuthStorage") as { create?: () => unknown } | undefined;
+		const modelRegistryModule = Reflect.get(piModule, "ModelRegistry") as
+			| (new (
+					authStorage: unknown,
+			  ) => CompatibleModelRegistry)
+			| undefined;
+
+		if (typeof authStorageModule?.create === "function" && modelRegistryModule) {
+			const fallbackRegistry = new modelRegistryModule(authStorageModule.create());
+			if (typeof fallbackRegistry.getApiKey === "function") {
+				return await fallbackRegistry.getApiKey(model);
+			}
+		}
+	} catch {
+		// Ignore and fall back to environment-based resolution below.
+	}
+
+	try {
+		const aiModule = (await import("@mariozechner/pi-ai")) as {
+			getEnvApiKey?: (provider: string) => string | undefined;
+		};
+		return aiModule.getEnvApiKey?.(model.provider);
+	} catch {
+		return undefined;
+	}
+}
+
 function extractText(parts: AssistantMessage["content"], type: "text" | "thinking"): string {
 	const chunks: string[] = [];
 	for (const part of parts) {
@@ -413,7 +468,10 @@ export default function (pi: ExtensionAPI) {
 		question: string,
 	): Promise<AssistantMessage | "aborted"> {
 		const model = ctx.model!;
-		const apiKey = (await ctx.modelRegistry.getApiKey(model))!;
+		const apiKey = await resolveBtwApiKey(model, ctx.modelRegistry);
+		if (!apiKey) {
+			throw new Error(`No credentials available for ${model.provider}/${model.id}.`);
+		}
 		const thinkingLevel = pi.getThinkingLevel() as SessionThinkingLevel;
 
 		const stream = streamSimple(model, buildBtwContext(ctx, question, threadSnapshot), {
@@ -456,7 +514,7 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 
-		const apiKey = await ctx.modelRegistry.getApiKey(model);
+		const apiKey = await resolveBtwApiKey(model, ctx.modelRegistry);
 		if (!apiKey) {
 			notify(ctx, `No credentials available for ${model.provider}/${model.id}.`, "error");
 			return;
@@ -531,7 +589,7 @@ export default function (pi: ExtensionAPI) {
 			throw new Error("No active model selected.");
 		}
 
-		const apiKey = await ctx.modelRegistry.getApiKey(model);
+		const apiKey = await resolveBtwApiKey(model, ctx.modelRegistry);
 		if (!apiKey) {
 			throw new Error(`No credentials available for ${model.provider}/${model.id}.`);
 		}
