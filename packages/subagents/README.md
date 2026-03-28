@@ -45,7 +45,7 @@ Agents are markdown files with YAML frontmatter that define specialized subagent
 |-------|------|----------|
 | Builtin | Bundled with this package in `agents/` | Lowest |
 | User | `~/.pi/agent/agents/{name}.md` | Medium |
-| Project | `.pi/agents/{name}.md` (searches up directory tree) | Highest |
+| Project | `~/.pi/agent/subagents/project-agents/<mirrored-workspace>/agents/{name}.md` (searches mirrored parent workspaces); legacy `.pi/agents/{name}.md` is opt-in | Highest |
 
 Use `agentScope` parameter to control discovery: `"user"`, `"project"`, or `"both"` (default; project takes priority).
 
@@ -243,7 +243,7 @@ Chains are `.chain.md` files stored alongside agent files. They define reusable 
 | Scope | Path |
 |-------|------|
 | User | `~/.pi/agent/agents/{name}.chain.md` |
-| Project | `.pi/agents/{name}.chain.md` |
+| Project | `~/.pi/agent/subagents/project-agents/<mirrored-workspace>/agents/{name}.chain.md` |
 
 **Format:**
 
@@ -641,6 +641,37 @@ Session root resolution follows this precedence:
 3. Derived from parent session (stored alongside parent session file)
 
 Sessions are always enabled — every subagent run gets a session directory for tracking.
+
+### `projectAgentStorageMode`
+
+Controls where project-scope agent and chain definitions are stored.
+
+```json
+{
+  "projectAgentStorageMode": "shared"
+}
+```
+
+Modes:
+- `"shared"` (default) — stores project-scope definitions under `~/.pi/agent/subagents/project-agents/...`
+- `"project"` — uses legacy repo-local `.pi/agents/`
+
+When shared mode is enabled, legacy `.pi/agents/` directories are migrated automatically when discovered.
+
+### `projectAgentSharedRoot`
+
+Overrides the shared root used in `shared` mode.
+
+```json
+{
+  "projectAgentStorageMode": "shared",
+  "projectAgentSharedRoot": "~/.pi/agent/subagents/project-agents"
+}
+```
+
+Environment overrides are also supported:
+- `PI_SUBAGENT_PROJECT_AGENTS_MODE=shared|project`
+- `PI_SUBAGENT_PROJECT_AGENTS_ROOT=/custom/path`
 
 ## Chain Directory
 Each chain run creates `<tmpdir>/pi-chain-runs/{runId}/` containing:

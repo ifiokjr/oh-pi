@@ -218,6 +218,8 @@ export interface RunSyncOptions {
 export interface ExtensionConfig {
 	asyncByDefault?: boolean;
 	defaultSessionDir?: string;
+	projectAgentStorageMode?: "shared" | "project";
+	projectAgentSharedRoot?: string;
 }
 
 // ============================================================================

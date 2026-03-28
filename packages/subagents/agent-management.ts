@@ -448,7 +448,7 @@ export function handleCreate(params: ManagementParams, ctx: ManagementContext): 
 	const scope = scopeRaw as ManagementScope;
 	const isChain = hasKey(cfg, "steps");
 	const d = discoverAgentsAll(ctx.cwd);
-	const targetDir = scope === "user" ? d.userDir : (d.projectDir ?? path.join(ctx.cwd, ".pi", "agents"));
+	const targetDir = scope === "user" ? d.userDir : d.projectDir;
 	fs.mkdirSync(targetDir, { recursive: true });
 	if (nameExistsInScope(ctx.cwd, scope, name))
 		return result(`Name '${name}' already exists in ${scope} scope. Use update instead.`, true);

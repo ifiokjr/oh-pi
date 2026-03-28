@@ -7,8 +7,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { KNOWN_FIELDS } from "./agent-serializer.js";
-import { parseChain } from "./chain-serializer.js";
 import { mergeAgentsForScope } from "./agent-selection.js";
+import { parseChain } from "./chain-serializer.js";
+import { findNearestProjectAgentsDir } from "./project-agents-storage.js";
 
 export type AgentScope = "user" | "project" | "both";
 
@@ -55,7 +56,7 @@ export interface ChainConfig {
 
 export interface AgentDiscoveryResult {
 	agents: AgentConfig[];
-	projectAgentsDir: string | null;
+	projectAgentsDir: string;
 }
 
 function parseFrontmatter(content: string): { frontmatter: Record<string, string>; body: string } {
@@ -223,26 +224,6 @@ function loadChainsFromDir(dir: string, source: AgentSource): ChainConfig[] {
 	return chains;
 }
 
-function isDirectory(p: string): boolean {
-	try {
-		return fs.statSync(p).isDirectory();
-	} catch {
-		return false;
-	}
-}
-
-function findNearestProjectAgentsDir(cwd: string): string | null {
-	let currentDir = cwd;
-	while (true) {
-		const candidate = path.join(currentDir, ".pi", "agents");
-		if (isDirectory(candidate)) return candidate;
-
-		const parentDir = path.dirname(currentDir);
-		if (parentDir === currentDir) return null;
-		currentDir = parentDir;
-	}
-}
-
 const BUILTIN_AGENTS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "agents");
 
 export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryResult {
@@ -263,7 +244,7 @@ export function discoverAgentsAll(cwd: string): {
 	project: AgentConfig[];
 	chains: ChainConfig[];
 	userDir: string;
-	projectDir: string | null;
+	projectDir: string;
 } {
 	const userDir = path.join(os.homedir(), ".pi", "agent", "agents");
 	const projectDir = findNearestProjectAgentsDir(cwd);
