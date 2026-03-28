@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { type ColonyStorageOptions, getColonyWorktreeParentDir, resolveColonyStorageOptions } from "./storage.js";
 import type { ColonyWorkspace } from "./types.js";
 
 const WORKTREE_ENV_FLAG = "PI_ANT_COLONY_WORKTREE";
@@ -9,6 +10,7 @@ export interface PrepareColonyWorkspaceOptions {
 	cwd: string;
 	runtimeId: string;
 	enabled?: boolean;
+	storageOptions?: ColonyStorageOptions;
 }
 
 export interface ResumeColonyWorkspaceOptions extends PrepareColonyWorkspaceOptions {
@@ -138,7 +140,8 @@ export function prepareColonyWorkspace(opts: PrepareColonyWorkspaceOptions): Col
 		const safeRuntime = sanitizeSegment(opts.runtimeId);
 		const suffix = randomSuffix();
 		const branch = `ant-colony/${safeRuntime}-${suffix}`;
-		const worktreeParent = join(repoRoot, ".ant-colony", "worktrees");
+		const storageOptions = resolveColonyStorageOptions(opts.storageOptions);
+		const worktreeParent = getColonyWorktreeParentDir(originCwd, storageOptions);
 		const worktreeRoot = join(worktreeParent, `${safeRuntime}-${suffix}`);
 
 		mkdirSync(worktreeParent, { recursive: true });
@@ -190,7 +193,7 @@ export function resumeColonyWorkspace(opts: ResumeColonyWorkspaceOptions): Colon
 
 	if (saved.repoRoot && saved.worktreeRoot && saved.branch) {
 		try {
-			mkdirSync(join(saved.repoRoot, ".ant-colony", "worktrees"), { recursive: true });
+			mkdirSync(dirname(saved.worktreeRoot), { recursive: true });
 			git(saved.repoRoot, ["worktree", "add", saved.worktreeRoot, saved.branch]);
 			return {
 				...saved,

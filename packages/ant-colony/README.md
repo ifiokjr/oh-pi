@@ -12,7 +12,7 @@ Queen                           Main pi process, receives goals, orchestrates li
   ├─ ⚒️  Worker                  Sonnet, executes tasks, may spawn sub-tasks
   └─ 🛡️ Soldier                 Sonnet, reviews quality, may request rework
 
-Pheromone                       .ant-colony/ file system, indirect ant-to-ant communication
+Pheromone                       Shared ant-colony state store, indirect ant-to-ant communication
 Nest                            Shared state, atomic file operations, cross-process safe
 ```
 
@@ -27,8 +27,17 @@ Goal → Scouting → Task Pool → Workers Execute in Parallel → Soldiers Rev
 
 ## Workspace Isolation (Default)
 
-By default, each colony runs in an **isolated git worktree** on its own branch (`ant-colony/...`).
-This keeps your current branch untouched while the swarm edits code.
+By default, colony runtime state is stored outside the repository under a shared pi agent folder:
+
+```text
+~/.pi/agent/ant-colony/root/<mirrored-workspace-path>/
+├── colonies/
+└── worktrees/
+```
+
+Each colony still runs in an **isolated git worktree** on its own branch (`ant-colony/...`), but the
+worktree directory itself now lives in that shared storage root instead of inside your repo. This keeps
+your current branch untouched and avoids creating `.ant-colony/` in the workspace.
 
 If worktree creation is unavailable (e.g. not a git repo), the colony automatically falls back to the shared cwd and
 reports the reason in the final report/status output.
@@ -37,6 +46,22 @@ You can disable worktree isolation with:
 
 ```bash
 PI_ANT_COLONY_WORKTREE=0
+```
+
+You can opt back into project-local storage if you want the legacy behavior:
+
+```json
+// ~/.pi/agent/extensions/ant-colony/config.json
+{
+  "storageMode": "project"
+}
+```
+
+Optional overrides:
+
+```bash
+PI_ANT_COLONY_STORAGE_MODE=shared
+PI_ANT_COLONY_STORAGE_ROOT=~/.pi/agent/ant-colony
 ```
 
 ## Adaptive Concurrency
@@ -105,14 +130,16 @@ Each task declares the files it operates on. The queen guarantees:
 
 ## Nest Structure
 
-```
-.ant-colony/{colony-id}/
+```text
+~/.pi/agent/ant-colony/root/<mirrored-workspace-path>/colonies/{colony-id}/
 ├── state.json           Colony state
-├── pheromone.jsonl       Append-only pheromone log
+├── pheromone.jsonl      Append-only pheromone log
 └── tasks/               One file per task (atomic updates)
     ├── t-xxx.json
     └── t-yyy.json
 ```
+
+Legacy project-local `.ant-colony/{colony-id}/` state is migrated automatically into the shared store when detected.
 
 ## Installation
 

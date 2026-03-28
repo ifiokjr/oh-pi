@@ -1,14 +1,15 @@
 /**
  * Nest — Colony shared state backed by the file system.
  *
- * The nest is the single source of truth for a running colony. It persists
- * all state to `.ant-colony/{colonyId}/` so that colonies can be resumed
- * after a crash and multiple ants can coordinate via file locks.
+ * The nest is the single source of truth for a running colony. By default it
+ * persists state under `~/.pi/agent/ant-colony/...`, mirrored by workspace
+ * path, so colonies can resume without polluting the git workspace. Project-
+ * local `.ant-colony/{colonyId}/` storage remains available as an opt-in.
  *
  * Directory layout:
  * ```
- * .ant-colony/{colonyId}/
- *   state.json      — Main colony state (metrics, ants, concurrency)
+ * <storage-root>/{colonyId}/
+ *   state.json       — Main colony state (metrics, ants, concurrency)
  *   pheromone.jsonl  — Append-only pheromone log (incremental reads)
  *   tasks/           — One JSON file per task (atomic writes via rename)
  * ```
@@ -19,6 +20,12 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import {
+	type ColonyStorageOptions,
+	getColonyStateParentDir,
+	migrateLegacyProjectColonies,
+	resolveColonyStorageOptions,
+} from "./storage.js";
 import type { Ant, ColonyState, ConcurrencySample, EscalationReason, Pheromone, Task, TaskStatus } from "./types.js";
 
 /** Minimum pheromone strength to keep (below this, entries are garbage-collected). */
@@ -94,8 +101,12 @@ export class Nest {
 		private cwd: string,
 		// biome-ignore lint/correctness/noUnusedPrivateClassMembers: used as this.colonyId throughout
 		private colonyId: string,
+		storageOptions?: ColonyStorageOptions,
 	) {
-		this.dir = path.join(cwd, ".ant-colony", colonyId);
+		const resolvedStorage = resolveColonyStorageOptions(storageOptions);
+		migrateLegacyProjectColonies(cwd, resolvedStorage);
+		const parentDir = getColonyStateParentDir(cwd, resolvedStorage);
+		this.dir = path.join(parentDir, colonyId);
 		this.stateFile = path.join(this.dir, "state.json");
 		this.lockFile = path.join(this.dir, "state.lock");
 		this.pheromoneFile = path.join(this.dir, "pheromone.jsonl");
@@ -554,21 +565,29 @@ export class Nest {
 	}
 
 	/**
-	 * Scan `.ant-colony/` for a colony that can be resumed (status is
-	 * scouting, working, or reviewing and has no `finishedAt` timestamp).
+	 * Scan the configured colony storage for a colony that can be resumed
+	 * (status is scouting, working, or reviewing and has no `finishedAt`).
 	 */
-	static findResumable(cwd: string): { colonyId: string; state: ColonyState } | null {
-		const all = Nest.findAllResumable(cwd);
+	static findResumable(
+		cwd: string,
+		storageOptions?: ColonyStorageOptions,
+	): { colonyId: string; state: ColonyState } | null {
+		const all = Nest.findAllResumable(cwd, storageOptions);
 		return all.length > 0 ? all[0] : null;
 	}
 
 	/**
-	 * Find all resumable colonies in the working directory.
+	 * Find all resumable colonies for the current working directory.
 	 * Returns colonies whose state is incomplete (not done/failed/budget_exceeded).
 	 * Sorted by `createdAt` descending so the most recent colony is first.
 	 */
-	static findAllResumable(cwd: string): Array<{ colonyId: string; state: ColonyState }> {
-		const parentDir = path.join(cwd, ".ant-colony");
+	static findAllResumable(
+		cwd: string,
+		storageOptions?: ColonyStorageOptions,
+	): Array<{ colonyId: string; state: ColonyState }> {
+		const resolvedStorage = resolveColonyStorageOptions(storageOptions);
+		migrateLegacyProjectColonies(cwd, resolvedStorage);
+		const parentDir = getColonyStateParentDir(cwd, resolvedStorage);
 		const results: Array<{ colonyId: string; state: ColonyState }> = [];
 		try {
 			for (const dir of fs.readdirSync(parentDir)) {
@@ -587,7 +606,7 @@ export class Nest {
 				}
 			}
 		} catch {
-			// No .ant-colony directory — nothing to resume
+			// No persisted colony state found for this workspace.
 		}
 		results.sort((a, b) => (b.state.createdAt ?? 0) - (a.state.createdAt ?? 0));
 		return results;

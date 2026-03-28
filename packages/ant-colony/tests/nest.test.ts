@@ -48,7 +48,7 @@ let nest: Nest;
 
 beforeEach(() => {
 	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nest-test-"));
-	nest = new Nest(tmpDir, "test-colony");
+	nest = new Nest(tmpDir, "test-colony", { mode: "project" });
 	nest.init(mkState());
 });
 

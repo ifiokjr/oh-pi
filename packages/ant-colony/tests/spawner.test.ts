@@ -101,7 +101,7 @@ const mkTask = (description: string): Task => ({
 describe("runDrone", () => {
 	it("executes allowlisted commands", async () => {
 		const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "drone-ok-"));
-		const nest = new Nest(cwd, "drone-ok");
+		const nest = new Nest(cwd, "drone-ok", { mode: "project" });
 		const task = mkTask("node -e \"console.log('ok')\"");
 		nest.init(mkState({ tasks: [task] }));
 
@@ -113,7 +113,7 @@ describe("runDrone", () => {
 
 	it("rejects shell metacharacters", async () => {
 		const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "drone-bad-"));
-		const nest = new Nest(cwd, "drone-bad");
+		const nest = new Nest(cwd, "drone-bad", { mode: "project" });
 		const task = mkTask("echo hi && echo bye");
 		nest.init(mkState({ tasks: [task] }));
 
@@ -125,7 +125,7 @@ describe("runDrone", () => {
 
 	it("rejects non-allowlisted executables", async () => {
 		const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "drone-no-allow-"));
-		const nest = new Nest(cwd, "drone-no-allow");
+		const nest = new Nest(cwd, "drone-no-allow", { mode: "project" });
 		const task = mkTask("python -V");
 		nest.init(mkState({ tasks: [task] }));
 

@@ -256,12 +256,26 @@ async function flushMicrotasks() {
 	await Promise.resolve();
 }
 
+function withSharedStorageEnv(): () => void {
+	const previous = process.env.PI_ANT_COLONY_STORAGE_MODE;
+	process.env.PI_ANT_COLONY_STORAGE_MODE = "shared";
+	return () => {
+		if (previous == null) {
+			process.env.PI_ANT_COLONY_STORAGE_MODE = undefined;
+		} else {
+			process.env.PI_ANT_COLONY_STORAGE_MODE = previous;
+		}
+	};
+}
+
 describe("ant-colony extension commands", () => {
 	let cwd: string;
 	let pi: ReturnType<typeof createMockPi>;
 	let ctx: ReturnType<typeof createCommandCtx>;
+	let restoreStorageEnv: (() => void) | undefined;
 
 	beforeEach(() => {
+		restoreStorageEnv = withSharedStorageEnv();
 		cwd = fs.mkdtempSync(path.join(os.tmpdir(), "colony-index-test-"));
 		fs.writeFileSync(path.join(cwd, ".gitignore"), "");
 		runInvocations.length = 0;
@@ -276,6 +290,7 @@ describe("ant-colony extension commands", () => {
 	});
 
 	afterEach(() => {
+		restoreStorageEnv?.();
 		for (const inv of runInvocations) {
 			inv.deferred.resolve(mkState("failed", inv.opts.goal, inv.stableId));
 		}
@@ -295,6 +310,13 @@ describe("ant-colony extension commands", () => {
 			expect.objectContaining({ description: "Show ant colony details" }),
 		);
 		expect(pi.registerShortcut).not.toHaveBeenCalledWith("ctrl+shift+a", expect.anything());
+	});
+
+	it("does not modify .gitignore when shared storage is active", async () => {
+		const colonyCmd = pi._commands.get("colony");
+		await colonyCmd.handler("Keep repo clean", ctx);
+
+		expect(fs.readFileSync(path.join(cwd, ".gitignore"), "utf-8")).toBe("");
 	});
 
 	it("/colony-stop all aborts all running colonies", async () => {
@@ -360,6 +382,16 @@ describe("ant-colony extension commands", () => {
 });
 
 describe("index-level telemetry propagation", () => {
+	let restoreStorageEnv: (() => void) | undefined;
+
+	beforeEach(() => {
+		restoreStorageEnv = withSharedStorageEnv();
+	});
+
+	afterEach(() => {
+		restoreStorageEnv?.();
+	});
+
 	it("passes eventBus into ant_colony runtime tool execution", async () => {
 		runInvocations.length = 0;
 		const pi = createMockPi();

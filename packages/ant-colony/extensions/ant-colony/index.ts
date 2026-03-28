@@ -16,6 +16,7 @@ import { Container, matchesKey, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { Nest } from "./nest.js";
 import { createUsageLimitsTracker, type QueenCallbacks, resumeColony, runColony } from "./queen.js";
+import { resolveColonyStorageOptions, shouldManageProjectGitignore } from "./storage.js";
 import type {
 	AntStreamEvent,
 	AntUsageEvent,
@@ -44,7 +45,7 @@ import {
 
 // ═══ Background colony state ═══
 
-/** Ensure .ant-colony/ is in .gitignore */
+/** Ensure project-local `.ant-colony/` is ignored when legacy project storage is enabled. */
 function ensureGitignore(cwd: string) {
 	const gitignorePath = join(cwd, ".gitignore");
 	const content = existsSync(gitignorePath) ? readFileSync(gitignorePath, "utf-8") : "";
@@ -81,6 +82,7 @@ interface BackgroundColony {
 }
 
 export default function antColonyExtension(pi: ExtensionAPI) {
+	const storageOptions = resolveColonyStorageOptions();
 	/** All running background colonies, keyed by short ID. */
 	const colonies = new Map<string, BackgroundColony>();
 	/** Auto-incrementing colony counter for generating IDs. */
@@ -318,10 +320,13 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		},
 		signal?: AbortSignal | null,
 	) {
-		ensureGitignore(params.cwd);
+		if (shouldManageProjectGitignore(storageOptions)) {
+			ensureGitignore(params.cwd);
+		}
 		const workspace = prepareColonyWorkspace({
 			cwd: params.cwd,
 			runtimeId: `sync-${Date.now().toString(36)}`,
+			storageOptions,
 		});
 
 		const callbacks: QueenCallbacks = {
@@ -345,6 +350,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				workspace,
 				eventBus: pi.events, // Usage-tracker integration for budget-aware planning
 				usageLimitsTracker,
+				storageOptions,
 			});
 
 			return {
@@ -382,8 +388,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 					cwd: params.cwd,
 					runtimeId: colonyId,
 					savedWorkspace: options?.workspaceHint ?? null,
+					storageOptions,
 				})
-			: prepareColonyWorkspace({ cwd: params.cwd, runtimeId: colonyId });
+			: prepareColonyWorkspace({ cwd: params.cwd, runtimeId: colonyId, storageOptions });
 		const now = Date.now();
 		const colony: BackgroundColony = {
 			id: colonyId,
@@ -525,8 +532,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			},
 		};
 
-		// Ensure .ant-colony/ is in .gitignore
-		ensureGitignore(params.cwd);
+		if (shouldManageProjectGitignore(storageOptions)) {
+			ensureGitignore(params.cwd);
+		}
 
 		const colonyOpts = {
 			cwd: params.cwd,
@@ -543,6 +551,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			workspace,
 			eventBus: pi.events, // Usage-tracker integration for budget-aware planning
 			usageLimitsTracker,
+			storageOptions,
 		};
 		colony.promise = resume ? resumeColony(colonyOpts) : runColony(colonyOpts);
 
@@ -1352,7 +1361,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 	pi.registerCommand("colony-resume", {
 		description: "Resume colonies from their last checkpoint (resumes all resumable by default)",
 		async handler(args, ctx) {
-			const all = Nest.findAllResumable(ctx.cwd);
+			const all = Nest.findAllResumable(ctx.cwd, storageOptions);
 			if (all.length === 0) {
 				ctx.ui.notify("No resumable colonies found.", "info");
 				return;

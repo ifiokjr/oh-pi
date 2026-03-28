@@ -12,8 +12,6 @@
  * The scheduling loop models real ant colonies: ants leave nest → forage → return → leave again.
  */
 
-import * as fs from "node:fs";
-import * as path from "node:path";
 import type { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import {
 	applyConcurrencyCap,
@@ -27,6 +25,7 @@ import { buildImportGraph, type ImportGraph, taskDependsOn } from "./deps.js";
 import { preprocessMultimodalTask, shouldEscalateMultimodalRoute } from "./multimodal-routing.js";
 import { Nest } from "./nest.js";
 import { makePheromoneId, makeTaskId, resetAntCounter, runDrone, spawnAnt } from "./spawner.js";
+import { type ColonyStorageOptions, cleanupEmptyColonyStorageDirs, resolveColonyStorageOptions } from "./storage.js";
 import type {
 	Ant,
 	AntCaste,
@@ -85,6 +84,8 @@ export interface QueenOptions {
 	eventBus?: ColonyEventBus;
 	/** Optional shared tracker to avoid listener buildup in on/emit-only runtimes. */
 	usageLimitsTracker?: UsageLimitsTracker;
+	/** Runtime state storage location (shared by default, project-local opt-in). */
+	storageOptions?: ColonyStorageOptions;
 }
 
 export function makeColonyId(): string {
@@ -831,7 +832,8 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 	resetAntCounter();
 	const colonyId = makeColonyId();
 	const executionCwd = opts.executionCwd ?? opts.cwd;
-	const nest = new Nest(opts.cwd, colonyId);
+	const storageOptions = resolveColonyStorageOptions(opts.storageOptions);
+	const nest = new Nest(opts.cwd, colonyId, storageOptions);
 
 	const initialState: ColonyState = {
 		id: colonyId,
@@ -867,15 +869,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 
 	const cleanup = () => {
 		nest.destroy();
-		const parentDir = path.join(opts.cwd, ".ant-colony");
-		try {
-			const entries = fs.readdirSync(parentDir);
-			if (entries.length === 0) {
-				fs.rmdirSync(parentDir);
-			}
-		} catch {
-			/* ignore */
-		}
+		cleanupEmptyColonyStorageDirs(opts.cwd, storageOptions);
 	};
 
 	const emitSignal = (phase: ColonyState["status"], message: string, extras?: Partial<ColonySignal>) => {
@@ -1136,12 +1130,13 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
  * and continues executing any pending tasks.
  */
 export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
-	const found = Nest.findResumable(opts.cwd);
+	const storageOptions = resolveColonyStorageOptions(opts.storageOptions);
+	const found = Nest.findResumable(opts.cwd, storageOptions);
 	if (!found) {
 		return runColony(opts); // No resumable state found — start fresh
 	}
 
-	const nest = new Nest(opts.cwd, found.colonyId);
+	const nest = new Nest(opts.cwd, found.colonyId, storageOptions);
 	nest.restore();
 	const restored = nest.getStateLight();
 	const executionCwd = opts.executionCwd ?? restored.workspace?.executionCwd ?? opts.cwd;
@@ -1177,15 +1172,7 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 
 	const cleanup = () => {
 		nest.destroy();
-		const parentDir = path.join(opts.cwd, ".ant-colony");
-		try {
-			const entries = fs.readdirSync(parentDir);
-			if (entries.length === 0) {
-				fs.rmdirSync(parentDir);
-			}
-		} catch {
-			/* ignore */
-		}
+		cleanupEmptyColonyStorageDirs(opts.cwd, storageOptions);
 	};
 
 	callbacks.onPhase?.("working", "Resuming colony from checkpoint...");
