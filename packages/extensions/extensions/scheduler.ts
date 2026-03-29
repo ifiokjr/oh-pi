@@ -1306,7 +1306,7 @@ function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 
 	pi.registerCommand("schedule", {
 		description:
-			"Manage schedules. No args opens TUI manager. Also: list | enable <id> | disable <id> | delete <id> | clear",
+			"Manage scheduled reminders and future check-ins. No args opens TUI manager. Also: list | enable <id> | disable <id> | delete <id> | clear",
 		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Command router with multiple subcommands.
 		handler: async (args, ctx) => {
 			const trimmed = args.trim();
@@ -1420,13 +1420,14 @@ function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 		name: "schedule_prompt",
 		label: "Schedule Prompt",
 		description:
-			"Create/list/enable/disable/delete scheduled prompts. Use this when the user asks for reminders or recurring checks. add requires prompt; once tasks require duration; recurring supports interval (duration) or cron expression (cron).",
+			"Create/list/enable/disable/delete scheduled prompts. Use this when the user asks for reminders, to check back later, or to follow up on PRs, CI, builds, deployments, or any recurring check. add requires prompt; once tasks require duration; recurring supports interval (duration) or cron expression (cron).",
 		promptSnippet:
-			"Create/list/enable/disable/delete scheduled prompts. Supports recurring intervals/cron and one-time reminders (session-scoped).",
+			"Create/list/enable/disable/delete scheduled prompts for one-time reminders, future follow-ups, and recurring PR/CI/build/deployment checks. Supports intervals/cron and one-time reminders while this pi session remains active.",
 		promptGuidelines: [
-			"Use this tool when user asks to remind/check back later.",
+			"Use this tool when the user asks to remind/check back later, revisit something in the future, or monitor PRs, CI, builds, deploys, or background work.",
 			"For recurring tasks use kind='recurring' with duration like 5m or 2h, or provide cron.",
 			"For one-time reminders use kind='once' with duration like 30m or 1h.",
+			"Scheduled tasks run only while pi is active and idle, so phrase reminders and follow-ups accordingly.",
 		],
 		parameters: SchedulePromptToolParams,
 		execute: async (

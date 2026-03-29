@@ -1404,6 +1404,17 @@ describe("schedulerExtension registration", () => {
 		expect(pi._tools.has("schedule_prompt")).toBe(true);
 	});
 
+	it("describes schedule_prompt as usable for future PR and CI follow-ups", () => {
+		schedulerExtension(pi as any);
+		const tool = pi._tools.get("schedule_prompt");
+		expect(tool.description).toContain("check back later");
+		expect(tool.description).toContain("PRs");
+		expect(tool.description).toContain("CI");
+		expect(tool.promptSnippet).toContain("future follow-ups");
+		expect(tool.promptGuidelines.some((line: string) => line.includes("monitor PRs, CI"))).toBe(true);
+		expect(tool.promptGuidelines.some((line: string) => line.includes("active and idle"))).toBe(true);
+	});
+
 	it("registers event handlers", () => {
 		schedulerExtension(pi as any);
 		expect(pi._handlers.has("session_start")).toBe(true);
