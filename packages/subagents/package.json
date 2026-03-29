@@ -8,9 +8,9 @@
     "pi",
     "pi-coding-agent",
     "subagents",
-    "agents",
-    "async",
-    "tui"
+    "multi-agent",
+    "chains",
+    "delegation"
   ],
   "bin": {
     "pi-extension-subagents": "install.mjs"

@@ -28,5 +28,14 @@
   },
   "engines": {
     "node": ">=20.0.0"
-  }
+  },
+  "keywords": [
+    "pi",
+    "pi-coding-agent",
+    "oh-pi",
+    "core",
+    "types",
+    "registry",
+    "i18n"
+  ]
 }

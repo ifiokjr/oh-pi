@@ -4,11 +4,12 @@
   "description": "Shared TUI question-and-answer component for pi extensions.",
   "type": "module",
   "keywords": [
-    "pi-package",
     "pi",
     "pi-coding-agent",
     "tui",
-    "qna"
+    "qna",
+    "components",
+    "extension-library"
   ],
   "exports": {
     ".": "./index.ts",

@@ -6,5 +6,13 @@
     "agents",
     "README.md"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "keywords": [
+    "pi",
+    "pi-coding-agent",
+    "agents",
+    "agents-md",
+    "agent-templates",
+    "prompts"
+  ]
 }

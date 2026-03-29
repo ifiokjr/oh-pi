@@ -9,7 +9,8 @@
     "pi-coding-agent",
     "planning",
     "plan-mode",
-    "tui"
+    "branch-planning",
+    "research"
   ],
   "bin": {
     "pi-plan": "install.mjs"

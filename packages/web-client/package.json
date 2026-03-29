@@ -24,5 +24,14 @@
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
-  }
+  },
+  "keywords": [
+    "pi",
+    "pi-coding-agent",
+    "web",
+    "remote",
+    "client",
+    "websocket",
+    "typescript"
+  ]
 }

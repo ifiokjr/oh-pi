@@ -8,9 +8,9 @@
     "pi",
     "pi-coding-agent",
     "spec",
-    "spec-kit",
-    "planning",
-    "requirements"
+    "spec-driven-development",
+    "requirements",
+    "workflow"
   ],
   "pi": {
     "extensions": [

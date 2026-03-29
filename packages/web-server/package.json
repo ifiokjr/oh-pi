@@ -38,5 +38,14 @@
   },
   "engines": {
     "node": ">=20.0.0"
-  }
+  },
+  "keywords": [
+    "pi",
+    "pi-coding-agent",
+    "web",
+    "remote",
+    "server",
+    "websocket",
+    "http"
+  ]
 }

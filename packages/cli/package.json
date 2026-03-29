@@ -37,5 +37,14 @@
   },
   "engines": {
     "node": ">=20.0.0"
-  }
+  },
+  "keywords": [
+    "pi",
+    "pi-coding-agent",
+    "oh-pi",
+    "cli",
+    "tui",
+    "configuration",
+    "installer"
+  ]
 }
