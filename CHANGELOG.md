@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.6 (2026-03-29)
+
+### Features
+
+- add option to disable emoji icons with plain ASCII fallbacks (#28)
+
+### Fixes
+
+- harden nest lock recovery (#21)
+- move and clean up shared scheduler state (#22)
+- move repo-local runtime state to shared pi storage (#23)
+- handle older pi model registry in btw (#26)
+- improve follow-up scheduling guidance (#29)
+- add and refine npm keywords across the remaining published packages to improve discovery on pi.dev/packages.
+- fix ant-colony nest lock recovery and ensure colony IDs stay unique under concurrent launches.
+- fix BTW API key resolution on older pi runtimes that do not expose `ctx.modelRegistry.getApiKey()`.
+- improve scheduler tool descriptions so pi is more likely to use scheduled follow-ups for PRs, CI, builds, deployments, and other future check-ins.
+- Move ant-colony runtime state and isolated worktree directories out of repository-local `.ant-colony/` folders into a shared pi agent storage root under `~/.pi/agent/ant-colony/...` by default. Legacy local colony state is migrated automatically, `.gitignore` is no longer modified in the default shared mode, and an explicit `storageMode: "project"` opt-in remains available for users who prefer the old repo-local behavior.
+- Move scheduler state out of repository-local `.pi/scheduler.json` files into a shared pi agent directory under `~/.pi/agent/scheduler/...`, using a path that mirrors each workspace path for uniqueness. Legacy repo-local scheduler files are migrated automatically when discovered, and defunct scheduler stores are cleaned up once all tasks expire or are removed.
+- Move subagent project-scope agent and chain definitions out of repo-local `.pi/agents/` folders into a shared pi agent directory under `~/.pi/agent/subagents/project-agents/...` by default. Legacy project-local definitions are migrated automatically when discovered, mirrored parent workspaces are still searched for project overrides, and a `projectAgentStorageMode: "project"` opt-in keeps the old repo-local behavior available.
+- Pin `picomatch` to `4.0.4` via pnpm overrides so CI security audits pass with the patched version of the transitive dependency used by the Vitest toolchain.
+
 ## 0.3.5 (2026-03-25)
 
 ### Features
