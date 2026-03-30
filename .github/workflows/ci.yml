@@ -187,7 +187,7 @@ jobs:
 
       - uses: taiki-e/install-action@v2
         with:
-          tool: mdt
+          tool: mdt_cli
 
       - name: Check synchronized documentation blocks
         run: mdt check
