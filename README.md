@@ -83,6 +83,7 @@ Policy:
 - compatibility with older pi builds is best-effort unless explicitly documented otherwise
 - peer dependency ranges on pi-facing packages express the minimum supported baseline more clearly
 - higher-risk runtime integrations should gain smoke coverage before broadening compatibility claims
+- CI smoke-checks both the minimum supported baseline (`0.56.1`) and a pinned current upstream runtime (`0.64.0`)
 
 ---
 

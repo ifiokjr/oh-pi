@@ -19,6 +19,18 @@ importers:
       '@biomejs/biome':
         specifier: ^2.4.6
         version: 2.4.6
+      '@mariozechner/pi-agent-core':
+        specifier: 0.56.1
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-ai':
+        specifier: 0.56.1
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-coding-agent':
+        specifier: 0.56.1
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-tui':
+        specifier: 0.56.1
+        version: 0.56.1
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.13
