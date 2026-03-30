@@ -14,7 +14,7 @@
   ],
   "pi": {
     "extensions": [
-      "./extension"
+      "./extension/index.ts"
     ]
   },
   "exports": {

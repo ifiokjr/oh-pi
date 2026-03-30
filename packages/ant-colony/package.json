@@ -8,7 +8,7 @@
   ],
   "pi": {
     "extensions": [
-      "./extensions"
+      "./extensions/ant-colony/index.ts"
     ]
   },
   "files": [

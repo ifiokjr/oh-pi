@@ -7,7 +7,17 @@
   ],
   "pi": {
     "extensions": [
-      "./extensions"
+      "./extensions/auto-session-name.ts",
+      "./extensions/auto-update.ts",
+      "./extensions/bg-process.ts",
+      "./extensions/btw.ts",
+      "./extensions/compact-header.ts",
+      "./extensions/custom-footer.ts",
+      "./extensions/git-guard.ts",
+      "./extensions/safe-guard.ts",
+      "./extensions/scheduler.ts",
+      "./extensions/usage-tracker.ts",
+      "./extensions/watchdog.ts"
     ]
   },
   "files": [
