@@ -37,5 +37,14 @@
     "types",
     "registry",
     "i18n"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/core",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  }
 }

@@ -14,5 +14,14 @@
     "prompts",
     "README.md"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/prompts"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/prompts",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  }
 }

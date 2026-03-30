@@ -28,5 +28,14 @@
     "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-tui": "*",
     "@sinclair/typebox": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/ant-colony"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/ant-colony",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
   }
 }

@@ -29,5 +29,14 @@
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*",
     "@sinclair/typebox": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/web-remote"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/web-remote",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
   }
 }

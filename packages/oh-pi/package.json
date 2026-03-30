@@ -27,5 +27,14 @@
     "@ifi/oh-pi-prompts": "workspace:*",
     "@ifi/oh-pi-skills": "workspace:*",
     "@ifi/oh-pi-agents": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/oh-pi"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/oh-pi",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
   }
 }

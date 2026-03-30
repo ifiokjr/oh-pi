@@ -47,5 +47,14 @@
     "server",
     "websocket",
     "http"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/web-server"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/web-server",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  }
 }

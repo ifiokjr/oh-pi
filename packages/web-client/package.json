@@ -33,5 +33,14 @@
     "client",
     "websocket",
     "typescript"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/web-client"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/web-client",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  }
 }

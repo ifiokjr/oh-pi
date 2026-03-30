@@ -25,5 +25,14 @@
     "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-tui": "*",
     "@sinclair/typebox": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/extensions"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/extensions",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
   }
 }

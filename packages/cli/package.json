@@ -46,5 +46,14 @@
     "tui",
     "configuration",
     "installer"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/cli",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  }
 }

@@ -14,5 +14,14 @@
     "agents-md",
     "agent-templates",
     "prompts"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/agents"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/agents",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  }
 }

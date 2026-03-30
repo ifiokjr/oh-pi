@@ -14,5 +14,14 @@
     "themes",
     "README.md"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/themes"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/themes",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  }
 }
