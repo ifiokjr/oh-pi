@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.4.0 (2026-03-30)
+
+### Breaking Changes
+
+- clarify the supported minimum pi runtime baseline in package peer dependencies and repository docs.
+
+### Features
+
+- add MDT-powered documentation reuse (#66)
+
+### Fixes
+
+- reduce long-session runtime UI churn
+- improve error reporting and robustness for ant colony and subagent swarms (#56)
+- prevent scheduler startup prompt replay (#59)
+- isolate scheduled tasks by instance
+- add shared pi agent-dir and mirrored storage path utilities to `@ifi/oh-pi-core` for consistent config and storage path resolution.
+- add a shared extension runtime smoke-test harness and initial smoke coverage for scheduler/btw, ant-colony, and subagents.
+- add MDT-based documentation reuse, CI verification, and synchronized API docs for shared package helpers.
+- add missing package-level READMEs for published packages so npm and pi.dev package pages have package-specific documentation.
+- add repository, homepage, and bugs metadata to published package manifests so npm package pages link back to the correct monorepo locations.
+- add a small CI compatibility matrix that smoke-tests oh-pi extensions against the minimum supported pi baseline and a current upstream runtime.
+- align root build and CI publish validation with the actual compiled and published package set, including web packages and pack dry-run checks.
+- centralize pi-tui fallback resolution behind a shared loader used by shared-qna and plan runtime modules.
+- document non-interactive git and GitHub CLI guidance for agent-run workflows
+- document the scheduler instance-vs-workspace ownership model and the new adopt/release controls in the extensions README.
+- exclude compiled test artifacts from published tarballs for compiled packages and add a CI guard to catch regressions.
+- expand runtime smoke coverage for usage-tracker, auto-update, safe-guard, and spec extension registration flows.
+- reduce long-session input lag by avoiding footer rescans, adding a performance watchdog, and introducing a safe mode command that suppresses nonessential UI chrome when the session gets sluggish.
+- prevent scheduled prompts from being auto-run in newly opened pi instances for the same workspace by adding instance ownership, workspace-scoped opt-in tasks, scheduler leasing, takeover prompts, and explicit adopt/release/clear-foreign controls.
+- fix scheduler startup replay by restoring overdue persisted tasks for manual review instead of auto-running them in a new session
+- migrate hardcoded pi agent-dir paths in CLI and extensions to shared resolver utilities so custom `PI_CODING_AGENT_DIR` setups behave consistently.
+- reduce remaining moderate production audit findings by overriding patched transitive dependency versions.
+- refactor the root AGENTS.md into a progressive-disclosure layout with focused agent rule documents for engineering, packaging and release, and git/PR workflow guidance.
+- refactor the scheduler extension into shared constants/types, parsing helpers, and registration modules without changing user-facing behavior.
+- refactor the subagents extension by splitting bootstrap/config helpers, async runtime monitoring, and slash-command registration into focused modules.
+- refactor the usage tracker by splitting shared types, formatting helpers, and provider probe logic into focused modules.
+
 ## 0.3.6 (2026-03-29)
 
 ### Features

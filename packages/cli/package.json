@@ -1,6 +1,6 @@
 {
   "name": "@ifi/oh-pi-cli",
-  "version": "0.3.6",
+  "version": "0.4.0",
   "description": "Interactive TUI configurator for pi-coding-agent.",
   "type": "module",
   "bin": {

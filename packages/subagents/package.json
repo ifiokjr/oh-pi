@@ -1,6 +1,6 @@
 {
   "name": "@ifi/pi-extension-subagents",
-  "version": "0.3.6",
+  "version": "0.4.0",
   "description": "Full-featured subagent orchestration extension for pi, built on top of nicobailon/pi-subagents.",
   "type": "module",
   "keywords": [
