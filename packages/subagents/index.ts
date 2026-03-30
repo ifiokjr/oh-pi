@@ -14,7 +14,6 @@
 
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import { type ExtensionAPI, type ExtensionContext, type ToolDefinition } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
@@ -43,14 +42,11 @@ import {
 	DEFAULT_MAX_OUTPUT,
 	MAX_CONCURRENCY,
 	MAX_PARALLEL,
-	POLL_INTERVAL_MS,
 	RESULTS_DIR,
 	WIDGET_KEY,
 	checkSubagentDepth,
 } from "./types.js";
-import { readStatus, findByPrefix, getFinalOutput, mapConcurrent } from "./utils.js";
-import { buildCompletionKey, markSeenWithTtl } from "./completion-dedupe.js";
-import { createFileCoalescer } from "./file-coalescer.js";
+import { findByPrefix, getFinalOutput, mapConcurrent, readStatus } from "./utils.js";
 import { runSync } from "./execution.js";
 import { renderWidget, renderSubagentResult } from "./render.js";
 import { SubagentParams, StatusParams } from "./schemas.js";
@@ -61,61 +57,11 @@ import { finalizeSingleOutput, injectSingleOutputInstruction, resolveSingleOutpu
 import { AgentManagerComponent, type ManagerResult } from "./agent-manager.js";
 import { recordRun } from "./run-history.js";
 import { handleManagementAction } from "./agent-management.js";
-import { getSubagentConfigPath } from "./paths.js";
+import { registerSubagentCommands } from "./command-registration.js";
+import { ensureAccessibleDir, expandTildePath, getSubagentSessionRoot, loadSubagentConfig } from "./bootstrap.js";
+import { createSubagentRuntimeMonitor } from "./runtime-monitor.js";
 
 // ExtensionConfig is now imported from ./types.js
-
-/**
- * Derive subagent session base directory from parent session file.
- * If parent session is ~/.pi/agent/sessions/abc123.jsonl,
- * returns ~/.pi/agent/sessions/abc123/ as the base.
- * Callers add runId to create the actual session root: abc123/{runId}/
- * Falls back to a unique temp directory if no parent session.
- */
-function getSubagentSessionRoot(parentSessionFile: string | null): string {
-	if (parentSessionFile) {
-		const baseName = path.basename(parentSessionFile, ".jsonl");
-		const sessionsDir = path.dirname(parentSessionFile);
-		return path.join(sessionsDir, baseName);
-	}
-	return fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagent-session-"));
-}
-
-function loadConfig(): ExtensionConfig {
-	const configPath = getSubagentConfigPath();
-	try {
-		if (fs.existsSync(configPath)) {
-			return JSON.parse(fs.readFileSync(configPath, "utf-8")) as ExtensionConfig;
-		}
-	} catch {}
-	return {};
-}
-
-function expandTilde(p: string): string {
-	return p.startsWith("~/") ? path.join(os.homedir(), p.slice(2)) : p;
-}
-
-/**
- * Create a directory and verify it is actually accessible.
- * On Windows with Azure AD/Entra ID, directories created shortly after
- * wake-from-sleep can end up with broken NTFS ACLs (null DACL) when the
- * cloud SID cannot be resolved without network connectivity. This leaves
- * the directory completely inaccessible to the creating user.
- */
-function ensureAccessibleDir(dirPath: string): void {
-	fs.mkdirSync(dirPath, { recursive: true });
-	try {
-		fs.accessSync(dirPath, fs.constants.R_OK | fs.constants.W_OK);
-	} catch {
-		// Directory exists but is inaccessible — remove and recreate
-		try {
-			fs.rmSync(dirPath, { recursive: true, force: true });
-		} catch {}
-		fs.mkdirSync(dirPath, { recursive: true });
-		// Verify recovery succeeded
-		fs.accessSync(dirPath, fs.constants.R_OK | fs.constants.W_OK);
-	}
-}
 
 export default function registerSubagentExtension(pi: ExtensionAPI): void {
 	ensureAccessibleDir(RESULTS_DIR);
@@ -124,7 +70,7 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
 	// Cleanup old chain directories on startup (after 24h)
 	cleanupOldChainDirs();
 
-	const config = loadConfig();
+	const config = loadSubagentConfig();
 	const asyncByDefault = config.asyncByDefault === true;
 
 	const tempArtifactsDir = getArtifactsDir(null);
@@ -132,120 +78,18 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
 	let baseCwd = process.cwd();
 	let currentSessionId: string | null = null;
 	const asyncJobs = new Map<string, AsyncJobState>();
-	const cleanupTimers = new Map<string, ReturnType<typeof setTimeout>>(); // Track cleanup timeouts
+	const cleanupTimers = new Map<string, ReturnType<typeof setTimeout>>();
 	let lastUiContext: ExtensionContext | null = null;
-	let poller: NodeJS.Timeout | null = null;
 	let safeModeEnabled = false;
 
-	const ensurePoller = () => {
-		if (poller) return;
-		poller = setInterval(() => {
-			if (!lastUiContext || !lastUiContext.hasUI) return;
-			if (safeModeEnabled) {
-				renderWidget(lastUiContext, [], { suppressed: true });
-				return;
-			}
-			if (asyncJobs.size === 0) {
-				renderWidget(lastUiContext, []);
-				clearInterval(poller);
-				poller = null;
-				return;
-			}
-
-			for (const job of asyncJobs.values()) {
-				// Skip status reads for finished jobs - they won't change
-				if (job.status === "complete" || job.status === "failed") {
-					continue;
-				}
-				const status = readStatus(job.asyncDir);
-				if (status) {
-					job.status = status.state;
-					job.mode = status.mode;
-					job.currentStep = status.currentStep ?? job.currentStep;
-					job.stepsTotal = status.steps?.length ?? job.stepsTotal;
-					job.startedAt = status.startedAt ?? job.startedAt;
-					job.updatedAt = status.lastUpdate ?? Date.now();
-					if (status.steps?.length) {
-						job.agents = status.steps.map((step) => step.agent);
-					}
-					job.sessionDir = status.sessionDir ?? job.sessionDir;
-					job.outputFile = status.outputFile ?? job.outputFile;
-					job.totalTokens = status.totalTokens ?? job.totalTokens;
-					job.sessionFile = status.sessionFile ?? job.sessionFile;
-					// job.shareUrl = status.shareUrl ?? job.shareUrl;
-				} else {
-					job.status = job.status === "queued" ? "running" : job.status;
-					job.updatedAt = Date.now();
-				}
-			}
-
-			renderWidget(lastUiContext, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
-		}, POLL_INTERVAL_MS);
-		poller.unref?.();
-	};
-
-	const completionSeen = new Map<string, number>();
-	const completionTtlMs = 10 * 60 * 1000;
-	const handleResult = (file: string) => {
-		const p = path.join(RESULTS_DIR, file);
-		if (!fs.existsSync(p)) return;
-		try {
-			const data = JSON.parse(fs.readFileSync(p, "utf-8"));
-			if (data.sessionId && data.sessionId !== currentSessionId) return;
-			if (!data.sessionId && data.cwd && data.cwd !== baseCwd) return;
-			const now = Date.now();
-			const completionKey = buildCompletionKey(data, `result:${file}`);
-			if (markSeenWithTtl(completionSeen, completionKey, now, completionTtlMs)) {
-				try {
-					fs.unlinkSync(p);
-				} catch {}
-				return;
-			}
-			pi.events.emit("subagent:complete", data);
-			fs.unlinkSync(p);
-		} catch {}
-	};
-
-	const resultFileCoalescer = createFileCoalescer(handleResult, 50);
-	let watcher: fs.FSWatcher | null = null;
-	let watcherRestartTimer: ReturnType<typeof setTimeout> | null = null;
-
-	function startResultWatcher(): void {
-		watcherRestartTimer = null;
-		try {
-			watcher = fs.watch(RESULTS_DIR, (ev, file) => {
-				if (ev !== "rename" || !file) return;
-				const fileName = file.toString();
-				if (!fileName.endsWith(".json")) return;
-				resultFileCoalescer.schedule(fileName);
-			});
-			watcher.on("error", () => {
-				// Watcher died (directory deleted, ACL change, etc.) — restart after delay
-				watcher = null;
-				watcherRestartTimer = setTimeout(() => {
-					try {
-						fs.mkdirSync(RESULTS_DIR, { recursive: true });
-						startResultWatcher();
-					} catch {}
-				}, 3000);
-			});
-			watcher.unref?.();
-		} catch {
-			// fs.watch can throw if directory is inaccessible — retry after delay
-			watcher = null;
-			watcherRestartTimer = setTimeout(() => {
-				try {
-					fs.mkdirSync(RESULTS_DIR, { recursive: true });
-					startResultWatcher();
-				} catch {}
-			}, 3000);
-		}
-	}
-
-	startResultWatcher();
-	fs.readdirSync(RESULTS_DIR)
-		.filter((f) => f.endsWith(".json"))
-		.forEach((file) => resultFileCoalescer.schedule(file, 0));
+	const runtimeMonitor = createSubagentRuntimeMonitor({
+		pi,
+		asyncJobs,
+		getBaseCwd: () => baseCwd,
+		getCurrentSessionId: () => currentSessionId,
+		getLastUiContext: () => lastUiContext,
+		getSafeModeEnabled: () => safeModeEnabled,
+	});
 
 	const tool: ToolDefinition<typeof SubagentParams, Details> = {
 		name: "subagent",
@@ -319,10 +163,10 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			// Sessions are always enabled - stored alongside parent session for tracking
 			// Include runId to ensure uniqueness across multiple subagent calls
 			const sessionRoot = params.sessionDir
-				? path.resolve(expandTilde(params.sessionDir))
+				? path.resolve(expandTildePath(params.sessionDir))
 				: path.join(
 						config.defaultSessionDir
-							? path.resolve(expandTilde(config.defaultSessionDir))
+							? path.resolve(expandTildePath(config.defaultSessionDir))
 							: getSubagentSessionRoot(parentSessionFile),
 						runId,
 					);
@@ -1020,67 +864,6 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 	pi.registerTool(tool);
 	pi.registerTool(statusTool);
 
-	interface InlineConfig {
-		output?: string | false;
-		reads?: string[] | false;
-		model?: string;
-		skill?: string[] | false;
-		progress?: boolean;
-	}
-
-	const parseInlineConfig = (raw: string): InlineConfig => {
-		const config: InlineConfig = {};
-		for (const part of raw.split(",")) {
-			const trimmed = part.trim();
-			if (!trimmed) continue;
-			const eq = trimmed.indexOf("=");
-			if (eq === -1) {
-				if (trimmed === "progress") config.progress = true;
-				continue;
-			}
-			const key = trimmed.slice(0, eq).trim();
-			const val = trimmed.slice(eq + 1).trim();
-			switch (key) {
-				case "output":
-					config.output = val === "false" ? false : val;
-					break;
-				case "reads":
-					config.reads = val === "false" ? false : val.split("+").filter(Boolean);
-					break;
-				case "model":
-					config.model = val || undefined;
-					break;
-				case "skill":
-				case "skills":
-					config.skill = val === "false" ? false : val.split("+").filter(Boolean);
-					break;
-				case "progress":
-					config.progress = val !== "false";
-					break;
-			}
-		}
-		return config;
-	};
-
-	const parseAgentToken = (token: string): { name: string; config: InlineConfig } => {
-		const bracket = token.indexOf("[");
-		if (bracket === -1) return { name: token, config: {} };
-		const end = token.lastIndexOf("]");
-		return {
-			name: token.slice(0, bracket),
-			config: parseInlineConfig(token.slice(bracket + 1, end !== -1 ? end : undefined)),
-		};
-	};
-
-	/** Extract --bg flag from end of args, return cleaned args and whether flag was present */
-	const extractBgFlag = (args: string): { args: string; bg: boolean } => {
-		// Only match --bg at the very end to avoid false positives in quoted strings
-		if (args.endsWith(" --bg") || args === "--bg") {
-			return { args: args.slice(0, args.length - (args === "--bg" ? 4 : 5)).trim(), bg: true };
-		}
-		return { args, bg: false };
-	};
-
 	const setupDirectRun = (ctx: ExtensionContext) => {
 		const runId = randomUUID().slice(0, 8);
 		const parentSessionFile = ctx.sessionManager.getSessionFile() ?? null;
@@ -1095,29 +878,6 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			artifactsDir: getArtifactsDir(parentSessionFile),
 			artifactConfig: { ...DEFAULT_ARTIFACT_CONFIG } as ArtifactConfig,
 		};
-	};
-
-	const makeAgentCompletions = (multiAgent: boolean) => (prefix: string) => {
-		const agents = discoverAgents(baseCwd, "both").agents;
-		if (!multiAgent) {
-			if (prefix.includes(" ")) return null;
-			return agents.filter((a) => a.name.startsWith(prefix)).map((a) => ({ value: a.name, label: a.name }));
-		}
-
-		const lastArrow = prefix.lastIndexOf(" -> ");
-		const segment = lastArrow !== -1 ? prefix.slice(lastArrow + 4) : prefix;
-		if (segment.includes(" -- ") || segment.includes('"') || segment.includes("'")) return null;
-
-		const lastWord = (prefix.match(/(\S*)$/) || ["", ""])[1];
-		const beforeLastWord = prefix.slice(0, prefix.length - lastWord.length);
-
-		if (lastWord === "->") {
-			return agents.map((a) => ({ value: `${prefix} ${a.name}`, label: a.name }));
-		}
-
-		return agents
-			.filter((a) => a.name.startsWith(lastWord))
-			.map((a) => ({ value: `${beforeLastWord}${a.name}`, label: a.name }));
 	};
 
 	const openAgentManager = async (ctx: ExtensionContext) => {
@@ -1208,186 +968,9 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		}
 	};
 
-	pi.registerCommand("agents", {
-		description: "Open the Agents Manager",
-		handler: async (_args, ctx) => {
-			await openAgentManager(ctx);
-		},
-	});
-
-	pi.registerCommand("run", {
-		description: "Run a subagent directly: /run agent[output=file] task [--bg]",
-		getArgumentCompletions: makeAgentCompletions(false),
-		handler: async (args, ctx) => {
-			const { args: cleanedArgs, bg } = extractBgFlag(args);
-			const input = cleanedArgs.trim();
-			const firstSpace = input.indexOf(" ");
-			if (firstSpace === -1) {
-				ctx.ui.notify("Usage: /run <agent> <task> [--bg]", "error");
-				return;
-			}
-			const { name: agentName, config: inline } = parseAgentToken(input.slice(0, firstSpace));
-			const task = input.slice(firstSpace + 1).trim();
-			if (!task) {
-				ctx.ui.notify("Usage: /run <agent> <task> [--bg]", "error");
-				return;
-			}
-
-			const agents = discoverAgents(baseCwd, "both").agents;
-			if (!agents.find((a) => a.name === agentName)) {
-				ctx.ui.notify(`Unknown agent: ${agentName}`, "error");
-				return;
-			}
-
-			let finalTask = task;
-			if (inline.reads && Array.isArray(inline.reads) && inline.reads.length > 0) {
-				finalTask = `[Read from: ${inline.reads.join(", ")}]\n\n${finalTask}`;
-			}
-			const params: Record<string, unknown> = { agent: agentName, task: finalTask, clarify: false };
-			if (inline.output !== undefined) params.output = inline.output;
-			if (inline.skill !== undefined) params.skill = inline.skill;
-			if (inline.model) params.model = inline.model;
-			if (bg) params.async = true;
-			pi.sendUserMessage(
-				`Call the subagent tool with these exact parameters: ${JSON.stringify({ ...params, agentScope: "both" })}`,
-			);
-		},
-	});
-
-	interface ParsedStep {
-		name: string;
-		config: InlineConfig;
-		task?: string;
-	}
-
-	const parseAgentArgs = (
-		args: string,
-		command: string,
-		ctx: ExtensionContext,
-	): { steps: ParsedStep[]; task: string } | null => {
-		const input = args.trim();
-		const usage = `Usage: /${command} agent1 "task1" -> agent2 "task2"`;
-		let steps: ParsedStep[];
-		let sharedTask: string;
-		let perStep = false;
-
-		if (input.includes(" -> ")) {
-			perStep = true;
-			const segments = input.split(" -> ");
-			steps = [];
-			for (const seg of segments) {
-				const trimmed = seg.trim();
-				if (!trimmed) continue;
-				let agentPart: string;
-				let task: string | undefined;
-				const qMatch = trimmed.match(/^(\S+(?:\[[^\]]*\])?)\s+(?:"([^"]*)"|'([^']*)')$/);
-				if (qMatch) {
-					agentPart = qMatch[1]!;
-					task = (qMatch[2] ?? qMatch[3]) || undefined;
-				} else {
-					const dashIdx = trimmed.indexOf(" -- ");
-					if (dashIdx !== -1) {
-						agentPart = trimmed.slice(0, dashIdx).trim();
-						task = trimmed.slice(dashIdx + 4).trim() || undefined;
-					} else {
-						agentPart = trimmed;
-					}
-				}
-				const parsed = parseAgentToken(agentPart);
-				steps.push({ ...parsed, task });
-			}
-			sharedTask = steps.find((s) => s.task)?.task ?? "";
-		} else {
-			const delimiterIndex = input.indexOf(" -- ");
-			if (delimiterIndex === -1) {
-				ctx.ui.notify(usage, "error");
-				return null;
-			}
-			const agentsPart = input.slice(0, delimiterIndex).trim();
-			sharedTask = input.slice(delimiterIndex + 4).trim();
-			if (!agentsPart || !sharedTask) {
-				ctx.ui.notify(usage, "error");
-				return null;
-			}
-			steps = agentsPart
-				.split(/\s+/)
-				.filter(Boolean)
-				.map((t) => parseAgentToken(t));
-		}
-
-		if (steps.length === 0) {
-			ctx.ui.notify(usage, "error");
-			return null;
-		}
-		const agents = discoverAgents(baseCwd, "both").agents;
-		for (const step of steps) {
-			if (!agents.find((a) => a.name === step.name)) {
-				ctx.ui.notify(`Unknown agent: ${step.name}`, "error");
-				return null;
-			}
-		}
-		if (command === "chain" && !steps[0]?.task && (perStep || !sharedTask)) {
-			ctx.ui.notify(`First step must have a task: /chain agent "task" -> agent2`, "error");
-			return null;
-		}
-		if (command === "parallel" && !steps.some((s) => s.task) && !sharedTask) {
-			ctx.ui.notify("At least one step must have a task", "error");
-			return null;
-		}
-		return { steps, task: sharedTask };
-	};
-
-	pi.registerCommand("chain", {
-		description: 'Run agents in sequence: /chain scout "task" -> planner [--bg]',
-		getArgumentCompletions: makeAgentCompletions(true),
-		handler: async (args, ctx) => {
-			const { args: cleanedArgs, bg } = extractBgFlag(args);
-			const parsed = parseAgentArgs(cleanedArgs, "chain", ctx);
-			if (!parsed) return;
-			const chain = parsed.steps.map(({ name, config, task: stepTask }, i) => ({
-				agent: name,
-				...(stepTask ? { task: stepTask } : i === 0 && parsed.task ? { task: parsed.task } : {}),
-				...(config.output !== undefined ? { output: config.output } : {}),
-				...(config.reads !== undefined ? { reads: config.reads } : {}),
-				...(config.model ? { model: config.model } : {}),
-				...(config.skill !== undefined ? { skill: config.skill } : {}),
-				...(config.progress !== undefined ? { progress: config.progress } : {}),
-			}));
-			const params: Record<string, unknown> = { chain, task: parsed.task, clarify: false, agentScope: "both" };
-			if (bg) params.async = true;
-			pi.sendUserMessage(`Call the subagent tool with these exact parameters: ${JSON.stringify(params)}`);
-		},
-	});
-
-	pi.registerCommand("parallel", {
-		description: 'Run agents in parallel: /parallel scout "task1" -> reviewer "task2" [--bg]',
-		getArgumentCompletions: makeAgentCompletions(true),
-		handler: async (args, ctx) => {
-			const { args: cleanedArgs, bg } = extractBgFlag(args);
-			const parsed = parseAgentArgs(cleanedArgs, "parallel", ctx);
-			if (!parsed) return;
-			if (parsed.steps.length > MAX_PARALLEL) {
-				ctx.ui.notify(`Max ${MAX_PARALLEL} parallel tasks`, "error");
-				return;
-			}
-			const tasks = parsed.steps.map(({ name, config, task: stepTask }) => ({
-				agent: name,
-				task: stepTask ?? parsed.task,
-				...(config.output !== undefined ? { output: config.output } : {}),
-				...(config.reads !== undefined ? { reads: config.reads } : {}),
-				...(config.model ? { model: config.model } : {}),
-				...(config.skill !== undefined ? { skill: config.skill } : {}),
-				...(config.progress !== undefined ? { progress: config.progress } : {}),
-			}));
-			const params: Record<string, unknown> = {
-				chain: [{ parallel: tasks }],
-				task: parsed.task,
-				clarify: false,
-				agentScope: "both",
-			};
-			if (bg) params.async = true;
-			pi.sendUserMessage(`Call the subagent tool with these exact parameters: ${JSON.stringify(params)}`);
-		},
+	registerSubagentCommands(pi, {
+		getBaseCwd: () => baseCwd,
+		openAgentManager,
 	});
 
 	pi.registerShortcut("ctrl+shift+a", {
@@ -1418,8 +1001,8 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			updatedAt: now,
 		});
 		if (lastUiContext) {
-			renderWidget(lastUiContext, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
-			ensurePoller();
+			runtimeMonitor.refreshWidget();
+			runtimeMonitor.ensurePoller();
 		}
 	});
 
@@ -1434,13 +1017,15 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			if (result.asyncDir) job.asyncDir = result.asyncDir;
 		}
 		if (lastUiContext) {
-			renderWidget(lastUiContext, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
+			runtimeMonitor.refreshWidget();
 		}
 		// Schedule cleanup after 10 seconds (track timer for cleanup on shutdown)
 		const timer = setTimeout(() => {
 			cleanupTimers.delete(asyncId);
 			asyncJobs.delete(asyncId);
-			if (lastUiContext) renderWidget(lastUiContext, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
+			if (lastUiContext) {
+				runtimeMonitor.refreshWidget();
+			}
 		}, 10000);
 		cleanupTimers.set(asyncId, timer);
 	});
@@ -1450,15 +1035,15 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		if (!ctx.hasUI) return;
 		lastUiContext = ctx;
 		if (asyncJobs.size > 0) {
-			renderWidget(ctx, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
-			ensurePoller();
+			runtimeMonitor.refreshWidget();
+			runtimeMonitor.ensurePoller();
 		}
 	});
 
 	pi.events.on("oh-pi:safe-mode", (data) => {
 		safeModeEnabled = Boolean((data as { enabled?: boolean } | undefined)?.enabled);
 		if (lastUiContext?.hasUI) {
-			renderWidget(lastUiContext, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
+			runtimeMonitor.refreshWidget();
 		}
 	});
 
@@ -1479,7 +1064,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		for (const timer of cleanupTimers.values()) clearTimeout(timer);
 		cleanupTimers.clear();
 		asyncJobs.clear();
-		resultFileCoalescer.clear();
+		runtimeMonitor.clearResults();
 		if (ctx.hasUI) {
 			lastUiContext = ctx;
 			renderWidget(ctx, []);
@@ -1493,7 +1078,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		for (const timer of cleanupTimers.values()) clearTimeout(timer);
 		cleanupTimers.clear();
 		asyncJobs.clear();
-		resultFileCoalescer.clear();
+		runtimeMonitor.clearResults();
 		if (ctx.hasUI) {
 			lastUiContext = ctx;
 			renderWidget(ctx, []);
@@ -1507,25 +1092,21 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		for (const timer of cleanupTimers.values()) clearTimeout(timer);
 		cleanupTimers.clear();
 		asyncJobs.clear();
-		resultFileCoalescer.clear();
+		runtimeMonitor.clearResults();
 		if (ctx.hasUI) {
 			lastUiContext = ctx;
 			renderWidget(ctx, []);
 		}
 	});
 	pi.on("session_shutdown", () => {
-		watcher?.close();
-		if (watcherRestartTimer) clearTimeout(watcherRestartTimer);
-		watcherRestartTimer = null;
-		if (poller) clearInterval(poller);
-		poller = null;
+		runtimeMonitor.stop();
 		// Clear all pending cleanup timers
 		for (const timer of cleanupTimers.values()) {
 			clearTimeout(timer);
 		}
 		cleanupTimers.clear();
 		asyncJobs.clear();
-		resultFileCoalescer.clear();
+		runtimeMonitor.clearResults();
 		if (lastUiContext?.hasUI) {
 			lastUiContext.ui.setWidget(WIDGET_KEY, undefined);
 		}
