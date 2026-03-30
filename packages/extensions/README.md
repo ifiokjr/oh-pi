@@ -42,6 +42,27 @@ extensions/
 
 Pi loads the raw TypeScript extensions from this directory.
 
+## Scheduler ownership model
+
+`scheduler` now distinguishes between **instance-scoped** tasks and **workspace-scoped** tasks:
+
+- **Instance scope** is the default for `/loop`, `/remind`, and `schedule_prompt`.
+  - The task stays owned by the pi instance that created it.
+  - Opening a second pi instance in the same repo will **not** auto-run that task.
+  - Foreign tasks are restored for review instead of being dispatched automatically.
+- **Workspace scope** is opt-in for monitors that should survive instance changes in the same repo.
+  - Use `/loop --workspace ...`
+  - Use `/remind --workspace ...`
+  - Or use `schedule_prompt(..., { scope: "workspace" })`
+
+When another live instance already owns scheduler activity for the workspace, pi prompts before taking over. You can also manage ownership explicitly with:
+
+- `/schedule adopt <id|all>`
+- `/schedule release <id|all>`
+- `/schedule clear-foreign`
+
+Use workspace scope sparingly for long-running shared checks like CI/build/deploy monitoring. For ordinary reminders and follow-ups, prefer the default instance scope.
+
 ## Watchdog config
 
 `watchdog` reads optional JSON config from:
