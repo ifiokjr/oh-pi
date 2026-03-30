@@ -28,6 +28,7 @@ export interface ScheduleTask {
 	lastStatus?: TaskStatus;
 	runCount: number;
 	pending: boolean;
+	resumeRequired?: boolean;
 }
 
 export type RecurringSpec =

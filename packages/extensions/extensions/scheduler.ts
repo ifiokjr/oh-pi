@@ -10,7 +10,8 @@
  *
  * Tasks run only while pi is active and idle. State is persisted under
  * `~/.pi/agent/scheduler/.../scheduler.json` using a path that mirrors the
- * current workspace path.
+ * current workspace path. Overdue tasks restored from disk are surfaced for
+ * manual review instead of auto-dispatching on session start.
  */
 
 import * as fs from "node:fs";
@@ -35,13 +36,7 @@ import {
 	MAX_TASKS,
 	MIN_RECURRING_INTERVAL,
 	ONE_MINUTE,
-	type ParseResult,
-	type RecurringSpec,
-	type ReminderParseResult,
-	type SchedulePromptAddPlan,
 	type ScheduleTask,
-	type TaskKind,
-	type TaskStatus,
 	THREE_DAYS,
 } from "./scheduler-shared.js";
 
@@ -77,7 +72,7 @@ export type {
 	ScheduleTask,
 	TaskKind,
 	TaskStatus,
-};
+} from "./scheduler-shared.js";
 
 interface SchedulerStore {
 	version: 1;
@@ -136,7 +131,9 @@ export class SchedulerRuntime {
 			return false;
 		}
 		task.enabled = enabled;
-		if (!enabled) {
+		if (enabled) {
+			task.resumeRequired = false;
+		} else {
 			task.pending = false;
 		}
 		this.persistTasks();
@@ -186,13 +183,13 @@ export class SchedulerRuntime {
 
 		const lines = ["Scheduled tasks:", ""];
 		for (const task of list) {
-			const state = task.enabled ? "on" : "off";
+			const state = this.taskStateLabel(task);
 			const mode = this.taskMode(task);
 			const next = `${this.formatRelativeTime(task.nextRunAt)} (${this.formatClock(task.nextRunAt)})`;
 			const last = task.lastRunAt
 				? `${this.formatRelativeTime(task.lastRunAt)} (${this.formatClock(task.lastRunAt)})`
 				: "never";
-			const status = task.lastStatus ?? "pending";
+			const status = this.taskStatusLabel(task);
 			const preview = task.prompt.length > 72 ? `${task.prompt.slice(0, 69)}...` : task.prompt;
 			lines.push(`${task.id}  ${state}  ${mode}  next ${next}`);
 			lines.push(`  runs=${task.runCount}  last=${last}  status=${status}`);
@@ -314,10 +311,18 @@ export class SchedulerRuntime {
 			return;
 		}
 
-		const nextRunAt = Math.min(...enabled.map((t) => t.nextRunAt));
-		const next = new Date(nextRunAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-		const text = `${enabled.length} active • next ${next}`;
-		this.runtimeCtx.ui.setStatus("pi-scheduler", text);
+		const resumeRequired = enabled.filter((task) => task.resumeRequired);
+		const scheduled = enabled.filter((task) => !task.resumeRequired);
+		const parts: string[] = [];
+		if (resumeRequired.length > 0) {
+			parts.push(`${resumeRequired.length} due`);
+		}
+		if (scheduled.length > 0) {
+			const nextRunAt = Math.min(...scheduled.map((task) => task.nextRunAt));
+			const next = new Date(nextRunAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+			parts.push(`${scheduled.length} active • next ${next}`);
+		}
+		this.runtimeCtx.ui.setStatus("pi-scheduler", parts.join(" • ") || "paused");
 	}
 
 	private pruneDispatchHistory(now: number) {
@@ -366,7 +371,7 @@ export class SchedulerRuntime {
 				continue;
 			}
 
-			if (!task.enabled) {
+			if (!task.enabled || task.resumeRequired) {
 				continue;
 			}
 			if (now >= task.nextRunAt) {
@@ -494,6 +499,7 @@ export class SchedulerRuntime {
 			if (action === "Run now") {
 				task.nextRunAt = Date.now();
 				task.pending = true;
+				task.resumeRequired = false;
 				this.persistTasks();
 				this.updateStatus();
 				this.tickScheduler().catch(() => {
@@ -534,6 +540,7 @@ export class SchedulerRuntime {
 				task.jitterMs = this.computeJitterMs(task.id, normalized.durationMs);
 				task.nextRunAt = Date.now() + normalized.durationMs + task.jitterMs;
 				task.pending = false;
+				task.resumeRequired = false;
 				this.persistTasks();
 				ctx.ui.notify(`Updated ${task.id} to every ${formatDurationShort(normalized.durationMs)}.`, "info");
 				if (normalized.note) {
@@ -563,6 +570,7 @@ export class SchedulerRuntime {
 			task.jitterMs = 0;
 			task.nextRunAt = nextRunAt;
 			task.pending = false;
+			task.resumeRequired = false;
 			this.persistTasks();
 			ctx.ui.notify(`Updated ${task.id} to cron ${normalizedCron.expression}.`, "info");
 			if (normalizedCron.note) {
@@ -582,6 +590,7 @@ export class SchedulerRuntime {
 		const normalized = normalizeDuration(parsed);
 		task.nextRunAt = Date.now() + normalized.durationMs;
 		task.pending = false;
+		task.resumeRequired = false;
 		this.persistTasks();
 		ctx.ui.notify(`Updated ${task.id} reminder to ${this.formatRelativeTime(task.nextRunAt)}.`, "info");
 		if (normalized.note) {
@@ -612,6 +621,7 @@ export class SchedulerRuntime {
 		}
 
 		task.pending = false;
+		task.resumeRequired = false;
 		task.lastRunAt = now;
 		task.lastStatus = "success";
 		task.runCount += 1;
@@ -679,7 +689,7 @@ export class SchedulerRuntime {
 	}
 
 	private taskOptionLabel(task: ScheduleTask): string {
-		const state = task.enabled ? "+" : "-";
+		const state = task.resumeRequired ? "!" : task.enabled ? "+" : "-";
 		return `${task.id} • ${state} ${this.taskMode(task)} • ${this.formatRelativeTime(task.nextRunAt)} • ${this.truncateText(task.prompt, 50)}`;
 	}
 
@@ -791,6 +801,7 @@ export class SchedulerRuntime {
 					enabled: task.enabled ?? true,
 					pending: false,
 					runCount: task.runCount ?? 0,
+					resumeRequired: task.resumeRequired ?? false,
 				};
 				if (normalized.kind === "recurring" && normalized.expiresAt && now >= normalized.expiresAt) {
 					mutated = true;
@@ -830,6 +841,10 @@ export class SchedulerRuntime {
 						normalized.nextRunAt = now + fallbackDelay;
 					}
 				}
+				if (normalized.enabled && normalized.nextRunAt <= now) {
+					normalized.resumeRequired = true;
+					mutated = true;
+				}
 
 				this.tasks.set(normalized.id, normalized);
 			}
@@ -840,6 +855,34 @@ export class SchedulerRuntime {
 			this.persistTasks();
 		}
 		this.updateStatus();
+	}
+
+	private taskStateLabel(task: ScheduleTask): string {
+		if (task.resumeRequired) {
+			return "due";
+		}
+		return task.enabled ? "on" : "off";
+	}
+
+	private taskStatusLabel(task: ScheduleTask): string {
+		if (task.resumeRequired) {
+			return "resume_required";
+		}
+		return task.lastStatus ?? "pending";
+	}
+
+	notifyResumeRequiredTasks() {
+		if (!this.runtimeCtx?.hasUI) {
+			return;
+		}
+		const dueTasks = this.getSortedTasks().filter((task) => task.enabled && task.resumeRequired);
+		if (dueTasks.length === 0) {
+			return;
+		}
+		this.runtimeCtx.ui.notify(
+			`Scheduler restored ${dueTasks.length} overdue task${dueTasks.length === 1 ? "" : "s"} from a previous session. They will not run automatically; use /schedule to review, run, reschedule, or disable them.`,
+			"warning",
+		);
 	}
 
 	persistTasks() {
