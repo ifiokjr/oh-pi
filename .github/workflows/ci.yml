@@ -260,10 +260,33 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+  compat:
+    name: Compatibility (pi ${{ matrix.label }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - label: min-0.56.1
+            version: 0.56.1
+          - label: current-0.64.0
+            version: 0.64.0
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - uses: pnpm/action-setup@v4.4.0
+
+      - uses: actions/setup-node@v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Verify compatibility smoke suite
+        run: pnpm verify:pi-compat -- --version ${{ matrix.version }}
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [commit-lint, changeset, security, lint, typecheck, test]
+    needs: [commit-lint, changeset, security, lint, typecheck, test, compat]
     # Run build even if changeset was skipped (release commits)
     if: "!failure() && !cancelled()"
     steps:
