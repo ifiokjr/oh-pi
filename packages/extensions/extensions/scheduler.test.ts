@@ -1097,6 +1097,34 @@ describe("SchedulerRuntime", () => {
 			expect(ctx._statusMap.get("pi-scheduler")).toContain("1 active");
 		});
 
+		it("shows due count for overdue restored tasks", () => {
+			const now = Date.now();
+			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
+				JSON.stringify({
+					version: 1,
+					tasks: [
+						{
+							id: "due12345",
+							prompt: "check build",
+							kind: "once",
+							enabled: true,
+							createdAt: now - 10 * ONE_MINUTE,
+							nextRunAt: now - ONE_MINUTE,
+							jitterMs: 0,
+							runCount: 0,
+							pending: false,
+						},
+					],
+				}),
+			);
+
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+			runtime.updateStatus();
+			expect(ctx._statusMap.get("pi-scheduler")).toContain("1 due");
+		});
+
 		it("shows paused message when all tasks disabled", () => {
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
@@ -1174,7 +1202,78 @@ describe("SchedulerRuntime", () => {
 			expect(task).toBeDefined();
 			expect(task!.prompt).toBe("check build");
 			expect(task!.runCount).toBe(3);
+			expect(task!.resumeRequired).toBe(false);
 			expect(readFileSync).toHaveBeenCalledWith(getSchedulerStoragePath(ctx.cwd), "utf-8");
+		});
+
+		it("marks overdue restored tasks as resume-required instead of dispatching them immediately", async () => {
+			const now = Date.now();
+			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
+				JSON.stringify({
+					version: 1,
+					tasks: [
+						{
+							id: "overdue1",
+							prompt: "check build",
+							kind: "recurring",
+							enabled: true,
+							createdAt: now - 10 * ONE_MINUTE,
+							nextRunAt: now - ONE_MINUTE,
+							intervalMs: 5 * ONE_MINUTE,
+							expiresAt: now + THREE_DAYS,
+							jitterMs: 0,
+							runCount: 1,
+							pending: false,
+						},
+					],
+				}),
+			);
+
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+
+			const task = runtime.getTask("overdue1");
+			expect(task).toBeDefined();
+			expect(task!.resumeRequired).toBe(true);
+			expect(task!.pending).toBe(false);
+
+			await runtime.tickScheduler();
+			expect(task!.pending).toBe(false);
+			expect(pi._userMessages).toHaveLength(0);
+		});
+
+		it("lets users explicitly resume an overdue restored task by re-enabling it", async () => {
+			const now = Date.now();
+			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
+				JSON.stringify({
+					version: 1,
+					tasks: [
+						{
+							id: "overdue2",
+							prompt: "check build",
+							kind: "once",
+							enabled: true,
+							createdAt: now - 10 * ONE_MINUTE,
+							nextRunAt: now - ONE_MINUTE,
+							jitterMs: 0,
+							runCount: 0,
+							pending: false,
+						},
+					],
+				}),
+			);
+
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+
+			expect(runtime.getTask("overdue2")!.resumeRequired).toBe(true);
+			runtime.setTaskEnabled("overdue2", false);
+			runtime.setTaskEnabled("overdue2", true);
+			await runtime.tickScheduler();
+
+			expect(pi._userMessages).toEqual(["check build"]);
 		});
 
 		it("skips expired tasks when loading from disk", () => {
@@ -1926,6 +2025,34 @@ describe("event wiring", () => {
 		const ctx = createMockCtx();
 		pi._emit("session_start", { type: "session_start" }, ctx);
 		// Scheduler is started (no easy way to verify timer, but it should not throw)
+	});
+
+	it("warns about overdue restored tasks on session_start without dispatching them", () => {
+		const now = Date.now();
+		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
+		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
+			JSON.stringify({
+				version: 1,
+				tasks: [
+					{
+						id: "overdue3",
+						prompt: "check build",
+						kind: "once",
+						enabled: true,
+						createdAt: now - 10 * ONE_MINUTE,
+						nextRunAt: now - ONE_MINUTE,
+						jitterMs: 0,
+						runCount: 0,
+						pending: false,
+					},
+				],
+			}),
+		);
+
+		const ctx = createMockCtx();
+		pi._emit("session_start", { type: "session_start" }, ctx);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("will not run automatically"))).toBe(true);
+		expect(pi._userMessages).toHaveLength(0);
 	});
 
 	it("updates status on session_switch", () => {

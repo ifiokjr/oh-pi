@@ -196,7 +196,7 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			"Use this tool when the user asks to remind/check back later, revisit something in the future, or monitor PRs, CI, builds, deploys, or background work.",
 			"For recurring tasks use kind='recurring' with duration like 5m or 2h, or provide cron.",
 			"For one-time reminders use kind='once' with duration like 30m or 1h.",
-			"Scheduled tasks run only while pi is active and idle, so phrase reminders and follow-ups accordingly.",
+			"Scheduled tasks run only while pi is active and idle. Persisted overdue tasks are restored for manual review instead of auto-running at startup.",
 		],
 		parameters: SchedulePromptToolParams,
 		execute: async (
@@ -240,8 +240,8 @@ function handleToolList(runtime: SchedulerRuntime): ToolResult {
 			task.kind === "once"
 				? "-"
 				: (task.cronExpression ?? formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL));
-		const state = task.enabled ? "on" : "off";
-		const status = task.lastStatus ?? "pending";
+		const state = task.resumeRequired ? "due" : task.enabled ? "on" : "off";
+		const status = task.resumeRequired ? "resume_required" : (task.lastStatus ?? "pending");
 		const last = task.lastRunAt ? runtime.formatRelativeTime(task.lastRunAt) : "never";
 		return `${task.id}\t${state}\t${task.kind}\t${schedule}\t${runtime.formatRelativeTime(task.nextRunAt)}\t${task.runCount}\t${last}\t${status}\t${task.prompt}`;
 	});
@@ -417,6 +417,7 @@ export function registerEvents(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 	pi.on("session_start", async (event, ctx) => {
 		refreshRuntimeContext(event, ctx);
 		runtime.startScheduler();
+		runtime.notifyResumeRequiredTasks();
 	});
 
 	pi.on("session_switch", refreshRuntimeContext);
