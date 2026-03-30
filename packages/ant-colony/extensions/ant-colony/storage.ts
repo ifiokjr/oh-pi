@@ -47,6 +47,15 @@ export function loadAntColonyConfig(): AntColonyConfig {
 	}
 }
 
+/**
+<!-- {=antColonyResolveStorageOptionsDocs} -->
+
+Resolve the effective ant-colony storage mode and shared root. Explicit options win, then
+environment variables, then extension config, and shared storage is the default when no override is
+provided.
+
+<!-- {/antColonyResolveStorageOptionsDocs} -->
+*/
 export function resolveColonyStorageOptions(options?: ColonyStorageOptions): Required<ColonyStorageOptions> {
 	const config = loadAntColonyConfig();
 	const envMode = parseStorageMode(process.env[STORAGE_MODE_ENV_FLAG]);
@@ -83,6 +92,15 @@ export function getSharedColonyWorkspaceRoot(cwd: string, options?: ColonyStorag
 	return path.join(getSharedColonyStorageRoot(options), getMirroredWorkspacePath(cwd));
 }
 
+/**
+<!-- {=antColonyGetColonyStateParentDirDocs} -->
+
+Resolve the parent directory for persisted colony state. Shared mode stores state under the
+workspace-mirrored shared root in `colonies/`, while project mode keeps using the legacy local
+`.ant-colony/` directory.
+
+<!-- {/antColonyGetColonyStateParentDirDocs} -->
+*/
 export function getColonyStateParentDir(cwd: string, options?: ColonyStorageOptions): string {
 	const resolved = resolveColonyStorageOptions(options);
 	if (resolved.mode === "project") {
@@ -91,6 +109,15 @@ export function getColonyStateParentDir(cwd: string, options?: ColonyStorageOpti
 	return path.join(getSharedColonyWorkspaceRoot(cwd, resolved), "colonies");
 }
 
+/**
+<!-- {=antColonyGetColonyWorktreeParentDirDocs} -->
+
+Resolve the parent directory for isolated colony worktrees. Shared mode keeps them under the
+workspace-mirrored shared root in `worktrees/`, while project mode places them under the legacy
+project-local `.ant-colony/worktrees/` path.
+
+<!-- {/antColonyGetColonyWorktreeParentDirDocs} -->
+*/
 export function getColonyWorktreeParentDir(cwd: string, options?: ColonyStorageOptions): string {
 	const resolved = resolveColonyStorageOptions(options);
 	if (resolved.mode === "project") {
@@ -103,6 +130,15 @@ export function shouldManageProjectGitignore(options?: ColonyStorageOptions): bo
 	return resolveColonyStorageOptions(options).mode === "project";
 }
 
+/**
+<!-- {=antColonyMigrateLegacyProjectColoniesDocs} -->
+
+Best-effort migration for legacy project-local colony state. When shared mode is active, existing
+`.ant-colony/{colony-id}/` directories are copied into the shared store so resumable colonies keep
+working without leaving runtime state in the repo.
+
+<!-- {/antColonyMigrateLegacyProjectColoniesDocs} -->
+*/
 export function migrateLegacyProjectColonies(cwd: string, options?: ColonyStorageOptions): void {
 	const resolved = resolveColonyStorageOptions(options);
 	if (resolved.mode !== "shared") {

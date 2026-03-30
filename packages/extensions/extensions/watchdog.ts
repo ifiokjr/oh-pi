@@ -23,6 +23,14 @@ const ALERT_HISTORY_LIMIT = 20;
 const OVERLAY_WIDTH = 84;
 const OVERLAY_MAX_HEIGHT = "80%";
 const SAFE_MODE_REASON_MAX_LENGTH = 96;
+/**
+<!-- {=extensionsWatchdogConfigPathDocs} -->
+
+Path to the optional watchdog JSON config file under the pi agent directory. This is the default
+location used for watchdog sampling, threshold overrides, and enable/disable settings.
+
+<!-- {/extensionsWatchdogConfigPathDocs} -->
+*/
 export const WATCHDOG_CONFIG_PATH = path.join(homedir(), ".pi", "agent", "extensions", "watchdog", "config.json");
 
 export type WatchdogSample = {
@@ -120,6 +128,14 @@ function formatSafeModeStatusHint(state: SafeModeState): string | undefined {
 	return reason ? `safe-mode: ${source} · ${reason}` : `safe-mode: ${source}`;
 }
 
+/**
+<!-- {=extensionsLoadWatchdogConfigDocs} -->
+
+Load watchdog config from disk and return a safe object. Missing files, invalid JSON, or malformed
+values all fall back to an empty config so runtime monitoring can continue safely.
+
+<!-- {/extensionsLoadWatchdogConfigDocs} -->
+*/
 export function loadWatchdogConfig(configPath = WATCHDOG_CONFIG_PATH): WatchdogConfig {
 	try {
 		if (!fs.existsSync(configPath)) {
@@ -132,6 +148,14 @@ export function loadWatchdogConfig(configPath = WATCHDOG_CONFIG_PATH): WatchdogC
 	}
 }
 
+/**
+<!-- {=extensionsResolveWatchdogThresholdsDocs} -->
+
+Resolve the effective watchdog thresholds by merging optional config overrides onto the built-in
+default thresholds.
+
+<!-- {/extensionsResolveWatchdogThresholdsDocs} -->
+*/
 export function resolveWatchdogThresholds(config: WatchdogConfig = {}): WatchdogThresholds {
 	return {
 		...DEFAULT_WATCHDOG_THRESHOLDS,
@@ -139,6 +163,14 @@ export function resolveWatchdogThresholds(config: WatchdogConfig = {}): Watchdog
 	};
 }
 
+/**
+<!-- {=extensionsResolveWatchdogSampleIntervalMsDocs} -->
+
+Resolve the watchdog sampling interval in milliseconds, clamping configured values into the
+supported range and falling back to the default interval when no valid override is provided.
+
+<!-- {/extensionsResolveWatchdogSampleIntervalMsDocs} -->
+*/
 export function resolveWatchdogSampleIntervalMs(config: WatchdogConfig = {}): number {
 	return clampSampleIntervalMs(config.sampleIntervalMs);
 }

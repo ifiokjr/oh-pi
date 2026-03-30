@@ -82,28 +82,29 @@ The package has one primary public entrypoint:
 
 Supported subcommands:
 
-```text
-/spec                   # same as /spec status
-/spec help
-/spec status
-/spec init
-/spec constitution [principles]
-/spec specify <feature description>
-/spec clarify [focus]
-/spec checklist [domain]
-/spec plan [technical context]
-/spec tasks [context]
-/spec analyze [focus]
-/spec implement [focus]
-/spec list
-/spec next
-```
+<!-- {=piSpecSubcommandsDocs} -->
+
+Canonical `/spec` subcommands exposed by the extension. Keep README command lists and exported type
+metadata in sync with this source of truth: `status`, `help`, `init`, `constitution`, `specify`,
+`clarify`, `checklist`, `plan`, `tasks`, `analyze`, `implement`, `list`, and `next`.
+
+<!-- {/piSpecSubcommandsDocs} -->
 
 That is the **intentional public API**.
 
 There is **not** a separate public JS/TS library API right now. Internal modules like
 `workspace.ts`, `scaffold.ts`, or `prompts.ts` are implementation details for contributors, not a versioned
 integration surface for consumers.
+
+Core workflow steps:
+
+<!-- {=piSpecWorkflowStepsDocs} -->
+
+Workflow steps that hand work back into pi for feature execution. These ordered steps are
+`constitution`, `specify`, `clarify`, `checklist`, `plan`, `tasks`, `analyze`, and `implement`.
+Keep contributor-facing docs aligned with the same sequence.
+
+<!-- {/piSpecWorkflowStepsDocs} -->
 
 ### Why one `/spec` command is the right API
 

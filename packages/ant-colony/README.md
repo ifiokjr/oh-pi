@@ -27,7 +27,23 @@ Goal → Scouting → Task Pool → Workers Execute in Parallel → Soldiers Rev
 
 ## Workspace Isolation (Default)
 
-By default, colony runtime state is stored outside the repository under a shared pi agent folder:
+<!-- {=antColonySharedStorageOverview} -->
+
+Ant-colony stores runtime state outside the repository by default under the shared pi agent
+directory, mirroring the workspace path so each repo gets its own isolated storage root.
+Project-local `.ant-colony/` storage remains available as an explicit opt-in for legacy workflows.
+
+<!-- {/antColonySharedStorageOverview} -->
+
+<!-- {=antColonyGetColonyWorktreeParentDirDocs} -->
+
+Resolve the parent directory for isolated colony worktrees. Shared mode keeps them under the
+workspace-mirrored shared root in `worktrees/`, while project mode places them under the legacy
+project-local `.ant-colony/worktrees/` path.
+
+<!-- {/antColonyGetColonyWorktreeParentDirDocs} -->
+
+Shared storage layout:
 
 ```text
 ~/.pi/agent/ant-colony/root/<mirrored-workspace-path>/
@@ -35,18 +51,27 @@ By default, colony runtime state is stored outside the repository under a shared
 └── worktrees/
 ```
 
-Each colony still runs in an **isolated git worktree** on its own branch (`ant-colony/...`), but the
-worktree directory itself now lives in that shared storage root instead of inside your repo. This keeps
-your current branch untouched and avoids creating `.ant-colony/` in the workspace.
+<!-- {=antColonyPrepareColonyWorkspaceDocs} -->
 
-If worktree creation is unavailable (e.g. not a git repo), the colony automatically falls back to the shared cwd and
-reports the reason in the final report/status output.
+Prepare the execution workspace for a colony run. When worktree isolation is enabled and git
+supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch; otherwise it
+falls back to the shared working directory and records the reason.
+
+<!-- {/antColonyPrepareColonyWorkspaceDocs} -->
 
 You can disable worktree isolation with:
 
 ```bash
 PI_ANT_COLONY_WORKTREE=0
 ```
+
+<!-- {=antColonyResolveStorageOptionsDocs} -->
+
+Resolve the effective ant-colony storage mode and shared root. Explicit options win, then
+environment variables, then extension config, and shared storage is the default when no override is
+provided.
+
+<!-- {/antColonyResolveStorageOptionsDocs} -->
 
 You can opt back into project-local storage if you want the legacy behavior:
 
@@ -130,6 +155,14 @@ Each task declares the files it operates on. The queen guarantees:
 
 ## Nest Structure
 
+<!-- {=antColonyGetColonyStateParentDirDocs} -->
+
+Resolve the parent directory for persisted colony state. Shared mode stores state under the
+workspace-mirrored shared root in `colonies/`, while project mode keeps using the legacy local
+`.ant-colony/` directory.
+
+<!-- {/antColonyGetColonyStateParentDirDocs} -->
+
 ```text
 ~/.pi/agent/ant-colony/root/<mirrored-workspace-path>/colonies/{colony-id}/
 ├── state.json           Colony state
@@ -139,7 +172,13 @@ Each task declares the files it operates on. The queen guarantees:
     └── t-yyy.json
 ```
 
-Legacy project-local `.ant-colony/{colony-id}/` state is migrated automatically into the shared store when detected.
+<!-- {=antColonyMigrateLegacyProjectColoniesDocs} -->
+
+Best-effort migration for legacy project-local colony state. When shared mode is active, existing
+`.ant-colony/{colony-id}/` directories are copied into the shared store so resumable colonies keep
+working without leaving runtime state in the repo.
+
+<!-- {/antColonyMigrateLegacyProjectColoniesDocs} -->
 
 ## Installation
 

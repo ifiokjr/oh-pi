@@ -53,6 +53,15 @@ function loadStorageConfig(): SubagentStorageConfig {
 	}
 }
 
+/**
+<!-- {=subagentsResolveProjectAgentStorageOptionsDocs} -->
+
+Resolve the effective project-agent storage mode and shared root. Explicit options take precedence,
+then environment variables, then extension config, and shared storage is the default when no
+override is provided.
+
+<!-- {/subagentsResolveProjectAgentStorageOptionsDocs} -->
+*/
 export function resolveProjectAgentStorageOptions(
 	options?: ProjectAgentStorageOptions,
 ): Required<ProjectAgentStorageOptions> {
@@ -93,6 +102,15 @@ export function getLegacyProjectAgentsDir(cwd: string): string {
 	return path.join(path.resolve(cwd), ".pi", "agents");
 }
 
+/**
+<!-- {=subagentsGetSharedProjectAgentsDirDocs} -->
+
+Build the shared directory for project-scope agent and chain definitions. The path combines the
+shared root, a mirrored workspace path, and the trailing `agents/` directory so different projects
+stay isolated from one another.
+
+<!-- {/subagentsGetSharedProjectAgentsDirDocs} -->
+*/
 export function getSharedProjectAgentsDir(cwd: string, options?: ProjectAgentStorageOptions): string {
 	const resolved = resolveProjectAgentStorageOptions(options);
 	return path.join(resolved.sharedRoot, ...getMirroredWorkspacePathSegments(cwd), "agents");
@@ -109,6 +127,15 @@ function cleanupLegacyPiDir(cwd: string): void {
 	}
 }
 
+/**
+<!-- {=subagentsMigrateLegacyProjectAgentsDocs} -->
+
+Best-effort migration for legacy repo-local project agents. When shared mode is active, discovered
+`.pi/agents/` directories are copied into shared storage and the empty legacy `.pi/` directory is
+removed when possible.
+
+<!-- {/subagentsMigrateLegacyProjectAgentsDocs} -->
+*/
 export function migrateLegacyProjectAgents(cwd: string, options?: ProjectAgentStorageOptions): void {
 	const resolved = resolveProjectAgentStorageOptions(options);
 	if (resolved.mode !== "shared") {
@@ -135,6 +162,15 @@ export function migrateLegacyProjectAgents(cwd: string, options?: ProjectAgentSt
 	}
 }
 
+/**
+<!-- {=subagentsFindNearestProjectAgentsDirDocs} -->
+
+Find the highest-priority project agents directory for the current workspace. The resolver walks up
+parent workspaces, migrates legacy storage when needed, and preserves the same nearest-parent lookup
+semantics in both shared and project storage modes.
+
+<!-- {/subagentsFindNearestProjectAgentsDirDocs} -->
+*/
 export function findNearestProjectAgentsDir(cwd: string, options?: ProjectAgentStorageOptions): string {
 	const resolved = resolveProjectAgentStorageOptions(options);
 	migrateLegacyProjectAgents(cwd, resolved);

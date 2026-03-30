@@ -121,6 +121,15 @@ export function worktreeEnabledByDefault(): boolean {
 	return !DISABLED_VALUES.has(raw.trim().toLowerCase());
 }
 
+/**
+<!-- {=antColonyPrepareColonyWorkspaceDocs} -->
+
+Prepare the execution workspace for a colony run. When worktree isolation is enabled and git
+supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch; otherwise it
+falls back to the shared working directory and records the reason.
+
+<!-- {/antColonyPrepareColonyWorkspaceDocs} -->
+*/
 export function prepareColonyWorkspace(opts: PrepareColonyWorkspaceOptions): ColonyWorkspace {
 	const originCwd = resolve(opts.cwd);
 	const enabled = opts.enabled ?? worktreeEnabledByDefault();

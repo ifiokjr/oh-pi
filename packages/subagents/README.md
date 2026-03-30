@@ -49,6 +49,15 @@ Agents are markdown files with YAML frontmatter that define specialized subagent
 
 Use `agentScope` parameter to control discovery: `"user"`, `"project"`, or `"both"` (default; project takes priority).
 
+<!-- {=subagentsProjectAgentStorageOverview} -->
+
+Subagents stores project-scope agents and chains in shared pi storage by default under a
+workspace-mirrored path, so repositories stay clean while still supporting parent-workspace lookup
+for nested projects. Legacy repo-local `.pi/agents/` storage remains available as an explicit
+project-mode override.
+
+<!-- {/subagentsProjectAgentStorageOverview} -->
+
 **Builtin agents:** The extension ships with ready-to-use agents — `scout`, `planner`, `worker`, `reviewer`, `context-builder`, `researcher`, `artist`, `frontend-designer`, and `multimodal-summariser`. They load at lowest priority so any user or project agent with the same name overrides them. Builtin agents appear with a `[builtin]` badge in listings and cannot be modified through management actions (create a same-named user agent to override instead).
 
 > **Note:** The `researcher` agent uses `web_search`, `fetch_content`, and `get_search_content` tools which require the [pi-web-access](https://github.com/nicobailon/pi-web-access) extension. Install it with `pi install npm:pi-web-access`.
@@ -644,7 +653,13 @@ Sessions are always enabled — every subagent run gets a session directory for 
 
 ### `projectAgentStorageMode`
 
-Controls where project-scope agent and chain definitions are stored.
+<!-- {=subagentsResolveProjectAgentStorageOptionsDocs} -->
+
+Resolve the effective project-agent storage mode and shared root. Explicit options take precedence,
+then environment variables, then extension config, and shared storage is the default when no
+override is provided.
+
+<!-- {/subagentsResolveProjectAgentStorageOptionsDocs} -->
 
 ```json
 {
@@ -652,15 +667,32 @@ Controls where project-scope agent and chain definitions are stored.
 }
 ```
 
-Modes:
-- `"shared"` (default) — stores project-scope definitions under `~/.pi/agent/subagents/project-agents/...`
-- `"project"` — uses legacy repo-local `.pi/agents/`
+<!-- {=subagentsProjectAgentStorageOverview} -->
 
-When shared mode is enabled, legacy `.pi/agents/` directories are migrated automatically when discovered.
+Subagents stores project-scope agents and chains in shared pi storage by default under a
+workspace-mirrored path, so repositories stay clean while still supporting parent-workspace lookup
+for nested projects. Legacy repo-local `.pi/agents/` storage remains available as an explicit
+project-mode override.
+
+<!-- {/subagentsProjectAgentStorageOverview} -->
+
+<!-- {=subagentsMigrateLegacyProjectAgentsDocs} -->
+
+Best-effort migration for legacy repo-local project agents. When shared mode is active, discovered
+`.pi/agents/` directories are copied into shared storage and the empty legacy `.pi/` directory is
+removed when possible.
+
+<!-- {/subagentsMigrateLegacyProjectAgentsDocs} -->
 
 ### `projectAgentSharedRoot`
 
-Overrides the shared root used in `shared` mode.
+<!-- {=subagentsGetSharedProjectAgentsDirDocs} -->
+
+Build the shared directory for project-scope agent and chain definitions. The path combines the
+shared root, a mirrored workspace path, and the trailing `agents/` directory so different projects
+stay isolated from one another.
+
+<!-- {/subagentsGetSharedProjectAgentsDirDocs} -->
 
 ```json
 {
@@ -668,6 +700,14 @@ Overrides the shared root used in `shared` mode.
   "projectAgentSharedRoot": "~/.pi/agent/subagents/project-agents"
 }
 ```
+
+<!-- {=subagentsFindNearestProjectAgentsDirDocs} -->
+
+Find the highest-priority project agents directory for the current workspace. The resolver walks up
+parent workspaces, migrates legacy storage when needed, and preserves the same nearest-parent lookup
+semantics in both shared and project storage modes.
+
+<!-- {/subagentsFindNearestProjectAgentsDirDocs} -->
 
 Environment overrides are also supported:
 - `PI_SUBAGENT_PROJECT_AGENTS_MODE=shared|project`

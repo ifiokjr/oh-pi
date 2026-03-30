@@ -1395,6 +1395,16 @@ export class SchedulerRuntime {
 	}
 }
 
+/**
+<!-- {=extensionsSchedulerOverview} -->
+
+The scheduler extension adds recurring checks, one-time reminders, and the LLM-callable
+`schedule_prompt` tool so pi can schedule future follow-ups like PR, CI, build, or deployment
+checks. Tasks run only while pi is active and idle, and scheduler state is persisted in shared pi
+storage using a workspace-mirrored path.
+
+<!-- {/extensionsSchedulerOverview} -->
+*/
 export default function schedulerExtension(pi: ExtensionAPI) {
 	const runtime = new SchedulerRuntime(pi);
 	registerEvents(pi, runtime);

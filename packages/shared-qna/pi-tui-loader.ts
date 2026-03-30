@@ -10,6 +10,16 @@ export interface PiTuiLoaderOptions {
 	requireFn?: PiTuiRequire;
 }
 
+/**
+<!-- {=sharedQnaGetPiTuiFallbackPathsDocs} -->
+
+Return the ordered list of Bun global fallback paths to try for `@mariozechner/pi-tui`.
+
+The list prefers an explicit `BUN_INSTALL` root when provided and always includes the default
+`~/.bun/install/global/node_modules/@mariozechner/pi-tui` fallback without duplicates.
+
+<!-- {/sharedQnaGetPiTuiFallbackPathsDocs} -->
+*/
 export function getPiTuiFallbackPaths(options: Omit<PiTuiLoaderOptions, "requireFn"> = {}): string[] {
 	const homeDir = options.homeDir ?? os.homedir();
 	const roots = new Set<string>();
@@ -22,6 +32,16 @@ export function getPiTuiFallbackPaths(options: Omit<PiTuiLoaderOptions, "require
 	);
 }
 
+/**
+<!-- {=sharedQnaRequirePiTuiModuleDocs} -->
+
+Load `@mariozechner/pi-tui` with a shared fallback strategy.
+
+The loader first tries the normal package import path, then walks the Bun-global fallback list, and
+finally throws a helpful error that names every checked location when none of them resolve.
+
+<!-- {/sharedQnaRequirePiTuiModuleDocs} -->
+*/
 export function requirePiTuiModule(options: PiTuiLoaderOptions = {}): unknown {
 	const requireFn = options.requireFn ?? createRequire(import.meta.url);
 	try {

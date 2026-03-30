@@ -85,6 +85,27 @@ Policy:
 - higher-risk runtime integrations should gain smoke coverage before broadening compatibility claims
 - CI smoke-checks both the minimum supported baseline (`0.56.1`) and a pinned current upstream runtime (`0.64.0`)
 
+### Documentation reuse with MDT
+
+This repo uses [MDT](https://github.com/ifiokjr/mdt) to keep selected markdown sections and exported
+TypeScript API docs synchronized from shared provider blocks under `docs/mdt/`.
+
+```bash
+mdt list
+mdt update
+mdt check
+```
+
+Or through workspace scripts:
+
+```bash
+pnpm docs:list
+pnpm docs:update
+pnpm docs:check
+```
+
+CI runs `mdt check` so provider and consumer blocks stay in sync.
+
 ---
 
 ## Configuration

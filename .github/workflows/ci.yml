@@ -179,6 +179,19 @@ jobs:
         with:
           fail-on-severity: moderate
 
+  docs:
+    name: Documentation Reuse (MDT)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdt
+
+      - name: Check synchronized documentation blocks
+        run: mdt check
+
   security:
     name: Security Checks
     runs-on: ubuntu-latest
@@ -286,7 +299,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [commit-lint, changeset, security, lint, typecheck, test, compat]
+    needs: [commit-lint, changeset, docs, security, lint, typecheck, test, compat]
     # Run build even if changeset was skipped (release commits)
     if: "!failure() && !cancelled()"
     steps:
