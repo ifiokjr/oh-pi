@@ -36,6 +36,9 @@ importers:
 
   packages/ant-colony:
     dependencies:
+      '@ifi/oh-pi-core':
+        specifier: workspace:*
+        version: link:../core
       '@mariozechner/pi-agent-core':
         specifier: '*'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
@@ -208,6 +211,9 @@ importers:
 
   packages/subagents:
     dependencies:
+      '@ifi/oh-pi-core':
+        specifier: workspace:*
+        version: link:../core
       '@mariozechner/pi-agent-core':
         specifier: '*'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)

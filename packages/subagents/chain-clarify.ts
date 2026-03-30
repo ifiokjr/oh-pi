@@ -9,9 +9,9 @@ import type { Theme } from "@mariozechner/pi-coding-agent";
 import type { Component, TUI } from "@mariozechner/pi-tui";
 import { matchesKey, visibleWidth, truncateToWidth } from "@mariozechner/pi-tui";
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentConfig, ChainConfig, ChainStepConfig } from "./agents.js";
+import { getUserAgentsDir } from "./paths.js";
 import type { ResolvedStepBehavior } from "./settings.js";
 import type { TextEditorState } from "./text-editor.js";
 import {
@@ -339,7 +339,7 @@ export class ChainClarifyComponent implements Component {
 				return;
 			}
 			try {
-				const dir = path.join(os.homedir(), ".pi", "agent", "agents");
+				const dir = getUserAgentsDir();
 				fs.mkdirSync(dir, { recursive: true });
 				const filePath = path.join(dir, `${name}.chain.md`);
 				const config = this.buildChainConfig(name);

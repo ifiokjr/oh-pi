@@ -61,6 +61,7 @@ import { finalizeSingleOutput, injectSingleOutputInstruction, resolveSingleOutpu
 import { AgentManagerComponent, type ManagerResult } from "./agent-manager.js";
 import { recordRun } from "./run-history.js";
 import { handleManagementAction } from "./agent-management.js";
+import { getSubagentConfigPath } from "./paths.js";
 
 // ExtensionConfig is now imported from ./types.js
 
@@ -81,7 +82,7 @@ function getSubagentSessionRoot(parentSessionFile: string | null): string {
 }
 
 function loadConfig(): ExtensionConfig {
-	const configPath = path.join(os.homedir(), ".pi", "agent", "extensions", "subagent", "config.json");
+	const configPath = getSubagentConfigPath();
 	try {
 		if (fs.existsSync(configPath)) {
 			return JSON.parse(fs.readFileSync(configPath, "utf-8")) as ExtensionConfig;

@@ -4,9 +4,10 @@
 
 import { execSync } from "node:child_process";
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
+import { expandHomeDir } from "@ifi/oh-pi-core";
 import { loadSkills, type Skill } from "@mariozechner/pi-coding-agent";
+import { resolveAgentDir } from "./paths.js";
 
 export type SkillSource =
 	| "project"
@@ -46,7 +47,7 @@ let loadSkillsCache: { cwd: string; skills: CachedSkillEntry[]; timestamp: numbe
 const LOAD_SKILLS_CACHE_TTL_MS = 5000;
 
 const CONFIG_DIR = ".pi";
-const AGENT_DIR = path.join(os.homedir(), ".pi", "agent");
+const AGENT_DIR = resolveAgentDir();
 
 const SOURCE_PRIORITY: Record<SkillSource, number> = {
 	project: 700,
@@ -167,7 +168,7 @@ function collectSettingsSkillPaths(cwd: string): string[] {
 				if (typeof entry !== "string") continue;
 				let resolved = entry;
 				if (resolved.startsWith("~/")) {
-					resolved = path.join(os.homedir(), resolved.slice(2));
+					resolved = expandHomeDir(resolved);
 				} else if (!path.isAbsolute(resolved)) {
 					resolved = path.resolve(base, resolved);
 				}

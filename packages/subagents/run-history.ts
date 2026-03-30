@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
+import { getRunHistoryPath } from "./paths.js";
 
 export interface RunEntry {
 	agent: string;
@@ -11,7 +11,7 @@ export interface RunEntry {
 	exit?: number;
 }
 
-const HISTORY_PATH = path.join(os.homedir(), ".pi", "agent", "run-history.jsonl");
+const HISTORY_PATH = getRunHistoryPath();
 const ROTATE_READ_THRESHOLD = 1200;
 const ROTATE_KEEP = 1000;
 

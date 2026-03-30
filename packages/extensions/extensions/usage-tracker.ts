@@ -20,10 +20,9 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { AssistantMessage } from "@mariozechner/pi-ai";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -439,7 +438,7 @@ async function getOAuthModule(): Promise<typeof import("@mariozechner/pi-ai/oaut
 
 /** Path to pi's auth storage file. */
 function getAuthPath(): string {
-	return join(homedir(), ".pi", "agent", "auth.json");
+	return join(getAgentDir(), "auth.json");
 }
 
 /** Read pi's auth config from ~/.pi/agent/auth.json. */
@@ -1163,7 +1162,7 @@ function providerDisplayName(provider: ProviderKey): string {
  * already configured, and writes back. This is a one-time idempotent operation.
  */
 function ensureCtrlUUnbound(): void {
-	const keybindingsPath = join(homedir(), ".pi", "agent", "keybindings.json");
+	const keybindingsPath = join(getAgentDir(), "keybindings.json");
 	try {
 		let config: Record<string, unknown> = {};
 		if (existsSync(keybindingsPath)) {
@@ -1203,7 +1202,7 @@ function ensureCtrlUUnbound(): void {
 }
 
 function getUsageHistoryPath(): string {
-	return join(homedir(), ".pi", "agent", "usage-tracker-history.json");
+	return join(getAgentDir(), "usage-tracker-history.json");
 }
 
 export default function usageTracker(pi: ExtensionAPI) {

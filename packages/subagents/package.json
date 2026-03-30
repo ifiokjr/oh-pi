@@ -31,6 +31,9 @@
     "!test/**"
   ],
   "license": "MIT",
+  "dependencies": {
+    "@ifi/oh-pi-core": "workspace:*"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ifiokjr/oh-pi.git",

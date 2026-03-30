@@ -1,8 +1,7 @@
 import { execSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import type { OhPConfig } from "@ifi/oh-pi-core";
+import { basename, dirname, join } from "node:path";
+import { type OhPConfig, resolvePiAgentDir } from "@ifi/oh-pi-core";
 import {
 	writeAgents,
 	writeExtensions,
@@ -84,10 +83,10 @@ function copyDir(src: string, dest: string) {
 }
 
 /**
- * Apply an OhPConfig by generating and writing all config files to ~/.pi/agent/.
+ * Apply an OhPConfig by generating and writing all config files to pi's resolved agent dir.
  */
 export function applyConfig(config: OhPConfig) {
-	const agentDir = join(homedir(), ".pi", "agent");
+	const agentDir = resolvePiAgentDir();
 	ensureDir(agentDir);
 	if ((config.providerStrategy ?? "replace") === "replace") {
 		cleanupManagedConfig(agentDir);
@@ -124,16 +123,16 @@ export function installPi() {
 }
 
 /**
- * Back up ~/.pi/agent/ to ~/.pi/agent.bak-{timestamp}/.
+ * Back up the resolved pi agent dir to a sibling `.bak-{timestamp}` directory.
  * @returns Backup directory path, or empty string if source doesn't exist.
  */
 export function backupConfig(): string {
-	const agentDir = join(homedir(), ".pi", "agent");
+	const agentDir = resolvePiAgentDir();
 	if (!existsSync(agentDir)) {
 		return "";
 	}
 	const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-	const backupDir = join(homedir(), ".pi", `agent.bak-${ts}`);
+	const backupDir = join(dirname(agentDir), `${basename(agentDir)}.bak-${ts}`);
 	copyDir(agentDir, backupDir);
 	return backupDir;
 }

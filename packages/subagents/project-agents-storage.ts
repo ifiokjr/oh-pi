@@ -1,6 +1,11 @@
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
+import {
+	expandHomeDir,
+	getExtensionConfigPath,
+	getMirroredWorkspacePathSegments,
+	resolvePiAgentDir,
+} from "@ifi/oh-pi-core";
 
 export type ProjectAgentStorageMode = "shared" | "project";
 
@@ -16,8 +21,8 @@ interface SubagentStorageConfig {
 
 const STORAGE_MODE_ENV_FLAG = "PI_SUBAGENT_PROJECT_AGENTS_MODE";
 const STORAGE_ROOT_ENV_FLAG = "PI_SUBAGENT_PROJECT_AGENTS_ROOT";
-const CONFIG_PATH = path.join(os.homedir(), ".pi", "agent", "extensions", "subagent", "config.json");
-const DEFAULT_SHARED_ROOT = path.join(os.homedir(), ".pi", "agent", "subagents", "project-agents");
+const CONFIG_PATH = getExtensionConfigPath("subagent");
+const DEFAULT_SHARED_ROOT = path.join(resolvePiAgentDir(), "subagents", "project-agents");
 
 function parseStorageMode(value: unknown): ProjectAgentStorageMode | undefined {
 	if (value !== "shared" && value !== "project") {
@@ -27,7 +32,7 @@ function parseStorageMode(value: unknown): ProjectAgentStorageMode | undefined {
 }
 
 function expandTilde(value: string): string {
-	return value.startsWith("~/") ? path.join(os.homedir(), value.slice(2)) : value;
+	return expandHomeDir(value);
 }
 
 function loadStorageConfig(): SubagentStorageConfig {
@@ -61,18 +66,6 @@ export function resolveProjectAgentStorageOptions(
 	return { mode, sharedRoot };
 }
 
-function getMirroredWorkspacePath(cwd: string): string {
-	const resolved = path.resolve(cwd);
-	const parsed = path.parse(resolved);
-	const relativeSegments = resolved.slice(parsed.root.length).split(path.sep).filter(Boolean);
-	const rootSegment = parsed.root
-		? parsed.root
-				.replaceAll(/[^a-zA-Z0-9]+/g, "-")
-				.replaceAll(/^-+|-+$/g, "")
-				.toLowerCase() || "root"
-		: "root";
-	return path.join(rootSegment, ...relativeSegments);
-}
 
 function isDirectory(p: string): boolean {
 	try {
@@ -102,7 +95,7 @@ export function getLegacyProjectAgentsDir(cwd: string): string {
 
 export function getSharedProjectAgentsDir(cwd: string, options?: ProjectAgentStorageOptions): string {
 	const resolved = resolveProjectAgentStorageOptions(options);
-	return path.join(resolved.sharedRoot, getMirroredWorkspacePath(cwd), "agents");
+	return path.join(resolved.sharedRoot, ...getMirroredWorkspacePathSegments(cwd), "agents");
 }
 
 function cleanupLegacyPiDir(cwd: string): void {

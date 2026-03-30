@@ -2,6 +2,7 @@
   "name": "@ifi/oh-pi-ant-colony",
   "version": "0.3.6",
   "description": "Autonomous multi-agent swarm extension for pi — adaptive concurrency, pheromone communication.",
+  "type": "module",
   "keywords": [
     "pi-package"
   ],
@@ -16,6 +17,9 @@
     "!**/*.test.ts"
   ],
   "license": "MIT",
+  "dependencies": {
+    "@ifi/oh-pi-core": "workspace:*"
+  },
   "scripts": {
     "build": "pnpm run typecheck:worktree && pnpm run test:worktree",
     "typecheck": "pnpm run typecheck:worktree",

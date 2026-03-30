@@ -14,9 +14,8 @@
  */
 
 import * as fs from "node:fs";
-import { homedir } from "node:os";
 import * as path from "node:path";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { Cron } from "croner";
 
@@ -79,7 +78,7 @@ interface SchedulerStore {
 }
 
 function getSchedulerStorageRoot(): string {
-	return path.join(homedir(), ".pi", "agent", "scheduler");
+	return path.join(getAgentDir(), "scheduler");
 }
 
 export function getSchedulerStoragePath(cwd: string): string {

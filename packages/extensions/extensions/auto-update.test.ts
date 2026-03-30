@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({}));
+vi.mock("@mariozechner/pi-coding-agent", () => ({
+	getAgentDir: () => "/mock-home/.pi/agent",
+}));
 
 import { isNewer } from "./auto-update";
 

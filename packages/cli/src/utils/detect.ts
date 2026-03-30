@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { resolvePiAgentDir } from "@ifi/oh-pi-core";
 
 export interface EnvInfo {
 	piInstalled: boolean;
@@ -112,7 +112,7 @@ function detectProviders(agentDir: string): string[] {
  * @returns Environment info object {@link EnvInfo}
  */
 export async function detectEnv(): Promise<EnvInfo> {
-	const agentDir = join(homedir(), ".pi", "agent");
+	const agentDir = resolvePiAgentDir();
 
 	// Detect pi version and scan config in parallel
 	const [versionResult, existingFiles] = await Promise.all([

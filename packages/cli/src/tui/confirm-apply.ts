@@ -1,6 +1,5 @@
 import * as p from "@clack/prompts";
-import type { OhPConfig } from "@ifi/oh-pi-core";
-import { t } from "@ifi/oh-pi-core";
+import { type OhPConfig, resolvePiAgentDir, t } from "@ifi/oh-pi-core";
 import chalk from "chalk";
 import type { EnvInfo } from "../utils/detect.js";
 import { applyConfig, backupConfig, installPi } from "../utils/install.js";
@@ -125,7 +124,7 @@ export async function confirmApply(config: OhPConfig, env: EnvInfo) {
 
 	// ═══ Result ═══
 	const tree = [
-		`${chalk.gray("~/.pi/agent/")}`,
+		`${chalk.gray(`${resolvePiAgentDir()}/`)}`,
 		`${chalk.gray("├── ")}auth.json ${chalk.dim("")}`,
 		`${chalk.gray("├── ")}settings.json`,
 		...(config.keybindings !== "default" ? [`${chalk.gray("├── ")}keybindings.json`] : []),

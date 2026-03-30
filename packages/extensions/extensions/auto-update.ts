@@ -7,16 +7,15 @@
  */
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { type ExtensionAPI, getAgentDir } from "@mariozechner/pi-coding-agent";
 
 /** Minimum interval between version checks (24 hours). */
 const CHECK_INTERVAL = 24 * 60 * 60 * 1000;
 
 /** Stamp file path — stores the timestamp of the last version check. */
-const STAMP_FILE = join(homedir(), ".pi", "agent", ".update-check");
+const STAMP_FILE = join(getAgentDir(), ".update-check");
 
 /** Read the last-check timestamp from the stamp file. Returns 0 if missing or unreadable. */
 function readStamp(): number {

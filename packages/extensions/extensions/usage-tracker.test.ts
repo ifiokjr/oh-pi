@@ -28,6 +28,7 @@ vi.mock("node:os", async (importOriginal) => {
 
 vi.mock("@mariozechner/pi-coding-agent", () => ({
 	CustomEditor: class {},
+	getAgentDir: () => "/mock-home/.pi/agent",
 }));
 
 vi.mock("@mariozechner/pi-ai", () => ({}));

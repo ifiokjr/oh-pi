@@ -31,7 +31,9 @@ vi.mock("node:os", async (importOriginal) => {
 	return { ...actual, homedir: () => "/mock-home" };
 });
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({}));
+vi.mock("@mariozechner/pi-coding-agent", () => ({
+	getAgentDir: () => "/mock-home/.pi/agent",
+}));
 vi.mock("@mariozechner/pi-ai", () => ({}));
 
 vi.mock("@sinclair/typebox", () => ({

@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { KNOWN_FIELDS } from "./agent-serializer.js";
 import { mergeAgentsForScope } from "./agent-selection.js";
 import { parseChain } from "./chain-serializer.js";
+import { getUserAgentsDir } from "./paths.js";
 import { findNearestProjectAgentsDir } from "./project-agents-storage.js";
 
 export type AgentScope = "user" | "project" | "both";
@@ -227,7 +228,7 @@ function loadChainsFromDir(dir: string, source: AgentSource): ChainConfig[] {
 const BUILTIN_AGENTS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "agents");
 
 export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryResult {
-	const userDir = path.join(os.homedir(), ".pi", "agent", "agents");
+	const userDir = getUserAgentsDir();
 	const projectAgentsDir = findNearestProjectAgentsDir(cwd);
 
 	const builtinAgents = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
@@ -246,7 +247,7 @@ export function discoverAgentsAll(cwd: string): {
 	userDir: string;
 	projectDir: string;
 } {
-	const userDir = path.join(os.homedir(), ".pi", "agent", "agents");
+	const userDir = getUserAgentsDir();
 	const projectDir = findNearestProjectAgentsDir(cwd);
 
 	const builtin = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");

@@ -17,6 +17,7 @@ vi.mock("@mariozechner/pi-coding-agent", () => ({
 	SessionManager: { inMemory: vi.fn() },
 	SettingsManager: { inMemory: vi.fn() },
 	createExtensionRuntime: vi.fn(),
+	getAgentDir: () => "/mock-home/.pi/agent",
 }));
 vi.mock("@mariozechner/pi-ai", () => ({ getModel: vi.fn() }));
 

@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
+import { getSessionsBaseDir } from "./paths.js";
 import type { ArtifactPaths } from "./types.js";
 
 const TEMP_ARTIFACTS_DIR = path.join(os.tmpdir(), "pi-subagent-artifacts");
@@ -73,7 +73,7 @@ export function cleanupOldArtifacts(dir: string, maxAgeDays: number): void {
 export function cleanupAllArtifactDirs(maxAgeDays: number): void {
 	cleanupOldArtifacts(TEMP_ARTIFACTS_DIR, maxAgeDays);
 
-	const sessionsBase = path.join(os.homedir(), ".pi", "agent", "sessions");
+	const sessionsBase = getSessionsBaseDir();
 	if (!fs.existsSync(sessionsBase)) return;
 
 	let dirs: string[];

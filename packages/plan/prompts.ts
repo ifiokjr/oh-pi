@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
 
 const PLAN_MODE_PROMPT_FILENAME = "PLAN.prompt.md";
 
@@ -27,7 +27,7 @@ export async function loadPlanModePrompt(options?: {
 	agentDirPath?: string;
 	bundledPromptPath?: string;
 }): Promise<string> {
-	const agentDirPath = options?.agentDirPath ?? path.join(os.homedir(), ".pi", "agent");
+	const agentDirPath = options?.agentDirPath ?? getAgentDir();
 	const bundledPromptPath = options?.bundledPromptPath ?? getBundledPromptPath();
 	const overridePromptPath = path.join(agentDirPath, PLAN_MODE_PROMPT_FILENAME);
 

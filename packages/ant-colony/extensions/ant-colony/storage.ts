@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
-import { homedir } from "node:os";
 import * as path from "node:path";
+import { expandHomeDir } from "@ifi/oh-pi-core";
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
 
 export type ColonyStorageMode = "shared" | "project";
 
@@ -16,8 +17,8 @@ interface AntColonyConfig {
 
 const STORAGE_MODE_ENV_FLAG = "PI_ANT_COLONY_STORAGE_MODE";
 const STORAGE_ROOT_ENV_FLAG = "PI_ANT_COLONY_STORAGE_ROOT";
-const DEFAULT_SHARED_ROOT = path.join(homedir(), ".pi", "agent", "ant-colony");
-const CONFIG_PATH = path.join(homedir(), ".pi", "agent", "extensions", "ant-colony", "config.json");
+const DEFAULT_SHARED_ROOT = path.join(getAgentDir(), "ant-colony");
+const CONFIG_PATH = path.join(getAgentDir(), "extensions", "ant-colony", "config.json");
 
 function parseStorageMode(value: unknown): ColonyStorageMode | undefined {
 	if (value !== "shared" && value !== "project") {
@@ -27,7 +28,7 @@ function parseStorageMode(value: unknown): ColonyStorageMode | undefined {
 }
 
 function expandTilde(value: string): string {
-	return value.startsWith("~/") ? path.join(homedir(), value.slice(2)) : value;
+	return expandHomeDir(value);
 }
 
 export function loadAntColonyConfig(): AntColonyConfig {
