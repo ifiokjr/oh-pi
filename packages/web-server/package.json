@@ -34,7 +34,7 @@
     "@types/ws": "^8.5.0"
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "*"
+    "@mariozechner/pi-coding-agent": ">=0.56.1"
   },
   "engines": {
     "node": ">=20.0.0"

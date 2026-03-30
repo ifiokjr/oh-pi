@@ -73,6 +73,17 @@ npx @ifi/oh-pi --local              # install to project .pi/settings.json
 npx @ifi/oh-pi --remove             # uninstall all oh-pi packages from pi
 ```
 
+### Compatibility Policy
+
+oh-pi tracks upstream pi fairly closely and currently treats **pi `0.56.1` or newer** as the
+minimum supported runtime baseline for packages that integrate directly with the pi SDK.
+
+Policy:
+- new oh-pi releases target the current pi runtime family first
+- compatibility with older pi builds is best-effort unless explicitly documented otherwise
+- peer dependency ranges on pi-facing packages express the minimum supported baseline more clearly
+- higher-risk runtime integrations should gain smoke coverage before broadening compatibility claims
+
 ---
 
 ## Configuration
