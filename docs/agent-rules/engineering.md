@@ -17,7 +17,7 @@
 - `pnpm format` — format the repo
 - `pnpm test` — run the full test suite
 - `pnpm typecheck` — run repo type-checking with `tsgo`
-- `pnpm build` — build compiled packages
+- `pnpm build` — run every workspace package build script
 - `pnpm security:check` — run dependency allowlist and audit checks
 
 ## Testing conventions

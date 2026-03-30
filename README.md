@@ -468,7 +468,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for contributor workflow, changeset req
 ### Commands
 
 ```bash
-pnpm build          # Build core + cli (tsc)
+pnpm build          # Build every workspace package that exposes a build script
 pnpm typecheck      # Type check with tsgo (fast)
 pnpm test           # Run all tests
 pnpm lint           # Biome lint + format check
