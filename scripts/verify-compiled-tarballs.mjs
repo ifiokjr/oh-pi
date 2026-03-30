@@ -1,11 +1,5 @@
 import { execFileSync } from "node:child_process";
-
-const compiledPackages = [
-	{ name: "@ifi/oh-pi-core", dir: "packages/core" },
-	{ name: "@ifi/oh-pi-cli", dir: "packages/cli" },
-	{ name: "@ifi/pi-web-client", dir: "packages/web-client" },
-	{ name: "@ifi/pi-web-server", dir: "packages/web-server" },
-];
+import { compiledPackages } from "./package-classes.mjs";
 
 for (const pkg of compiledPackages) {
 	console.log(`Verifying tarball for ${pkg.name}...`);

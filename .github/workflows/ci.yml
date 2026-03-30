@@ -286,6 +286,11 @@ jobs:
           test -f packages/core/dist/index.js || (echo "core dist/index.js missing" && exit 1)
           test -f packages/cli/dist/index.js || (echo "cli dist/index.js missing" && exit 1)
           test -f packages/cli/dist/bin/oh-pi.js || (echo "cli dist/bin/oh-pi.js missing" && exit 1)
+          test -f packages/web-client/dist/index.js || (echo "web-client dist/index.js missing" && exit 1)
+          test -f packages/web-server/dist/index.js || (echo "web-server dist/index.js missing" && exit 1)
 
       - name: Verify compiled tarballs exclude test artifacts
         run: pnpm verify:compiled-tarballs
+
+      - name: Verify all published packages pack successfully
+        run: pnpm verify:published-packages
