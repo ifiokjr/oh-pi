@@ -1,27 +1,11 @@
-import { createRequire } from "node:module";
-import os from "node:os";
-import path from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { requirePiTuiModule } from "@ifi/pi-shared-qna";
 import { resolveActivePlanFilePath } from "./plan-files";
 import type { PlanModeState } from "./types";
 import { createInactivePlanModeState, isPlanModeState } from "./utils";
 
-const require = createRequire(import.meta.url);
-
-function requirePiTui() {
-	try {
-		return require("@mariozechner/pi-tui");
-	} catch (error) {
-		const code = (error as { code?: string }).code;
-		if (code !== "MODULE_NOT_FOUND") {
-			throw error;
-		}
-		return require(path.join(os.homedir(), ".bun", "install", "global", "node_modules", "@mariozechner", "pi-tui"));
-	}
-}
-
 function getPiTui() {
-	return requirePiTui() as {
+	return requirePiTuiModule() as {
 		truncateToWidth: (text: string, width: number) => string;
 		wrapTextWithAnsi: (text: string, width: number) => string[];
 	};

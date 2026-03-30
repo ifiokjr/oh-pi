@@ -1,20 +1,4 @@
-import { createRequire } from "node:module";
-import os from "node:os";
-import path from "node:path";
-
-const require = createRequire(import.meta.url);
-
-function requirePiTui() {
-	try {
-		return require("@mariozechner/pi-tui");
-	} catch (error) {
-		const code = (error as { code?: string }).code;
-		if (code !== "MODULE_NOT_FOUND") {
-			throw error;
-		}
-		return require(path.join(os.homedir(), ".bun", "install", "global", "node_modules", "@mariozechner", "pi-tui"));
-	}
-}
+import { requirePiTuiModule } from "./pi-tui-loader.js";
 
 type Component = {
 	handleInput: (data: string) => void;
@@ -35,7 +19,7 @@ type EditorTheme = {
 };
 
 function getPiTui() {
-	return requirePiTui() as {
+	return requirePiTuiModule() as {
 		Editor: new (tui: TUI, theme: EditorTheme) => {
 			disableSubmit?: boolean;
 			onChange?: () => void;

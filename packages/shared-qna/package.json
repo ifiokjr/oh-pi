@@ -13,6 +13,7 @@
   ],
   "exports": {
     ".": "./index.ts",
+    "./pi-tui-loader": "./pi-tui-loader.ts",
     "./package.json": "./package.json"
   },
   "files": [

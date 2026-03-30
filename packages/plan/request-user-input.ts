@@ -1,9 +1,6 @@
-import { createRequire } from "node:module";
-import os from "node:os";
-import path from "node:path";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { QnATuiComponent, type QnAResponse, type QnAResult } from "@ifi/pi-shared-qna";
+import { QnATuiComponent, requirePiTuiModule, type QnAResponse, type QnAResult } from "@ifi/pi-shared-qna";
 import type {
 	NormalizedRequestUserInputQuestion,
 	PlanModeState,
@@ -14,22 +11,8 @@ import type {
 } from "./types";
 import { findDuplicateId } from "./utils";
 
-const require = createRequire(import.meta.url);
-
-function requirePiTui() {
-	try {
-		return require("@mariozechner/pi-tui");
-	} catch (error) {
-		const code = (error as { code?: string }).code;
-		if (code !== "MODULE_NOT_FOUND") {
-			throw error;
-		}
-		return require(path.join(os.homedir(), ".bun", "install", "global", "node_modules", "@mariozechner", "pi-tui"));
-	}
-}
-
 function createText(text: string) {
-	const { Text } = requirePiTui() as {
+	const { Text } = requirePiTuiModule() as {
 		Text: new (text: string, x: number, y: number) => unknown;
 	};
 	return new Text(text, 0, 0);
