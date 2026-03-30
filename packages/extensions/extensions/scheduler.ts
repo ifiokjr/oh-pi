@@ -609,10 +609,24 @@ export class SchedulerRuntime {
 			}
 
 			const options = list.map((task) => this.taskOptionLabel(task));
+			options.push("🗑 Clear all");
 			options.push("+ Close");
 
 			const selected = await ctx.ui.select(`Scheduled tasks for ${this.getWorkspaceLabel(ctx)} (select one)`, options);
 			if (!selected || selected === "+ Close") {
+				return;
+			}
+			if (selected === "🗑 Clear all") {
+				const count = list.length;
+				const ok = await ctx.ui.confirm(
+					"Clear all scheduled tasks?",
+					`Delete ${count} scheduled task${count === 1 ? "" : "s"} for ${this.getWorkspaceLabel(ctx)}?`,
+				);
+				if (!ok) {
+					continue;
+				}
+				this.clearTasks();
+				ctx.ui.notify(`Cleared ${count} scheduled task${count === 1 ? "" : "s"}.`, "info");
 				return;
 			}
 

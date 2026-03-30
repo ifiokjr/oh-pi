@@ -2308,11 +2308,30 @@ describe("edge cases", () => {
 		expect(select).toHaveBeenNthCalledWith(
 			1,
 			"Scheduled tasks for /mock-project/apps/api (select one)",
-			expect.arrayContaining([expect.stringContaining("every 5m"), "+ Close"]),
+			expect.arrayContaining([expect.stringContaining("every 5m"), "🗑 Clear all", "+ Close"]),
 		);
 		const actionTitle = select.mock.calls[1][0];
 		expect(actionTitle).toContain("Workspace: /mock-project/apps/api");
 		expect(actionTitle).toContain(`Prompt: ${prompt}`);
+	});
+
+	it("can clear all tasks directly from the task manager list", async () => {
+		await pi._commands.get("loop").handler("5m check api health", ctx);
+		await pi._commands.get("loop").handler("10m check worker backlog", ctx);
+		const select = vi.fn().mockResolvedValueOnce("🗑 Clear all");
+		const confirm = vi.fn().mockResolvedValueOnce(true);
+		const taskCtx = createMockCtx({ cwd: "/mock-project/apps/api", select, confirm });
+
+		await pi._commands.get("schedule").handler("", taskCtx);
+
+		expect(confirm).toHaveBeenCalledWith(
+			"Clear all scheduled tasks?",
+			"Delete 2 scheduled tasks for /mock-project/apps/api?",
+		);
+		expect(taskCtx._notifications.some((n: any) => n.msg.includes("Cleared 2 scheduled tasks."))).toBe(true);
+		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBe(false);
+		await pi._commands.get("schedule").handler("list", ctx);
+		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBe(true);
 	});
 
 	it("creates and then deletes a task via different commands", async () => {
