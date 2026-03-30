@@ -7,7 +7,7 @@ import {
 	parseRemindScheduleArgs,
 	validateSchedulePromptAddInput,
 } from "./scheduler-parsing.js";
-import { DEFAULT_LOOP_INTERVAL, MAX_TASKS, type TaskKind } from "./scheduler-shared.js";
+import { DEFAULT_LOOP_INTERVAL, MAX_TASKS, type ScheduleScope, type TaskKind } from "./scheduler-shared.js";
 
 const SchedulePromptToolParams = Type.Object({
 	action: Type.Union(
@@ -18,6 +18,9 @@ const SchedulePromptToolParams = Type.Object({
 			Type.Literal("clear"),
 			Type.Literal("enable"),
 			Type.Literal("disable"),
+			Type.Literal("adopt"),
+			Type.Literal("release"),
+			Type.Literal("clear_foreign"),
 		],
 		{ description: "Action to perform" },
 	),
@@ -35,19 +38,37 @@ const SchedulePromptToolParams = Type.Object({
 				"Cron expression for recurring tasks. Accepts 5-field (minute hour dom month dow) or 6-field (sec minute hour dom month dow).",
 		}),
 	),
-	id: Type.Optional(Type.String({ description: "Task id for delete/enable/disable action" })),
+	scope: Type.Optional(
+		Type.Union([Type.Literal("instance"), Type.Literal("workspace")], {
+			description: "Task ownership scope. Use workspace for monitors that should survive instance changes.",
+		}),
+	),
+	id: Type.Optional(Type.String({ description: "Task id for delete/enable/disable/adopt/release action" })),
 });
 
 type ToolResult = { content: { type: "text"; text: string }[]; details: Record<string, unknown> };
 
+function parseScopeFlag(input: string): { scope: ScheduleScope | undefined; rest: string } {
+	const trimmed = input.trim();
+	if (trimmed.startsWith("--workspace ") || trimmed === "--workspace") {
+		return { scope: "workspace", rest: trimmed.slice("--workspace".length).trim() };
+	}
+	if (trimmed.startsWith("--instance ") || trimmed === "--instance") {
+		return { scope: "instance", rest: trimmed.slice("--instance".length).trim() };
+	}
+	return { scope: undefined, rest: trimmed };
+}
+
 export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 	pi.registerCommand("loop", {
-		description: "Schedule recurring prompt: /loop 5m <prompt>, /loop <prompt> every 2h, or /loop cron <expr> <prompt>",
+		description:
+			"Schedule recurring prompt: /loop 5m <prompt>, /loop --workspace 5m <prompt>, or /loop cron <expr> <prompt>",
 		handler: async (args, ctx) => {
-			const parsed = parseLoopScheduleArgs(args);
+			const scoped = parseScopeFlag(args);
+			const parsed = parseLoopScheduleArgs(scoped.rest);
 			if (!parsed) {
 				ctx.ui.notify(
-					"Usage: /loop 5m check build OR /loop cron '*/5 * * * *' check build (minimum cron cadence is 1m)",
+					"Usage: /loop 5m check build OR /loop --workspace 5m check build OR /loop cron '*/5 * * * *' check build (minimum cron cadence is 1m)",
 					"warning",
 				);
 				return;
@@ -59,21 +80,28 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			}
 
 			if (parsed.recurring.mode === "cron") {
-				const task = runtime.addRecurringCronTask(parsed.prompt, parsed.recurring.cronExpression);
+				const task = runtime.addRecurringCronTask(parsed.prompt, parsed.recurring.cronExpression, {
+					scope: scoped.scope,
+				});
 				if (!task) {
 					ctx.ui.notify("Invalid cron schedule. Cron tasks must run no more often than once per minute.", "error");
 					return;
 				}
-				ctx.ui.notify(`Scheduled cron ${task.cronExpression} (id: ${task.id}). Expires in 3 days.`, "info");
+				ctx.ui.notify(
+					`Scheduled cron ${task.cronExpression} (id: ${task.id}). Expires in 3 days. Scope: ${task.scope ?? "instance"}.`,
+					"info",
+				);
 				if (parsed.recurring.note) {
 					ctx.ui.notify(parsed.recurring.note, "info");
 				}
 				return;
 			}
 
-			const task = runtime.addRecurringIntervalTask(parsed.prompt, parsed.recurring.durationMs);
+			const task = runtime.addRecurringIntervalTask(parsed.prompt, parsed.recurring.durationMs, {
+				scope: scoped.scope,
+			});
 			ctx.ui.notify(
-				`Scheduled every ${formatDurationShort(parsed.recurring.durationMs)} (id: ${task.id}). Expires in 3 days.`,
+				`Scheduled every ${formatDurationShort(parsed.recurring.durationMs)} (id: ${task.id}). Expires in 3 days. Scope: ${task.scope ?? "instance"}.`,
 				"info",
 			);
 			if (parsed.recurring.note) {
@@ -83,9 +111,10 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 	});
 
 	pi.registerCommand("remind", {
-		description: "Schedule one-time reminder: /remind in 45m <prompt>",
+		description: "Schedule one-time reminder: /remind in 45m <prompt> or /remind --workspace in 45m <prompt>",
 		handler: async (args, ctx) => {
-			const parsed = parseRemindScheduleArgs(args);
+			const scoped = parseScopeFlag(args);
+			const parsed = parseRemindScheduleArgs(scoped.rest);
 			if (!parsed) {
 				ctx.ui.notify("Usage: /remind in 45m check deployment", "warning");
 				return;
@@ -96,8 +125,11 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				return;
 			}
 
-			const task = runtime.addOneShotTask(parsed.prompt, parsed.durationMs);
-			ctx.ui.notify(`Reminder set for ${runtime.formatRelativeTime(task.nextRunAt)} (id: ${task.id}).`, "info");
+			const task = runtime.addOneShotTask(parsed.prompt, parsed.durationMs, { scope: scoped.scope });
+			ctx.ui.notify(
+				`Reminder set for ${runtime.formatRelativeTime(task.nextRunAt)} (id: ${task.id}, scope: ${task.scope ?? "instance"}).`,
+				"info",
+			);
 			if (parsed.note) {
 				ctx.ui.notify(parsed.note, "info");
 			}
@@ -106,7 +138,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 
 	pi.registerCommand("schedule", {
 		description:
-			"Manage scheduled reminders and future check-ins. No args opens TUI manager. Also: list | enable <id> | disable <id> | delete <id> | clear",
+			"Manage scheduled reminders and future check-ins. No args opens TUI manager. Also: list | enable <id> | disable <id> | delete <id> | clear | adopt <id|all> | release <id|all> | clear-foreign",
 		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Command router with multiple subcommands.
 		handler: async (args, ctx) => {
 			const trimmed = args.trim();
@@ -115,7 +147,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				return;
 			}
 
-			const [rawAction, rawArg] = trimmed.split(/\s+/, 2);
+			const [rawAction, rawArg, rawExtra] = trimmed.split(/\s+/, 3);
 			const action = rawAction.toLowerCase();
 
 			if (action === "list") {
@@ -162,7 +194,56 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				return;
 			}
 
-			ctx.ui.notify("Usage: /schedule [tui|list|enable <id>|disable <id>|delete <id>|clear]", "warning");
+			if (action === "adopt") {
+				const target = rawArg?.trim() || "all";
+				const result = runtime.adoptTasks(target);
+				if (result.error) {
+					ctx.ui.notify(result.error, "warning");
+					return;
+				}
+				ctx.ui.notify(`Adopted ${result.count} scheduled task${result.count === 1 ? "" : "s"}.`, "info");
+				return;
+			}
+
+			if (action === "release") {
+				const target = rawArg?.trim() || "all";
+				const result = runtime.releaseTasks(target);
+				if (result.error) {
+					ctx.ui.notify(result.error, "warning");
+					return;
+				}
+				ctx.ui.notify(`Released ${result.count} scheduled task${result.count === 1 ? "" : "s"}.`, "info");
+				return;
+			}
+
+			if (action === "clear-foreign") {
+				const result = runtime.clearForeignTasks();
+				ctx.ui.notify(`Cleared ${result.count} foreign scheduled task${result.count === 1 ? "" : "s"}.`, "info");
+				return;
+			}
+
+			if (action === "scope") {
+				ctx.ui.notify(
+					"Change scope by recreating with --workspace/--instance or by adopting and re-scheduling. /schedule scope is not supported yet.",
+					"info",
+				);
+				return;
+			}
+
+			if (action === "adopt" || action === "release") {
+				ctx.ui.notify(`Usage: /schedule ${action} <id|all>`, "warning");
+				return;
+			}
+
+			if (rawExtra) {
+				ctx.ui.notify("Too many arguments for /schedule.", "warning");
+				return;
+			}
+
+			ctx.ui.notify(
+				"Usage: /schedule [tui|list|enable <id>|disable <id>|delete <id>|clear|adopt <id|all>|release <id|all>|clear-foreign]",
+				"warning",
+			);
 		},
 	});
 
@@ -189,19 +270,28 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 		name: "schedule_prompt",
 		label: "Schedule Prompt",
 		description:
-			"Create/list/enable/disable/delete scheduled prompts. Use this when the user asks for reminders, to check back later, or to follow up on PRs, CI, builds, deployments, or any recurring check. add requires prompt; once tasks require duration; recurring supports interval (duration) or cron expression (cron).",
+			"Create/list/enable/disable/delete/adopt/release/clear scheduled prompts. Use this when the user asks for reminders, to check back later, or to follow up on PRs, CI, builds, deployments, or any recurring check. add requires prompt; once tasks require duration; recurring supports interval (duration) or cron expression (cron).",
 		promptSnippet:
-			"Create/list/enable/disable/delete scheduled prompts for one-time reminders, future follow-ups, and recurring PR/CI/build/deployment checks. Supports intervals/cron and one-time reminders while this pi session remains active.",
+			"Create/list/enable/disable/delete/adopt/release/clear scheduled prompts for one-time reminders, future follow-ups, and recurring PR/CI/build/deployment checks. Supports intervals/cron and one-time reminders while this pi instance remains active unless scope='workspace' is used.",
 		promptGuidelines: [
 			"Use this tool when the user asks to remind/check back later, revisit something in the future, or monitor PRs, CI, builds, deploys, or background work.",
 			"For recurring tasks use kind='recurring' with duration like 5m or 2h, or provide cron.",
 			"For one-time reminders use kind='once' with duration like 30m or 1h.",
-			"Scheduled tasks run only while pi is active and idle. Persisted overdue tasks are restored for manual review instead of auto-running at startup.",
+			"Default scope is instance. Use scope='workspace' only for monitors that should be adoptable across pi instances in the same workspace.",
+			"Scheduled tasks run only while pi is active and idle. Persisted overdue or foreign-owned tasks are restored for manual review instead of auto-running at startup.",
 		],
 		parameters: SchedulePromptToolParams,
 		execute: async (
 			_toolCallId,
-			params: { action: string; kind?: TaskKind; prompt?: string; duration?: string; cron?: string; id?: string },
+			params: {
+				action: string;
+				kind?: TaskKind;
+				prompt?: string;
+				duration?: string;
+				cron?: string;
+				scope?: ScheduleScope;
+				id?: string;
+			},
 		): Promise<{ content: { type: "text"; text: string }[]; details: Record<string, unknown> }> => {
 			const { action } = params;
 
@@ -216,6 +306,15 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			}
 			if (action === "enable" || action === "disable") {
 				return handleToolToggle(params, runtime);
+			}
+			if (action === "adopt") {
+				return handleToolAdopt(params, runtime);
+			}
+			if (action === "release") {
+				return handleToolRelease(params, runtime);
+			}
+			if (action === "clear_foreign") {
+				return handleToolClearForeign(runtime);
 			}
 			if (action === "add") {
 				return handleToolAdd(params, runtime);
@@ -240,16 +339,16 @@ function handleToolList(runtime: SchedulerRuntime): ToolResult {
 			task.kind === "once"
 				? "-"
 				: (task.cronExpression ?? formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL));
-		const state = task.resumeRequired ? "due" : task.enabled ? "on" : "off";
+		const state = task.resumeRequired ? `due:${task.resumeReason ?? "unknown"}` : task.enabled ? "on" : "off";
 		const status = task.resumeRequired ? "resume_required" : (task.lastStatus ?? "pending");
 		const last = task.lastRunAt ? runtime.formatRelativeTime(task.lastRunAt) : "never";
-		return `${task.id}\t${state}\t${task.kind}\t${schedule}\t${runtime.formatRelativeTime(task.nextRunAt)}\t${task.runCount}\t${last}\t${status}\t${task.prompt}`;
+		return `${task.id}\t${state}\t${task.kind}\t${task.scope ?? "instance"}\t${schedule}\t${runtime.formatRelativeTime(task.nextRunAt)}\t${task.runCount}\t${last}\t${status}\t${task.prompt}`;
 	});
 	return {
 		content: [
 			{
 				type: "text",
-				text: `Scheduled tasks (id\tstate\tkind\tschedule\tnext\truns\tlast\tstatus\tprompt):\n${lines.join("\n")}`,
+				text: `Scheduled tasks (id\tstate\tkind\tscope\tschedule\tnext\truns\tlast\tstatus\tprompt):\n${lines.join("\n")}`,
 			},
 		],
 		details: { action: "list", tasks: list },
@@ -308,6 +407,46 @@ function handleToolToggle(params: { action: string; id?: string }, runtime: Sche
 	};
 }
 
+function handleToolAdopt(params: { id?: string }, runtime: SchedulerRuntime): ToolResult {
+	const target = params.id?.trim() || "all";
+	const result = runtime.adoptTasks(target);
+	if (result.error) {
+		return {
+			content: [{ type: "text", text: `Error: ${result.error}` }],
+			details: { action: "adopt", error: result.error },
+		};
+	}
+	return {
+		content: [{ type: "text", text: `Adopted ${result.count} scheduled task${result.count === 1 ? "" : "s"}.` }],
+		details: { action: "adopt", target, adopted: result.count },
+	};
+}
+
+function handleToolRelease(params: { id?: string }, runtime: SchedulerRuntime): ToolResult {
+	const target = params.id?.trim() || "all";
+	const result = runtime.releaseTasks(target);
+	if (result.error) {
+		return {
+			content: [{ type: "text", text: `Error: ${result.error}` }],
+			details: { action: "release", error: result.error },
+		};
+	}
+	return {
+		content: [{ type: "text", text: `Released ${result.count} scheduled task${result.count === 1 ? "" : "s"}.` }],
+		details: { action: "release", target, released: result.count },
+	};
+}
+
+function handleToolClearForeign(runtime: SchedulerRuntime): ToolResult {
+	const result = runtime.clearForeignTasks();
+	return {
+		content: [
+			{ type: "text", text: `Cleared ${result.count} foreign scheduled task${result.count === 1 ? "" : "s"}.` },
+		],
+		details: { action: "clear_foreign", cleared: result.count },
+	};
+}
+
 function validationErrorMessage(error: string): string {
 	switch (error) {
 		case "missing_duration":
@@ -326,7 +465,7 @@ function validationErrorMessage(error: string): string {
 }
 
 function handleToolAdd(
-	params: { kind?: TaskKind; prompt?: string; duration?: string; cron?: string },
+	params: { kind?: TaskKind; prompt?: string; duration?: string; cron?: string; scope?: ScheduleScope },
 	runtime: SchedulerRuntime,
 ): ToolResult {
 	const prompt = params.prompt?.trim();
@@ -357,12 +496,12 @@ function handleToolAdd(
 	}
 
 	if (validated.plan.kind === "once") {
-		const task = runtime.addOneShotTask(prompt, validated.plan.durationMs);
+		const task = runtime.addOneShotTask(prompt, validated.plan.durationMs, { scope: params.scope });
 		return {
 			content: [
 				{
 					type: "text",
-					text: `Reminder scheduled (id: ${task.id}) for ${runtime.formatRelativeTime(task.nextRunAt)}.${
+					text: `Reminder scheduled (id: ${task.id}) for ${runtime.formatRelativeTime(task.nextRunAt)} as ${task.scope ?? "instance"}-scoped.${
 						validated.plan.note ? ` ${validated.plan.note}` : ""
 					}`,
 				},
@@ -372,7 +511,7 @@ function handleToolAdd(
 	}
 
 	if (validated.plan.mode === "cron") {
-		const task = runtime.addRecurringCronTask(prompt, validated.plan.cronExpression);
+		const task = runtime.addRecurringCronTask(prompt, validated.plan.cronExpression, { scope: params.scope });
 		if (!task) {
 			return {
 				content: [
@@ -385,7 +524,7 @@ function handleToolAdd(
 			content: [
 				{
 					type: "text",
-					text: `Recurring cron task scheduled (id: ${task.id}) with '${task.cronExpression}'. Expires in 3 days.${
+					text: `Recurring cron task scheduled (id: ${task.id}) with '${task.cronExpression}' as ${task.scope ?? "instance"}-scoped. Expires in 3 days.${
 						validated.plan.note ? ` ${validated.plan.note}` : ""
 					}`,
 				},
@@ -394,12 +533,12 @@ function handleToolAdd(
 		};
 	}
 
-	const task = runtime.addRecurringIntervalTask(prompt, validated.plan.durationMs);
+	const task = runtime.addRecurringIntervalTask(prompt, validated.plan.durationMs, { scope: params.scope });
 	return {
 		content: [
 			{
 				type: "text",
-				text: `Recurring task scheduled (id: ${task.id}) every ${formatDurationShort(validated.plan.durationMs)}. Expires in 3 days.${
+				text: `Recurring task scheduled (id: ${task.id}) every ${formatDurationShort(validated.plan.durationMs)} as ${task.scope ?? "instance"}-scoped. Expires in 3 days.${
 					validated.plan.note ? ` ${validated.plan.note}` : ""
 				}`,
 			},
@@ -416,6 +555,7 @@ export function registerEvents(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 
 	pi.on("session_start", async (event, ctx) => {
 		refreshRuntimeContext(event, ctx);
+		await runtime.handleStartupOwnership(ctx);
 		runtime.startScheduler();
 		runtime.notifyResumeRequiredTasks();
 	});

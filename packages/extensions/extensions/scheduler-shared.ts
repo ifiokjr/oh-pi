@@ -9,14 +9,19 @@ export const DEFAULT_LOOP_INTERVAL = 10 * ONE_MINUTE;
 export const MIN_RECURRING_INTERVAL = ONE_MINUTE;
 export const DISPATCH_RATE_LIMIT_WINDOW_MS = ONE_MINUTE;
 export const MAX_DISPATCHES_PER_WINDOW = 6;
+export const SCHEDULER_LEASE_HEARTBEAT_MS = 1_000;
+export const SCHEDULER_LEASE_STALE_AFTER_MS = 10_000;
 
 export type TaskKind = "recurring" | "once";
 export type TaskStatus = "pending" | "success" | "error";
+export type ScheduleScope = "instance" | "workspace";
+export type ResumeReason = "overdue" | "foreign_owner" | "stale_owner" | "legacy_unowned" | "released";
 
 export interface ScheduleTask {
 	id: string;
 	prompt: string;
 	kind: TaskKind;
+	scope?: ScheduleScope;
 	enabled: boolean;
 	createdAt: number;
 	nextRunAt: number;
@@ -29,6 +34,18 @@ export interface ScheduleTask {
 	runCount: number;
 	pending: boolean;
 	resumeRequired?: boolean;
+	resumeReason?: ResumeReason;
+	ownerInstanceId?: string;
+	ownerSessionId?: string | null;
+}
+
+export interface SchedulerLease {
+	version: 1;
+	instanceId: string;
+	sessionId: string | null;
+	pid: number;
+	cwd: string;
+	heartbeatAt: number;
 }
 
 export type RecurringSpec =
@@ -66,6 +83,12 @@ export function getSchedulerStoragePath(cwd: string): string {
 				.toLowerCase() || "root"
 		: "root";
 	return path.join(getSchedulerStorageRoot(), rootSegment, ...relativeSegments, "scheduler.json");
+}
+
+export function getSchedulerLeasePath(cwd: string): string {
+	const storagePath = getSchedulerStoragePath(cwd);
+	const parentDir = path.dirname(storagePath);
+	return path.join(parentDir, "scheduler.lease.json");
 }
 
 export function getLegacySchedulerStoragePath(cwd: string): string {

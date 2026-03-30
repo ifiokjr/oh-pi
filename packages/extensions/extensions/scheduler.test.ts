@@ -99,6 +99,9 @@ function createMockCtx(overrides: Record<string, any> = {}) {
 		hasUI: overrides.hasUI ?? true,
 		isIdle: overrides.isIdle ?? (() => true),
 		hasPendingMessages: overrides.hasPendingMessages ?? (() => false),
+		sessionManager: overrides.sessionManager ?? {
+			getSessionFile: () => "/mock-home/.pi/agent/sessions/test-session.jsonl",
+		},
 		ui: {
 			notify(msg: string, type: string) {
 				notifications.push({ msg, type });
@@ -138,6 +141,7 @@ import schedulerExtension, {
 	DISPATCH_RATE_LIMIT_WINDOW_MS,
 	FIFTEEN_MINUTES,
 	formatDurationShort,
+	getSchedulerLeasePath,
 	getSchedulerStoragePath,
 	MAX_DISPATCHES_PER_WINDOW,
 	MAX_TASKS,
@@ -603,6 +607,14 @@ describe("getSchedulerStoragePath", () => {
 	});
 });
 
+describe("getSchedulerLeasePath", () => {
+	it("stores the scheduler lease alongside the shared scheduler state", () => {
+		expect(getSchedulerLeasePath("/mock-project")).toBe(
+			"/mock-home/.pi/agent/scheduler/root/mock-project/scheduler.lease.json",
+		);
+	});
+});
+
 describe("SchedulerRuntime", () => {
 	let pi: ReturnType<typeof createMockPi>;
 	let runtime: SchedulerRuntime;
@@ -721,6 +733,27 @@ describe("SchedulerRuntime", () => {
 			stored.pending = true;
 			runtime.setTaskEnabled(task.id, false);
 			expect(runtime.getTask(task.id)!.pending).toBe(false);
+		});
+	});
+
+	describe("ownership and scope", () => {
+		it("defaults new reminders to instance scope and current ownership", () => {
+			const task = runtime.addOneShotTask("remind", 5 * ONE_MINUTE);
+			expect(task.scope).toBe("instance");
+			expect(task.ownerInstanceId).toBe(runtime.currentInstanceId);
+		});
+
+		it("adopts and releases tasks explicitly", () => {
+			const task = runtime.addRecurringIntervalTask("check build", 5 * ONE_MINUTE);
+
+			const released = runtime.releaseTasks(task.id);
+			expect(released.count).toBe(1);
+			expect(runtime.getTask(task.id)?.resumeReason).toBe("released");
+
+			const adopted = runtime.adoptTasks(task.id);
+			expect(adopted.count).toBe(1);
+			expect(runtime.getTask(task.id)?.ownerInstanceId).toBe(runtime.currentInstanceId);
+			expect(runtime.getTask(task.id)?.resumeRequired).toBe(false);
 		});
 	});
 
@@ -1189,6 +1222,9 @@ describe("SchedulerRuntime", () => {
 							jitterMs: 0,
 							runCount: 3,
 							pending: false,
+							scope: "instance",
+							ownerInstanceId: runtime.currentInstanceId,
+							ownerSessionId: null,
 						},
 					],
 				}),
@@ -1225,6 +1261,7 @@ describe("SchedulerRuntime", () => {
 							jitterMs: 0,
 							runCount: 1,
 							pending: false,
+							scope: "workspace",
 						},
 					],
 				}),
@@ -1260,6 +1297,7 @@ describe("SchedulerRuntime", () => {
 							jitterMs: 0,
 							runCount: 0,
 							pending: false,
+							scope: "workspace",
 						},
 					],
 				}),
@@ -1568,6 +1606,11 @@ describe("command handlers", () => {
 		it("creates task with default 10m interval", async () => {
 			await pi._commands.get("loop").handler("check build status", ctx);
 			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled every 10m"))).toBe(true);
+		});
+
+		it("creates workspace-scoped loop tasks with an explicit flag", async () => {
+			await pi._commands.get("loop").handler("--workspace 5m check build", ctx);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Scope: workspace"))).toBe(true);
 		});
 
 		it("shows warning on empty args", async () => {
@@ -1987,6 +2030,31 @@ describe("schedule_prompt tool", () => {
 		});
 	});
 
+	describe("ownership actions", () => {
+		it("supports workspace-scoped tasks via the tool API", async () => {
+			const result = await tool.execute("id", {
+				action: "add",
+				prompt: "watch CI",
+				kind: "recurring",
+				duration: "5m",
+				scope: "workspace",
+			});
+			expect(result.content[0].text).toContain("workspace-scoped");
+			expect(result.details.task.scope).toBe("workspace");
+		});
+
+		it("adopts and releases tasks through the tool API", async () => {
+			const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+			const taskId = addResult.details.task.id;
+
+			const releaseResult = await tool.execute("id", { action: "release", id: taskId });
+			expect(releaseResult.content[0].text).toContain("Released 1 scheduled task");
+
+			const adoptResult = await tool.execute("id", { action: "adopt", id: taskId });
+			expect(adoptResult.content[0].text).toContain("Adopted 1 scheduled task");
+		});
+	});
+
 	describe("action: unsupported", () => {
 		it("returns error for unknown action", async () => {
 			const result = await tool.execute("id", { action: "banana" });
@@ -2027,7 +2095,7 @@ describe("event wiring", () => {
 		// Scheduler is started (no easy way to verify timer, but it should not throw)
 	});
 
-	it("warns about overdue restored tasks on session_start without dispatching them", () => {
+	it("warns about overdue restored tasks on session_start without dispatching them", async () => {
 		const now = Date.now();
 		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
@@ -2044,6 +2112,7 @@ describe("event wiring", () => {
 						jitterMs: 0,
 						runCount: 0,
 						pending: false,
+						scope: "workspace",
 					},
 				],
 			}),
@@ -2051,7 +2120,55 @@ describe("event wiring", () => {
 
 		const ctx = createMockCtx();
 		pi._emit("session_start", { type: "session_start" }, ctx);
+		await Promise.resolve();
 		expect(ctx._notifications.some((n: any) => n.msg.includes("will not run automatically"))).toBe(true);
+		expect(pi._userMessages).toHaveLength(0);
+	});
+
+	it("prompts before a new instance adopts tasks owned by another live instance", async () => {
+		const now = Date.now();
+		(existsSync as ReturnType<typeof vi.fn>).mockImplementation(
+			(file: string) => file.endsWith("scheduler.json") || file.endsWith("scheduler.lease.json"),
+		);
+		(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((file: string) => {
+			if (file.endsWith("scheduler.lease.json")) {
+				return JSON.stringify({
+					version: 1,
+					instanceId: "foreign-instance",
+					sessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
+					pid: 123,
+					cwd: "/mock-project",
+					heartbeatAt: now,
+				});
+			}
+			return JSON.stringify({
+				version: 1,
+				tasks: [
+					{
+						id: "foreign1",
+						prompt: "check build",
+						kind: "once",
+						enabled: true,
+						createdAt: now - ONE_MINUTE,
+						nextRunAt: now + ONE_MINUTE,
+						jitterMs: 0,
+						runCount: 0,
+						pending: false,
+						scope: "instance",
+						ownerInstanceId: "foreign-instance",
+						ownerSessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
+					},
+				],
+			});
+		});
+
+		const ctx = createMockCtx({ select: vi.fn().mockResolvedValue("Leave tasks in the other instance") });
+		pi._emit("session_start", { type: "session_start" }, ctx);
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(ctx.ui.select).toHaveBeenCalled();
+		expect(ctx._notifications.some((n: any) => n.msg.includes("observe scheduler tasks"))).toBe(true);
 		expect(pi._userMessages).toHaveLength(0);
 	});
 

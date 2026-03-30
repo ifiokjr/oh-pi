@@ -14,6 +14,7 @@
  * manual review instead of auto-dispatching on session start.
  */
 
+import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
@@ -30,12 +31,18 @@ import {
 	DISPATCH_RATE_LIMIT_WINDOW_MS,
 	FIFTEEN_MINUTES,
 	getLegacySchedulerStoragePath,
+	getSchedulerLeasePath,
 	getSchedulerStoragePath,
 	getSchedulerStorageRoot,
 	MAX_DISPATCHES_PER_WINDOW,
 	MAX_TASKS,
 	MIN_RECURRING_INTERVAL,
 	ONE_MINUTE,
+	type ResumeReason,
+	SCHEDULER_LEASE_HEARTBEAT_MS,
+	SCHEDULER_LEASE_STALE_AFTER_MS,
+	type SchedulerLease,
+	type ScheduleScope,
 	type ScheduleTask,
 	THREE_DAYS,
 } from "./scheduler-shared.js";
@@ -51,33 +58,46 @@ export {
 	parseRemindScheduleArgs,
 	validateSchedulePromptAddInput,
 } from "./scheduler-parsing.js";
+export type {
+	ParseResult,
+	RecurringSpec,
+	ReminderParseResult,
+	ResumeReason,
+	SchedulePromptAddPlan,
+	SchedulerLease,
+	ScheduleScope,
+	ScheduleTask,
+	TaskKind,
+	TaskStatus,
+} from "./scheduler-shared.js";
 export {
 	DEFAULT_LOOP_INTERVAL,
 	DISPATCH_RATE_LIMIT_WINDOW_MS,
 	FIFTEEN_MINUTES,
 	getLegacySchedulerStoragePath,
+	getSchedulerLeasePath,
 	getSchedulerStoragePath,
 	getSchedulerStorageRoot,
 	MAX_DISPATCHES_PER_WINDOW,
 	MAX_TASKS,
 	MIN_RECURRING_INTERVAL,
 	ONE_MINUTE,
+	SCHEDULER_LEASE_HEARTBEAT_MS,
+	SCHEDULER_LEASE_STALE_AFTER_MS,
 	THREE_DAYS,
 };
-export type {
-	ParseResult,
-	RecurringSpec,
-	ReminderParseResult,
-	SchedulePromptAddPlan,
-	ScheduleTask,
-	TaskKind,
-	TaskStatus,
-} from "./scheduler-shared.js";
 
 interface SchedulerStore {
 	version: 1;
 	tasks: ScheduleTask[];
 }
+
+type SchedulerDispatchMode = "auto" | "observer";
+
+type TaskMutationResult = {
+	count: number;
+	error?: string;
+};
 
 // ── Runtime ─────────────────────────────────────────────────────────────────
 
@@ -87,8 +107,13 @@ export class SchedulerRuntime {
 	private runtimeCtx: ExtensionContext | undefined;
 	private dispatching = false;
 	private storagePath: string | undefined;
+	private leasePath: string | undefined;
 	private readonly dispatchTimestamps: number[] = [];
 	private lastRateLimitNoticeAt = 0;
+	private readonly instanceId = randomUUID().slice(0, 12);
+	private sessionId: string | null = null;
+	private dispatchMode: SchedulerDispatchMode = "auto";
+	private startupOwnershipHandled = false;
 
 	constructor(private readonly pi: ExtensionAPI) {}
 
@@ -96,18 +121,31 @@ export class SchedulerRuntime {
 		return this.tasks.size;
 	}
 
+	get currentInstanceId(): string {
+		return this.instanceId;
+	}
+
 	setRuntimeContext(ctx: ExtensionContext | undefined) {
 		this.runtimeCtx = ctx;
+		this.sessionId = this.getSessionId(ctx);
 		if (!ctx?.cwd) {
 			return;
 		}
 
 		const nextStorePath = getSchedulerStoragePath(ctx.cwd);
-		if (nextStorePath !== this.storagePath) {
+		const nextLeasePath = getSchedulerLeasePath(ctx.cwd);
+		if (nextStorePath !== this.storagePath || nextLeasePath !== this.leasePath) {
+			this.releaseLeaseIfOwned();
 			this.storagePath = nextStorePath;
+			this.leasePath = nextLeasePath;
+			this.dispatchMode = "auto";
+			this.startupOwnershipHandled = false;
 			this.migrateLegacyStore(ctx.cwd);
 			this.loadTasksFromDisk();
+			return;
 		}
+
+		this.reconcileTaskOwnership();
 	}
 
 	clearStatus(ctx?: ExtensionContext) {
@@ -131,11 +169,14 @@ export class SchedulerRuntime {
 			return false;
 		}
 		task.enabled = enabled;
-		if (enabled) {
-			task.resumeRequired = false;
-		} else {
+		if (!enabled) {
 			task.pending = false;
 		}
+		if (enabled && task.resumeReason === "overdue") {
+			task.resumeRequired = false;
+			task.resumeReason = undefined;
+		}
+		this.reconcileTaskOwnership();
 		this.persistTasks();
 		this.updateStatus();
 		return true;
@@ -156,6 +197,70 @@ export class SchedulerRuntime {
 		this.persistTasks();
 		this.updateStatus();
 		return count;
+	}
+
+	adoptTasks(target = "all"): TaskMutationResult {
+		const matching = this.resolveTaskTargets(target, (task) => task.ownerInstanceId !== this.instanceId);
+		if (matching.error) {
+			return { count: 0, error: matching.error };
+		}
+		for (const task of matching.tasks) {
+			this.assignOwner(task, task.scope ?? "instance");
+		}
+		this.reconcileTaskOwnership();
+		this.persistTasks();
+		this.updateStatus();
+		return { count: matching.tasks.length };
+	}
+
+	releaseTasks(target = "all"): TaskMutationResult {
+		const matching = this.resolveTaskTargets(target, (task) => task.ownerInstanceId === this.instanceId);
+		if (matching.error) {
+			return { count: 0, error: matching.error };
+		}
+		for (const task of matching.tasks) {
+			task.ownerInstanceId = undefined;
+			task.ownerSessionId = undefined;
+			task.pending = false;
+			task.resumeRequired = true;
+			task.resumeReason = "released";
+		}
+		this.reconcileTaskOwnership();
+		this.persistTasks();
+		this.updateStatus();
+		return { count: matching.tasks.length };
+	}
+
+	clearForeignTasks(): TaskMutationResult {
+		let count = 0;
+		for (const task of Array.from(this.tasks.values())) {
+			if (task.ownerInstanceId && task.ownerInstanceId !== this.instanceId) {
+				this.tasks.delete(task.id);
+				count += 1;
+			}
+		}
+		if (count > 0) {
+			this.persistTasks();
+			this.updateStatus();
+		}
+		return { count };
+	}
+
+	disableForeignTasks(): TaskMutationResult {
+		let count = 0;
+		for (const task of this.tasks.values()) {
+			if (task.ownerInstanceId && task.ownerInstanceId !== this.instanceId) {
+				task.enabled = false;
+				task.pending = false;
+				count += 1;
+			}
+		}
+		if (count > 0) {
+			this.reconcileTaskOwnership();
+			this.persistTasks();
+			this.updateStatus();
+		}
+		return { count };
 	}
 
 	formatRelativeTime(timestamp: number): string {
@@ -192,13 +297,13 @@ export class SchedulerRuntime {
 			const status = this.taskStatusLabel(task);
 			const preview = task.prompt.length > 72 ? `${task.prompt.slice(0, 69)}...` : task.prompt;
 			lines.push(`${task.id}  ${state}  ${mode}  next ${next}`);
-			lines.push(`  runs=${task.runCount}  last=${last}  status=${status}`);
+			lines.push(`  owner=${this.taskOwnerLabel(task)}  runs=${task.runCount}  last=${last}  status=${status}`);
 			lines.push(`  ${preview}`);
 		}
 		return lines.join("\n");
 	}
 
-	addRecurringIntervalTask(prompt: string, intervalMs: number): ScheduleTask {
+	addRecurringIntervalTask(prompt: string, intervalMs: number, options: { scope?: ScheduleScope } = {}): ScheduleTask {
 		const id = this.createId();
 		const createdAt = Date.now();
 		const safeIntervalMs = Number.isFinite(intervalMs)
@@ -210,6 +315,7 @@ export class SchedulerRuntime {
 			id,
 			prompt,
 			kind: "recurring",
+			scope: options.scope ?? "instance",
 			enabled: true,
 			createdAt,
 			nextRunAt,
@@ -219,13 +325,18 @@ export class SchedulerRuntime {
 			runCount: 0,
 			pending: false,
 		};
+		this.assignOwner(task, task.scope ?? "instance");
 		this.tasks.set(id, task);
 		this.persistTasks();
 		this.updateStatus();
 		return task;
 	}
 
-	addRecurringCronTask(prompt: string, cronExpression: string): ScheduleTask | undefined {
+	addRecurringCronTask(
+		prompt: string,
+		cronExpression: string,
+		options: { scope?: ScheduleScope } = {},
+	): ScheduleTask | undefined {
 		const normalizedCron = normalizeCronExpression(cronExpression);
 		if (!normalizedCron) {
 			return undefined;
@@ -242,6 +353,7 @@ export class SchedulerRuntime {
 			id,
 			prompt,
 			kind: "recurring",
+			scope: options.scope ?? "instance",
 			enabled: true,
 			createdAt,
 			nextRunAt,
@@ -251,19 +363,21 @@ export class SchedulerRuntime {
 			runCount: 0,
 			pending: false,
 		};
+		this.assignOwner(task, task.scope ?? "instance");
 		this.tasks.set(id, task);
 		this.persistTasks();
 		this.updateStatus();
 		return task;
 	}
 
-	addOneShotTask(prompt: string, delayMs: number): ScheduleTask {
+	addOneShotTask(prompt: string, delayMs: number, options: { scope?: ScheduleScope } = {}): ScheduleTask {
 		const id = this.createId();
 		const createdAt = Date.now();
 		const task: ScheduleTask = {
 			id,
 			prompt,
 			kind: "once",
+			scope: options.scope ?? "instance",
 			enabled: true,
 			createdAt,
 			nextRunAt: createdAt + delayMs,
@@ -271,6 +385,7 @@ export class SchedulerRuntime {
 			runCount: 0,
 			pending: false,
 		};
+		this.assignOwner(task, task.scope ?? "instance");
 		this.tasks.set(id, task);
 		this.persistTasks();
 		this.updateStatus();
@@ -285,15 +400,16 @@ export class SchedulerRuntime {
 			this.tickScheduler().catch(() => {
 				// Best-effort scheduler tick; errors are non-fatal.
 			});
-		}, 1000);
+		}, SCHEDULER_LEASE_HEARTBEAT_MS);
+		this.schedulerTimer.unref?.();
 	}
 
 	stopScheduler() {
-		if (!this.schedulerTimer) {
-			return;
+		if (this.schedulerTimer) {
+			clearInterval(this.schedulerTimer);
+			this.schedulerTimer = undefined;
 		}
-		clearInterval(this.schedulerTimer);
-		this.schedulerTimer = undefined;
+		this.releaseLeaseIfOwned();
 	}
 
 	updateStatus() {
@@ -313,7 +429,11 @@ export class SchedulerRuntime {
 
 		const resumeRequired = enabled.filter((task) => task.resumeRequired);
 		const scheduled = enabled.filter((task) => !task.resumeRequired);
+		const leaseStatus = this.getLeaseStatus();
 		const parts: string[] = [];
+		if (leaseStatus.activeForeign && this.dispatchMode === "observer") {
+			parts.push("observing other instance");
+		}
 		if (resumeRequired.length > 0) {
 			parts.push(`${resumeRequired.length} due`);
 		}
@@ -362,7 +482,7 @@ export class SchedulerRuntime {
 		}
 
 		const now = Date.now();
-		let mutated = false;
+		let mutated = this.reconcileTaskOwnership();
 
 		for (const task of Array.from(this.tasks.values())) {
 			if (task.kind === "recurring" && task.expiresAt && now >= task.expiresAt) {
@@ -395,8 +515,14 @@ export class SchedulerRuntime {
 			return;
 		}
 
+		const leaseStatus = this.ensureDispatchLease(now);
+		if (!leaseStatus.canDispatch) {
+			this.updateStatus();
+			return;
+		}
+
 		const nextTask = Array.from(this.tasks.values())
-			.filter((task) => task.enabled && task.pending)
+			.filter((task) => task.enabled && task.pending && this.canCurrentInstanceDispatchTask(task))
 			.sort((a, b) => a.nextRunAt - b.nextRunAt)[0];
 
 		if (!nextTask) {
@@ -409,6 +535,60 @@ export class SchedulerRuntime {
 		} finally {
 			this.dispatching = false;
 		}
+	}
+
+	async handleStartupOwnership(ctx: ExtensionContext): Promise<void> {
+		if (this.startupOwnershipHandled) {
+			return;
+		}
+		this.startupOwnershipHandled = true;
+		const leaseStatus = this.getLeaseStatus();
+		if (!leaseStatus.activeForeign) {
+			this.dispatchMode = "auto";
+			return;
+		}
+
+		this.dispatchMode = "observer";
+		if (!ctx.hasUI) {
+			return;
+		}
+
+		const foreignTaskCount = this.getForeignTaskCount();
+		const option = await ctx.ui.select("Another pi instance is managing scheduled tasks for this workspace.", [
+			"Leave tasks in the other instance",
+			"Review tasks",
+			`Take over scheduler and adopt foreign tasks${foreignTaskCount > 0 ? ` (${foreignTaskCount})` : ""}`,
+			`Disable foreign tasks${foreignTaskCount > 0 ? ` (${foreignTaskCount})` : ""}`,
+			`Clear foreign tasks${foreignTaskCount > 0 ? ` (${foreignTaskCount})` : ""}`,
+		]);
+
+		switch (option) {
+			case "Review tasks":
+				await this.openTaskManager(ctx);
+				break;
+			case `Take over scheduler and adopt foreign tasks${foreignTaskCount > 0 ? ` (${foreignTaskCount})` : ""}`: {
+				const adopted = this.takeOverScheduler(true);
+				ctx.ui.notify(
+					`Scheduler ownership moved to this instance.${adopted > 0 ? ` Adopted ${adopted} task${adopted === 1 ? "" : "s"}.` : ""}`,
+					"warning",
+				);
+				break;
+			}
+			case `Disable foreign tasks${foreignTaskCount > 0 ? ` (${foreignTaskCount})` : ""}`: {
+				const result = this.disableForeignTasks();
+				ctx.ui.notify(`Disabled ${result.count} foreign task${result.count === 1 ? "" : "s"}.`, "warning");
+				break;
+			}
+			case `Clear foreign tasks${foreignTaskCount > 0 ? ` (${foreignTaskCount})` : ""}`: {
+				const result = this.clearForeignTasks();
+				ctx.ui.notify(`Cleared ${result.count} foreign task${result.count === 1 ? "" : "s"}.`, "warning");
+				break;
+			}
+			default:
+				ctx.ui.notify("This instance will observe scheduler tasks without dispatching them.", "info");
+		}
+
+		this.updateStatus();
 	}
 
 	async openTaskManager(ctx: ExtensionContext): Promise<void> {
@@ -464,6 +644,8 @@ export class SchedulerRuntime {
 				task.kind === "recurring" ? "⏱ Change schedule" : "⏱ Change reminder delay",
 				task.enabled ? "Disable" : "Enable",
 				"Run now",
+				"Adopt",
+				"Release",
 				"🗑 Delete",
 				"↩ Back",
 				"✕ Close",
@@ -484,6 +666,26 @@ export class SchedulerRuntime {
 				continue;
 			}
 
+			if (action === "Adopt") {
+				const result = this.adoptTasks(task.id);
+				if (result.error) {
+					ctx.ui.notify(result.error, "warning");
+				} else {
+					ctx.ui.notify(`Adopted ${task.id}.`, "info");
+				}
+				continue;
+			}
+
+			if (action === "Release") {
+				const result = this.releaseTasks(task.id);
+				if (result.error) {
+					ctx.ui.notify(result.error, "warning");
+				} else {
+					ctx.ui.notify(`Released ${task.id}.`, "info");
+				}
+				continue;
+			}
+
 			if (action === "🗑 Delete") {
 				const ok = await ctx.ui.confirm("Delete scheduled task?", `${task.id}: ${task.prompt}`);
 				if (!ok) {
@@ -500,6 +702,8 @@ export class SchedulerRuntime {
 				task.nextRunAt = Date.now();
 				task.pending = true;
 				task.resumeRequired = false;
+				task.resumeReason = undefined;
+				this.reconcileTaskOwnership();
 				this.persistTasks();
 				this.updateStatus();
 				this.tickScheduler().catch(() => {
@@ -541,6 +745,8 @@ export class SchedulerRuntime {
 				task.nextRunAt = Date.now() + normalized.durationMs + task.jitterMs;
 				task.pending = false;
 				task.resumeRequired = false;
+				task.resumeReason = undefined;
+				this.reconcileTaskOwnership();
 				this.persistTasks();
 				ctx.ui.notify(`Updated ${task.id} to every ${formatDurationShort(normalized.durationMs)}.`, "info");
 				if (normalized.note) {
@@ -571,6 +777,8 @@ export class SchedulerRuntime {
 			task.nextRunAt = nextRunAt;
 			task.pending = false;
 			task.resumeRequired = false;
+			task.resumeReason = undefined;
+			this.reconcileTaskOwnership();
 			this.persistTasks();
 			ctx.ui.notify(`Updated ${task.id} to cron ${normalizedCron.expression}.`, "info");
 			if (normalizedCron.note) {
@@ -580,7 +788,6 @@ export class SchedulerRuntime {
 			return;
 		}
 
-		// One-shot task: update delay
 		const parsed = parseDuration(raw);
 		if (!parsed) {
 			ctx.ui.notify("Invalid duration. Try values like 5m, 2h, or 1 day.", "warning");
@@ -591,6 +798,8 @@ export class SchedulerRuntime {
 		task.nextRunAt = Date.now() + normalized.durationMs;
 		task.pending = false;
 		task.resumeRequired = false;
+		task.resumeReason = undefined;
+		this.reconcileTaskOwnership();
 		this.persistTasks();
 		ctx.ui.notify(`Updated ${task.id} reminder to ${this.formatRelativeTime(task.nextRunAt)}.`, "info");
 		if (normalized.note) {
@@ -600,7 +809,7 @@ export class SchedulerRuntime {
 	}
 
 	dispatchTask(task: ScheduleTask) {
-		if (!task.enabled) {
+		if (!(task.enabled && this.canCurrentInstanceDispatchTask(task))) {
 			return;
 		}
 		const now = Date.now();
@@ -622,6 +831,7 @@ export class SchedulerRuntime {
 
 		task.pending = false;
 		task.resumeRequired = false;
+		task.resumeReason = undefined;
 		task.lastRunAt = now;
 		task.lastStatus = "success";
 		task.runCount += 1;
@@ -689,8 +899,8 @@ export class SchedulerRuntime {
 	}
 
 	private taskOptionLabel(task: ScheduleTask): string {
-		const state = task.resumeRequired ? "!" : task.enabled ? "+" : "-";
-		return `${task.id} • ${state} ${this.taskMode(task)} • ${this.formatRelativeTime(task.nextRunAt)} • ${this.truncateText(task.prompt, 50)}`;
+		const state = task.resumeRequired ? `! ${task.resumeReason ?? "review"}` : task.enabled ? "+" : "-";
+		return `${task.id} • ${state} [${task.scope ?? "instance"}] ${this.taskMode(task)} • ${this.formatRelativeTime(task.nextRunAt)} • ${this.truncateText(task.prompt, 50)}`;
 	}
 
 	private truncateText(value: string, max = 64): string {
@@ -721,6 +931,244 @@ export class SchedulerRuntime {
 		return this.hashString(taskId) % (maxJitter + 1);
 	}
 
+	private getSessionId(ctx: ExtensionContext | undefined): string | null {
+		try {
+			return ctx?.sessionManager?.getSessionFile?.() ?? null;
+		} catch {
+			return null;
+		}
+	}
+
+	private assignOwner(task: ScheduleTask, scope: ScheduleScope) {
+		task.scope = scope;
+		task.ownerInstanceId = this.instanceId;
+		task.ownerSessionId = this.sessionId;
+		task.resumeRequired = false;
+		task.resumeReason = undefined;
+	}
+
+	private resolveTaskTargets(
+		target: string,
+		predicate?: (task: ScheduleTask) => boolean,
+	): { tasks: ScheduleTask[]; error?: undefined } | { tasks: ScheduleTask[]; error: string } {
+		if (target === "all") {
+			const tasks = this.getSortedTasks().filter((task) => predicate?.(task) ?? true);
+			return { tasks };
+		}
+		const task = this.tasks.get(target);
+		if (!task) {
+			return { tasks: [], error: `Task not found: ${target}` };
+		}
+		if (predicate && !predicate(task)) {
+			return { tasks: [], error: `Task ${target} is not eligible for that operation.` };
+		}
+		return { tasks: [task] };
+	}
+
+	private getForeignTaskCount(): number {
+		return Array.from(this.tasks.values()).filter(
+			(task) => task.ownerInstanceId && task.ownerInstanceId !== this.instanceId,
+		).length;
+	}
+
+	private readLease(): SchedulerLease | undefined {
+		if (!this.leasePath) {
+			return undefined;
+		}
+		try {
+			if (!fs.existsSync(this.leasePath)) {
+				return undefined;
+			}
+			const raw = fs.readFileSync(this.leasePath, "utf-8");
+			const parsed = JSON.parse(raw) as SchedulerLease;
+			if (!(parsed?.instanceId && Number.isFinite(parsed?.heartbeatAt))) {
+				return undefined;
+			}
+			return parsed;
+		} catch {
+			return undefined;
+		}
+	}
+
+	private isLeaseFresh(lease: SchedulerLease | undefined, now = Date.now()): boolean {
+		if (!lease) {
+			return false;
+		}
+		return now - lease.heartbeatAt < SCHEDULER_LEASE_STALE_AFTER_MS;
+	}
+
+	private getLeaseStatus(now = Date.now()): {
+		lease?: SchedulerLease;
+		ownedByCurrent: boolean;
+		activeForeign: boolean;
+	} {
+		const lease = this.readLease();
+		const ownedByCurrent = Boolean(lease && lease.instanceId === this.instanceId && this.isLeaseFresh(lease, now));
+		const activeForeign = Boolean(lease && lease.instanceId !== this.instanceId && this.isLeaseFresh(lease, now));
+		return { lease, ownedByCurrent, activeForeign };
+	}
+
+	private writeLease(now = Date.now(), force = false): boolean {
+		if (!(this.leasePath && this.runtimeCtx?.cwd)) {
+			return false;
+		}
+		try {
+			const current = this.readLease();
+			if (!force && current && current.instanceId !== this.instanceId && this.isLeaseFresh(current, now)) {
+				return false;
+			}
+			const lease: SchedulerLease = {
+				version: 1,
+				instanceId: this.instanceId,
+				sessionId: this.sessionId,
+				pid: process.pid,
+				cwd: this.runtimeCtx.cwd,
+				heartbeatAt: now,
+			};
+			fs.mkdirSync(path.dirname(this.leasePath), { recursive: true });
+			const tempPath = `${this.leasePath}.tmp`;
+			fs.writeFileSync(tempPath, JSON.stringify(lease, null, 2), "utf-8");
+			fs.renameSync(tempPath, this.leasePath);
+			const confirmed = this.readLease();
+			return confirmed ? confirmed.instanceId === this.instanceId : true;
+		} catch {
+			return false;
+		}
+	}
+
+	private releaseLeaseIfOwned() {
+		if (!this.leasePath) {
+			return;
+		}
+		try {
+			const lease = this.readLease();
+			if (lease?.instanceId !== this.instanceId) {
+				return;
+			}
+			fs.rmSync(this.leasePath, { force: true });
+		} catch {
+			// Best-effort cleanup.
+		}
+	}
+
+	private ensureDispatchLease(now = Date.now()): { canDispatch: boolean } {
+		if (this.dispatchMode === "observer") {
+			return { canDispatch: false };
+		}
+		const status = this.getLeaseStatus(now);
+		if (status.ownedByCurrent) {
+			return { canDispatch: this.writeLease(now, true) };
+		}
+		if (status.activeForeign) {
+			return { canDispatch: false };
+		}
+		return { canDispatch: this.writeLease(now) };
+	}
+
+	private takeOverScheduler(adoptForeignTasks: boolean): number {
+		this.dispatchMode = "auto";
+		this.writeLease(Date.now(), true);
+		if (!adoptForeignTasks) {
+			return 0;
+		}
+		let count = 0;
+		for (const task of this.tasks.values()) {
+			if (task.ownerInstanceId && task.ownerInstanceId !== this.instanceId) {
+				this.assignOwner(task, task.scope ?? "instance");
+				count += 1;
+			}
+		}
+		this.reconcileTaskOwnership();
+		this.persistTasks();
+		this.updateStatus();
+		return count;
+	}
+
+	private canCurrentInstanceDispatchTask(task: ScheduleTask): boolean {
+		if (!(task.enabled && !task.resumeRequired)) {
+			return false;
+		}
+		if ((task.scope ?? "instance") === "workspace") {
+			return true;
+		}
+		return task.ownerInstanceId === this.instanceId;
+	}
+
+	private normalizeTaskScope(task: ScheduleTask): boolean {
+		if (task.scope) {
+			return false;
+		}
+		task.scope = task.kind === "once" ? "instance" : "workspace";
+		return true;
+	}
+
+	private getTaskRestriction(
+		task: ScheduleTask,
+		leaseStatus: ReturnType<SchedulerRuntime["getLeaseStatus"]>,
+		legacyTask: boolean,
+	): ResumeReason | null {
+		if (legacyTask) {
+			return "legacy_unowned";
+		}
+		if ((task.scope ?? "instance") !== "instance") {
+			return null;
+		}
+		if (!task.ownerInstanceId) {
+			return task.resumeReason === "released" ? "released" : "legacy_unowned";
+		}
+		if (task.ownerInstanceId === this.instanceId) {
+			return null;
+		}
+		return leaseStatus.activeForeign && leaseStatus.lease?.instanceId === task.ownerInstanceId
+			? "foreign_owner"
+			: "stale_owner";
+	}
+
+	private markTaskForReview(task: ScheduleTask, reason: ResumeReason): boolean {
+		if (task.resumeRequired && task.resumeReason === reason && !task.pending) {
+			return false;
+		}
+		task.resumeRequired = true;
+		task.resumeReason = reason;
+		task.pending = false;
+		return true;
+	}
+
+	private clearTaskReviewState(task: ScheduleTask): boolean {
+		if (!(task.resumeRequired || task.resumeReason)) {
+			return false;
+		}
+		task.resumeRequired = false;
+		task.resumeReason = undefined;
+		return true;
+	}
+
+	private reconcileTaskOwnership(): boolean {
+		const leaseStatus = this.getLeaseStatus(Date.now());
+		let mutated = false;
+
+		for (const task of this.tasks.values()) {
+			const legacyTask = task.scope === undefined && task.ownerInstanceId === undefined;
+			mutated = this.normalizeTaskScope(task) || mutated;
+
+			const restriction = this.getTaskRestriction(task, leaseStatus, legacyTask);
+			if (restriction) {
+				mutated = this.markTaskForReview(task, restriction) || mutated;
+				continue;
+			}
+
+			if (task.resumeReason === "overdue") {
+				continue;
+			}
+
+			if (task.resumeRequired || task.resumeReason) {
+				mutated = this.clearTaskReviewState(task) || mutated;
+			}
+		}
+
+		return mutated;
+	}
+
 	private migrateLegacyStore(cwd: string) {
 		if (!this.storagePath) {
 			return;
@@ -749,6 +1197,7 @@ export class SchedulerRuntime {
 		} catch {
 			// Best-effort cleanup.
 		}
+		this.releaseLeaseIfOwned();
 
 		const schedulerRoot = getSchedulerStorageRoot();
 		let currentDir = path.dirname(this.storagePath);
@@ -798,10 +1247,12 @@ export class SchedulerRuntime {
 
 				const normalized: ScheduleTask = {
 					...task,
+					scope: task.scope,
 					enabled: task.enabled ?? true,
 					pending: false,
 					runCount: task.runCount ?? 0,
 					resumeRequired: task.resumeRequired ?? false,
+					resumeReason: task.resumeReason,
 				};
 				if (normalized.kind === "recurring" && normalized.expiresAt && now >= normalized.expiresAt) {
 					mutated = true;
@@ -843,6 +1294,7 @@ export class SchedulerRuntime {
 				}
 				if (normalized.enabled && normalized.nextRunAt <= now) {
 					normalized.resumeRequired = true;
+					normalized.resumeReason = "overdue";
 					mutated = true;
 				}
 
@@ -851,6 +1303,7 @@ export class SchedulerRuntime {
 		} catch {
 			// Ignore corrupted store and continue with empty in-memory state.
 		}
+		mutated = this.reconcileTaskOwnership() || mutated;
 		if (mutated) {
 			this.persistTasks();
 		}
@@ -859,16 +1312,26 @@ export class SchedulerRuntime {
 
 	private taskStateLabel(task: ScheduleTask): string {
 		if (task.resumeRequired) {
-			return "due";
+			return `review:${task.resumeReason ?? "unknown"}`;
 		}
 		return task.enabled ? "on" : "off";
 	}
 
 	private taskStatusLabel(task: ScheduleTask): string {
 		if (task.resumeRequired) {
-			return "resume_required";
+			return `resume_required (${task.resumeReason ?? "unknown"})`;
 		}
 		return task.lastStatus ?? "pending";
+	}
+
+	private taskOwnerLabel(task: ScheduleTask): string {
+		if (task.ownerInstanceId === this.instanceId) {
+			return `this:${this.instanceId}`;
+		}
+		if (task.ownerInstanceId) {
+			return `${task.ownerInstanceId}${task.ownerSessionId ? ` (${task.ownerSessionId})` : ""}`;
+		}
+		return "unowned";
 	}
 
 	notifyResumeRequiredTasks() {
@@ -879,10 +1342,33 @@ export class SchedulerRuntime {
 		if (dueTasks.length === 0) {
 			return;
 		}
+		const counts = new Map<ResumeReason, number>();
+		for (const task of dueTasks) {
+			const reason = task.resumeReason ?? "overdue";
+			counts.set(reason, (counts.get(reason) ?? 0) + 1);
+		}
+		const details = Array.from(counts.entries())
+			.map(([reason, count]) => `${count} ${this.resumeReasonLabel(reason)}`)
+			.join(", ");
 		this.runtimeCtx.ui.notify(
-			`Scheduler restored ${dueTasks.length} overdue task${dueTasks.length === 1 ? "" : "s"} from a previous session. They will not run automatically; use /schedule to review, run, reschedule, or disable them.`,
+			`Scheduler restored ${dueTasks.length} task${dueTasks.length === 1 ? "" : "s"} requiring review (${details}). They will not run automatically; use /schedule to review, adopt, reschedule, disable, or delete them.`,
 			"warning",
 		);
+	}
+
+	private resumeReasonLabel(reason: ResumeReason): string {
+		switch (reason) {
+			case "foreign_owner":
+				return "owned by another live instance";
+			case "stale_owner":
+				return "owned by a stale instance";
+			case "legacy_unowned":
+				return "legacy unowned task";
+			case "released":
+				return "released task";
+			default:
+				return "overdue task";
+		}
 	}
 
 	persistTasks() {
