@@ -40,16 +40,16 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@mariozechner/pi-agent-core':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -109,16 +109,16 @@ importers:
   packages/extensions:
     dependencies:
       '@mariozechner/pi-agent-core':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -166,16 +166,16 @@ importers:
         specifier: workspace:*
         version: link:../shared-qna
       '@mariozechner/pi-agent-core':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -194,16 +194,16 @@ importers:
   packages/spec:
     dependencies:
       '@mariozechner/pi-agent-core':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -215,16 +215,16 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@mariozechner/pi-agent-core':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -240,7 +240,7 @@ importers:
         specifier: workspace:*
         version: link:../web-server
       '@mariozechner/pi-coding-agent':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@sinclair/typebox':
         specifier: '*'
@@ -252,7 +252,7 @@ importers:
         specifier: ^1.14.0
         version: 1.19.11(hono@4.12.8)
       '@mariozechner/pi-coding-agent':
-        specifier: '*'
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       hono:
         specifier: ^4.7.0
