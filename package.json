@@ -11,6 +11,7 @@
 		"security:audit:dev": "pnpm audit -D --audit-level=high",
 		"security:check": "pnpm security:allowlist && pnpm security:audit:prod && pnpm security:audit:dev",
 		"test": "vitest run",
+		"verify:compiled-tarballs": "node ./scripts/verify-compiled-tarballs.mjs",
 		"lint": "biome check --error-on-warnings .",
 		"lint:fix": "biome check --fix .",
 		"format": "biome format --write .",
