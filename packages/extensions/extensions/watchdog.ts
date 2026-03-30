@@ -1,0 +1,595 @@
+import * as fs from "node:fs";
+import { cpus, homedir } from "node:os";
+import * as path from "node:path";
+import { monitorEventLoopDelay } from "node:perf_hooks";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import {
+	getSafeModeState,
+	type SafeModeSource,
+	type SafeModeState,
+	setSafeModeState,
+	subscribeSafeMode,
+} from "./runtime-mode";
+
+const MB = 1024 * 1024;
+const DEFAULT_SAMPLE_INTERVAL_MS = 5_000;
+const MIN_SAMPLE_INTERVAL_MS = 1_000;
+const MAX_SAMPLE_INTERVAL_MS = 60_000;
+const ALERT_COOLDOWN_MS = 45_000;
+const AUTO_SAFE_MODE_AFTER_CONSECUTIVE_ALERTS = 2;
+const HISTOGRAM_RESOLUTION_MS = 20;
+const SAMPLE_HISTORY_LIMIT = 60;
+const ALERT_HISTORY_LIMIT = 20;
+const OVERLAY_WIDTH = 84;
+const OVERLAY_MAX_HEIGHT = "80%";
+const SAFE_MODE_REASON_MAX_LENGTH = 96;
+export const WATCHDOG_CONFIG_PATH = path.join(homedir(), ".pi", "agent", "extensions", "watchdog", "config.json");
+
+export type WatchdogSample = {
+	timestamp: number;
+	cpuPercent: number;
+	rssMb: number;
+	heapUsedMb: number;
+	heapTotalMb: number;
+	eventLoopMeanMs: number;
+	eventLoopP99Ms: number;
+	eventLoopMaxMs: number;
+	safeModeEnabled: boolean;
+};
+
+export type WatchdogThresholds = {
+	cpuPercent: number;
+	rssMb: number;
+	heapUsedMb: number;
+	eventLoopP99Ms: number;
+	eventLoopMaxMs: number;
+};
+
+export type WatchdogConfig = {
+	enabled?: boolean;
+	sampleIntervalMs?: number;
+	thresholds?: Partial<WatchdogThresholds>;
+};
+
+export type WatchdogAlert = {
+	severity: "warning" | "critical";
+	reasons: string[];
+	sample: WatchdogSample;
+};
+
+export const DEFAULT_WATCHDOG_THRESHOLDS: WatchdogThresholds = {
+	cpuPercent: 85,
+	rssMb: 1200,
+	heapUsedMb: 768,
+	eventLoopP99Ms: 120,
+	eventLoopMaxMs: 250,
+};
+
+function toMilliseconds(value: number): number {
+	return Number.isFinite(value) ? value / 1_000_000 : 0;
+}
+
+function pushBounded<T>(items: T[], item: T, limit: number): void {
+	items.push(item);
+	if (items.length > limit) {
+		items.splice(0, items.length - limit);
+	}
+}
+
+function formatRelativeAge(timestamp: number, now = Date.now()): string {
+	const diffMs = Math.max(0, now - timestamp);
+	if (diffMs < 1_000) {
+		return "just now";
+	}
+	const seconds = Math.floor(diffMs / 1_000);
+	if (seconds < 60) {
+		return `${seconds}s ago`;
+	}
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) {
+		return `${minutes}m ago`;
+	}
+	const hours = Math.floor(minutes / 60);
+	return `${hours}h ago`;
+}
+
+function clampSampleIntervalMs(value: number | undefined): number {
+	if (!Number.isFinite(value)) {
+		return DEFAULT_SAMPLE_INTERVAL_MS;
+	}
+	return Math.min(MAX_SAMPLE_INTERVAL_MS, Math.max(MIN_SAMPLE_INTERVAL_MS, Math.round(value)));
+}
+
+function shortenReason(reason: string | null | undefined): string | null {
+	if (!reason) {
+		return null;
+	}
+	return reason.length > SAFE_MODE_REASON_MAX_LENGTH ? `${reason.slice(0, SAFE_MODE_REASON_MAX_LENGTH - 1)}…` : reason;
+}
+
+function formatThresholdSummary(thresholds: WatchdogThresholds): string {
+	return `CPU ${thresholds.cpuPercent}% · RSS ${thresholds.rssMb}MB · Heap ${thresholds.heapUsedMb}MB · P99 ${thresholds.eventLoopP99Ms}ms · Max ${thresholds.eventLoopMaxMs}ms`;
+}
+
+function formatSafeModeStatusHint(state: SafeModeState): string | undefined {
+	if (!state.enabled) {
+		return undefined;
+	}
+	const source = state.auto ? "watchdog" : (state.source ?? "manual");
+	const reason = shortenReason(state.reason);
+	return reason ? `safe-mode: ${source} · ${reason}` : `safe-mode: ${source}`;
+}
+
+export function loadWatchdogConfig(configPath = WATCHDOG_CONFIG_PATH): WatchdogConfig {
+	try {
+		if (!fs.existsSync(configPath)) {
+			return {};
+		}
+		const raw = JSON.parse(fs.readFileSync(configPath, "utf-8")) as unknown;
+		return raw && typeof raw === "object" ? (raw as WatchdogConfig) : {};
+	} catch {
+		return {};
+	}
+}
+
+export function resolveWatchdogThresholds(config: WatchdogConfig = {}): WatchdogThresholds {
+	return {
+		...DEFAULT_WATCHDOG_THRESHOLDS,
+		...(config.thresholds ?? {}),
+	};
+}
+
+export function resolveWatchdogSampleIntervalMs(config: WatchdogConfig = {}): number {
+	return clampSampleIntervalMs(config.sampleIntervalMs);
+}
+
+export function calculateCpuPercent(usage: { user: number; system: number }, elapsedMs: number, coreCount = 1): number {
+	if (!(elapsedMs > 0 && Number.isFinite(elapsedMs))) {
+		return 0;
+	}
+	const coreDivisor = Math.max(1, coreCount);
+	const usedMs = (usage.user + usage.system) / 1000;
+	return Math.max(0, (usedMs / elapsedMs / coreDivisor) * 100);
+}
+
+export function createWatchdogSample(input: {
+	timestamp: number;
+	cpuUsage: { user: number; system: number };
+	elapsedMs: number;
+	coreCount?: number;
+	memoryUsage: { rss: number; heapUsed: number; heapTotal: number };
+	eventLoopMeanNs: number;
+	eventLoopP99Ns: number;
+	eventLoopMaxNs: number;
+	safeModeEnabled: boolean;
+}): WatchdogSample {
+	return {
+		timestamp: input.timestamp,
+		cpuPercent: calculateCpuPercent(input.cpuUsage, input.elapsedMs, input.coreCount ?? 1),
+		rssMb: input.memoryUsage.rss / MB,
+		heapUsedMb: input.memoryUsage.heapUsed / MB,
+		heapTotalMb: input.memoryUsage.heapTotal / MB,
+		eventLoopMeanMs: toMilliseconds(input.eventLoopMeanNs),
+		eventLoopP99Ms: toMilliseconds(input.eventLoopP99Ns),
+		eventLoopMaxMs: toMilliseconds(input.eventLoopMaxNs),
+		safeModeEnabled: input.safeModeEnabled,
+	};
+}
+
+export function evaluateWatchdogSample(
+	sample: WatchdogSample,
+	thresholds: WatchdogThresholds = DEFAULT_WATCHDOG_THRESHOLDS,
+): WatchdogAlert | null {
+	const reasons: string[] = [];
+	let severity: WatchdogAlert["severity"] = "warning";
+
+	if (sample.eventLoopP99Ms >= thresholds.eventLoopP99Ms) {
+		reasons.push(`event-loop p99 ${sample.eventLoopP99Ms.toFixed(0)}ms`);
+	}
+	if (sample.eventLoopMaxMs >= thresholds.eventLoopMaxMs) {
+		reasons.push(`event-loop max ${sample.eventLoopMaxMs.toFixed(0)}ms`);
+		severity = "critical";
+	}
+	if (sample.cpuPercent >= thresholds.cpuPercent) {
+		reasons.push(`cpu ${sample.cpuPercent.toFixed(0)}%`);
+	}
+	if (sample.rssMb >= thresholds.rssMb) {
+		reasons.push(`rss ${sample.rssMb.toFixed(0)}MB`);
+		severity = "critical";
+	}
+	if (sample.heapUsedMb >= thresholds.heapUsedMb) {
+		reasons.push(`heap ${sample.heapUsedMb.toFixed(0)}MB`);
+	}
+
+	if (reasons.length === 0) {
+		return null;
+	}
+
+	if (reasons.length >= 3) {
+		severity = "critical";
+	}
+
+	return { severity, reasons, sample };
+}
+
+export function formatWatchdogStatus(sample: WatchdogSample | null): string {
+	if (!sample) {
+		return "watchdog: waiting for first sample";
+	}
+	const safeMode = sample.safeModeEnabled ? "safe-mode:on" : "safe-mode:off";
+	return [
+		`cpu ${sample.cpuPercent.toFixed(0)}%`,
+		`rss ${sample.rssMb.toFixed(0)}MB`,
+		`heap ${sample.heapUsedMb.toFixed(0)}/${sample.heapTotalMb.toFixed(0)}MB`,
+		`lag p99 ${sample.eventLoopP99Ms.toFixed(0)}ms`,
+		`max ${sample.eventLoopMaxMs.toFixed(0)}ms`,
+		safeMode,
+	].join(" · ");
+}
+
+export function formatWatchdogAlert(alert: WatchdogAlert): string {
+	return `Performance watchdog ${alert.severity}: ${alert.reasons.join(", ")}. Run /watchdog status or /safe-mode on if input feels laggy.`;
+}
+
+export function applySafeMode(
+	pi: Pick<ExtensionAPI, "events">,
+	enabled: boolean,
+	options: { source?: SafeModeSource; reason?: string | null; auto?: boolean } = {},
+): SafeModeState {
+	const state = setSafeModeState(enabled, {
+		source: options.source,
+		reason: options.reason,
+		auto: options.auto,
+	});
+	pi.events.emit("oh-pi:safe-mode", state);
+	return state;
+}
+
+function levelForAlert(alert: WatchdogAlert): "warning" | "error" {
+	return alert.severity === "critical" ? "error" : "warning";
+}
+
+function shortSafeModeStatus(state: SafeModeState): string {
+	if (!state.enabled) {
+		return "safe mode is off";
+	}
+	const source = state.auto ? "watchdog" : (state.source ?? "manual");
+	return `safe mode is on (${source}${state.reason ? `: ${state.reason}` : ""})`;
+}
+
+function buildOverlayLines(
+	theme: { fg: (color: string, text: string) => string; bold?: (text: string) => string },
+	input: {
+		enabled: boolean;
+		latestSample: WatchdogSample | null;
+		sampleHistory: WatchdogSample[];
+		alertHistory: WatchdogAlert[];
+		thresholds: WatchdogThresholds;
+		safeModeState: SafeModeState;
+		sampleIntervalMs: number;
+	},
+): string[] {
+	const now = Date.now();
+	const title = theme.bold ? theme.bold("Performance Watchdog") : "Performance Watchdog";
+	const lines: string[] = [theme.fg("toolTitle", title), ""];
+	lines.push(`${theme.fg("accent", "State:")} ${input.enabled ? "enabled" : "disabled"}`);
+	lines.push(`${theme.fg("accent", "Sampling:")} every ${input.sampleIntervalMs}ms`);
+	lines.push(`${theme.fg("accent", "Safe mode:")} ${shortSafeModeStatus(input.safeModeState)}`);
+	lines.push("");
+	lines.push(theme.fg("accent", "Current sample"));
+	lines.push(input.latestSample ? formatWatchdogStatus(input.latestSample) : "No samples recorded yet.");
+	lines.push("");
+	lines.push(theme.fg("accent", "Thresholds"));
+	lines.push(formatThresholdSummary(input.thresholds));
+	lines.push("");
+	lines.push(theme.fg("accent", "Recent alerts"));
+	if (input.alertHistory.length === 0) {
+		lines.push(theme.fg("dim", "No alerts yet."));
+	} else {
+		for (const alert of input.alertHistory.slice(-6).reverse()) {
+			const color = alert.severity === "critical" ? "error" : "warning";
+			lines.push(
+				`${theme.fg(color, alert.severity.toUpperCase())} · ${alert.reasons.join(", ")} · ${theme.fg("dim", formatRelativeAge(alert.sample.timestamp, now))}`,
+			);
+		}
+	}
+	lines.push("");
+	lines.push(theme.fg("accent", "Recent samples"));
+	if (input.sampleHistory.length === 0) {
+		lines.push(theme.fg("dim", "No samples yet."));
+	} else {
+		for (const sample of input.sampleHistory.slice(-8).reverse()) {
+			lines.push(
+				`${theme.fg("dim", formatRelativeAge(sample.timestamp, now))} · cpu ${sample.cpuPercent.toFixed(0)}% · rss ${sample.rssMb.toFixed(0)}MB · p99 ${sample.eventLoopP99Ms.toFixed(0)}ms · max ${sample.eventLoopMaxMs.toFixed(0)}ms`,
+			);
+		}
+	}
+	lines.push("");
+	lines.push(theme.fg("dim", `Config: ${WATCHDOG_CONFIG_PATH}`));
+	lines.push(theme.fg("dim", "Keys: [r] sample now · [s] toggle safe mode · [q/Esc/Space] close"));
+	return lines;
+}
+
+export default function watchdogExtension(pi: ExtensionAPI) {
+	const config = loadWatchdogConfig();
+	const thresholds = resolveWatchdogThresholds(config);
+	const sampleIntervalMs = resolveWatchdogSampleIntervalMs(config);
+	const histogram = monitorEventLoopDelay({ resolution: HISTOGRAM_RESOLUTION_MS });
+	histogram.enable();
+
+	const coreCount = Math.max(1, cpus().length || 1);
+	const sampleHistory: WatchdogSample[] = [];
+	const alertHistory: WatchdogAlert[] = [];
+	let activeCtx: ExtensionContext | ExtensionCommandContext | null = null;
+	let latestSample: WatchdogSample | null = null;
+	let lastAlertAt = 0;
+	let consecutiveAlerts = 0;
+	let enabled = config.enabled !== false;
+	let timer: ReturnType<typeof setInterval> | null = null;
+	let lastCpuUsage = process.cpuUsage();
+	let lastSampleAt = Date.now();
+
+	const setAlertStatus = (text: string | undefined) => {
+		if (activeCtx?.hasUI) {
+			activeCtx.ui.setStatus("watchdog", text);
+		}
+	};
+
+	const setSafeModeStatus = (state = getSafeModeState()) => {
+		if (activeCtx?.hasUI) {
+			activeCtx.ui.setStatus("safe-mode", formatSafeModeStatusHint(state));
+		}
+	};
+
+	const takeSample = () => {
+		if (!enabled) {
+			setAlertStatus(undefined);
+			return latestSample;
+		}
+
+		const now = Date.now();
+		const elapsedMs = Math.max(1, now - lastSampleAt);
+		const cpuNow = process.cpuUsage();
+		const cpuDelta = {
+			user: cpuNow.user - lastCpuUsage.user,
+			system: cpuNow.system - lastCpuUsage.system,
+		};
+		lastCpuUsage = cpuNow;
+		lastSampleAt = now;
+
+		latestSample = createWatchdogSample({
+			timestamp: now,
+			cpuUsage: cpuDelta,
+			elapsedMs,
+			coreCount,
+			memoryUsage: process.memoryUsage(),
+			eventLoopMeanNs: Number(histogram.mean),
+			eventLoopP99Ns: Number(histogram.percentile(99)),
+			eventLoopMaxNs: Number(histogram.max),
+			safeModeEnabled: getSafeModeState().enabled,
+		});
+		histogram.reset();
+		pushBounded(sampleHistory, latestSample, SAMPLE_HISTORY_LIMIT);
+
+		const alert = evaluateWatchdogSample(latestSample, thresholds);
+		if (!alert) {
+			consecutiveAlerts = 0;
+			setAlertStatus(undefined);
+			return latestSample;
+		}
+
+		consecutiveAlerts += 1;
+		pushBounded(alertHistory, alert, ALERT_HISTORY_LIMIT);
+		setAlertStatus(`watchdog: ${alert.reasons.join(", ")}`);
+
+		if (activeCtx?.hasUI && now - lastAlertAt >= ALERT_COOLDOWN_MS) {
+			lastAlertAt = now;
+			activeCtx.ui.notify(formatWatchdogAlert(alert), levelForAlert(alert));
+		}
+
+		if (
+			consecutiveAlerts >= AUTO_SAFE_MODE_AFTER_CONSECUTIVE_ALERTS &&
+			!getSafeModeState().enabled &&
+			activeCtx?.hasUI
+		) {
+			const state = applySafeMode(pi, true, {
+				source: "watchdog",
+				reason: alert.reasons.join(", "),
+				auto: true,
+			});
+			setSafeModeStatus(state);
+			activeCtx.ui.notify(`Watchdog enabled safe mode automatically: ${shortSafeModeStatus(state)}.`, "warning");
+		}
+
+		return latestSample;
+	};
+
+	const ensureTimer = () => {
+		if (timer || !enabled) {
+			return;
+		}
+		timer = setInterval(() => {
+			takeSample();
+		}, sampleIntervalMs);
+		timer.unref?.();
+	};
+
+	const stopTimer = () => {
+		if (!timer) {
+			return;
+		}
+		clearInterval(timer);
+		timer = null;
+	};
+
+	const resetCounters = () => {
+		histogram.enable();
+		lastCpuUsage = process.cpuUsage();
+		lastSampleAt = Date.now();
+		consecutiveAlerts = 0;
+		histogram.reset();
+	};
+
+	const resetHistory = () => {
+		resetCounters();
+		latestSample = null;
+		lastAlertAt = 0;
+		sampleHistory.length = 0;
+		alertHistory.length = 0;
+		setAlertStatus(undefined);
+	};
+
+	const notifyStatus = (ctx: ExtensionCommandContext | ExtensionContext) => {
+		takeSample();
+		ctx.ui.notify(`${formatWatchdogStatus(latestSample)} · ${formatThresholdSummary(thresholds)}`, "info");
+	};
+
+	const notifyConfig = (ctx: ExtensionCommandContext | ExtensionContext) => {
+		ctx.ui.notify(
+			`watchdog config: ${enabled ? "enabled" : "disabled"} · interval ${sampleIntervalMs}ms · ${formatThresholdSummary(thresholds)} · ${WATCHDOG_CONFIG_PATH}`,
+			"info",
+		);
+	};
+
+	const openOverlay = async (ctx: ExtensionCommandContext | ExtensionContext) => {
+		activeCtx = ctx;
+		setSafeModeStatus();
+		takeSample();
+		await ctx.ui.custom(
+			(tui, theme, _keybindings, done) => ({
+				render(width: number) {
+					return buildOverlayLines(theme, {
+						enabled,
+						latestSample,
+						sampleHistory,
+						alertHistory,
+						thresholds,
+						safeModeState: getSafeModeState(),
+						sampleIntervalMs,
+					}).map((line) => line.slice(0, width));
+				},
+				handleInput(data: string) {
+					if (data === "q" || data === "\x1b" || data === " " || data === "\r") {
+						done(undefined);
+						return;
+					}
+					if (data === "r") {
+						takeSample();
+						tui.requestRender();
+						return;
+					}
+					if (data === "s") {
+						const state = applySafeMode(pi, !getSafeModeState().enabled, {
+							source: "manual",
+							reason: getSafeModeState().enabled ? null : "enabled from watchdog overlay",
+							auto: false,
+						});
+						setSafeModeStatus(state);
+						takeSample();
+						tui.requestRender();
+					}
+				},
+				// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
+				dispose() {},
+			}),
+			{ overlay: true, overlayOptions: { anchor: "center", width: OVERLAY_WIDTH, maxHeight: OVERLAY_MAX_HEIGHT } },
+		);
+	};
+
+	subscribeSafeMode((state) => {
+		setSafeModeStatus(state);
+		if (latestSample) {
+			latestSample = { ...latestSample, safeModeEnabled: state.enabled };
+		}
+	});
+
+	pi.registerCommand("watchdog", {
+		description: "Inspect or control the performance watchdog: /watchdog [status|overlay|config|reset|on|off|sample]",
+		async handler(args, ctx) {
+			activeCtx = ctx;
+			setSafeModeStatus();
+			const command = args.trim().toLowerCase() || "status";
+			switch (command) {
+				case "on":
+					enabled = true;
+					resetCounters();
+					ensureTimer();
+					ctx.ui.notify("Performance watchdog enabled.", "info");
+					return;
+				case "off":
+					enabled = false;
+					stopTimer();
+					setAlertStatus(undefined);
+					ctx.ui.notify("Performance watchdog disabled.", "warning");
+					return;
+				case "sample":
+					latestSample = takeSample();
+					ctx.ui.notify(formatWatchdogStatus(latestSample), "info");
+					return;
+				case "reset":
+					resetHistory();
+					ctx.ui.notify("Performance watchdog history reset.", "info");
+					return;
+				case "overlay":
+				case "dashboard":
+					await openOverlay(ctx);
+					return;
+				case "config":
+					notifyConfig(ctx);
+					return;
+				default:
+					notifyStatus(ctx);
+			}
+		},
+	});
+
+	pi.registerCommand("safe-mode", {
+		description: "Reduce nonessential UI churn: /safe-mode [on|off|status]",
+		async handler(args, ctx) {
+			activeCtx = ctx;
+			const command = args.trim().toLowerCase() || "status";
+			switch (command) {
+				case "on": {
+					const state = applySafeMode(pi, true, { source: "manual", reason: "enabled by user", auto: false });
+					setSafeModeStatus(state);
+					ctx.ui.notify(`Enabled ${shortSafeModeStatus(state)}.`, "warning");
+					return;
+				}
+				case "off": {
+					const state = applySafeMode(pi, false, { source: "manual", reason: null, auto: false });
+					setSafeModeStatus(state);
+					ctx.ui.notify(`Disabled ${shortSafeModeStatus(state)}.`, "success");
+					setAlertStatus(undefined);
+					consecutiveAlerts = 0;
+					return;
+				}
+				default:
+					setSafeModeStatus();
+					ctx.ui.notify(shortSafeModeStatus(getSafeModeState()), "info");
+			}
+		},
+	});
+
+	pi.on("session_start", (_event, ctx) => {
+		activeCtx = ctx;
+		resetCounters();
+		setSafeModeStatus();
+		ensureTimer();
+	});
+
+	pi.on("session_switch", (_event, ctx) => {
+		activeCtx = ctx;
+		resetCounters();
+		setSafeModeStatus();
+		ensureTimer();
+	});
+
+	pi.on("session_shutdown", () => {
+		setAlertStatus(undefined);
+		if (activeCtx?.hasUI) {
+			activeCtx.ui.setStatus("safe-mode", undefined);
+		}
+		stopTimer();
+		histogram.disable();
+	});
+}

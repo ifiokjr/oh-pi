@@ -134,11 +134,16 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
 	const cleanupTimers = new Map<string, ReturnType<typeof setTimeout>>(); // Track cleanup timeouts
 	let lastUiContext: ExtensionContext | null = null;
 	let poller: NodeJS.Timeout | null = null;
+	let safeModeEnabled = false;
 
 	const ensurePoller = () => {
 		if (poller) return;
 		poller = setInterval(() => {
 			if (!lastUiContext || !lastUiContext.hasUI) return;
+			if (safeModeEnabled) {
+				renderWidget(lastUiContext, [], { suppressed: true });
+				return;
+			}
 			if (asyncJobs.size === 0) {
 				renderWidget(lastUiContext, []);
 				clearInterval(poller);
@@ -173,7 +178,7 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
 				}
 			}
 
-			renderWidget(lastUiContext, Array.from(asyncJobs.values()));
+			renderWidget(lastUiContext, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
 		}, POLL_INTERVAL_MS);
 		poller.unref?.();
 	};
@@ -1412,7 +1417,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			updatedAt: now,
 		});
 		if (lastUiContext) {
-			renderWidget(lastUiContext, Array.from(asyncJobs.values()));
+			renderWidget(lastUiContext, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
 			ensurePoller();
 		}
 	});
@@ -1428,13 +1433,13 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			if (result.asyncDir) job.asyncDir = result.asyncDir;
 		}
 		if (lastUiContext) {
-			renderWidget(lastUiContext, Array.from(asyncJobs.values()));
+			renderWidget(lastUiContext, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
 		}
 		// Schedule cleanup after 10 seconds (track timer for cleanup on shutdown)
 		const timer = setTimeout(() => {
 			cleanupTimers.delete(asyncId);
 			asyncJobs.delete(asyncId);
-			if (lastUiContext) renderWidget(lastUiContext, Array.from(asyncJobs.values()));
+			if (lastUiContext) renderWidget(lastUiContext, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
 		}, 10000);
 		cleanupTimers.set(asyncId, timer);
 	});
@@ -1444,8 +1449,15 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		if (!ctx.hasUI) return;
 		lastUiContext = ctx;
 		if (asyncJobs.size > 0) {
-			renderWidget(ctx, Array.from(asyncJobs.values()));
+			renderWidget(ctx, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
 			ensurePoller();
+		}
+	});
+
+	pi.events.on("oh-pi:safe-mode", (data) => {
+		safeModeEnabled = Boolean((data as { enabled?: boolean } | undefined)?.enabled);
+		if (lastUiContext?.hasUI) {
+			renderWidget(lastUiContext, Array.from(asyncJobs.values()), { suppressed: safeModeEnabled });
 		}
 	});
 

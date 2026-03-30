@@ -26,6 +26,8 @@ Stratified by task complexity:
 
 - `scenarios.md`: Scenario list template (by S/M/L tier)
 - `results-template.md`: Results recording template (single agent vs colony)
+- `extensions-render-performance.mjs`: benchmark for session-length-sensitive extension rendering paths
+- `live-runtime-behavior.mjs`: benchmark for capped live widgets and fixed-window overlay rendering
 
 ## Suggested Execution Flow (Manual)
 

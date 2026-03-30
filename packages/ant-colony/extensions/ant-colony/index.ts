@@ -258,6 +258,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 	let renderHandler: (() => void) | null = null;
 	let clearHandler: (() => void) | null = null;
 	let notifyHandler: ((data: { msg: string; level: "info" | "success" | "warning" | "error" }) => void) | null = null;
+	let safeModeHandler: ((data: unknown) => void) | null = null;
+	let safeModeEnabled = false;
 
 	pi.on("session_start", async (_event, ctx) => {
 		// Remove old listeners (ctx is stale after session restart / /reload)
@@ -270,8 +272,16 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		if (notifyHandler) {
 			pi.events.off("ant-colony:notify", notifyHandler);
 		}
+		if (safeModeHandler) {
+			pi.events.off("oh-pi:safe-mode", safeModeHandler);
+		}
 
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Colony status rendering aggregates multiple live counters and safe-mode suppression.
 		renderHandler = () => {
+			if (safeModeEnabled) {
+				ctx.ui.setStatus("ant-colony", undefined);
+				return;
+			}
 			if (colonies.size === 0) {
 				return;
 			}
@@ -304,10 +314,19 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		notifyHandler = (data) => {
 			ctx.ui.notify(data.msg, data.level);
 		};
+		safeModeHandler = (data) => {
+			safeModeEnabled = Boolean((data as { enabled?: boolean } | undefined)?.enabled);
+			if (safeModeEnabled) {
+				ctx.ui.setStatus("ant-colony", undefined);
+			} else {
+				renderHandler?.();
+			}
+		};
 
 		pi.events.on("ant-colony:render", renderHandler);
 		pi.events.on("ant-colony:clear-ui", clearHandler);
 		pi.events.on("ant-colony:notify", notifyHandler);
+		pi.events.on("oh-pi:safe-mode", safeModeHandler);
 	});
 
 	// ─── Sync mode (print mode): block until colony completes ───

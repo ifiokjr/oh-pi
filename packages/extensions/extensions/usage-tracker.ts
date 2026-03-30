@@ -25,6 +25,7 @@ import { dirname, join } from "node:path";
 import type { AssistantMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
+import { getSafeModeState, subscribeSafeMode } from "./runtime-mode";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -2060,7 +2061,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	// ─── Widget rendering ─────────────────────────────────────────────────
 
 	function renderWidget(_ctx: ExtensionContext, theme: { fg: (c: string, t: string) => string }): string[] {
-		if (!widgetVisible) {
+		if (!widgetVisible || getSafeModeState().enabled) {
 			return [];
 		}
 
@@ -2102,9 +2103,11 @@ export default function usageTracker(pi: ExtensionAPI) {
 		triggerProbe(ctx);
 
 		ctx.ui.setWidget("usage-tracker", (tui, theme) => {
+			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
 			const timer = setInterval(() => tui.requestRender(), 15_000);
 			return {
 				dispose() {
+					unsubSafeMode();
 					clearInterval(timer);
 				},
 				// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
@@ -2176,9 +2179,11 @@ export default function usageTracker(pi: ExtensionAPI) {
 			widgetVisible = !widgetVisible;
 			if (widgetVisible) {
 				ctx.ui.setWidget("usage-tracker", (tui, theme) => {
+					const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
 					const timer = setInterval(() => tui.requestRender(), 15_000);
 					return {
 						dispose() {
+							unsubSafeMode();
 							clearInterval(timer);
 						},
 						// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface

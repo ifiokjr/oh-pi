@@ -110,9 +110,9 @@ function hasEmptyTextOutputWithoutOutputTarget(task: string, output: string): bo
 /**
  * Render the async jobs widget
  */
-export function renderWidget(ctx: ExtensionContext, jobs: AsyncJobState[]): void {
+export function renderWidget(ctx: ExtensionContext, jobs: AsyncJobState[], options: { suppressed?: boolean } = {}): void {
 	if (!ctx.hasUI) return;
-	if (jobs.length === 0) {
+	if (options.suppressed || jobs.length === 0) {
 		if (lastWidgetHash !== "") {
 			lastWidgetHash = "";
 			ctx.ui.setWidget(WIDGET_KEY, undefined);
