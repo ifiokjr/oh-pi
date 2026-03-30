@@ -286,7 +286,7 @@ export class SchedulerRuntime {
 			return "No scheduled tasks.";
 		}
 
-		const lines = ["Scheduled tasks:", ""];
+		const lines = [`Scheduled tasks for ${this.getWorkspaceLabel()}:`, ""];
 		for (const task of list) {
 			const state = this.taskStateLabel(task);
 			const mode = this.taskMode(task);
@@ -611,7 +611,7 @@ export class SchedulerRuntime {
 			const options = list.map((task) => this.taskOptionLabel(task));
 			options.push("+ Close");
 
-			const selected = await ctx.ui.select("Scheduled tasks (select one)", options);
+			const selected = await ctx.ui.select(`Scheduled tasks for ${this.getWorkspaceLabel(ctx)} (select one)`, options);
 			if (!selected || selected === "+ Close") {
 				return;
 			}
@@ -639,7 +639,11 @@ export class SchedulerRuntime {
 				return false;
 			}
 
-			const title = `${task.id} • ${this.taskMode(task)} • next ${this.formatRelativeTime(task.nextRunAt)} (${this.formatClock(task.nextRunAt)})`;
+			const title = [
+				`${task.id} • ${this.taskMode(task)} • next ${this.formatRelativeTime(task.nextRunAt)} (${this.formatClock(task.nextRunAt)})`,
+				`Workspace: ${this.getWorkspaceLabel(ctx)}`,
+				`Prompt: ${task.prompt}`,
+			].join("\n");
 			const options = [
 				task.kind === "recurring" ? "⏱ Change schedule" : "⏱ Change reminder delay",
 				task.enabled ? "Disable" : "Enable",
@@ -901,6 +905,10 @@ export class SchedulerRuntime {
 	private taskOptionLabel(task: ScheduleTask): string {
 		const state = task.resumeRequired ? `! ${task.resumeReason ?? "review"}` : task.enabled ? "+" : "-";
 		return `${task.id} • ${state} [${task.scope ?? "instance"}] ${this.taskMode(task)} • ${this.formatRelativeTime(task.nextRunAt)} • ${this.truncateText(task.prompt, 50)}`;
+	}
+
+	private getWorkspaceLabel(ctx?: ExtensionContext): string {
+		return ctx?.cwd ?? this.runtimeCtx?.cwd ?? "(unknown workspace)";
 	}
 
 	private truncateText(value: string, max = 64): string {

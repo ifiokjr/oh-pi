@@ -847,10 +847,12 @@ describe("SchedulerRuntime", () => {
 			expect(runtime.formatTaskList()).toBe("No scheduled tasks.");
 		});
 
-		it("includes task details in list", () => {
+		it("includes task details and workspace in list", () => {
+			const ctx = createMockCtx({ cwd: "/mock-project/apps/api" });
+			runtime.setRuntimeContext(ctx as any);
 			runtime.addRecurringIntervalTask("check build", 5 * ONE_MINUTE);
 			const list = runtime.formatTaskList();
-			expect(list).toContain("Scheduled tasks:");
+			expect(list).toContain("Scheduled tasks for /mock-project/apps/api:");
 			expect(list).toContain("check build");
 			expect(list).toContain("every 5m");
 			expect(list).toContain("runs=0");
@@ -2290,6 +2292,27 @@ describe("edge cases", () => {
 	it("handles /schedule with no args (TUI manager)", async () => {
 		await pi._commands.get("schedule").handler("", ctx);
 		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBe(true);
+	});
+
+	it("shows workspace in the task manager and full prompt after selecting a task", async () => {
+		const prompt = "check the full deployment pipeline and report every failing stage";
+		await pi._commands.get("loop").handler(`5m ${prompt}`, ctx);
+		const select = vi
+			.fn()
+			.mockImplementationOnce(async (_title: string, options: string[]) => options[0])
+			.mockResolvedValueOnce("↩ Back");
+		const taskCtx = createMockCtx({ cwd: "/mock-project/apps/api", select });
+
+		await pi._commands.get("schedule").handler("", taskCtx);
+
+		expect(select).toHaveBeenNthCalledWith(
+			1,
+			"Scheduled tasks for /mock-project/apps/api (select one)",
+			expect.arrayContaining([expect.stringContaining("every 5m"), "+ Close"]),
+		);
+		const actionTitle = select.mock.calls[1][0];
+		expect(actionTitle).toContain("Workspace: /mock-project/apps/api");
+		expect(actionTitle).toContain(`Prompt: ${prompt}`);
 	});
 
 	it("creates and then deletes a task via different commands", async () => {
