@@ -202,9 +202,11 @@ describe("withStateLock spin", () => {
 		expect(nest.getStateLight().status).toBe("reviewing");
 	});
 
-	it("surfaces non-contention lock errors immediately", () => {
+	it("recovers from directory removal by recreating it", () => {
 		fs.rmSync(nest.dir, { recursive: true, force: true });
 
-		expect(() => nest.updateState({ status: "reviewing" })).toThrow(/failed to acquire state lock/i);
+		// The lock should recover by recreating the directory (robustness fix)
+		expect(() => nest.updateState({ status: "reviewing" })).not.toThrow();
+		expect(fs.existsSync(nest.dir)).toBe(true);
 	});
 });

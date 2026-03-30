@@ -324,7 +324,11 @@ export async function spawnAnt(
 	const registry = modelRegistry ?? new ModelRegistry(auth);
 	const model = resolveModel(antConfig.model, registry);
 	if (!model) {
-		throw new Error(`Model not found: ${antConfig.model}`);
+		const identity = modelIdentity(antConfig.model);
+		throw new Error(
+			`Model not found: ${antConfig.model} (provider: ${identity.provider}, model: ${identity.model}). ` +
+				"Ensure the model is configured in your provider settings or pass a valid model override.",
+		);
 	}
 	const configuredIdentity = modelIdentity(antConfig.model);
 
@@ -497,14 +501,21 @@ export async function spawnAnt(
 			nest.dropPheromone(p);
 		}
 
-		nest.updateTaskStatus(task.id, "failed", accumulatedText, errStr);
+		// Preserve full error with stack trace for post-mortem debugging
+		const fullError = e instanceof Error ? `${e.message}\n${e.stack || ""}` : errStr;
+		const errorWithPartialOutput = accumulatedText
+			? `${fullError.slice(0, 1500)}\n\n--- Partial output before failure ---\n${accumulatedText.slice(-500)}`
+			: fullError.slice(0, 2000);
+		nest.updateTaskStatus(task.id, "failed", accumulatedText, errorWithPartialOutput);
 
 		return { ant, output: accumulatedText, newTasks, pheromones, rateLimited: false };
 	} finally {
 		try {
 			session?.dispose();
-		} catch {
-			/* ignore dispose errors */
+		} catch (disposeErr) {
+			// Log dispose errors instead of swallowing them silently.
+			// These can indicate resource leaks (unclosed streams, handles).
+			console.error(`[ant:${antId}] session dispose error: ${String(disposeErr).slice(0, 200)}`);
 		}
 	}
 }

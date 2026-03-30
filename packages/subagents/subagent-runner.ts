@@ -103,13 +103,14 @@ function runPiStreaming(
 	outputFile: string,
 	env?: Record<string, string | undefined>,
 	piPackageRoot?: string,
-): Promise<{ stdout: string; exitCode: number | null }> {
+): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
 	return new Promise((resolve) => {
 		const outputStream = fs.createWriteStream(outputFile, { flags: "w" });
 		const spawnEnv = { ...process.env, ...(env ?? {}), ...getSubagentDepthEnv() };
 		const spawnSpec = getPiSpawnCommand(args, piPackageRoot ? { piPackageRoot } : undefined);
 		const child = spawn(spawnSpec.command, spawnSpec.args, { cwd, stdio: ["ignore", "pipe", "pipe"], env: spawnEnv });
 		let stdout = "";
+		let stderr = "";
 
 		child.stdout.on("data", (chunk: Buffer) => {
 			const text = chunk.toString();
@@ -118,17 +119,19 @@ function runPiStreaming(
 		});
 
 		child.stderr.on("data", (chunk: Buffer) => {
-			outputStream.write(chunk.toString());
+			const text = chunk.toString();
+			stderr += text;
+			outputStream.write(text);
 		});
 
 		child.on("close", (exitCode) => {
 			outputStream.end();
-			resolve({ stdout, exitCode });
+			resolve({ stdout, stderr, exitCode });
 		});
 
-		child.on("error", () => {
+		child.on("error", (err) => {
 			outputStream.end();
-			resolve({ stdout, exitCode: 1 });
+			resolve({ stdout, stderr: stderr || `Process spawn error: ${err.message}`, exitCode: 1 });
 		});
 	});
 }
@@ -393,6 +396,11 @@ async function runSingleStep(
 				"utf-8",
 			);
 		}
+	}
+
+	// Include stderr in output when process fails without stdout
+	if (result.exitCode !== 0 && !outputForSummary && result.stderr) {
+		outputForSummary = `[!] Process failed (exit ${result.exitCode}):\n${result.stderr.slice(0, 1000)}`;
 	}
 
 	return { agent: step.agent, output: outputForSummary, exitCode: result.exitCode, artifactPaths };
@@ -839,6 +847,31 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 	}
 }
 
+/** Write a failure result file so the parent process knows what happened. */
+function writeFailureResult(resultPath: string | undefined, id: string, error: unknown): void {
+	if (!resultPath) return;
+	try {
+		const errMsg = error instanceof Error ? `${error.message}\n${error.stack || ""}` : String(error);
+		fs.mkdirSync(path.dirname(resultPath), { recursive: true });
+		fs.writeFileSync(
+			resultPath,
+			JSON.stringify({
+				id,
+				agent: "unknown",
+				success: false,
+				summary: `Runner crashed: ${errMsg.slice(0, 1000)}`,
+				results: [],
+				exitCode: 1,
+				timestamp: Date.now(),
+				error: errMsg.slice(0, 2000),
+			}),
+		);
+	} catch {
+		// Last resort — at least log it
+		console.error(`Failed to write failure result to ${resultPath}`);
+	}
+}
+
 const configArg = process.argv[2];
 if (configArg) {
 	try {
@@ -849,6 +882,7 @@ if (configArg) {
 		} catch {}
 		runSubagent(config).catch((runErr) => {
 			console.error("Subagent runner error:", runErr);
+			writeFailureResult(config.resultPath, config.id, runErr);
 			process.exit(1);
 		});
 	} catch (err) {
@@ -866,6 +900,7 @@ if (configArg) {
 			const config = JSON.parse(input) as SubagentRunConfig;
 			runSubagent(config).catch((runErr) => {
 				console.error("Subagent runner error:", runErr);
+				writeFailureResult(config.resultPath, config.id, runErr);
 				process.exit(1);
 			});
 		} catch (err) {

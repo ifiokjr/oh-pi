@@ -679,13 +679,17 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 						antId: "queen",
 						antCaste: caste,
 						taskId: task.id,
-						content: `Failed: ${task.title} — ${String(e).slice(0, 100)}`,
+						content: `Failed: ${task.title} — ${String(e).slice(0, 300)}`,
 						files: task.files,
 						strength: warnStrength,
 						createdAt: Date.now(),
 					});
 				}
-				nest.updateTaskStatus(task.id, "failed", undefined, String(e));
+				// Preserve full error with stack trace for debugging
+				const fullError = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
+				nest.updateTaskStatus(task.id, "failed", undefined, fullError.slice(0, 2000));
+				// Surface the failure so it's not silent
+				emitSignal("working", `Task failed: ${task.title.slice(0, 60)} — ${errStr.slice(0, 120)}`);
 
 				// Bio 6: Corpse cleanup — error pattern tracking + diagnostic task
 				const pattern = classifyError(errStr);
@@ -694,7 +698,7 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 				for (const f of task.files) {
 					entry.files.add(f);
 				}
-				entry.errors.push(errStr.slice(0, 200));
+				entry.errors.push(errStr.slice(0, 500));
 				errorPatterns.set(pattern, entry);
 
 				if (entry.count >= 2 && entry.files.size > 0) {
@@ -971,10 +975,14 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		}
 
 		if (!plan.ok) {
+			const intel = collectScoutIntelligence(nest, 2000);
+			const issueDetail = plan.issues.join(", ");
+			const warningDetail = plan.warnings.length > 0 ? ` | warnings: ${plan.warnings.join(", ")}` : "";
+			const failureContext = `No valid execution plan after ${recoveryRound} recovery rounds. Issues: ${issueDetail}${warningDetail}. Scout intel (${intel.length} chars): ${intel.slice(0, 300)}`;
 			nest.updateState({ status: "failed", finishedAt: Date.now() });
 			const finalState = nest.getState();
 			callbacks.onComplete?.(finalState);
-			emitSignal("failed", `No valid execution plan: ${plan.issues.slice(0, 3).join(", ")}`);
+			emitSignal("failed", failureContext.slice(0, 500));
 			return finalState;
 		}
 
@@ -1027,7 +1035,10 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 			const result = await runAntWave({ ...waveBase, caste: "worker" });
 			if (result === "budget") {
 				nest.updateState({ status: "budget_exceeded", finishedAt: Date.now() });
-				emitSignal("budget_exceeded", "Budget exhausted");
+				emitSignal(
+					"budget_exceeded",
+					`Budget exhausted: ${updateMetrics(nest).tasksDone}/${updateMetrics(nest).tasksTotal} tasks completed before limit`,
+				);
 				const budgetState = nest.getState();
 				callbacks.onComplete?.(budgetState);
 				return budgetState;
@@ -1061,7 +1072,10 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 					const result = await runAntWave({ ...waveBase, caste: "worker" });
 					if (result === "budget") {
 						nest.updateState({ status: "budget_exceeded", finishedAt: Date.now() });
-						emitSignal("budget_exceeded", "Budget exhausted");
+						emitSignal(
+							"budget_exceeded",
+							`Budget exhausted: ${updateMetrics(nest).tasksDone}/${updateMetrics(nest).tasksTotal} tasks completed before limit`,
+						);
 						const budgetState = nest.getState();
 						callbacks.onComplete?.(budgetState);
 						return budgetState;
@@ -1109,10 +1123,12 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		emitSignal("done", `${finalMetrics.tasksDone}/${finalMetrics.tasksTotal} tasks done`);
 		return finalState;
 	} catch (e) {
+		const fullError = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
 		nest.updateState({ status: "failed", finishedAt: Date.now() });
 		const failState = nest.getState();
 		callbacks.onComplete?.(failState);
-		emitSignal("failed", String(e).slice(0, 100));
+		const m = failState.metrics;
+		emitSignal("failed", `Colony crashed (${m.tasksDone}/${m.tasksTotal} done): ${fullError.slice(0, 500)}`);
 		return failState;
 	} finally {
 		if (ownsUsageLimitsTracker) {
@@ -1190,7 +1206,10 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 			const result = await runAntWave({ ...waveBase, caste: "worker" });
 			if (result === "budget") {
 				nest.updateState({ status: "budget_exceeded", finishedAt: Date.now() });
-				emitSignal("budget_exceeded", "Budget exhausted");
+				emitSignal(
+					"budget_exceeded",
+					`Budget exhausted: ${updateMetrics(nest).tasksDone}/${updateMetrics(nest).tasksTotal} tasks completed before limit`,
+				);
 				const s = nest.getState();
 				callbacks.onComplete?.(s);
 				return s;
@@ -1228,10 +1247,12 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		emitSignal("done", `Resumed: ${finalMetrics.tasksDone}/${finalMetrics.tasksTotal} tasks done`);
 		return finalState;
 	} catch (e) {
+		const fullError = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
 		nest.updateState({ status: "failed", finishedAt: Date.now() });
 		const failState = nest.getState();
 		callbacks.onComplete?.(failState);
-		emitSignal("failed", String(e).slice(0, 100));
+		const m = failState.metrics;
+		emitSignal("failed", `Colony crashed (${m.tasksDone}/${m.tasksTotal} done): ${fullError.slice(0, 500)}`);
 		return failState;
 	} finally {
 		if (ownsUsageLimitsTracker) {

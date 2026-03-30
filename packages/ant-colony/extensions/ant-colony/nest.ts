@@ -458,14 +458,33 @@ export class Nest {
 	 * the timeout (3s) is reached. Stale locks (>30s old or from dead
 	 * processes) are automatically broken.
 	 */
+	/** Extract the `code` property from a filesystem error, if present. */
+	private fsErrorCode(error: unknown): string | undefined {
+		return typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined;
+	}
+
+	/** Whether the error is a transient directory-missing error that can be retried. */
+	private isDirectoryMissingError(error: unknown): boolean {
+		return this.fsErrorCode(error) === "ENOENT";
+	}
+
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Lock acquisition requires spin-wait + stale-lock recovery + directory recovery.
 	private withStateLock<T>(fn: () => T): T {
 		const start = Date.now();
 		while (true) {
 			try {
+				// Ensure the colony storage directory still exists (it may have
+				// been cleaned up mid-run by worktree teardown or another process).
+				fs.mkdirSync(path.dirname(this.lockFile), { recursive: true });
 				fs.writeFileSync(this.lockFile, `${process.pid}:${Date.now()}`, { flag: "wx" });
 				break;
 			} catch (error) {
 				if (!this.isLockContentionError(error)) {
+					// ENOENT can occur if the directory was removed between
+					// mkdirSync and writeFileSync — retry instead of crashing.
+					if (this.isDirectoryMissingError(error) && Date.now() - start < STATE_LOCK_WAIT_MS) {
+						continue;
+					}
 					throw new Error(
 						`[Nest] failed to acquire state lock at ${this.lockFile}: ${error instanceof Error ? error.message : String(error)}`,
 					);

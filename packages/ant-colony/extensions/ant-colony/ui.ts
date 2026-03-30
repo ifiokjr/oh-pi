@@ -185,6 +185,6 @@ export function buildReport(state: ColonyState): string {
 		...state.tasks.filter((t) => t.status === "done").map((t) => `- ${checkMark()} **${t.title}**`),
 		...state.tasks
 			.filter((t) => t.status === "failed")
-			.map((t) => `- ${crossMark()} **${t.title}** — ${t.error?.slice(0, 80) || "unknown"}`),
+			.map((t) => `- ${crossMark()} **${t.title}** — ${t.error?.slice(0, 200) || "unknown"}`),
 	].join("\n");
 }

@@ -88,6 +88,10 @@ export interface SingleResult {
 	usage: Usage;
 	model?: string;
 	error?: string;
+	/** Whether the subagent was aborted via signal (vs failed naturally). */
+	aborted?: boolean;
+	/** Number of unparseable JSONL lines received from the subprocess. */
+	parseErrors?: number;
 	sessionFile?: string;
 	skills?: string[];
 	skillsWarning?: string;

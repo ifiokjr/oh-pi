@@ -327,7 +327,10 @@ export async function runSync(
 					}
 					scheduleUpdate();
 				}
-			} catch {}
+			} catch {
+				// Count unparseable lines — corrupted output shouldn't be silently lost
+				result.parseErrors = (result.parseErrors ?? 0) + 1;
+			}
 		};
 
 		let stderrBuf = "";
@@ -354,17 +357,31 @@ export async function runSync(
 			if (code !== 0 && stderrBuf.trim() && !result.error) {
 				result.error = stderrBuf.trim();
 			}
+			// Provide a fallback error for non-zero exits with no error details
+			if (code !== 0 && !result.error) {
+				result.error = `Subagent process exited with code ${code} (no stderr output captured)`;
+			}
 			resolve(code ?? 0);
 		});
-		proc.on("error", () => resolve(1));
+		proc.on("error", (err) => {
+			result.error = result.error || `Subagent process error: ${err.message}`;
+			resolve(1);
+		});
 
 		if (signal) {
 			const kill = () => {
 				proc.kill("SIGTERM");
 				setTimeout(() => !proc.killed && proc.kill("SIGKILL"), 3000);
 			};
-			if (signal.aborted) kill();
-			else signal.addEventListener("abort", kill, { once: true });
+			if (signal.aborted) {
+				kill();
+				result.aborted = true;
+			} else {
+				signal.addEventListener("abort", () => {
+					result.aborted = true;
+					kill();
+				}, { once: true });
+			}
 		}
 	});
 
@@ -377,7 +394,8 @@ export async function runSync(
 	if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
 	result.exitCode = exitCode;
 
-	if (exitCode === 0 && !result.error) {
+	// Check for internal errors even when exit code is 0 (or non-zero without error details)
+	if (!result.error || exitCode === 0) {
 		const errInfo = detectSubagentError(result.messages);
 		if (errInfo.hasError) {
 			result.exitCode = errInfo.exitCode ?? 1;

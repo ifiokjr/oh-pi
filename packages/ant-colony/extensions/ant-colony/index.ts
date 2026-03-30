@@ -507,9 +507,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				const icon = ant.status === "done" ? checkMark() : crossMark();
 				const progress = m ? `${m.tasksDone}/${m.tasksTotal}` : "";
 				const cost = m ? formatCost(m.totalCost) : "";
+				const errorSuffix = ant.status !== "done" && task.error ? ` — ${task.error.slice(0, 150)}` : "";
 				pushLog(colony, {
 					level: ant.status === "done" ? "info" : "warning",
-					text: `${icon} ${task.title.slice(0, 80)} (${progress}${cost ? `, ${cost}` : ""})`,
+					text: `${icon} ${task.title.slice(0, 120)} (${progress}${cost ? `, ${cost}` : ""})${errorSuffix}`,
 				});
 				pi.sendMessage(
 					{
@@ -632,7 +633,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				});
 			})
 			.catch((e) => {
-				pushLog(colony, { level: "error", text: `CRASHED · ${String(e).slice(0, 120)}` });
+				const crashDetail = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
+				pushLog(colony, { level: "error", text: `CRASHED · ${crashDetail.slice(0, 500)}` });
 				cleanupWorkspace("crash");
 				colonies.delete(colonyId);
 				if (colonies.size === 0) {
