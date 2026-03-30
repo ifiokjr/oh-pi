@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.ts";
+import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
+import autoUpdateExtension from "./auto-update.js";
 import btwExtension from "./btw.js";
+import safeGuardExtension from "./safe-guard.js";
 import schedulerExtension from "./scheduler.js";
+import usageTrackerExtension from "./usage-tracker.js";
 
 describe("extensions runtime smoke tests", () => {
 	it("registers scheduler commands and handles a basic tool flow", async () => {
@@ -27,5 +30,35 @@ describe("extensions runtime smoke tests", () => {
 
 		await harness.commands.get("btw").handler("what changed?", harness.ctx);
 		expect(harness.notifications.some((item) => item.msg.includes("No active model selected"))).toBe(true);
+	});
+
+	it("registers usage tracker commands, tool, and shortcut without crashing", () => {
+		const harness = createExtensionHarness();
+		usageTrackerExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+
+		expect(harness.commands.has("usage")).toBe(true);
+		expect(harness.commands.has("usage-toggle")).toBe(true);
+		expect(harness.commands.has("usage-refresh")).toBe(true);
+		expect(harness.tools.has("usage_report")).toBe(true);
+		expect(harness.shortcuts.has("ctrl+u")).toBe(true);
+	});
+
+	it("registers auto-update startup hook without crashing", () => {
+		const harness = createExtensionHarness();
+		autoUpdateExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+		expect(harness.notifications.length).toBeGreaterThanOrEqual(0);
+	});
+
+	it("blocks protected writes in headless mode via safe-guard", async () => {
+		const harness = createExtensionHarness();
+		safeGuardExtension(harness.pi as never);
+		const results = await harness.emitAsync(
+			"tool_call",
+			{ toolName: "write", input: { path: ".env.local" } },
+			{ ...harness.ctx, hasUI: false },
+		);
+		expect(results[0]).toEqual({ block: true, reason: "Protected path: .env" });
 	});
 });

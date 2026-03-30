@@ -1,59 +1,59 @@
 import { EventEmitter } from "node:events";
 
 export function createExtensionHarness() {
-	const handlers = new Map<string, Array<(...args: any[]) => any>>();
-	const tools = new Map<string, any>();
-	const commands = new Map<string, any>();
-	const flags = new Map<string, any>();
-	const messages: any[] = [];
-	const userMessages: string[] = [];
-	const notifications: Array<{ msg: string; type: string }> = [];
-	const statusMap = new Map<string, any>();
-	const shortcuts = new Map<string, any>();
-	const messageRenderers = new Map<string, any>();
+	const handlers = new Map();
+	const tools = new Map();
+	const commands = new Map();
+	const flags = new Map();
+	const messages = [];
+	const userMessages = [];
+	const notifications = [];
+	const statusMap = new Map();
+	const shortcuts = new Map();
+	const messageRenderers = new Map();
 	const eventBus = new EventEmitter();
 
 	const pi = {
 		events: {
-			on(event: string, handler: (...args: any[]) => any) {
+			on(event, handler) {
 				eventBus.on(event, handler);
 			},
-			emit(event: string, ...args: any[]) {
+			emit(event, ...args) {
 				eventBus.emit(event, ...args);
 			},
 		},
-		on(event: string, handler: (...args: any[]) => any) {
+		on(event, handler) {
 			if (!handlers.has(event)) {
 				handlers.set(event, []);
 			}
-			handlers.get(event)!.push(handler);
+			handlers.get(event).push(handler);
 		},
-		registerTool(tool: any) {
+		registerTool(tool) {
 			tools.set(tool.name, tool);
 		},
-		registerCommand(name: string, spec: any) {
+		registerCommand(name, spec) {
 			commands.set(name, spec);
 		},
-		registerFlag(name: string, spec: any) {
+		registerFlag(name, spec) {
 			flags.set(name, spec);
 		},
-		registerShortcut(name: string, spec: any) {
+		registerShortcut(name, spec) {
 			shortcuts.set(name, spec);
 		},
-		registerMessageRenderer(name: string, renderer: any) {
+		registerMessageRenderer(name, renderer) {
 			messageRenderers.set(name, renderer);
 		},
-		sendMessage(message: any) {
+		sendMessage(message) {
 			messages.push(message);
 		},
-		sendUserMessage(message: string) {
+		sendUserMessage(message) {
 			userMessages.push(message);
 		},
 		appendEntry() {},
 		getThinkingLevel() {
 			return "low";
 		},
-		getFlag(name: string) {
+		getFlag(name) {
 			return flags.get(name)?.default;
 		},
 	};
@@ -85,10 +85,10 @@ export function createExtensionHarness() {
 		switchSession: async () => ({ cancelled: false }),
 		reload: async () => {},
 		ui: {
-			notify(msg: string, type: string) {
+			notify(msg, type) {
 				notifications.push({ msg, type });
 			},
-			setStatus(key: string, value: any) {
+			setStatus(key, value) {
 				if (value === undefined) {
 					statusMap.delete(key);
 				} else {
@@ -116,12 +116,12 @@ export function createExtensionHarness() {
 		statusMap,
 		shortcuts,
 		messageRenderers,
-		emit(event: string, ...args: any[]) {
+		emit(event, ...args) {
 			for (const handler of handlers.get(event) ?? []) {
 				handler(...args);
 			}
 		},
-		async emitAsync(event: string, ...args: any[]) {
+		async emitAsync(event, ...args) {
 			const results = [];
 			for (const handler of handlers.get(event) ?? []) {
 				results.push(await handler(...args));

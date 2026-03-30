@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.ts";
+import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
 const tempDirs: string[] = [];
 let previousHome: string | undefined;
