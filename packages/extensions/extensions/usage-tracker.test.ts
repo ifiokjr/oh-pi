@@ -57,6 +57,7 @@ vi.stubGlobal("fetch", mockFetch);
 // ─── Auth helpers ───────────────────────────────────────────────────────────
 
 const AUTH_JSON_PATH = "/mock-home/.pi/agent/auth.json";
+const RATE_LIMIT_CACHE_PATH = "/mock-home/.pi/agent/usage-tracker-rate-limits.json";
 
 function makeAuthJson(overrides: Record<string, any> = {}) {
 	return JSON.stringify({
@@ -84,6 +85,32 @@ function makeAuthJson(overrides: Record<string, any> = {}) {
 			email: "test@example.com",
 		},
 		...overrides,
+	});
+}
+
+function makeRateLimitCacheJson(overrides: Record<string, any> = {}) {
+	return JSON.stringify({
+		version: 1,
+		providers: {
+			anthropic: {
+				provider: "anthropic",
+				windows: [
+					{
+						label: "7-day Sonnet",
+						percentLeft: 72,
+						resetDescription: "in 6d",
+						windowMinutes: 10_080,
+					},
+				],
+				credits: null,
+				account: null,
+				plan: "OAuth",
+				note: null,
+				probedAt: Date.now() - 60_000,
+				error: null,
+			},
+			...overrides,
+		},
 	});
 }
 
@@ -696,6 +723,37 @@ describe("usage-tracker extension", () => {
 			expect(text).toContain("60% left");
 		});
 
+		it("restores cached Anthropic windows across restarts when the live probe is rate-limited", async () => {
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path) === AUTH_JSON_PATH || String(path) === RATE_LIMIT_CACHE_PATH) {
+					return true;
+				}
+				return false;
+			});
+			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path) === AUTH_JSON_PATH) {
+					return makeAuthJson();
+				}
+				if (String(path) === RATE_LIMIT_CACHE_PATH) {
+					return makeRateLimitCacheJson();
+				}
+				return "{}";
+			});
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
+			const text = result.content[0].text;
+
+			expect(text).toContain("Anthropic Rate Limits:");
+			expect(text).toContain("7-day Sonnet");
+			expect(text).toContain("72% left");
+			expect(text).toContain("Showing last known window values");
+		});
+
 		it("shows OpenAI windows from the ChatGPT usage endpoint", async () => {
 			ctx.model = { id: "gpt-4o" } as any;
 			mockFetch.mockImplementation((url: string) => {
@@ -905,6 +963,42 @@ describe("usage-tracker extension", () => {
 			const rendered = component?.render(200).join("\n") ?? "";
 			expect(rendered).toContain("$");
 			expect(rendered).toContain("30d:");
+		});
+
+		it("shows cached Anthropic windows in the widget when live probing is rate-limited", () => {
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path) === AUTH_JSON_PATH || String(path) === RATE_LIMIT_CACHE_PATH) {
+					return true;
+				}
+				return false;
+			});
+			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path) === AUTH_JSON_PATH) {
+					return makeAuthJson();
+				}
+				if (String(path) === RATE_LIMIT_CACHE_PATH) {
+					return makeRateLimitCacheJson();
+				}
+				return "{}";
+			});
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						render: (width: number) => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
+			const rendered = component?.render(200).join("\n") ?? "";
+			expect(rendered).toContain("Anthropic");
+			expect(rendered).toContain("72%");
 		});
 
 		it("truncates widget output to terminal width", () => {

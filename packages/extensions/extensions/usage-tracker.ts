@@ -116,6 +116,10 @@ function getUsageHistoryPath(): string {
 	return join(getAgentDir(), "usage-tracker-history.json");
 }
 
+function getRateLimitCachePath(): string {
+	return join(getAgentDir(), "usage-tracker-rate-limits.json");
+}
+
 export default function usageTracker(pi: ExtensionAPI) {
 	// Unbind ctrl+u from deleteToLineStart so our shortcut wins cleanly
 	ensureCtrlUUnbound();
@@ -144,6 +148,8 @@ export default function usageTracker(pi: ExtensionAPI) {
 	const usageHistoryPath = getUsageHistoryPath();
 	/** Rolling history points (cost + timestamp), persisted on disk. */
 	const rollingHistory: HistoricalCostPoint[] = [];
+	/** Persistent cache of last known provider rate limits. */
+	const rateLimitCachePath = getRateLimitCachePath();
 
 	function pruneRollingHistory(now = Date.now()): void {
 		const cutoff = now - ROLLING_COST_WINDOW_MS;
@@ -209,7 +215,94 @@ export default function usageTracker(pi: ExtensionAPI) {
 		}
 	}
 
+	function normalizeProviderRateLimits(value: unknown): ProviderRateLimits | null {
+		if (!value || typeof value !== "object") {
+			return null;
+		}
+		const candidate = value as Partial<ProviderRateLimits> & { windows?: unknown };
+		if (!(candidate.provider === "anthropic" || candidate.provider === "openai" || candidate.provider === "google")) {
+			return null;
+		}
+		const windows = Array.isArray(candidate.windows)
+			? candidate.windows
+					.map((window) => {
+						if (!window || typeof window !== "object") {
+							return null;
+						}
+						const item = window as {
+							label?: unknown;
+							percentLeft?: unknown;
+							resetDescription?: unknown;
+							windowMinutes?: unknown;
+						};
+						if (typeof item.label !== "string") {
+							return null;
+						}
+						const percentLeft = Number(item.percentLeft);
+						if (!Number.isFinite(percentLeft)) {
+							return null;
+						}
+						const windowMinutes = item.windowMinutes == null ? null : Number(item.windowMinutes);
+						return {
+							label: item.label,
+							percentLeft: clampPercent(percentLeft),
+							resetDescription: typeof item.resetDescription === "string" ? item.resetDescription : null,
+							windowMinutes: Number.isFinite(windowMinutes) ? windowMinutes : null,
+						};
+					})
+					.filter((window): window is NonNullable<typeof window> => window !== null)
+			: [];
+		const probedAt = Number(candidate.probedAt);
+		return {
+			provider: candidate.provider,
+			windows,
+			credits: typeof candidate.credits === "number" && Number.isFinite(candidate.credits) ? candidate.credits : null,
+			account: typeof candidate.account === "string" ? candidate.account : null,
+			plan: typeof candidate.plan === "string" ? candidate.plan : null,
+			note: typeof candidate.note === "string" ? candidate.note : null,
+			probedAt: Number.isFinite(probedAt) ? probedAt : Date.now(),
+			error: typeof candidate.error === "string" ? candidate.error : null,
+		};
+	}
+
+	function loadRateLimitCache(): void {
+		try {
+			if (!existsSync(rateLimitCachePath)) {
+				return;
+			}
+			const raw = JSON.parse(readFileSync(rateLimitCachePath, "utf-8")) as { providers?: unknown };
+			if (!raw.providers || typeof raw.providers !== "object") {
+				return;
+			}
+			for (const value of Object.values(raw.providers)) {
+				const providerRateLimits = normalizeProviderRateLimits(value);
+				if (!providerRateLimits) {
+					continue;
+				}
+				rateLimits.set(providerRateLimits.provider, providerRateLimits);
+			}
+		} catch {
+			// Non-critical. The next live probe will repopulate provider data.
+		}
+	}
+
+	function saveRateLimitCache(): void {
+		try {
+			const dir = dirname(rateLimitCachePath);
+			if (!existsSync(dir)) {
+				mkdirSync(dir, { recursive: true });
+			}
+			const providers = Object.fromEntries(
+				Array.from(rateLimits.entries()).map(([provider, value]) => [provider, value]),
+			);
+			writeFileSync(rateLimitCachePath, `${JSON.stringify({ version: 1, providers }, null, 2)}\n`, "utf-8");
+		} catch {
+			// Non-critical. We can still rely on in-memory provider data.
+		}
+	}
+
 	loadRollingHistory();
+	loadRateLimitCache();
 
 	// ─── Data collection ──────────────────────────────────────────────────
 
@@ -478,6 +571,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 					probedAt: now,
 					error: null,
 				});
+				saveRateLimitCache();
 				lastProbeTime.set(provider, now);
 				return;
 			}
@@ -495,6 +589,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 					probedAt: now,
 					error: `${providerDisplayName(provider)} token refresh failed \u2014 re-authenticate with pi login.`,
 				});
+				saveRateLimitCache();
 				lastProbeTime.set(provider, now);
 				return;
 			}
@@ -521,6 +616,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 			}
 
 			rateLimits.set(provider, limits);
+			saveRateLimitCache();
 			lastProbeTime.set(provider, Date.now());
 		} catch {
 			// Probe failed — keep stale data if any
