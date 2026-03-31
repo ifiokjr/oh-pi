@@ -79,10 +79,19 @@ async function resolveActiveFeatureName(
 	ctx: ExtensionCommandContext,
 	repoRoot: string,
 	currentBranch: string,
+	hasGit = true,
 ): Promise<string | undefined> {
 	const featureFromBranch = resolveFeatureFromBranch(repoRoot, currentBranch);
 	if (featureFromBranch) {
 		return featureFromBranch;
+	}
+
+	// When git is available, the current branch is the source of truth for the
+	// active feature — matching upstream spec-kit behavior.  The specs/ directory
+	// scan is only a fallback for non-git repositories where branch detection is
+	// unavailable.
+	if (hasGit) {
+		return undefined;
 	}
 
 	const features = listFeatureDirs(repoRoot);
@@ -103,8 +112,9 @@ async function resolveFeaturePaths(
 	ctx: ExtensionCommandContext,
 	repoRoot: string,
 	currentBranch: string,
+	hasGit = true,
 ): Promise<WorkflowPaths | undefined> {
-	const featureName = await resolveActiveFeatureName(ctx, repoRoot, currentBranch);
+	const featureName = await resolveActiveFeatureName(ctx, repoRoot, currentBranch, hasGit);
 	if (!featureName) {
 		ctx.ui.notify("No active feature found. Run /spec specify <feature description> first.", "warning");
 		return undefined;
@@ -178,8 +188,9 @@ async function handleStatus(
 	ctx: ExtensionCommandContext,
 	repoRoot: string,
 	currentBranch: string,
+	hasGit: boolean,
 ): Promise<void> {
-	const activeFeature = await resolveActiveFeatureName(ctx, repoRoot, currentBranch);
+	const activeFeature = await resolveActiveFeatureName(ctx, repoRoot, currentBranch, hasGit);
 	sendReport(
 		pi,
 		formatWorkflowStatus(
@@ -198,8 +209,9 @@ async function handleNext(
 	ctx: ExtensionCommandContext,
 	repoRoot: string,
 	currentBranch: string,
+	hasGit: boolean,
 ): Promise<void> {
-	const activeFeature = await resolveActiveFeatureName(ctx, repoRoot, currentBranch);
+	const activeFeature = await resolveActiveFeatureName(ctx, repoRoot, currentBranch, hasGit);
 	const status = buildWorkflowStatus({
 		repoRoot,
 		currentBranch,
@@ -287,8 +299,8 @@ async function handleWorkflowStep(
 
 	const featurePaths =
 		step === "constitution"
-			? buildWorkflowPaths(env.repoRoot, await resolveActiveFeatureName(ctx, env.repoRoot, env.currentBranch))
-			: await resolveFeaturePaths(ctx, env.repoRoot, env.currentBranch);
+			? buildWorkflowPaths(env.repoRoot, await resolveActiveFeatureName(ctx, env.repoRoot, env.currentBranch, env.hasGit))
+			: await resolveFeaturePaths(ctx, env.repoRoot, env.currentBranch, env.hasGit);
 	ensureWorkflowScaffold(featurePaths ?? env.basePaths);
 	if (!featurePaths) {
 		return;
@@ -347,11 +359,11 @@ export default function specExtension(pi: ExtensionAPI) {
 				return;
 			}
 			if (subcommand === "status") {
-				await handleStatus(pi, ctx, env.repoRoot, env.currentBranch);
+				await handleStatus(pi, ctx, env.repoRoot, env.currentBranch, env.hasGit);
 				return;
 			}
 			if (subcommand === "next") {
-				await handleNext(pi, ctx, env.repoRoot, env.currentBranch);
+				await handleNext(pi, ctx, env.repoRoot, env.currentBranch, env.hasGit);
 				return;
 			}
 			if (!isWorkflowStep(subcommand)) {
