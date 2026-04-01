@@ -16,6 +16,7 @@ const DEFAULT_SAMPLE_INTERVAL_MS = 5_000;
 const MIN_SAMPLE_INTERVAL_MS = 1_000;
 const MAX_SAMPLE_INTERVAL_MS = 60_000;
 const ALERT_COOLDOWN_MS = 45_000;
+const ALERT_NOTIFICATION_LIMIT = 2;
 const AUTO_SAFE_MODE_AFTER_CONSECUTIVE_ALERTS = 2;
 const HISTOGRAM_RESOLUTION_MS = 20;
 const SAMPLE_HISTORY_LIMIT = 60;
@@ -356,6 +357,8 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	let latestSample: WatchdogSample | null = null;
 	let lastAlertAt = 0;
 	let consecutiveAlerts = 0;
+	let alertNotificationCount = 0;
+	let latestAlertMessage: string | null = null;
 	let enabled = config.enabled !== false;
 	let timer: ReturnType<typeof setInterval> | null = null;
 	let lastCpuUsage = process.cpuUsage();
@@ -412,11 +415,24 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 
 		consecutiveAlerts += 1;
 		pushBounded(alertHistory, alert, ALERT_HISTORY_LIMIT);
-		setAlertStatus(`watchdog: ${alert.reasons.join(", ")}`);
+		latestAlertMessage = `watchdog: ${alert.reasons.join(", ")}`;
+		setAlertStatus(latestAlertMessage);
 
-		if (activeCtx?.hasUI && now - lastAlertAt >= ALERT_COOLDOWN_MS) {
+		if (
+			activeCtx?.hasUI &&
+			now - lastAlertAt >= ALERT_COOLDOWN_MS &&
+			alertNotificationCount < ALERT_NOTIFICATION_LIMIT
+		) {
 			lastAlertAt = now;
-			activeCtx.ui.notify(formatWatchdogAlert(alert), levelForAlert(alert));
+			alertNotificationCount += 1;
+			if (alertNotificationCount >= ALERT_NOTIFICATION_LIMIT) {
+				activeCtx.ui.notify(
+					`${formatWatchdogAlert(alert)} Further alerts suppressed — check status bar or /watchdog overlay.`,
+					levelForAlert(alert),
+				);
+			} else {
+				activeCtx.ui.notify(formatWatchdogAlert(alert), levelForAlert(alert));
+			}
 		}
 
 		if (
@@ -466,6 +482,8 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		resetCounters();
 		latestSample = null;
 		lastAlertAt = 0;
+		alertNotificationCount = 0;
+		latestAlertMessage = null;
 		sampleHistory.length = 0;
 		alertHistory.length = 0;
 		setAlertStatus(undefined);
