@@ -416,6 +416,11 @@ export class SchedulerRuntime {
 		if (!this.runtimeCtx?.hasUI) {
 			return;
 		}
+		// Clear the stale-task status hint when no tasks need review.
+		const staleCount = Array.from(this.tasks.values()).filter((t) => t.enabled && t.resumeRequired).length;
+		if (staleCount === 0) {
+			this.runtimeCtx.ui.setStatus("pi-scheduler-stale", undefined);
+		}
 		if (this.tasks.size === 0) {
 			this.runtimeCtx.ui.setStatus("pi-scheduler", undefined);
 			return;
@@ -1372,9 +1377,15 @@ export class SchedulerRuntime {
 		const details = Array.from(counts.entries())
 			.map(([reason, count]) => `${count} ${this.resumeReasonLabel(reason)}`)
 			.join(", ");
+		const count = dueTasks.length;
 		this.runtimeCtx.ui.notify(
-			`Scheduler restored ${dueTasks.length} task${dueTasks.length === 1 ? "" : "s"} requiring review (${details}). They will not run automatically; use /schedule to review, adopt, reschedule, disable, or delete them.`,
+			`Scheduler: ${count} stale task${count === 1 ? "" : "s"} need review (${details}). Use /schedule to manage them.`,
 			"warning",
+		);
+		// Persist a compact hint in the status bar so users see it without repeated notifications.
+		this.runtimeCtx.ui.setStatus(
+			"pi-scheduler-stale",
+			`⚠ ${count} stale task${count === 1 ? "" : "s"} — /schedule to review`,
 		);
 	}
 

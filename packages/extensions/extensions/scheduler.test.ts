@@ -2123,7 +2123,9 @@ describe("event wiring", () => {
 		const ctx = createMockCtx();
 		pi._emit("session_start", { type: "session_start" }, ctx);
 		await Promise.resolve();
-		expect(ctx._notifications.some((n: any) => n.msg.includes("will not run automatically"))).toBe(true);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review"))).toBe(
+			true,
+		);
 		expect(pi._userMessages).toHaveLength(0);
 	});
 
