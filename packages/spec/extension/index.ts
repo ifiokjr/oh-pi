@@ -299,7 +299,10 @@ async function handleWorkflowStep(
 
 	const featurePaths =
 		step === "constitution"
-			? buildWorkflowPaths(env.repoRoot, await resolveActiveFeatureName(ctx, env.repoRoot, env.currentBranch, env.hasGit))
+			? buildWorkflowPaths(
+					env.repoRoot,
+					await resolveActiveFeatureName(ctx, env.repoRoot, env.currentBranch, env.hasGit),
+				)
 			: await resolveFeaturePaths(ctx, env.repoRoot, env.currentBranch, env.hasGit);
 	ensureWorkflowScaffold(featurePaths ?? env.basePaths);
 	if (!featurePaths) {

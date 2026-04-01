@@ -113,6 +113,6 @@ function updateStatus(
 	server: PiWebServer,
 ): void {
 	const count = server.connectedClients;
-	const text = `🌐 Remote: ${count} client${count !== 1 ? "s" : ""}`;
+	const text = `🌐 Remote: ${count} client${count === 1 ? "" : "s"}`;
 	ctx.ui.setStatus("remote", text);
 }

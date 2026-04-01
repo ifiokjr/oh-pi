@@ -157,7 +157,7 @@ export default function (pi: ExtensionAPI) {
 					clearTimeout(timer);
 
 					const output = (stdout + stderr).trim();
-					const exitInfo = code !== 0 ? `\n[Exit code: ${code}]` : "";
+					const exitInfo = code === 0 ? "" : `\n[Exit code: ${code}]`;
 					resolve({ content: [{ type: "text", text: output + exitInfo }], details: {} });
 				});
 

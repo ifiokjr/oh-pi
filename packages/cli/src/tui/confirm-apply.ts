@@ -127,7 +127,7 @@ export async function confirmApply(config: OhPConfig, env: EnvInfo) {
 		`${chalk.gray(`${resolvePiAgentDir()}/`)}`,
 		`${chalk.gray("├── ")}auth.json ${chalk.dim("")}`,
 		`${chalk.gray("├── ")}settings.json`,
-		...(config.keybindings !== "default" ? [`${chalk.gray("├── ")}keybindings.json`] : []),
+		...(config.keybindings === "default" ? [] : [`${chalk.gray("├── ")}keybindings.json`]),
 		`${chalk.gray("├── ")}AGENTS.md ${chalk.dim(config.agents)}`,
 		...(config.extensions.length > 0
 			? [`${chalk.gray("├── ")}extensions/ ${chalk.dim(`${config.extensions.length} items`)}`]

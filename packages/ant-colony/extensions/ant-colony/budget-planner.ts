@@ -328,7 +328,7 @@ export function planBudget(
 	const severity = classifySeverity(lowestRateLimitPct, costSpent, maxCost);
 
 	// Remaining budget for allocation
-	const remainingBudget = maxCost != null ? Math.max(0, maxCost - costSpent) : Number.POSITIVE_INFINITY;
+	const remainingBudget = maxCost == null ? Number.POSITIVE_INFINITY : Math.max(0, maxCost - costSpent);
 
 	// Recommended max concurrency (min of severity cap and hardware cap)
 	const recommendedMaxConcurrency = Math.min(CONCURRENCY_CAPS[severity], concurrency.max);

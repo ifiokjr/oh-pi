@@ -463,7 +463,7 @@ function maybeAddOpenAIWhamWindow(
 	const labelSuffix = roundedWindowSeconds ? windowLabelFromSeconds(roundedWindowSeconds) : windowLabel;
 	const resetFromDuration = countdownFromSeconds(typed.reset_after_seconds);
 	const resetAtSeconds = parseFiniteNumber(typed.reset_at);
-	const resetFromTimestamp = resetAtSeconds !== null ? countdownFromSeconds(resetAtSeconds - Date.now() / 1000) : null;
+	const resetFromTimestamp = resetAtSeconds === null ? null : countdownFromSeconds(resetAtSeconds - Date.now() / 1000);
 
 	upsertWindow(result.windows, {
 		label: `${groupLabel} (${labelSuffix})`,
