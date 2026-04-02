@@ -55,16 +55,15 @@ Pi loads the raw TypeScript extensions from this directory.
 
 ## Scheduler ownership model
 
-`scheduler` now distinguishes between **instance-scoped** tasks and **workspace-scoped** tasks:
+<!-- {=extensionsSchedulerOwnershipDocs} -->
 
-- **Instance scope** is the default for `/loop`, `/remind`, and `schedule_prompt`.
-  - The task stays owned by the pi instance that created it.
-  - Opening a second pi instance in the same repo will **not** auto-run that task.
-  - Foreign tasks are restored for review instead of being dispatched automatically.
-- **Workspace scope** is opt-in for monitors that should survive instance changes in the same repo.
-  - Use `/loop --workspace ...`
-  - Use `/remind --workspace ...`
-  - Or use `schedule_prompt(..., { scope: "workspace" })`
+The scheduler distinguishes between instance-scoped tasks and workspace-scoped tasks. Instance
+scope is the default for `/loop`, `/remind`, and `schedule_prompt`, which means tasks stay owned by
+one pi instance and other instances restore them for review instead of auto-running them.
+Workspace scope is an explicit opt-in for shared CI/build/deploy monitors that should survive
+instance changes in the same repository.
+
+<!-- {/extensionsSchedulerOwnershipDocs} -->
 
 When another live instance already owns scheduler activity for the workspace, pi prompts before taking over. You can also manage ownership explicitly with:
 
@@ -73,6 +72,37 @@ When another live instance already owns scheduler activity for the workspace, pi
 - `/schedule clear-foreign`
 
 Use workspace scope sparingly for long-running shared checks like CI/build/deploy monitoring. For ordinary reminders and follow-ups, prefer the default instance scope.
+
+## Usage tracker
+
+<!-- {=extensionsUsageTrackerOverview} -->
+
+The usage-tracker extension is a CodexBar-inspired provider quota and cost monitor for pi. It
+shows provider-level rate limits for Anthropic, OpenAI, and Google using pi-managed auth, while
+also tracking per-model token usage and session costs locally.
+
+<!-- {/extensionsUsageTrackerOverview} -->
+
+<!-- {=extensionsUsageTrackerPersistenceDocs} -->
+
+Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot
+under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing
+recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
+
+<!-- {/extensionsUsageTrackerPersistenceDocs} -->
+
+<!-- {=extensionsUsageTrackerCommandsDocs} -->
+
+Key usage-tracker surfaces:
+
+- widget above the editor for at-a-glance quotas and session totals
+- `/usage` for the full dashboard overlay
+- `Ctrl+U` as a shortcut for the same overlay
+- `/usage-toggle` to show or hide the widget
+- `/usage-refresh` to force fresh provider probes
+- `usage_report` so the agent can answer quota and spend questions directly
+
+<!-- {/extensionsUsageTrackerCommandsDocs} -->
 
 ## Watchdog config
 
@@ -110,6 +140,18 @@ Example:
   }
 }
 ```
+
+### Watchdog alert behavior
+
+<!-- {=extensionsWatchdogAlertBehaviorDocs} -->
+
+The watchdog samples CPU, memory, and event-loop lag on an interval, records recent samples and
+alerts, and can escalate into safe mode automatically when repeated alerts indicate sustained UI
+churn or lag. Toast notifications are intentionally capped per session; ongoing watchdog state is
+kept visible in the status bar and the `/watchdog` overlay instead of repeatedly spamming the
+terminal.
+
+<!-- {/extensionsWatchdogAlertBehaviorDocs} -->
 
 ### Watchdog helper behavior
 

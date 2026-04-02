@@ -1,18 +1,27 @@
 /**
- * oh-pi Scheduler Extension
- *
- * Adds recurring checks (`/loop`), one-time reminders (`/remind`), and a
- * task manager (`/schedule`) to pi. Also exposes an LLM-callable tool
- * (`schedule_prompt`) so the agent can create/list/delete schedules in
- * natural language.
- *
- * Based on pi-scheduler by @manojlds (MIT).
- *
- * Tasks run only while pi is active and idle. State is persisted under
- * `~/.pi/agent/scheduler/.../scheduler.json` using a path that mirrors the
- * current workspace path. Overdue tasks restored from disk are surfaced for
- * manual review instead of auto-dispatching on session start.
- */
+oh-pi Scheduler Extension
+
+Based on pi-scheduler by @manojlds (MIT).
+
+<!-- {=extensionsSchedulerOverview} -->
+
+The scheduler extension adds recurring checks, one-time reminders, and the LLM-callable
+`schedule_prompt` tool so pi can schedule future follow-ups like PR, CI, build, or deployment
+checks. Tasks run only while pi is active and idle, and scheduler state is persisted in shared pi
+storage using a workspace-mirrored path.
+
+<!-- {/extensionsSchedulerOverview} -->
+
+<!-- {=extensionsSchedulerOwnershipDocs} -->
+
+The scheduler distinguishes between instance-scoped tasks and workspace-scoped tasks. Instance
+scope is the default for `/loop`, `/remind`, and `schedule_prompt`, which means tasks stay owned by
+one pi instance and other instances restore them for review instead of auto-running them.
+Workspace scope is an explicit opt-in for shared CI/build/deploy monitors that should survive
+instance changes in the same repository.
+
+<!-- {/extensionsSchedulerOwnershipDocs} -->
+*/
 
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";

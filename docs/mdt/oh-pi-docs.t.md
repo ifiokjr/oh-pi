@@ -268,3 +268,52 @@ CI runs `pnpm mdt check` so provider and consumer blocks stay in sync with the r
 version.
 
 <!-- {/repoMdtCiDocs} -->
+
+<!-- {@extensionsUsageTrackerOverview} -->
+
+The usage-tracker extension is a CodexBar-inspired provider quota and cost monitor for pi. It
+shows provider-level rate limits for Anthropic, OpenAI, and Google using pi-managed auth, while
+also tracking per-model token usage and session costs locally.
+
+<!-- {/extensionsUsageTrackerOverview} -->
+
+<!-- {@extensionsUsageTrackerPersistenceDocs} -->
+
+Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot
+under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing
+recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
+
+<!-- {/extensionsUsageTrackerPersistenceDocs} -->
+
+<!-- {@extensionsUsageTrackerCommandsDocs} -->
+
+Key usage-tracker surfaces:
+
+- widget above the editor for at-a-glance quotas and session totals
+- `/usage` for the full dashboard overlay
+- `Ctrl+U` as a shortcut for the same overlay
+- `/usage-toggle` to show or hide the widget
+- `/usage-refresh` to force fresh provider probes
+- `usage_report` so the agent can answer quota and spend questions directly
+
+<!-- {/extensionsUsageTrackerCommandsDocs} -->
+
+<!-- {@extensionsSchedulerOwnershipDocs} -->
+
+The scheduler distinguishes between instance-scoped tasks and workspace-scoped tasks. Instance
+scope is the default for `/loop`, `/remind`, and `schedule_prompt`, which means tasks stay owned by
+one pi instance and other instances restore them for review instead of auto-running them.
+Workspace scope is an explicit opt-in for shared CI/build/deploy monitors that should survive
+instance changes in the same repository.
+
+<!-- {/extensionsSchedulerOwnershipDocs} -->
+
+<!-- {@extensionsWatchdogAlertBehaviorDocs} -->
+
+The watchdog samples CPU, memory, and event-loop lag on an interval, records recent samples and
+alerts, and can escalate into safe mode automatically when repeated alerts indicate sustained UI
+churn or lag. Toast notifications are intentionally capped per session; ongoing watchdog state is
+kept visible in the status bar and the `/watchdog` overlay instead of repeatedly spamming the
+terminal.
+
+<!-- {/extensionsWatchdogAlertBehaviorDocs} -->

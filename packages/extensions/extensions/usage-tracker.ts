@@ -1,23 +1,35 @@
 /**
- * Usage Tracker Extension — Rate Limit & Cost Monitor for pi
- *
- * The **main feature** is showing **provider-level rate limits** by querying
- * provider APIs directly using pi-managed auth tokens stored in
- * `~/.pi/agent/auth.json`. Supports Anthropic, OpenAI, and Google providers.
- *
- * Also tracks per-model token usage and session costs locally.
- *
- * **Widget** (always visible above editor):
- *   Rate limit bars + session cost at a glance.
- *
- * **`/usage` command** (rich overlay):
- *   Full rate limit status, per-model token breakdown, cache stats, pace.
- *
- * **`usage_report` tool** (LLM-callable):
- *   Agent can generate a cost/usage report for the user on demand.
- *
- * **`Ctrl+U`** shortcut to open the overlay.
- */
+Usage Tracker Extension — Rate Limit & Cost Monitor for pi
+
+<!-- {=extensionsUsageTrackerOverview} -->
+
+The usage-tracker extension is a CodexBar-inspired provider quota and cost monitor for pi. It
+shows provider-level rate limits for Anthropic, OpenAI, and Google using pi-managed auth, while
+also tracking per-model token usage and session costs locally.
+
+<!-- {/extensionsUsageTrackerOverview} -->
+
+<!-- {=extensionsUsageTrackerPersistenceDocs} -->
+
+Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot
+under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing
+recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
+
+<!-- {/extensionsUsageTrackerPersistenceDocs} -->
+
+<!-- {=extensionsUsageTrackerCommandsDocs} -->
+
+Key usage-tracker surfaces:
+
+- widget above the editor for at-a-glance quotas and session totals
+- `/usage` for the full dashboard overlay
+- `Ctrl+U` as a shortcut for the same overlay
+- `/usage-toggle` to show or hide the widget
+- `/usage-refresh` to force fresh provider probes
+- `usage_report` so the agent can answer quota and spend questions directly
+
+<!-- {/extensionsUsageTrackerCommandsDocs} -->
+*/
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -116,6 +128,15 @@ function getUsageHistoryPath(): string {
 	return join(getAgentDir(), "usage-tracker-history.json");
 }
 
+/**
+<!-- {=extensionsUsageTrackerPersistenceDocs} -->
+
+Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot
+under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing
+recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
+
+<!-- {/extensionsUsageTrackerPersistenceDocs} -->
+*/
 function getRateLimitCachePath(): string {
 	return join(getAgentDir(), "usage-tracker-rate-limits.json");
 }

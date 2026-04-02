@@ -343,6 +343,17 @@ function buildOverlayLines(
 	return lines;
 }
 
+/**
+<!-- {=extensionsWatchdogAlertBehaviorDocs} -->
+
+The watchdog samples CPU, memory, and event-loop lag on an interval, records recent samples and
+alerts, and can escalate into safe mode automatically when repeated alerts indicate sustained UI
+churn or lag. Toast notifications are intentionally capped per session; ongoing watchdog state is
+kept visible in the status bar and the `/watchdog` overlay instead of repeatedly spamming the
+terminal.
+
+<!-- {/extensionsWatchdogAlertBehaviorDocs} -->
+*/
 export default function watchdogExtension(pi: ExtensionAPI) {
 	const config = loadWatchdogConfig();
 	const thresholds = resolveWatchdogThresholds(config);
