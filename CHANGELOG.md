@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.4 (2026-04-02)
+
+### Features
+
+- show clickable PR link in custom footer (#79)
+- add /status overlay command (#80)
+- add `/status` command that opens an overlay showing model, session, context window, workspace, git branch, PR link, extension statuses, and safe-mode state.
+- show the current PR as a clickable hyperlink in the custom footer when a PR is open for the current branch.
+
+### Fixes
+
+- gate specs/ dir fallback on non-git repos only (#74)
+- support Windows by using shell mode for execFileSync (#76)
+- add safe mode awareness, reduce tick frequency, and fix memory leaks (#78)
+- fix `findPi()` on Windows by trying `pi.cmd` first and passing `shell: true` to `execFileSync` so the npm CMD shim is resolved correctly.
+- Add safe mode awareness to the scheduler extension, reducing tick frequency and suppressing UI status updates when safe mode is active. Fix memory leak in dispatch timestamp tracking by replacing unbounded `shift()` pruning with a capped `splice()` approach and clearing timestamps on scheduler stop.
+- standardize MDT documentation reuse on `pnpm mdt` across repo docs, scripts, and CI.
+
 ## 0.4.3 (2026-04-01)
 
 ### Fixes

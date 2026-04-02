@@ -1,6 +1,6 @@
 {
   "name": "@ifi/oh-pi",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "One-click setup for pi-coding-agent — extensions, themes, prompts, skills, and ant-colony swarm. Like oh-my-zsh for pi.",
   "keywords": [
     "pi-package",

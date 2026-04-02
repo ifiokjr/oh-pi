@@ -1,6 +1,6 @@
 {
   "name": "@ifi/pi-web-server",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Embeddable HTTP + WebSocket server for remote pi session management.",
   "type": "module",
   "bin": {
