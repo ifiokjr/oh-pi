@@ -24,6 +24,7 @@ function makeAssistantMessage(overrides: Partial<{ input: number; output: number
 
 function createMockPi() {
 	const handlers = new Map<string, ((...args: any[]) => any)[]>();
+	const commands = new Map<string, any>();
 
 	return {
 		on(event: string, handler: (...args: any[]) => any) {
@@ -32,11 +33,15 @@ function createMockPi() {
 			}
 			handlers.get(event)?.push(handler);
 		},
+		registerCommand(name: string, opts: any) {
+			commands.set(name, opts);
+		},
 		getThinkingLevel() {
 			return "medium";
 		},
 		exec: vi.fn().mockResolvedValue({ stdout: "", exitCode: 1 }),
 		_handlers: handlers,
+		_commands: commands,
 		async _emit(event: string, ...args: any[]) {
 			for (const handler of handlers.get(event) ?? []) {
 				await handler(...args);
@@ -263,5 +268,70 @@ describe("custom-footer extension", () => {
 
 		const rendered = component.render(300)[0];
 		expect(rendered).not.toContain("PR #");
+	});
+
+	it("registers a /status command", () => {
+		const pi = createMockPi();
+		customFooter(pi as any);
+		expect(pi._commands.has("status")).toBe(true);
+	});
+
+	it("/status overlay shows model, session, tokens, context, branch, and extension statuses", async () => {
+		const pi = createMockPi();
+		customFooter(pi as any);
+
+		let customFactory: any;
+		const ctx = {
+			model: { id: "claude-sonnet-4-20250514", provider: "anthropic" },
+			getContextUsage: () => ({ tokens: 45000, contextWindow: 200000, percent: 22.5 }),
+			sessionManager: {
+				getBranch: () => [{ type: "message", message: makeAssistantMessage({ input: 1200, output: 800, cost: 0.03 }) }],
+			},
+			ui: {
+				setFooter(factory: any) {
+					factory(
+						{ requestRender: vi.fn() },
+						{ fg: (_c: string, t: string) => t },
+						{
+							onBranchChange: () => () => undefined,
+							getGitBranch: () => "feat/test-branch",
+							getExtensionStatuses: () =>
+								new Map([
+									["pi-scheduler", "2 active \u2022 next 10:30"],
+									["watchdog", "cpu 12% \u00b7 rss 380MB"],
+								]),
+							getAvailableProviderCount: () => 3,
+						},
+					);
+				},
+				custom: vi.fn().mockImplementation(async (factory: any) => {
+					customFactory = factory;
+				}),
+			},
+		};
+
+		await pi._emit("session_start", {}, ctx);
+		await pi._commands.get("status").handler("", ctx);
+
+		expect(customFactory).toBeDefined();
+		const component = customFactory(
+			{ requestRender: vi.fn() },
+			{ fg: (_color: string, text: string) => text },
+			{},
+			() => {},
+		);
+		const rendered = component.render(200).join("\n");
+
+		expect(rendered).toContain("claude-sonnet-4-20250514");
+		expect(rendered).toContain("anthropic");
+		expect(rendered).toContain("medium");
+		expect(rendered).toContain("$0.03");
+		expect(rendered).toContain("1.2k");
+		expect(rendered).toContain("23% used");
+		expect(rendered).toContain("feat/test-branch");
+		expect(rendered).toContain("pi-scheduler");
+		expect(rendered).toContain("2 active");
+		expect(rendered).toContain("watchdog");
+		expect(rendered).toContain("cpu 12%");
 	});
 });

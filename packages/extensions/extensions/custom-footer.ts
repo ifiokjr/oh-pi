@@ -13,7 +13,7 @@
  */
 
 import type { AssistantMessage } from "@mariozechner/pi-ai";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth } from "@mariozechner/pi-tui";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode";
 
@@ -81,6 +81,8 @@ export default function (pi: ExtensionAPI) {
 	/** Cached assistant usage totals to avoid rescanning the full session on every render. */
 	let usageTotals: FooterUsageTotals = { input: 0, output: 0, cost: 0 };
 	/** Cached PR info for the current branch. */
+	let activeFooterData: ReadonlyFooterDataProvider | null = null;
+	let activeCtx: ExtensionContext | null = null;
 	let cachedPr: PrInfo | null = null;
 	/** Branch name when the PR was last probed. */
 	let prProbedForBranch: string | null = null;
@@ -135,8 +137,10 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		sessionStart = Date.now();
 		syncUsageTotals(ctx);
+		activeCtx = ctx;
 
 		ctx.ui.setFooter((tui, theme, footerData) => {
+			activeFooterData = footerData;
 			const unsub = footerData.onBranchChange(() => {
 				probePr(footerData.getGitBranch());
 				tui.requestRender();
@@ -222,5 +226,119 @@ export default function (pi: ExtensionAPI) {
 		if (event.message.role === "assistant") {
 			accumulateAssistantUsage(usageTotals, event.message as AssistantMessage);
 		}
+	});
+
+	// ─── /status overlay ─────────────────────────────────────────────────
+
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Status overlay assembles many optional sections.
+	function buildStatusLines(theme: { fg: (color: string, text: string) => string }): string[] {
+		const lines: string[] = [];
+		const sep = theme.fg("dim", " │ ");
+		const divider = theme.fg("dim", "─".repeat(60));
+
+		lines.push(theme.fg("accent", "╭─ Status ───────────────────────────────────────────────────╮"));
+		lines.push("");
+
+		// ── Model ──
+		const thinking = pi.getThinkingLevel();
+		const thinkLabel = thinking === "none" ? "off" : thinking;
+		const modelId = activeCtx?.model?.id || "no-model";
+		const provider = (activeCtx?.model as { provider?: string })?.provider || "unknown";
+		lines.push(`  ${theme.fg("accent", "Model")}${sep}${theme.fg("accent", modelId)}`);
+		lines.push(`  ${theme.fg("accent", "Provider")}${sep}${provider}`);
+		lines.push(`  ${theme.fg("accent", "Thinking")}${sep}${thinkLabel}`);
+		lines.push("");
+
+		// ── Session ──
+		lines.push(`  ${divider}`);
+		const elapsed = formatElapsed(Date.now() - sessionStart);
+		lines.push(
+			`  ${theme.fg("accent", "Session")}${sep}${elapsed}${sep}${theme.fg("warning", `$${usageTotals.cost.toFixed(2)}`)}`,
+		);
+		lines.push(
+			`  ${theme.fg("accent", "Tokens")}${sep}${theme.fg("success", fmt(usageTotals.input))} in${sep}${theme.fg("warning", fmt(usageTotals.output))} out${sep}${theme.fg("dim", fmt(usageTotals.input + usageTotals.output))} total`,
+		);
+
+		// ── Context window ──
+		const usage = activeCtx?.getContextUsage?.();
+		if (usage) {
+			const pct = usage.percent ?? 0;
+			const pctColor = pct > 75 ? "error" : pct > 50 ? "warning" : "success";
+			const tokens = usage.tokens == null ? "?" : fmt(usage.tokens);
+			lines.push(
+				`  ${theme.fg("accent", "Context")}${sep}${theme.fg(pctColor, `${pct.toFixed(0)}% used`)}${sep}${tokens} / ${fmt(usage.contextWindow)} tokens`,
+			);
+		}
+		lines.push("");
+
+		// ── Workspace ──
+		lines.push(`  ${divider}`);
+		lines.push(`  ${theme.fg("accent", "Directory")}${sep}${process.cwd()}`);
+
+		const branch = activeFooterData?.getGitBranch?.();
+		if (branch) {
+			lines.push(`  ${theme.fg("accent", "Branch")}${sep}${theme.fg("accent", branch)}`);
+		}
+
+		if (cachedPr) {
+			const prLink = hyperlink(cachedPr.url, `#${cachedPr.number}`);
+			lines.push(
+				`  ${theme.fg("accent", "Pull Request")}${sep}${theme.fg("success", prLink)}${sep}${theme.fg("dim", cachedPr.url)}`,
+			);
+		}
+		lines.push("");
+
+		// ── Extension statuses ──
+		const statuses = activeFooterData?.getExtensionStatuses?.();
+		if (statuses && statuses.size > 0) {
+			lines.push(`  ${divider}`);
+			lines.push(`  ${theme.fg("accent", "Extension Statuses")}`);
+			lines.push("");
+			for (const [key, value] of statuses) {
+				lines.push(`  ${theme.fg("dim", key.padEnd(24))}${value}`);
+			}
+			lines.push("");
+		}
+
+		// ── Safe mode ──
+		const safeMode = getSafeModeState();
+		if (safeMode.enabled) {
+			lines.push(`  ${divider}`);
+			const source = safeMode.auto ? "watchdog" : (safeMode.source ?? "manual");
+			lines.push(
+				`  ${theme.fg("warning", "⚠ Safe mode ON")}${sep}source: ${source}${safeMode.reason ? `${sep}${safeMode.reason}` : ""}`,
+			);
+			lines.push("");
+		}
+
+		lines.push(theme.fg("accent", "╰────────────────────────────────────────────────────────────╯"));
+		lines.push(theme.fg("dim", "  Press q/Esc/Space to close"));
+
+		return lines;
+	}
+
+	pi.registerCommand("status", {
+		description: "Show a full status overview: model, session, context, workspace, PR, and extension statuses",
+		async handler(_args, ctx) {
+			activeCtx = ctx;
+			await ctx.ui.custom(
+				(_tui, theme, _keybindings, done) => {
+					const lines = buildStatusLines(theme);
+					return {
+						render(width: number) {
+							return lines.map((line) => truncateToWidth(line, width));
+						},
+						handleInput(data: string) {
+							if (data === "q" || data === "\x1b" || data === "\r" || data === " ") {
+								done(undefined);
+							}
+						},
+						// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
+						dispose() {},
+					};
+				},
+				{ overlay: true },
+			);
+		},
 	});
 }
