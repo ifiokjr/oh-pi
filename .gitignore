@@ -3,6 +3,7 @@ dist/
 .ant-colony/
 *.tmp
 .ace-tool/
+.mdt/
 
 # npm lockfile (migrated to pnpm)
 package-lock.json

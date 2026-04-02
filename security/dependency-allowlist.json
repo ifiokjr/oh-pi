@@ -4,6 +4,7 @@
 	"packages": [
 		"@biomejs/biome",
 		"@clack/prompts",
+		"@ifi/mdt",
 		"@hono/node-server",
 		"@mariozechner/pi-agent-core",
 		"@mariozechner/pi-ai",

@@ -22,6 +22,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.4.10
         version: 2.4.10
+      '@ifi/mdt':
+        specifier: ^0.7.0
+        version: 0.7.0
       '@mariozechner/pi-agent-core':
         specifier: 0.56.1
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
@@ -664,6 +667,55 @@ packages:
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
+
+  '@ifi/mdt-darwin-arm64@0.7.0':
+    resolution: {integrity: sha512-nwPEb0XULP2X1bY5Aw8tPVsWwvXgbljoBcpCzKyw2lDnelM/MvVk3r4p8E7VemlUVHRdcM/RNo7L+Wzsfx05hg==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@ifi/mdt-darwin-x64@0.7.0':
+    resolution: {integrity: sha512-AbAbil8WdeuuugbTUfejAxpLcSo2p4fdpBSVMkekepcbl7Tnt2U7hp3VxqhQcFWeCAFMWLCNSXr6QuIhj8z7zQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@ifi/mdt-linux-arm64-gnu@0.7.0':
+    resolution: {integrity: sha512-Ezuhm8Za4LjM5SOvIvcl1PqwX64spYxOLyC/cFyIIIqHd7sQ4R7Fuc6EoM3Jd0XRpMk0bILk68pj3NOApM78+A==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@ifi/mdt-linux-arm64-musl@0.7.0':
+    resolution: {integrity: sha512-sCoeMMw/S1QLN5h1XJ/ZuQ5OlBh8wPTH/5EspGXDTo0lIWINTe8EC+k/RE5oK6r9m7T/HhvAXgjNzR+dMfGYgg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@ifi/mdt-linux-x64-gnu@0.7.0':
+    resolution: {integrity: sha512-ZURi0UMPjPr94g5r4fjc/N7DWwm3w2W8mp8xzNNElrauEDY0JMLPf6XkxruE/U9hVNOIwX/nxeaVN/jqUSFSSg==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@ifi/mdt-linux-x64-musl@0.7.0':
+    resolution: {integrity: sha512-oA8lPkFKNTtuI3NFGmo0aAHZOSzXz88pCYeQwiHqe7KF0ErUm7dsVLRtGYc5qspzrfkkNX6CBD4XVOUVsRXc2w==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@ifi/mdt-win32-arm64-msvc@0.7.0':
+    resolution: {integrity: sha512-NzHy7jwTQ3QjpjR234aJc6vqS36VmXoJyqrJNtRL8CFcH8r3uzi5UqhckH1Lqa3Pi62sSDuN1qy6ArKsHp63MQ==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@ifi/mdt-win32-x64-msvc@0.7.0':
+    resolution: {integrity: sha512-EHBSqCmHaZU4mteoVacx5o1AVgCtTjXpmmfoMxhs19+yQvGxDVyR+3y/4vTf8MvQS2SnkQNmfMQSqZRDvbnZDg==}
+    cpu: [x64]
+    os: [win32]
+
+  '@ifi/mdt@0.7.0':
+    resolution: {integrity: sha512-kQQo4xPUdnvPNXvfaPXBcy+1yFxv1LhjM8vGaUGlq4BOy2wyD4QcXrKDReqcUJbk6Yg5lNffxrbKLKrnB11djw==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -2591,6 +2643,41 @@ snapshots:
   '@hono/node-server@1.19.11(hono@4.12.8)':
     dependencies:
       hono: 4.12.8
+
+  '@ifi/mdt-darwin-arm64@0.7.0':
+    optional: true
+
+  '@ifi/mdt-darwin-x64@0.7.0':
+    optional: true
+
+  '@ifi/mdt-linux-arm64-gnu@0.7.0':
+    optional: true
+
+  '@ifi/mdt-linux-arm64-musl@0.7.0':
+    optional: true
+
+  '@ifi/mdt-linux-x64-gnu@0.7.0':
+    optional: true
+
+  '@ifi/mdt-linux-x64-musl@0.7.0':
+    optional: true
+
+  '@ifi/mdt-win32-arm64-msvc@0.7.0':
+    optional: true
+
+  '@ifi/mdt-win32-x64-msvc@0.7.0':
+    optional: true
+
+  '@ifi/mdt@0.7.0':
+    optionalDependencies:
+      '@ifi/mdt-darwin-arm64': 0.7.0
+      '@ifi/mdt-darwin-x64': 0.7.0
+      '@ifi/mdt-linux-arm64-gnu': 0.7.0
+      '@ifi/mdt-linux-arm64-musl': 0.7.0
+      '@ifi/mdt-linux-x64-gnu': 0.7.0
+      '@ifi/mdt-linux-x64-musl': 0.7.0
+      '@ifi/mdt-win32-arm64-msvc': 0.7.0
+      '@ifi/mdt-win32-x64-msvc': 0.7.0
 
   '@isaacs/cliui@8.0.2':
     dependencies:

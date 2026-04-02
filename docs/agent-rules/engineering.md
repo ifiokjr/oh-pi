@@ -19,6 +19,35 @@
 - `pnpm typecheck` — run repo type-checking with `tsgo`
 - `pnpm build` — run every workspace package build script
 - `pnpm security:check` — run dependency allowlist and audit checks
+- `pnpm mdt ...` — run MDT documentation reuse commands with the repo-pinned version
+
+## Documentation reuse
+
+<!-- {=repoMdtUsageRuleDocs} -->
+
+Use MDT through `pnpm mdt ...`, not a globally installed `mdt` binary. This keeps documentation
+reuse commands pinned to the repo's declared `@ifi/mdt` version and makes local runs, CI, and agent
+instructions consistent.
+
+<!-- {/repoMdtUsageRuleDocs} -->
+
+<!-- {=repoMdtCommandsDocs} -->
+
+```bash
+pnpm mdt list
+pnpm mdt update
+pnpm mdt check
+```
+
+Convenience wrappers remain available too:
+
+```bash
+pnpm docs:list
+pnpm docs:update
+pnpm docs:check
+```
+
+<!-- {/repoMdtCommandsDocs} -->
 
 ## Testing conventions
 

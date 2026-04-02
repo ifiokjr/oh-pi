@@ -185,12 +185,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
 
-      - uses: taiki-e/install-action@v2
+      - uses: pnpm/action-setup@v4.4.0
+
+      - uses: actions/setup-node@v6.3.0
         with:
-          tool: mdt_cli
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
 
       - name: Check synchronized documentation blocks
-        run: mdt check
+        run: pnpm mdt check
 
   security:
     name: Security Checks

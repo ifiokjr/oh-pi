@@ -1,2 +1,2 @@
 [exclude]
-patterns = ["**/dist/**"]
+patterns = ["**/dist/**", "**/.mdt/**"]

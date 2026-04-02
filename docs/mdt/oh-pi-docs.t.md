@@ -235,3 +235,36 @@ checks. Tasks run only while pi is active and idle, and scheduler state is persi
 storage using a workspace-mirrored path.
 
 <!-- {/extensionsSchedulerOverview} -->
+
+<!-- {@repoMdtUsageRuleDocs} -->
+
+Use MDT through `pnpm mdt ...`, not a globally installed `mdt` binary. This keeps documentation
+reuse commands pinned to the repo's declared `@ifi/mdt` version and makes local runs, CI, and agent
+instructions consistent.
+
+<!-- {/repoMdtUsageRuleDocs} -->
+
+<!-- {@repoMdtCommandsDocs} -->
+
+```bash
+pnpm mdt list
+pnpm mdt update
+pnpm mdt check
+```
+
+Convenience wrappers remain available too:
+
+```bash
+pnpm docs:list
+pnpm docs:update
+pnpm docs:check
+```
+
+<!-- {/repoMdtCommandsDocs} -->
+
+<!-- {@repoMdtCiDocs} -->
+
+CI runs `pnpm mdt check` so provider and consumer blocks stay in sync with the repo-pinned MDT
+version.
+
+<!-- {/repoMdtCiDocs} -->
