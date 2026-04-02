@@ -17,6 +17,18 @@ import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-age
 import { truncateToWidth } from "@mariozechner/pi-tui";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode";
 
+/** OSC 8 hyperlink: renders `text` as a clickable terminal link to `url`. */
+export function hyperlink(url: string, text: string): string {
+	return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`;
+}
+
+export type PrInfo = {
+	number: number;
+	url: string;
+};
+
+const PR_PROBE_COOLDOWN_MS = 60_000;
+
 export type FooterUsageTotals = {
 	input: number;
 	output: number;
@@ -68,9 +80,56 @@ export default function (pi: ExtensionAPI) {
 	let sessionStart = Date.now();
 	/** Cached assistant usage totals to avoid rescanning the full session on every render. */
 	let usageTotals: FooterUsageTotals = { input: 0, output: 0, cost: 0 };
+	/** Cached PR info for the current branch. */
+	let cachedPr: PrInfo | null = null;
+	/** Branch name when the PR was last probed. */
+	let prProbedForBranch: string | null = null;
+	/** Last time a PR probe was attempted. */
+	let lastPrProbeAt = 0;
+	/** Whether a PR probe is in flight. */
+	let prProbeInFlight = false;
 
 	const syncUsageTotals = (ctx: Pick<ExtensionContext, "sessionManager">) => {
 		usageTotals = collectFooterUsageTotals(ctx);
+	};
+
+	const probePr = (branch: string | null) => {
+		if (!branch || prProbeInFlight) {
+			return;
+		}
+		const now = Date.now();
+		if (branch === prProbedForBranch && now - lastPrProbeAt < PR_PROBE_COOLDOWN_MS) {
+			return;
+		}
+		if (branch !== prProbedForBranch) {
+			cachedPr = null;
+		}
+		prProbeInFlight = true;
+		prProbedForBranch = branch;
+		lastPrProbeAt = now;
+		pi.exec("gh", ["pr", "view", "--json", "number,url", "--jq", "{number,url}"], { timeout: 8000 })
+			.then(({ stdout, exitCode }) => {
+				if (exitCode !== 0 || !stdout.trim()) {
+					cachedPr = null;
+					return;
+				}
+				try {
+					const parsed = JSON.parse(stdout.trim()) as { number?: number; url?: string };
+					if (parsed.number && parsed.url) {
+						cachedPr = { number: parsed.number, url: parsed.url };
+					} else {
+						cachedPr = null;
+					}
+				} catch {
+					cachedPr = null;
+				}
+			})
+			.catch(() => {
+				cachedPr = null;
+			})
+			.finally(() => {
+				prProbeInFlight = false;
+			});
 	};
 
 	pi.on("session_start", async (_event, ctx) => {
@@ -78,9 +137,13 @@ export default function (pi: ExtensionAPI) {
 		syncUsageTotals(ctx);
 
 		ctx.ui.setFooter((tui, theme, footerData) => {
-			const unsub = footerData.onBranchChange(() => tui.requestRender());
+			const unsub = footerData.onBranchChange(() => {
+				probePr(footerData.getGitBranch());
+				tui.requestRender();
+			});
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
 			const timer = setInterval(() => tui.requestRender(), 30000);
+			probePr(footerData.getGitBranch());
 
 			return {
 				dispose() {
@@ -113,7 +176,13 @@ export default function (pi: ExtensionAPI) {
 					const cwdStr = theme.fg("muted", `⌂ ${short}`);
 
 					const branch = footerData.getGitBranch();
-					const branchStr = branch ? theme.fg("accent", `⎇ ${branch}`) : "";
+					let branchStr = branch ? theme.fg("accent", `⎇ ${branch}`) : "";
+					if (cachedPr) {
+						const prLabel = theme.fg("success", `PR #${cachedPr.number}`);
+						branchStr = branchStr
+							? `${branchStr} ${hyperlink(cachedPr.url, prLabel)}`
+							: hyperlink(cachedPr.url, prLabel);
+					}
 
 					const thinking = pi.getThinkingLevel();
 					const thinkColor =

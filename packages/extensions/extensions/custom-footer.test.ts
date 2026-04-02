@@ -6,7 +6,7 @@ vi.mock("@mariozechner/pi-tui", () => ({
 	truncateToWidth: (text: string, width: number) => text.slice(0, width),
 }));
 
-import customFooter, { collectFooterUsageTotals, fmt, formatElapsed } from "./custom-footer";
+import customFooter, { collectFooterUsageTotals, fmt, formatElapsed, hyperlink } from "./custom-footer";
 import { resetSafeModeStateForTests, setSafeModeState } from "./runtime-mode";
 
 function makeAssistantMessage(overrides: Partial<{ input: number; output: number; cost: number }> = {}) {
@@ -35,6 +35,7 @@ function createMockPi() {
 		getThinkingLevel() {
 			return "medium";
 		},
+		exec: vi.fn().mockResolvedValue({ stdout: "", exitCode: 1 }),
 		_handlers: handlers,
 		async _emit(event: string, ...args: any[]) {
 			for (const handler of handlers.get(event) ?? []) {
@@ -49,6 +50,13 @@ afterEach(() => {
 });
 
 describe("custom-footer helpers", () => {
+	it("generates OSC 8 hyperlinks", () => {
+		const link = hyperlink("https://github.com/ifiokjr/oh-pi/pull/42", "PR #42");
+		expect(link).toContain("\x1b]8;;https://github.com/ifiokjr/oh-pi/pull/42\x07");
+		expect(link).toContain("PR #42");
+		expect(link).toContain("\x1b]8;;\x07");
+	});
+
 	it("formats elapsed time compactly", () => {
 		expect(formatElapsed(42_000)).toBe("42s");
 		expect(formatElapsed(3 * 60_000 + 12_000)).toBe("3m12s");
@@ -187,5 +195,73 @@ describe("custom-footer extension", () => {
 
 		setSafeModeState(true, { source: "manual", reason: "test" });
 		expect(component.render(200)).toEqual([]);
+	});
+
+	it("shows a clickable PR link in the footer when a PR is open", async () => {
+		const pi = createMockPi();
+		pi.exec = vi.fn().mockResolvedValue({
+			stdout: JSON.stringify({ number: 77, url: "https://github.com/ifiokjr/oh-pi/pull/77" }),
+			exitCode: 0,
+		});
+		customFooter(pi as any);
+
+		let footerFactory: any;
+		const ctx = {
+			model: { id: "claude-sonnet", provider: "anthropic" },
+			getContextUsage: () => ({ percent: 12 }),
+			sessionManager: { getBranch: () => [] },
+			ui: {
+				setFooter(factory: any) {
+					footerFactory = factory;
+				},
+			},
+		};
+
+		await pi._emit("session_start", {}, ctx);
+
+		// The PR probe fires inside the setFooter factory, so instantiate the component first
+		const component = footerFactory(
+			{ requestRender: vi.fn() },
+			{ fg: (_color: string, text: string) => text },
+			{ onBranchChange: () => () => undefined, getGitBranch: () => "feat/footer-pr-link" },
+		);
+
+		// Wait for the async PR probe to resolve
+		await vi.waitFor(() => expect(pi.exec).toHaveBeenCalled());
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		const rendered = component.render(300)[0];
+		expect(rendered).toContain("PR #77");
+		expect(rendered).toContain("https://github.com/ifiokjr/oh-pi/pull/77");
+	});
+
+	it("does not show PR link when no PR is open", async () => {
+		const pi = createMockPi();
+		pi.exec = vi.fn().mockResolvedValue({ stdout: "", exitCode: 1 });
+		customFooter(pi as any);
+
+		let footerFactory: any;
+		const ctx = {
+			model: { id: "claude-sonnet", provider: "anthropic" },
+			getContextUsage: () => ({ percent: 12 }),
+			sessionManager: { getBranch: () => [] },
+			ui: {
+				setFooter(factory: any) {
+					footerFactory = factory;
+				},
+			},
+		};
+
+		await pi._emit("session_start", {}, ctx);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		const component = footerFactory(
+			{ requestRender: vi.fn() },
+			{ fg: (_color: string, text: string) => text },
+			{ onBranchChange: () => () => undefined, getGitBranch: () => "main" },
+		);
+
+		const rendered = component.render(300)[0];
+		expect(rendered).not.toContain("PR #");
 	});
 });

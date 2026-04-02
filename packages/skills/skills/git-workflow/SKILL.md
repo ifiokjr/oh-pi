@@ -45,6 +45,18 @@ chore(scope): maintenance tasks
 2. Generate PR title and description
 3. Suggest reviewers based on changed files (`git log --format='%an' -- <files>`)
 
+### PR link in summaries
+
+When a PR has been opened, **always include the full GitHub PR URL** in any summary or status
+update you provide. This makes it easy for the user to click through to the PR directly.
+
+Example summary format:
+```
+PR: https://github.com/owner/repo/pull/42
+```
+
+Use `gh pr view --json url --jq .url` to retrieve the URL if you do not already have it.
+
 ### Non-interactive safety for agent-run Git/GitHub commands
 
 When **the agent** runs `git` or `gh`, avoid opening an interactive editor or prompt.
