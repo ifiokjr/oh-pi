@@ -1,3 +1,19 @@
+/**
+<!-- {=ohPiCoreAgentPathsOverview} -->
+
+`@ifi/oh-pi-core` exposes a small set of path helpers for packages that need to resolve the pi
+agent directory, extension config locations, and shared workspace-scoped storage paths without
+hardcoding `~/.pi/agent` throughout the codebase.
+
+Use these helpers when a package needs to:
+
+- honor `PI_CODING_AGENT_DIR`
+- expand `~` consistently across platforms
+- mirror a workspace path into shared storage
+- compute stable extension config file locations
+
+<!-- {/ohPiCoreAgentPathsOverview} -->
+*/
 import { homedir } from "node:os";
 import path from "node:path";
 

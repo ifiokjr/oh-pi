@@ -1,3 +1,14 @@
+/**
+<!-- {=sharedQnaPiTuiLoaderOverview} -->
+
+`@ifi/pi-shared-qna` centralizes `@mariozechner/pi-tui` loading so first-party packages reuse one
+fallback strategy instead of embedding Bun-global lookup logic in multiple runtime modules.
+
+The shared loader tries the normal package resolution path first, then falls back to Bun global
+install locations when a project is running outside a conventional dependency layout.
+
+<!-- {/sharedQnaPiTuiLoaderOverview} -->
+*/
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";

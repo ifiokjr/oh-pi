@@ -1,3 +1,22 @@
+/**
+<!-- {=extensionsWatchdogConfigOverview} -->
+
+The watchdog extension reads optional runtime protection settings from a JSON config file in the pi
+agent directory. That config controls whether sampling is enabled, how frequently samples run, and
+which CPU, memory, and event-loop thresholds trigger alerts or safe-mode escalation.
+
+<!-- {/extensionsWatchdogConfigOverview} -->
+
+<!-- {=extensionsWatchdogAlertBehaviorDocs} -->
+
+The watchdog samples CPU, memory, and event-loop lag on an interval, records recent samples and
+alerts, and can escalate into safe mode automatically when repeated alerts indicate sustained UI
+churn or lag. Toast notifications are intentionally capped per session; ongoing watchdog state is
+kept visible in the status bar and the `/watchdog` overlay instead of repeatedly spamming the
+terminal.
+
+<!-- {/extensionsWatchdogAlertBehaviorDocs} -->
+*/
 import * as fs from "node:fs";
 import { cpus, homedir } from "node:os";
 import * as path from "node:path";

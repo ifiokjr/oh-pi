@@ -1,3 +1,12 @@
+/**
+<!-- {=antColonySharedStorageOverview} -->
+
+Ant-colony stores runtime state outside the repository by default under the shared pi agent
+directory, mirroring the workspace path so each repo gets its own isolated storage root.
+Project-local `.ant-colony/` storage remains available as an explicit opt-in for legacy workflows.
+
+<!-- {/antColonySharedStorageOverview} -->
+*/
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { expandHomeDir } from "@ifi/oh-pi-core";
