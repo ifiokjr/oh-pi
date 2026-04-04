@@ -54,9 +54,13 @@ pi install npm:@ifi/oh-pi-skills
 pi install npm:@ifi/pi-extension-subagents
 pi install npm:@ifi/pi-plan
 pi install npm:@ifi/pi-spec
+pi install npm:@ifi/pi-provider-cursor
 ```
 
 Do not use `bundledDependencies` in `@ifi/oh-pi`.
+
+Experimental packages can stay intentionally separate from the `@ifi/oh-pi` installer when they
+need an opt-in rollout or rely on unofficial upstream APIs.
 
 ## Release flow
 
