@@ -14,7 +14,7 @@ instructions consistent.
 <!-- {/repoMdtUsageRuleDocs} -->
 - Non-standard repo commands:
   - `pnpm typecheck` — type-checks the repo with `tsgo` (`@typescript/native-preview`)
-  - `pnpm build` — builds the compiled packages (`@ifi/oh-pi-core` and `@ifi/oh-pi-cli`)
+  - `pnpm build` — runs every workspace package build script
 - Every non-release change must include a changeset created with `knope document-change`; changeset frontmatter must use only `default`.
 <!-- {=repoMdtCommandsDocs} -->
 

@@ -124,6 +124,27 @@ importers:
         specifier: ^5.4.0
         version: 5.6.2
 
+  packages/cursor:
+    dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.10.2
+        version: 2.11.0
+      '@mariozechner/pi-agent-core':
+        specifier: '>=0.56.1'
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-ai':
+        specifier: '>=0.56.1'
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-coding-agent':
+        specifier: '>=0.56.1'
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-tui':
+        specifier: '>=0.56.1'
+        version: 0.56.1
+      '@sinclair/typebox':
+        specifier: '*'
+        version: 0.34.48
+
   packages/extensions:
     dependencies:
       '@mariozechner/pi-agent-core':
@@ -490,6 +511,9 @@ packages:
 
   '@borewit/text-codec@0.2.1':
     resolution: {integrity: sha512-k7vvKPbf7J2fZ5klGRD9AeKfUvojuZIQ3BT5u7Jfv+puwXkUBUT5PVyMDfJZpy30CBDXGMgw7fguK/lpOMBvgw==}
+
+  '@bufbuild/protobuf@2.11.0':
+    resolution: {integrity: sha512-sBXGT13cpmPR5BMgHE6UEEfEaShh5Ror6rfN3yEK5si7QVrtZg8LEPQb0VVhiLRUslD2yLnXtnRzG035J/mZXQ==}
 
   '@clack/core@1.1.0':
     resolution: {integrity: sha512-SVcm4Dqm2ukn64/8Gub2wnlA5nS2iWJyCkdNHcvNHPIeBTGojpdJ+9cZKwLfmqy7irD4N5qLteSilJlE0WLAtA==}
@@ -2541,6 +2565,8 @@ snapshots:
     optional: true
 
   '@borewit/text-codec@0.2.1': {}
+
+  '@bufbuild/protobuf@2.11.0': {}
 
   '@clack/core@1.1.0':
     dependencies:

@@ -17,6 +17,7 @@ export const publishedPackages = [
 	{ name: "@ifi/pi-shared-qna", dir: "packages/shared-qna" },
 	{ name: "@ifi/pi-plan", dir: "packages/plan" },
 	{ name: "@ifi/pi-spec", dir: "packages/spec" },
+	{ name: "@ifi/pi-provider-cursor", dir: "packages/cursor" },
 	{ name: "@ifi/pi-web-remote", dir: "packages/web-remote" },
 	{ name: "@ifi/oh-pi", dir: "packages/oh-pi" },
 ];

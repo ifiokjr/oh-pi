@@ -15,6 +15,7 @@ const SMOKE_TESTS = [
 	"packages/ant-colony/tests/smoke.test.ts",
 	"packages/subagents/tests/smoke.test.ts",
 	"packages/spec/tests/smoke.test.ts",
+	"packages/cursor/tests/smoke.test.ts",
 ];
 
 function parseArgs(argv) {

@@ -11,6 +11,7 @@ export function createExtensionHarness() {
 	const statusMap = new Map<string, any>();
 	const shortcuts = new Map<string, any>();
 	const messageRenderers = new Map<string, any>();
+	const providers = new Map<string, any>();
 	const eventBus = new EventEmitter();
 
 	const pi = {
@@ -42,6 +43,9 @@ export function createExtensionHarness() {
 		},
 		registerMessageRenderer(name: string, renderer: any) {
 			messageRenderers.set(name, renderer);
+		},
+		registerProvider(name: string, config: any) {
+			providers.set(name, config);
 		},
 		sendMessage(message: any) {
 			messages.push(message);
@@ -116,6 +120,7 @@ export function createExtensionHarness() {
 		statusMap,
 		shortcuts,
 		messageRenderers,
+		providers,
 		emit(event: string, ...args: any[]) {
 			for (const handler of handlers.get(event) ?? []) {
 				handler(...args);
