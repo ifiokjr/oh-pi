@@ -47,10 +47,10 @@ chore(scope): maintenance tasks
 
 ### PR link in summaries
 
-When a PR has been opened, **always include the full GitHub PR URL** in any summary or status
-update you provide. This makes it easy for the user to click through to the PR directly.
+When a PR has been opened, **always include the full GitHub PR URL** in any summary or status update you provide. This makes it easy for the user to click through to the PR directly.
 
 Example summary format:
+
 ```
 PR: https://github.com/owner/repo/pull/42
 ```
@@ -61,13 +61,17 @@ Use `gh pr view --json url --jq .url` to retrieve the URL if you do not already 
 
 When **the agent** runs `git` or `gh`, avoid opening an interactive editor or prompt.
 
-- For `git rebase --continue`, do **not** rely on `--no-edit` — `git rebase --continue` does not support it.
-  Use one of these instead:
-  ```bash
-  GIT_EDITOR=true git rebase --continue
-  # or
-  git -c core.editor=true rebase --continue
-  ```
+A lot of Git entrypoints use different editor config keys, so avoid surprises by disabling both:
+
+- `core.editor` / `GIT_EDITOR` (commit, merge, tag message editing)
+- `sequence.editor` / `GIT_SEQUENCE_EDITOR` (interactive rebase todo-list editing)
+
+Use this pattern for non-interactive flows:
+
+```bash
+GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true git -c core.editor=true -c sequence.editor=true rebase --continue
+```
+
 - For commits, always pass the message on the command line:
   ```bash
   git commit -m "fix(scope): message"
@@ -76,7 +80,7 @@ When **the agent** runs `git` or `gh`, avoid opening an interactive editor or pr
   ```bash
   git merge --no-edit
   ```
-- For any other git command that could open an editor, set `GIT_EDITOR=true` for that invocation.
+- For any other git command that could open an editor, set `GIT_EDITOR=true` and `GIT_SEQUENCE_EDITOR=true` (plus `-c core.editor=true -c sequence.editor=true`) for that invocation.
 - For GitHub CLI commands, disable terminal prompts and provide all required fields explicitly:
   ```bash
   GH_PROMPT_DISABLED=1 gh pr create --title "..." --body "..."
@@ -98,5 +102,5 @@ Guide through `git rebase -i` for cleaning up history before PR.
 If the agent is resolving conflicts during a rebase, continue with a non-interactive command such as:
 
 ```bash
-GIT_EDITOR=true git rebase --continue
+GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true git -c core.editor=true -c sequence.editor=true rebase --continue
 ```
