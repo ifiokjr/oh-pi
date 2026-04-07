@@ -6,6 +6,7 @@ export interface TestOllamaCloudBackend {
 	keysUrl: string;
 	setModels(models: Array<{ id: string; capabilities?: string[]; contextWindow?: number }>): void;
 	setRejectAuth(reject: boolean): void;
+	setRejectedModelShows(modelIds: string[]): void;
 	getAuthHeaders(): string[];
 	close(): Promise<void>;
 }
@@ -13,6 +14,7 @@ export interface TestOllamaCloudBackend {
 export async function createTestOllamaCloudBackend(): Promise<TestOllamaCloudBackend> {
 	let models: Array<{ id: string; capabilities?: string[]; contextWindow?: number }> = [];
 	let rejectAuth = false;
+	let rejectedModelShows = new Set<string>();
 	const authHeaders: string[] = [];
 
 	const server = http.createServer((req, res) => {
@@ -44,6 +46,11 @@ export async function createTestOllamaCloudBackend(): Promise<TestOllamaCloudBac
 			});
 			req.on("end", () => {
 				const parsed = JSON.parse(body || "{}") as { model?: string };
+				if (parsed.model && rejectedModelShows.has(parsed.model)) {
+					res.writeHead(500, { "Content-Type": "text/plain" });
+					res.end("show failed");
+					return;
+				}
 				const match = models.find((model) => model.id === parsed.model);
 				if (!match) {
 					res.writeHead(404, { "Content-Type": "text/plain" });
@@ -84,6 +91,9 @@ export async function createTestOllamaCloudBackend(): Promise<TestOllamaCloudBac
 		},
 		setRejectAuth(reject) {
 			rejectAuth = reject;
+		},
+		setRejectedModelShows(modelIds) {
+			rejectedModelShows = new Set(modelIds);
 		},
 		getAuthHeaders() {
 			return [...authHeaders];

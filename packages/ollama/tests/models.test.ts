@@ -50,6 +50,23 @@ describe("ollama cloud models", () => {
 		await backend.close();
 	});
 
+	it("falls back per model when metadata discovery fails", async () => {
+		const backend = await createTestOllamaCloudBackend();
+		backend.setModels([
+			{ id: "gpt-oss:120b", capabilities: ["completion", "tools", "thinking"], contextWindow: 131072 },
+			{ id: "qwen3-vl:235b", capabilities: ["completion", "tools", "thinking", "vision"], contextWindow: 262144 },
+		]);
+		backend.setRejectedModelShows(["qwen3-vl:235b"]);
+		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
+		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
+		process.env.PI_OLLAMA_CLOUD_SHOW_URL = `${backend.apiUrl.replace(/\/v1$/, "")}/api/show`;
+		const models = await discoverOllamaCloudModels("test-key");
+		expect(models?.map((model) => model.id)).toEqual(["gpt-oss:120b", "qwen3-vl:235b"]);
+		expect(models?.[1]?.input).toEqual(["text", "image"]);
+		expect(models?.[1]?.reasoning).toBe(true);
+		await backend.close();
+	});
+
 	it("prefers models stored with the login credential", () => {
 		const models = getCredentialModels({
 			refresh: "r",

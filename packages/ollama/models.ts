@@ -118,7 +118,7 @@ export async function discoverOllamaCloudModels(apiKey: string, options: { signa
 			headers: createDiscoveryHeaders(apiKey),
 			body: JSON.stringify({ model: id }),
 			signal: options.signal,
-		});
+		}).catch(() => null);
 		return normalizeDiscoveredModel(id, payload);
 	});
 	const models = discovered.filter((model): model is OllamaCloudProviderModel => model !== null);
@@ -177,16 +177,20 @@ function cloneModel(model: OllamaCloudProviderModel): OllamaCloudProviderModel {
 	};
 }
 
-function normalizeDiscoveredModel(id: string, payload: OllamaCloudShowResponse): OllamaCloudProviderModel | null {
+function normalizeDiscoveredModel(id: string, payload: OllamaCloudShowResponse | null): OllamaCloudProviderModel | null {
+	const fallback = findFallbackModel(id);
+	if (!payload) {
+		return fallback ? cloneModel(fallback) : toOllamaCloudModel({ id });
+	}
 	const capabilities = Array.isArray(payload.capabilities)
 		? payload.capabilities.filter((capability): capability is string => typeof capability === "string")
 		: [];
 	const capabilitySet = new Set(capabilities.map((capability) => capability.toLowerCase()));
-	const contextWindow = extractContextWindow(payload.model_info) ?? findFallbackModel(id)?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
+	const contextWindow = extractContextWindow(payload.model_info) ?? fallback?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
 	return toOllamaCloudModel({
 		id,
-		reasoning: capabilitySet.has("thinking"),
-		input: capabilitySet.has("vision") ? ["text", "image"] : ["text"],
+		reasoning: capabilitySet.has("thinking") || fallback?.reasoning,
+		input: capabilitySet.has("vision") ? ["text", "image"] : (fallback?.input ?? ["text"]),
 		contextWindow,
 		maxTokens: inferMaxTokens(contextWindow),
 	});
