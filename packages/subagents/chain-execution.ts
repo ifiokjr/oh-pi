@@ -326,9 +326,11 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 
 				// Resolve model to full provider/model format for consistent display
 				const taskAgentConfig = agents.find((a) => a.name === task.agent);
+				const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
 				const effectiveModel =
 					(task.model ? resolveModelFullId(task.model, availableModels) : null) ??
-					resolveModelFullId(taskAgentConfig?.model, availableModels);
+					resolveModelFullId(taskAgentConfig?.model, availableModels) ??
+					resolveModelFullId(inheritedModel, availableModels);
 
 				const r = await runSync(ctx.cwd, agents, task.agent, taskStr, {
 					cwd: task.cwd ?? cwd,

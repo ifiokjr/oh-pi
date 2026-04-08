@@ -418,7 +418,8 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 				// Mutable copies for TUI modifications
 				let tasks = params.tasks.map((t) => t.task);
-				const modelOverrides: (string | undefined)[] = params.tasks.map((t) => (t as { model?: string }).model);
+				const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
+				const modelOverrides: (string | undefined)[] = params.tasks.map((t) => (t as { model?: string }).model ?? inheritedModel);
 				// Initialize skill overrides from task-level skill params (may be overridden by TUI)
 				const skillOverrides: (string[] | false | undefined)[] = params.tasks.map((t) =>
 					normalizeSkillInput((t as { skill?: string | string[] | boolean }).skill),
@@ -604,7 +605,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				}
 
 				let task = params.task!;
-				let modelOverride: string | undefined = params.model as string | undefined;
+				let modelOverride: string | undefined = (params.model as string | undefined) ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined);
 				let skillOverride: string[] | false | undefined = normalizeSkillInput(params.skill);
 				// Normalize output: true means "use default" (same as undefined), false means disable
 				const rawOutput = params.output !== undefined ? params.output : agentConfig.output;
