@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
+import adaptiveRoutingExtension from "./adaptive-routing.js";
 import autoUpdateExtension from "./auto-update.js";
 import btwExtension from "./btw.js";
 import safeGuardExtension from "./safe-guard.js";
@@ -49,6 +50,12 @@ describe("extensions runtime smoke tests", () => {
 		autoUpdateExtension(harness.pi as never);
 		harness.emit("session_start", { type: "session_start" }, harness.ctx);
 		expect(harness.notifications.length).toBeGreaterThanOrEqual(0);
+	});
+
+	it("registers adaptive routing commands without crashing", () => {
+		const harness = createExtensionHarness();
+		adaptiveRoutingExtension(harness.pi as never);
+		expect(harness.commands.has("route")).toBe(true);
 	});
 
 	it("blocks protected writes in headless mode via safe-guard", async () => {

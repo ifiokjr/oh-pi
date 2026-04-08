@@ -14,6 +14,7 @@ export function createExtensionHarness() {
 	const providers = new Map();
 	const eventBus = new EventEmitter();
 
+	let currentThinking = "low";
 	const pi = {
 		events: {
 			on(event, handler) {
@@ -54,9 +55,23 @@ export function createExtensionHarness() {
 			userMessages.push(message);
 		},
 		appendEntry() {},
-		getThinkingLevel() {
-			return "low";
+		async setModel(model) {
+			ctx.model = model;
+			return true;
 		},
+		getThinkingLevel() {
+			return currentThinking;
+		},
+		setThinkingLevel(level) {
+			currentThinking = level;
+		},
+		getAllTools() {
+			return Array.from(tools.values());
+		},
+		getActiveTools() {
+			return Array.from(tools.keys());
+		},
+		setActiveTools() {},
 		getFlag(name) {
 			return flags.get(name)?.default;
 		},

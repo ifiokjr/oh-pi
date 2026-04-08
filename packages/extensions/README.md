@@ -5,6 +5,7 @@ Core first-party extensions for pi.
 ## Included extensions
 
 This package includes extensions such as:
+- adaptive-routing / route
 - safe-guard
 - git-guard
 - auto-session-name
@@ -32,7 +33,29 @@ npx @ifi/oh-pi
 ## What it provides
 
 These extensions add commands, tools, UI widgets, safety checks, background process handling,
-usage monitoring, scheduling features, and runtime performance protection (`/watchdog`, `/safe-mode`) to pi.
+usage monitoring, adaptive model routing, scheduling features, and runtime performance protection (`/watchdog`, `/safe-mode`) to pi.
+
+## Adaptive routing
+
+Adaptive routing adds a user-friendly `/route` command set and an opt-in model-agnostic mode that can:
+
+- classify prompts with a cheap router model
+- choose model and thinking level before a turn starts
+- respect provider reserve thresholds and fallback groups
+- suggest routes in shadow mode before automatically applying them
+- persist local-only telemetry and feedback under shared pi storage
+
+Key commands:
+
+- `/route status`
+- `/route shadow`
+- `/route auto`
+- `/route off`
+- `/route explain`
+- `/route lock`
+- `/route unlock`
+- `/route feedback <category>`
+- `/route stats`
 
 ## Scheduler follow-ups
 

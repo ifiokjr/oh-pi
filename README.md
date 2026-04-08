@@ -258,6 +258,31 @@ Agent: bash npm run dev
 
 **Commands:** `bg_status list` | `bg_status log --pid 12345` | `bg_status stop --pid 12345`
 
+### 🧭 Adaptive Routing (`adaptive-routing`) — **default: off**
+
+Lets pi operate in a model-agnostic mode by choosing a model and thinking level per prompt based on
+prompt shape, user preferences, live provider headroom, and local fallback policy.
+
+**Key ideas:**
+
+- `shadow` mode suggests a route without changing the current model
+- `auto` mode applies the selected route before the turn starts
+- premium providers can be protected with reserve thresholds
+- route decisions, disagreements, and feedback are stored locally under shared pi storage
+- routed premium fallbacks can include future providers like Cursor when installed
+
+**Commands:**
+
+- `/route status`
+- `/route shadow`
+- `/route auto`
+- `/route off`
+- `/route explain`
+- `/route lock`
+- `/route unlock`
+- `/route feedback <category>`
+- `/route stats`
+
 ### 💰 Usage Tracker (`usage-tracker`) — **default: off**
 
 <!-- {=extensionsUsageTrackerOverview} -->

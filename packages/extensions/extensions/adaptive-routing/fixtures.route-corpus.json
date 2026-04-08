@@ -1,0 +1,23 @@
+[
+  {
+    "name": "design-premium-prefers-claude",
+    "prompt": "Design a polished settings page with better spacing, hierarchy, and visual tone.",
+    "intent": "design",
+    "expectedModel": "anthropic/claude-opus-4.6",
+    "expectedThinking": "high"
+  },
+  {
+    "name": "peak-architecture-prefers-gpt",
+    "prompt": "Think deeply about the architecture tradeoffs for migrating this multi-package routing system across providers.",
+    "intent": "architecture",
+    "expectedModel": "openai/gpt-5.4",
+    "expectedThinking": "xhigh"
+  },
+  {
+    "name": "quick-question-prefers-cheap-tier",
+    "prompt": "What file registers the scheduler command?",
+    "intent": "quick-qna",
+    "expectedModel": "google/gemini-2.5-flash",
+    "expectedThinking": "minimal"
+  }
+]
