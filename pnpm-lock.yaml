@@ -15,6 +15,10 @@ overrides:
   yaml: 2.8.3
   picomatch: 4.0.4
   vite: 7.3.2
+  hono@<4.12.12: '>=4.12.12'
+  hono@>=4.0.0 <=4.12.11: '>=4.12.12'
+  '@hono/node-server@<1.19.13': '>=1.19.13'
+  basic-ftp@=5.2.0: '>=5.2.1'
 
 importers:
 
@@ -307,14 +311,14 @@ importers:
   packages/web-server:
     dependencies:
       '@hono/node-server':
-        specifier: ^1.14.0
-        version: 1.19.11(hono@4.12.8)
+        specifier: '>=1.19.13'
+        version: 1.19.13(hono@4.12.12)
       '@mariozechner/pi-coding-agent':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       hono:
-        specifier: ^4.7.0
-        version: 4.12.8
+        specifier: '>=4.12.12'
+        version: 4.12.12
       ws:
         specifier: ^8.18.0
         version: 8.19.0
@@ -705,11 +709,11 @@ packages:
       '@modelcontextprotocol/sdk':
         optional: true
 
-  '@hono/node-server@1.19.11':
-    resolution: {integrity: sha512-dr8/3zEaB+p0D2n/IUrlPF1HZm586qgJNXK1a9fhg/PzdtkK7Ksd5l312tJX2yBuALqDYBlG20QEbayqPyxn+g==}
+  '@hono/node-server@1.19.13':
+    resolution: {integrity: sha512-TsQLe4i2gvoTtrHje625ngThGBySOgSK3Xo2XRYOdqGN1teR8+I7vchQC46uLJi8OF62YTYA3AhSpumtkhsaKQ==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
-      hono: ^4
+      hono: '>=4.12.12'
 
   '@ifi/mdt-darwin-arm64@0.7.0':
     resolution: {integrity: sha512-nwPEb0XULP2X1bY5Aw8tPVsWwvXgbljoBcpCzKyw2lDnelM/MvVk3r4p8E7VemlUVHRdcM/RNo7L+Wzsfx05hg==}
@@ -1384,8 +1388,8 @@ packages:
   base64-js@1.5.1:
     resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
 
-  basic-ftp@5.2.0:
-    resolution: {integrity: sha512-VoMINM2rqJwJgfdHq6RiUudKt2BV+FY5ZFezP/ypmwayk68+NzzAQy4XXLlqsGD4MCzq3DrmNFD/uUmBJuGoXw==}
+  basic-ftp@5.2.1:
+    resolution: {integrity: sha512-0yaL8JdxTknKDILitVpfYfV2Ob6yb3udX/hK97M7I3jOeznBNxQPtVvTUtnhUkyHlxFWyr5Lvknmgzoc7jf+1Q==}
     engines: {node: '>=10.0.0'}
 
   bignumber.js@9.3.1:
@@ -1633,8 +1637,8 @@ packages:
   highlight.js@10.7.3:
     resolution: {integrity: sha512-tzcUFauisWKNHaRkN4Wjl/ZA07gENAjFl3J/c480dprkGTg5EQstgaNFqBfUqCq54kZRIEcreTsAgF/m2quD7A==}
 
-  hono@4.12.8:
-    resolution: {integrity: sha512-VJCEvtrezO1IAR+kqEYnxUOoStaQPGrCmX3j4wDTNOcD1uRPFpGlwQUIW8niPuvHXaTUxeOUl5MMDGrl+tmO9A==}
+  hono@4.12.12:
+    resolution: {integrity: sha512-p1JfQMKaceuCbpJKAPKVqyqviZdS0eUxH9v82oWo1kb9xjQ5wA6iP3FNVAPDFlz5/p7d45lO+BpSk1tuSZMF4Q==}
     engines: {node: '>=16.9.0'}
 
   hosted-git-info@9.0.2:
@@ -2685,9 +2689,9 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@hono/node-server@1.19.11(hono@4.12.8)':
+  '@hono/node-server@1.19.13(hono@4.12.12)':
     dependencies:
-      hono: 4.12.8
+      hono: 4.12.12
 
   '@ifi/mdt-darwin-arm64@0.7.0':
     optional: true
@@ -3423,7 +3427,7 @@ snapshots:
 
   base64-js@1.5.1: {}
 
-  basic-ftp@5.2.0: {}
+  basic-ftp@5.2.1: {}
 
   bignumber.js@9.3.1: {}
 
@@ -3657,7 +3661,7 @@ snapshots:
 
   get-uri@6.0.5:
     dependencies:
-      basic-ftp: 5.2.0
+      basic-ftp: 5.2.1
       data-uri-to-buffer: 6.0.2
       debug: 4.4.3
     transitivePeerDependencies:
@@ -3697,7 +3701,7 @@ snapshots:
 
   highlight.js@10.7.3: {}
 
-  hono@4.12.8: {}
+  hono@4.12.12: {}
 
   hosted-git-info@9.0.2:
     dependencies:
