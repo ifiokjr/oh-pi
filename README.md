@@ -506,6 +506,30 @@ pnpm lint:fix       # Auto-fix lint issues
 pnpm format         # Format all files
 ```
 
+### Test a local checkout in pi
+
+Use the repo-local source switcher to flip pi between the published npm packages and the packages in
+whatever checkout or worktree you want to test.
+
+```bash
+pnpm pi:local                             # point pi at this checkout
+pnpm pi:published                         # switch back to published npm packages
+pnpm pi:switch local -- --path /tmp/oh-pi-branch
+pnpm pi:switch remote -- --version 0.4.4
+pnpm pi:switch local -- --pi-local        # write into the current project's .pi/settings.json
+pnpm pi:switch status                     # show the current managed package sources
+```
+
+What it does:
+
+- rewrites only the managed oh-pi package sources in your pi settings
+- preserves package-specific config objects already in `settings.json`
+- runs `pi update` for each managed package so the switched source is ready to use
+- lets you validate a branch or detached worktree before you publish
+
+This is intended to be the normal development loop for testing a branch locally before cutting a
+release.
+
 ### Changesets
 
 **Every change must include a changeset.** This is enforced in CI.

@@ -12,20 +12,9 @@
 
 import { execFileSync } from "node:child_process";
 import process from "node:process";
+import { PACKAGES } from "./package-list.mjs";
 
 const IS_WINDOWS = process.platform === "win32";
-
-const PACKAGES = [
-	"@ifi/oh-pi-extensions",
-	"@ifi/oh-pi-ant-colony",
-	"@ifi/pi-extension-subagents",
-	"@ifi/pi-plan",
-	"@ifi/pi-spec",
-	"@ifi/oh-pi-themes",
-	"@ifi/oh-pi-prompts",
-	"@ifi/oh-pi-skills",
-	"@ifi/pi-web-remote",
-];
 
 function parseArgs(argv) {
 	const args = argv.slice(2);
