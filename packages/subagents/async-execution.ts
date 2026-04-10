@@ -99,8 +99,9 @@ export function isAsyncAvailable(): boolean {
 function spawnRunner(cfg: object, suffix: string, cwd: string): number | undefined {
 	if (!jitiCliPath) return undefined;
 
-	const cfgPath = path.join(os.tmpdir(), `pi-async-cfg-${suffix}.json`);
-	fs.writeFileSync(cfgPath, JSON.stringify(cfg));
+	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `pi-async-cfg-`));
+	const cfgPath = path.join(tmpDir, `${suffix}.json`);
+	fs.writeFileSync(cfgPath, JSON.stringify(cfg), { mode: 0o600 });
 	const runner = path.join(path.dirname(fileURLToPath(import.meta.url)), "subagent-runner.ts");
 
 	const proc = spawn("node", [jitiCliPath, runner, cfgPath], {
