@@ -26,8 +26,8 @@
   },
   "license": "MIT",
   "dependencies": {
-    "hono": "^4.7.0",
-    "@hono/node-server": "^1.14.0",
+    "hono": "^4.12.12",
+    "@hono/node-server": "^1.19.13",
     "ws": "^8.18.0"
   },
   "devDependencies": {

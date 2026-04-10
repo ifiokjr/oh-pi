@@ -13,8 +13,10 @@
  */
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { delimiter, join } from "node:path";
 import { StringEnum } from "@mariozechner/pi-ai";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { type ExtensionAPI, getAgentDir, getShellConfig } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 
 /** Timeout threshold in ms — commands exceeding this are automatically backgrounded. */
@@ -38,6 +40,28 @@ function isAlive(pid: number): boolean {
 	} catch {
 		return false;
 	}
+}
+
+export function createBgProcessShellEnv(
+	env: NodeJS.ProcessEnv = process.env,
+	agentDir: string = getAgentDir(),
+): NodeJS.ProcessEnv {
+	const pathKey = Object.keys(env).find((key) => key.toLowerCase() === "path") ?? "PATH";
+	const currentPath = env[pathKey] ?? "";
+	const binDir = join(agentDir, "bin");
+	const pathEntries = currentPath.split(delimiter).filter(Boolean);
+	const updatedPath = pathEntries.includes(binDir)
+		? currentPath
+		: [binDir, currentPath].filter(Boolean).join(delimiter);
+
+	return {
+		...env,
+		[pathKey]: updatedPath,
+	};
+}
+
+export function getBgProcessLogFilePath(now: number = Date.now(), tempDir: string = tmpdir()): string {
+	return join(tempDir, `oh-pi-bg-${now}.log`);
 }
 
 /**
@@ -68,9 +92,10 @@ export default function (pi: ExtensionAPI) {
 				let settled = false;
 				let backgrounded = false;
 
-				const child = spawn("bash", ["-c", command], {
+				const { shell, args } = getShellConfig();
+				const child = spawn(shell, [...args, command], {
 					cwd: process.cwd(),
-					env: { ...process.env },
+					env: createBgProcessShellEnv(),
 					stdio: ["ignore", "pipe", "pipe"],
 				});
 
@@ -108,7 +133,7 @@ export default function (pi: ExtensionAPI) {
 					backgrounded = true;
 					child.unref();
 
-					const logFile = `/tmp/oh-pi-bg-${Date.now()}.log`;
+					const logFile = getBgProcessLogFilePath();
 					writeFileSync(logFile, stdout + stderr);
 
 					const proc: BgProcess = {

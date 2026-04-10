@@ -311,13 +311,13 @@ importers:
   packages/web-server:
     dependencies:
       '@hono/node-server':
-        specifier: '>=1.19.13'
+        specifier: ^1.19.13
         version: 1.19.13(hono@4.12.12)
       '@mariozechner/pi-coding-agent':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
       hono:
-        specifier: '>=4.12.12'
+        specifier: ^4.12.12
         version: 4.12.12
       ws:
         specifier: ^8.18.0
