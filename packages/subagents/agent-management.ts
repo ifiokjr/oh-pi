@@ -221,6 +221,20 @@ function parseTools(raw: string): { tools?: string[]; mcpDirectTools?: string[] 
 	};
 }
 
+function validateExtensionPaths(paths: string[]): string | undefined {
+	for (const p of paths) {
+		if (p.startsWith("npm:")) continue;
+		const normalized = path.normalize(p);
+		if (path.isAbsolute(normalized)) {
+			return `Extension path '${p}' is not allowed: absolute paths are rejected. Use relative paths or npm: prefixed package references.`;
+		}
+		if (normalized.startsWith("..") || normalized.includes(`${path.sep}..`) || normalized.includes(`..${path.sep}`)) {
+			return `Extension path '${p}' is not allowed: parent directory traversal is rejected.`;
+		}
+	}
+	return undefined;
+}
+
 function applyAgentConfig(target: AgentConfig, cfg: Record<string, unknown>): string | undefined {
 	if (hasKey(cfg, "systemPrompt")) {
 		if (cfg.systemPrompt === false || cfg.systemPrompt === "") target.systemPrompt = "";
@@ -252,8 +266,12 @@ function applyAgentConfig(target: AgentConfig, cfg: Record<string, unknown>): st
 	if (hasKey(cfg, "extensions")) {
 		if (cfg.extensions === false) target.extensions = undefined;
 		else if (cfg.extensions === "") target.extensions = [];
-		else if (typeof cfg.extensions === "string") target.extensions = parseCsv(cfg.extensions);
-		else return "config.extensions must be a comma-separated string, empty string, or false when provided.";
+		else if (typeof cfg.extensions === "string") {
+			const parsed = parseCsv(cfg.extensions);
+			const extError = validateExtensionPaths(parsed);
+			if (extError) return extError;
+			target.extensions = parsed;
+		} else return "config.extensions must be a comma-separated string, empty string, or false when provided.";
 	}
 	if (hasKey(cfg, "thinking")) {
 		if (cfg.thinking === false || cfg.thinking === "") target.thinking = undefined;
