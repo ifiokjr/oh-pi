@@ -15,6 +15,9 @@ import { serializeChain } from "./chain-serializer.js";
 import { discoverAvailableSkills } from "./skills.js";
 import type { Details } from "./types.js";
 
+/** Maximum system prompt length when set via the management API. */
+const MAX_MANAGEMENT_SYSTEM_PROMPT_LENGTH = 50_000;
+
 type ManagementAction = "list" | "get" | "create" | "update" | "delete";
 type ManagementScope = "user" | "project";
 type ManagementContext = Pick<ExtensionContext, "cwd" | "modelRegistry">;
@@ -224,8 +227,12 @@ function parseTools(raw: string): { tools?: string[]; mcpDirectTools?: string[] 
 function applyAgentConfig(target: AgentConfig, cfg: Record<string, unknown>): string | undefined {
 	if (hasKey(cfg, "systemPrompt")) {
 		if (cfg.systemPrompt === false || cfg.systemPrompt === "") target.systemPrompt = "";
-		else if (typeof cfg.systemPrompt === "string") target.systemPrompt = cfg.systemPrompt;
-		else return "config.systemPrompt must be a string or false when provided.";
+		else if (typeof cfg.systemPrompt === "string") {
+			if (cfg.systemPrompt.length > MAX_MANAGEMENT_SYSTEM_PROMPT_LENGTH) {
+				return `config.systemPrompt exceeds the ${MAX_MANAGEMENT_SYSTEM_PROMPT_LENGTH} character limit for management API created prompts.`;
+			}
+			target.systemPrompt = cfg.systemPrompt;
+		} else return "config.systemPrompt must be a string or false when provided.";
 	}
 	if (hasKey(cfg, "model")) {
 		if (cfg.model === false || cfg.model === "") target.model = undefined;
@@ -356,6 +363,7 @@ export function formatAgentDetail(agent: AgentConfig): string {
 	if (agent.output) lines.push(`Output: ${agent.output}`);
 	if (agent.defaultReads?.length) lines.push(`Reads: ${agent.defaultReads.join(", ")}`);
 	if (agent.defaultProgress) lines.push("Progress: true");
+	if (agent.extraFields?.createdBy) lines.push(`Created By: ${agent.extraFields.createdBy} (review system prompt before use)`);
 	if (agent.systemPrompt.trim()) lines.push("", "System Prompt:", agent.systemPrompt);
 	return lines.join("\n");
 }
@@ -483,6 +491,7 @@ export function handleCreate(params: ManagementParams, ctx: ManagementContext): 
 		source: scope,
 		filePath: targetPath,
 		systemPrompt: "",
+		extraFields: { createdBy: "management-api" },
 	};
 	const applyError = applyAgentConfig(agent, cfg);
 	if (applyError) return result(applyError, true);
