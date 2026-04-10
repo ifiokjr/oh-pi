@@ -13,7 +13,10 @@
  */
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { StringEnum } from "@mariozechner/pi-ai";
+import { getShellConfig } from "@mariozechner/pi-coding-agent";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 
@@ -68,7 +71,8 @@ export default function (pi: ExtensionAPI) {
 				let settled = false;
 				let backgrounded = false;
 
-				const child = spawn("bash", ["-c", command], {
+				const { shell, args: shellArgs } = getShellConfig();
+				const child = spawn(shell, [...shellArgs, command], {
 					cwd: process.cwd(),
 					env: { ...process.env },
 					stdio: ["ignore", "pipe", "pipe"],
@@ -108,7 +112,7 @@ export default function (pi: ExtensionAPI) {
 					backgrounded = true;
 					child.unref();
 
-					const logFile = `/tmp/oh-pi-bg-${Date.now()}.log`;
+					const logFile = path.join(os.tmpdir(), `oh-pi-bg-${Date.now()}.log`);
 					writeFileSync(logFile, stdout + stderr);
 
 					const proc: BgProcess = {
