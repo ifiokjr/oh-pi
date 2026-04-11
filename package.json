@@ -1,6 +1,6 @@
 {
 	"private": true,
-	"packageManager": "pnpm@10.30.2",
+	"packageManager": "pnpm@10.33.0",
 	"scripts": {
 		"build": "pnpm -r run build",
 		"build:fast": "pnpm -r run build:fast",
@@ -56,7 +56,7 @@
 			"hono@<4.12.12": ">=4.12.12",
 			"hono@>=4.0.0 <=4.12.11": ">=4.12.12",
 			"@hono/node-server@<1.19.13": ">=1.19.13",
-			"basic-ftp@=5.2.0": ">=5.2.1"
+			"basic-ftp@<=5.2.1": ">=5.2.2"
 		}
 	}
 }
