@@ -43,6 +43,7 @@ import watchdogExtension, {
 	loadWatchdogConfig,
 	resolveWatchdogSampleIntervalMs,
 	resolveWatchdogThresholds,
+	tryCreateHistogram,
 	WATCHDOG_CONFIG_PATH,
 } from "./watchdog";
 
@@ -220,6 +221,37 @@ describe("watchdog helpers", () => {
 			eventLoopP99Ms: 90,
 			rssMb: 1200,
 		});
+	});
+});
+
+describe("tryCreateHistogram", () => {
+	it("returns the real histogram when monitorEventLoopDelay works", () => {
+		const h = tryCreateHistogram(20);
+		// The mock returns our test histogram, which has vi.fn() methods
+		expect(h.enable).toBeDefined();
+		expect(h.disable).toBeDefined();
+		expect(h.reset).toBeDefined();
+		expect(typeof h.percentile).toBe("function");
+		expect(typeof h.mean).toBe("number");
+		expect(typeof h.max).toBe("number");
+	});
+
+	it("returns a no-op fallback when monitorEventLoopDelay throws", async () => {
+		const { monitorEventLoopDelay: mockMonitor } = await import("node:perf_hooks");
+		const mock = vi.mocked(mockMonitor);
+		mock.mockImplementationOnce(() => {
+			throw new Error("Not implemented");
+		});
+
+		const h = tryCreateHistogram(20);
+
+		expect(h.mean).toBe(0);
+		expect(h.max).toBe(0);
+		expect(h.percentile(99)).toBe(0);
+		// No-op methods should not throw
+		h.enable();
+		h.disable();
+		h.reset();
 	});
 });
 
