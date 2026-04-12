@@ -12,7 +12,7 @@
 
 import { execFileSync } from "node:child_process";
 import process from "node:process";
-import { PACKAGES } from "./package-list.mjs";
+import { INSTALLER_PACKAGES } from "./package-list.mjs";
 
 const IS_WINDOWS = process.platform === "win32";
 
@@ -63,7 +63,7 @@ Options:
   -h, --help            Show this help
 
 Packages installed:
-${PACKAGES.map((p) => `  • ${p}`).join("\n")}
+${INSTALLER_PACKAGES.map((p) => `  • ${p}`).join("\n")}
 `.trim());
 }
 
@@ -119,7 +119,7 @@ const localFlag = opts.local ? ["-l"] : [];
 if (opts.remove) {
 	console.log("\n🐜 Removing oh-pi packages from pi...\n");
 	let failures = 0;
-	for (const pkg of PACKAGES) {
+	for (const pkg of INSTALLER_PACKAGES) {
 		const ok = run(pi, "remove", [`npm:${pkg}`, ...localFlag], { label: pkg });
 		if (!ok) failures++;
 	}
@@ -133,7 +133,7 @@ const scope = opts.local ? "project" : "global";
 console.log(`\n🐜 Installing oh-pi packages into pi (${scope})...\n`);
 
 let failures = 0;
-for (const pkg of PACKAGES) {
+for (const pkg of INSTALLER_PACKAGES) {
 	const source = `npm:${pkg}${suffix}`;
 	const ok = run(pi, "install", [source, ...localFlag], { label: pkg });
 	if (!ok) failures++;

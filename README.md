@@ -550,7 +550,11 @@ What it does:
 - rewrites only the managed oh-pi package sources in your pi settings
 - preserves package-specific config objects already in `settings.json`
 - runs `pi update` for each managed package so the switched source is ready to use
+- includes the experimental provider packages in addition to the main installer set
 - lets you validate a branch or detached worktree before you publish
+
+After switching, fully restart `pi`. Do not rely on `/reload` for source switches because it can
+keep previously loaded package modules alive.
 
 This is intended to be the normal development loop for testing a branch locally before cutting a
 release.

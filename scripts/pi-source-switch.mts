@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { PACKAGES } from "../packages/oh-pi/bin/package-list.mjs";
+import { SWITCHER_PACKAGES } from "../packages/oh-pi/bin/package-list.mjs";
 
 const IS_WINDOWS = process.platform === "win32";
 
@@ -157,7 +157,7 @@ export function rewriteManagedPackageSources(
 		return currentSource === nextSource ? entry : withPackageSource(entry, nextSource);
 	});
 
-	for (const packageName of PACKAGES) {
+	for (const packageName of SWITCHER_PACKAGES) {
 		if (!remainingPackages.has(packageName)) {
 			continue;
 		}
@@ -254,6 +254,10 @@ Examples:
   pnpm pi:published
   pnpm pi:switch remote -- --version 0.4.4
   pnpm pi:switch local -- --pi-local
+
+Notes:
+  - local/remote mode also manages the experimental provider packages
+  - fully restart pi after switching; /reload can keep old package modules alive
 `.trim());
 }
 
@@ -300,7 +304,7 @@ function collectManagedPackageSources(
 		}
 
 		const packageName = resolvePackageName(source);
-		if (!packageName || !PACKAGES.includes(packageName)) {
+		if (!packageName || !SWITCHER_PACKAGES.includes(packageName)) {
 			continue;
 		}
 
@@ -312,18 +316,18 @@ function collectManagedPackageSources(
 function buildDesiredSources(options: Options): Map<string, string> {
 	if (options.mode === "remote") {
 		const suffix = options.version ? `@${options.version}` : "";
-		return new Map(PACKAGES.map((packageName) => [packageName, `npm:${packageName}${suffix}`]));
+		return new Map(SWITCHER_PACKAGES.map((packageName) => [packageName, `npm:${packageName}${suffix}`]));
 	}
 
 	if (options.mode === "local") {
-		return resolveWorkspacePackageSources(options.repoPath, PACKAGES);
+		return resolveWorkspacePackageSources(options.repoPath, SWITCHER_PACKAGES);
 	}
 
 	throw new Error(`Unsupported mode: ${options.mode}`);
 }
 
 function describeChanges(currentSources: ReadonlyMap<string, string>, desiredSources: ReadonlyMap<string, string>): Change[] {
-	return PACKAGES.map((packageName) => ({
+	return SWITCHER_PACKAGES.map((packageName) => ({
 		packageName,
 		currentSource: currentSources.get(packageName),
 		nextSource: desiredSources.get(packageName) ?? "",
@@ -356,7 +360,7 @@ function printStatus(currentSources: ReadonlyMap<string, string>, settingsPath: 
 	console.log(`\noh-pi managed package sources (${scope} settings)`);
 	console.log(`Settings: ${settingsPath}`);
 	console.log("");
-	for (const packageName of PACKAGES) {
+	for (const packageName of SWITCHER_PACKAGES) {
 		console.log(`  ${packageName}`);
 		console.log(`    ${currentSources.get(packageName) ?? "<not configured>"}`);
 	}
@@ -365,7 +369,7 @@ function printStatus(currentSources: ReadonlyMap<string, string>, settingsPath: 
 function updatePiSources(pi: string, desiredSources: ReadonlyMap<string, string>) {
 	let failures = 0;
 	console.log("\nUpdating packages with pi...\n");
-	for (const packageName of PACKAGES) {
+	for (const packageName of SWITCHER_PACKAGES) {
 		const source = desiredSources.get(packageName);
 		if (!source) {
 			continue;
@@ -412,13 +416,15 @@ function main() {
 	const nextSettings: SettingsFile = { ...settings, packages: nextEntries };
 	if (options.dryRun) {
 		console.log("\nDry run only — settings were not written and pi update was not run.");
+		console.log("When you apply this switch, fully restart pi; /reload can keep old package modules alive.");
 		return;
 	}
 
 	writeSettings(settingsPath, nextSettings);
 	const pi = findPi();
 	updatePiSources(pi, desiredSources);
-	console.log("\n✅ Done. Restart pi to reload the switched packages.");
+	console.log("\n✅ Done. Fully restart pi to reload the switched packages.");
+	console.log("⚠️  Avoid /reload after switching sources; it can keep previously loaded package modules alive.");
 }
 
 const currentFilePath = realpathSync(fileURLToPath(import.meta.url));

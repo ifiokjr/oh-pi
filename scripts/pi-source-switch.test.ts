@@ -36,6 +36,7 @@ describe("pi source switcher helpers", () => {
 			new Map([
 				["@ifi/oh-pi-extensions", "/repo/packages/extensions"],
 				["@ifi/oh-pi-themes", "/repo/packages/themes"],
+				["@ifi/pi-provider-cursor", "/repo/packages/cursor"],
 			]),
 			(source) => parseNpmPackageName(source),
 		);
@@ -44,6 +45,7 @@ describe("pi source switcher helpers", () => {
 			"npm:@ifi/oh-pi",
 			{ source: "/repo/packages/extensions", extensions: ["-extensions/safe-guard.ts"] },
 			"/repo/packages/themes",
+			"/repo/packages/cursor",
 		]);
 	});
 
