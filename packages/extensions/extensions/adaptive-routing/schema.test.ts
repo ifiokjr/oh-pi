@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { getAgentDir } = vi.hoisted(() => ({
 	getAgentDir: vi.fn(() => "/mock-home/.pi/agent"),
@@ -16,7 +16,14 @@ import { DEFAULT_ADAPTIVE_ROUTING_CONFIG } from "./defaults.js";
 import { deriveFallbackGroups, deriveMaxThinkingLevel, normalizeRouteCandidates } from "./normalize.js";
 
 describe("adaptive routing config", () => {
+	let warnSpy: ReturnType<typeof vi.spyOn>;
+
+	beforeEach(() => {
+		warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+	});
+
 	afterEach(() => {
+		warnSpy.mockRestore();
 		vi.clearAllMocks();
 	});
 
@@ -48,6 +55,21 @@ describe("adaptive routing config", () => {
 		expect(config.taskClasses.quick?.defaultThinking).toBe(
 			DEFAULT_ADAPTIVE_ROUTING_CONFIG.taskClasses.quick?.defaultThinking,
 		);
+	});
+
+	it("warns and falls back when config JSON is invalid", () => {
+		const tempAgentDir = mkdtempSync(join(tmpdir(), "adaptive-routing-config-"));
+		getAgentDir.mockReturnValue(tempAgentDir);
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		writeFileSync(join(tempAgentDir, "extensions", "adaptive-routing", "config.json"), "{ broken json", "utf-8");
+
+		try {
+			const config = readAdaptiveRoutingConfig();
+			expect(config).toEqual(DEFAULT_ADAPTIVE_ROUTING_CONFIG);
+			expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to read config"));
+		} finally {
+			rmSync(tempAgentDir, { recursive: true, force: true });
+		}
 	});
 
 	it("reads config from the shared pi agent directory", () => {
