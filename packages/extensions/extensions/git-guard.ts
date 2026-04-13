@@ -63,7 +63,11 @@ export function detectInteractiveGitCommand(command: string): InteractiveGitDete
 		};
 	}
 
-	if (/\bgit\s+merge\b/.test(command) && !hasExplicitMergeMessage(command) && !hasNonInteractiveEditorOverride(command)) {
+	if (
+		/\bgit\s+merge\b/.test(command) &&
+		!hasExplicitMergeMessage(command) &&
+		!hasNonInteractiveEditorOverride(command)
+	) {
 		return {
 			reason: "`git merge` without `--no-edit` or an explicit message can open an editor in agent environments.",
 			suggestion: "Use `git merge --no-edit <branch>` or provide `-m` explicitly.",

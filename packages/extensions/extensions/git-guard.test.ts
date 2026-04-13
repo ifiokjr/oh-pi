@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	detectInteractiveGitCommand,
-	INTERACTIVE_GIT_WARNING_PREFIX,
-} from "./git-guard.js";
+import { detectInteractiveGitCommand, INTERACTIVE_GIT_WARNING_PREFIX } from "./git-guard.js";
 
 describe("detectInteractiveGitCommand", () => {
 	it("detects git rebase --continue without non-interactive editor overrides", () => {
