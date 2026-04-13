@@ -22,19 +22,19 @@ describe("resources", () => {
 
 	it("planDir returns correct path", () => {
 		const p = resources.planDir();
-		expect(p).toContain("packages/plan");
+		expect(p).toContain("node_modules/@ifi/pi-plan");
 		expect(p.startsWith("/")).toBe(true);
 	});
 
 	it("sharedQnaDir returns correct path", () => {
 		const p = resources.sharedQnaDir();
-		expect(p).toContain("packages/shared-qna");
+		expect(p).toContain("node_modules/@ifi/pi-shared-qna");
 		expect(p.startsWith("/")).toBe(true);
 	});
 
 	it("subagentsDir returns correct path", () => {
 		const p = resources.subagentsDir();
-		expect(p).toContain("packages/subagents");
+		expect(p).toContain("node_modules/@ifi/pi-extension-subagents");
 		expect(p.startsWith("/")).toBe(true);
 	});
 
