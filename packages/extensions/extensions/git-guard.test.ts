@@ -16,6 +16,11 @@ describe("detectInteractiveGitCommand", () => {
 		expect(result?.suggestion).toContain("git commit -m");
 	});
 
+	it("ignores non-git shell text that merely mentions git", () => {
+		expect(detectInteractiveGitCommand('echo "git commit"')).toBeNull();
+		expect(detectInteractiveGitCommand("printf 'git rebase --continue'\n")).toBeNull();
+	});
+
 	it("detects git merge without --no-edit or explicit message", () => {
 		const result = detectInteractiveGitCommand("git merge feature-branch");
 		expect(result).not.toBeNull();
@@ -25,6 +30,8 @@ describe("detectInteractiveGitCommand", () => {
 
 	it("returns null for safe non-interactive git commands", () => {
 		expect(detectInteractiveGitCommand('git commit -m "fix: test"')).toBeNull();
+		expect(detectInteractiveGitCommand("git commit -C HEAD")).toBeNull();
+		expect(detectInteractiveGitCommand("git commit --reuse-message HEAD")).toBeNull();
 		expect(detectInteractiveGitCommand("GIT_EDITOR=true git rebase --continue")).toBeNull();
 		expect(detectInteractiveGitCommand("git merge --no-edit feature-branch")).toBeNull();
 		expect(detectInteractiveGitCommand('git tag -a v1.2.3 -m "release"')).toBeNull();

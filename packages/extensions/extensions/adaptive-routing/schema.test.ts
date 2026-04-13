@@ -57,16 +57,19 @@ describe("adaptive routing config", () => {
 		);
 	});
 
-	it("warns and falls back when config JSON is invalid", () => {
+	it("warns once and falls back when config JSON is invalid", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "adaptive-routing-config-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
 		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
 		writeFileSync(join(tempAgentDir, "extensions", "adaptive-routing", "config.json"), "{ broken json", "utf-8");
 
 		try {
-			const config = readAdaptiveRoutingConfig();
-			expect(config).toEqual(DEFAULT_ADAPTIVE_ROUTING_CONFIG);
-			expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to read config"));
+			const first = readAdaptiveRoutingConfig();
+			const second = readAdaptiveRoutingConfig();
+			expect(first).toEqual(DEFAULT_ADAPTIVE_ROUTING_CONFIG);
+			expect(second).toEqual(DEFAULT_ADAPTIVE_ROUTING_CONFIG);
+			expect(warnSpy).toHaveBeenCalledTimes(1);
+			expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to parse config"));
 		} finally {
 			rmSync(tempAgentDir, { recursive: true, force: true });
 		}

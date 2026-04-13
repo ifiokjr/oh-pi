@@ -17,8 +17,16 @@ export function loadJsonConfigFile<T>({ path, fallback, normalize, warn }: LoadJ
 		return structuredClone(fallback);
 	}
 
+	let raw: unknown;
 	try {
-		const raw = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+		raw = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+	} catch (error) {
+		const detail = error instanceof Error ? error.message : String(error);
+		warn?.(`Failed to parse config ${path}: ${detail}`);
+		return structuredClone(fallback);
+	}
+
+	try {
 		const normalized = normalize(raw);
 		for (const message of normalized.warnings ?? []) {
 			warn?.(message);
@@ -26,7 +34,7 @@ export function loadJsonConfigFile<T>({ path, fallback, normalize, warn }: LoadJ
 		return normalized.value;
 	} catch (error) {
 		const detail = error instanceof Error ? error.message : String(error);
-		warn?.(`Failed to read config ${path}: ${detail}`);
+		warn?.(`Failed to normalize config ${path}: ${detail}`);
 		return structuredClone(fallback);
 	}
 }

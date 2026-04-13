@@ -36,6 +36,16 @@ const ROUTE_THINKING_LEVELS = new Set<RouteThinkingLevel>(["off", "minimal", "lo
 const ROUTING_MODES = new Set<AdaptiveRoutingMode>(["off", "shadow", "auto"]);
 const TELEMETRY_MODES = new Set<AdaptiveRoutingTelemetryMode>(["off", "local", "export"]);
 const PRIVACY_LEVELS = new Set<AdaptiveRoutingPrivacyLevel>(["minimal", "redacted", "full-local"]);
+const warnedConfigMessages = new Set<string>();
+
+function warnAdaptiveRoutingConfig(configPath: string, message: string): void {
+	const warningKey = `${configPath}:${message}`;
+	if (warnedConfigMessages.has(warningKey)) {
+		return;
+	}
+	warnedConfigMessages.add(warningKey);
+	console.warn(`[adaptive-routing] ${message}`);
+}
 
 export function getAdaptiveRoutingConfigPath(): string {
 	return join(getAgentDir(), "extensions", "adaptive-routing", "config.json");
@@ -47,7 +57,7 @@ export function readAdaptiveRoutingConfig(): AdaptiveRoutingConfig {
 		path: configPath,
 		fallback: DEFAULT_ADAPTIVE_ROUTING_CONFIG,
 		normalize: normalizeAdaptiveRoutingConfigWithWarnings,
-		warn: (message) => console.warn(`[adaptive-routing] ${message}`),
+		warn: (message) => warnAdaptiveRoutingConfig(configPath, message),
 	});
 }
 

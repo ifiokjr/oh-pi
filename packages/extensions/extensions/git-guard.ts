@@ -23,7 +23,7 @@ function hasNonInteractiveEditorOverride(command: string): boolean {
 }
 
 function hasExplicitCommitMessage(command: string): boolean {
-	return /(^|\s)(-m|--message|-F|--file)\s+/.test(command);
+	return /(^|\s)(-m|--message|-F|--file|-C|--reuse-message)(=|\s+)/.test(command);
 }
 
 function hasExplicitMergeMessage(command: string): boolean {
@@ -34,56 +34,77 @@ function hasExplicitTagMessage(command: string): boolean {
 	return /(^|\s)(-m|--message|-F|--file)\s+/.test(command);
 }
 
+function splitShellSegments(command: string): string[] {
+	return command
+		.split(/&&|\|\||[;|\n]/)
+		.map((segment) => segment.trim())
+		.filter(Boolean);
+}
+
+function stripLeadingEnvAssignments(segment: string): string {
+	let stripped = segment.trim().replace(/^\(+\s*/, "");
+	while (true) {
+		const next = stripped.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S+)\s+)*/, "");
+		if (next === stripped) {
+			return stripped;
+		}
+		stripped = next.trimStart();
+	}
+}
+
 export function detectInteractiveGitCommand(command: string): InteractiveGitDetection | null {
-	if (!/\bgit\b/.test(command)) {
-		return null;
-	}
+	for (const segment of splitShellSegments(command)) {
+		const gitCommand = stripLeadingEnvAssignments(segment);
+		if (!/^git\b/.test(gitCommand)) {
+			continue;
+		}
 
-	if (
-		/\bgit\s+rebase\b/.test(command) &&
-		/(^|\s)--continue(\s|$)/.test(command) &&
-		!hasNonInteractiveEditorOverride(command)
-	) {
-		return {
-			reason: "`git rebase --continue` can open an editor in agent environments.",
-			suggestion:
-				"Use `GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true git -c core.editor=true -c sequence.editor=true rebase --continue`.",
-		};
-	}
+		if (
+			/^git\s+rebase\b/.test(gitCommand) &&
+			/(^|\s)--continue(\s|$)/.test(gitCommand) &&
+			!hasNonInteractiveEditorOverride(segment)
+		) {
+			return {
+				reason: "`git rebase --continue` can open an editor in agent environments.",
+				suggestion:
+					"Use `GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true git -c core.editor=true -c sequence.editor=true rebase --continue`.",
+			};
+		}
 
-	if (
-		/\bgit\s+commit\b/.test(command) &&
-		!hasExplicitCommitMessage(command) &&
-		!/(^|\s)--no-edit(\s|$)/.test(command) &&
-		!hasNonInteractiveEditorOverride(command)
-	) {
-		return {
-			reason: "`git commit` without `-m`/`-F` can open an editor in agent environments.",
-			suggestion: 'Use `git commit -m "type(scope): description"`.',
-		};
-	}
+		if (
+			/^git\s+commit\b/.test(gitCommand) &&
+			!hasExplicitCommitMessage(gitCommand) &&
+			!/(^|\s)--no-edit(\s|$)/.test(gitCommand) &&
+			!hasNonInteractiveEditorOverride(segment)
+		) {
+			return {
+				reason: "`git commit` without `-m`/`-F` can open an editor in agent environments.",
+				suggestion: 'Use `git commit -m "type(scope): description"`.',
+			};
+		}
 
-	if (
-		/\bgit\s+merge\b/.test(command) &&
-		!hasExplicitMergeMessage(command) &&
-		!hasNonInteractiveEditorOverride(command)
-	) {
-		return {
-			reason: "`git merge` without `--no-edit` or an explicit message can open an editor in agent environments.",
-			suggestion: "Use `git merge --no-edit <branch>` or provide `-m` explicitly.",
-		};
-	}
+		if (
+			/^git\s+merge\b/.test(gitCommand) &&
+			!hasExplicitMergeMessage(gitCommand) &&
+			!hasNonInteractiveEditorOverride(segment)
+		) {
+			return {
+				reason: "`git merge` without `--no-edit` or an explicit message can open an editor in agent environments.",
+				suggestion: "Use `git merge --no-edit <branch>` or provide `-m` explicitly.",
+			};
+		}
 
-	if (
-		/\bgit\s+tag\b/.test(command) &&
-		/(^|\s)(-a|--annotate|-s|--sign)(\s|$)/.test(command) &&
-		!hasExplicitTagMessage(command) &&
-		!hasNonInteractiveEditorOverride(command)
-	) {
-		return {
-			reason: "Annotated or signed `git tag` can open an editor in agent environments.",
-			suggestion: 'Use `git tag -a vX.Y.Z -m "message"`.',
-		};
+		if (
+			/^git\s+tag\b/.test(gitCommand) &&
+			/(^|\s)(-a|--annotate|-s|--sign)(\s|$)/.test(gitCommand) &&
+			!hasExplicitTagMessage(gitCommand) &&
+			!hasNonInteractiveEditorOverride(segment)
+		) {
+			return {
+				reason: "Annotated or signed `git tag` can open an editor in agent environments.",
+				suggestion: 'Use `git tag -a vX.Y.Z -m "message"`.',
+			};
+		}
 	}
 
 	return null;

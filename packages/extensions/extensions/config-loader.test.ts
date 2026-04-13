@@ -45,7 +45,28 @@ describe("loadJsonConfigFile", () => {
 
 		expect(result).toEqual(fallback);
 		expect(warnings).toHaveLength(1);
+		expect(warnings[0]).toContain("Failed to parse config");
 		expect(warnings[0]).toContain("broken.json");
+	});
+
+	it("returns the fallback and warns when normalization throws", () => {
+		const warnings: string[] = [];
+		const fallback = { mode: "shadow", stickyTurns: 1 };
+
+		tempDir = mkdtempSync(join(tmpdir(), "config-loader-"));
+		writeFileSync(join(tempDir, "config.json"), `${JSON.stringify({ mode: "auto" })}\n`, "utf-8");
+
+		const result = loadJsonConfigFile({
+			path: join(tempDir, "config.json"),
+			fallback,
+			normalize: () => {
+				throw new Error("bad normalize");
+			},
+			warn: (message) => warnings.push(message),
+		});
+
+		expect(result).toEqual(fallback);
+		expect(warnings).toEqual([expect.stringContaining("Failed to normalize config")]);
 	});
 
 	it("returns normalized config and forwards partial-config warnings", () => {
