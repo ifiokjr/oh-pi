@@ -244,7 +244,7 @@ Illustrative examples:
       "openai/gpt-5-mini"
     ],
     "standard-coding": [
-      "anthropic/claude-sonnet-4.6",
+      "anthropic/claude-sonnet-4-6",
       "openai/gpt-5.4-mini",
       "google/gemini-2.5-pro"
     ],
