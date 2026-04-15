@@ -18,6 +18,7 @@
 			"./packages/extensions/extensions/scheduler.ts",
 			"./packages/extensions/extensions/tool-metadata.ts",
 			"./packages/extensions/extensions/usage-tracker.ts",
+			"./packages/extensions/extensions/worktree.ts",
 			"./packages/ant-colony/extensions/ant-colony/index.ts",
 			"./packages/subagents/index.ts",
 			"./packages/subagents/notify.ts",

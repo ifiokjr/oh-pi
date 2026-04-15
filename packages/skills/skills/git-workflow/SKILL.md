@@ -26,6 +26,29 @@ Recommend branching strategy based on project:
 - **Team**: main + develop + feature/fix branches
 - **Release**: GitFlow (main/develop/release/hotfix)
 
+### Worktree-aware workflow
+
+When the repository uses git worktrees, do not assume the current checkout is the main repo root.
+First establish:
+
+```bash
+git rev-parse --show-toplevel
+git rev-parse --git-common-dir
+git worktree list --porcelain
+```
+
+If the oh-pi worktree extension is available, prefer:
+
+- `/worktree status` — show the current worktree, canonical repo root, and pi ownership metadata
+- `/worktree list` — show all repo worktrees and which ones are pi-owned vs external/manual
+
+For pi-owned worktrees:
+
+- always record a human-readable purpose when creating one
+- preserve the owner/session metadata so cleanup decisions stay explainable
+- only clean up pi-owned worktrees by default
+- do **not** clean external/manual worktrees unless the user explicitly asks
+
 ### Commit Messages
 
 Follow Conventional Commits:

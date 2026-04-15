@@ -11,6 +11,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { expandHomeDir } from "@ifi/oh-pi-core";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import { getManagedWorktreeParentDir } from "./worktree-registry.js";
 
 export type ColonyStorageMode = "shared" | "project";
 
@@ -121,9 +122,9 @@ export function getColonyStateParentDir(cwd: string, options?: ColonyStorageOpti
 /**
 <!-- {=antColonyGetColonyWorktreeParentDirDocs} -->
 
-Resolve the parent directory for isolated colony worktrees. Shared mode keeps them under the
-workspace-mirrored shared root in `worktrees/`, while project mode places them under the legacy
-project-local `.ant-colony/worktrees/` path.
+Resolve the parent directory for isolated colony worktrees. Shared mode now uses the centralized
+pi worktree registry root so colony worktrees show up in the same shared namespace as `/worktree`,
+while project mode keeps using the legacy project-local `.ant-colony/worktrees/` path.
 
 <!-- {/antColonyGetColonyWorktreeParentDirDocs} -->
 */
@@ -132,7 +133,7 @@ export function getColonyWorktreeParentDir(cwd: string, options?: ColonyStorageO
 	if (resolved.mode === "project") {
 		return path.join(getLegacyProjectColonyStorageRoot(cwd), "worktrees");
 	}
-	return path.join(getSharedColonyWorkspaceRoot(cwd, resolved), "worktrees");
+	return getManagedWorktreeParentDir(cwd);
 }
 
 export function shouldManageProjectGitignore(options?: ColonyStorageOptions): boolean {

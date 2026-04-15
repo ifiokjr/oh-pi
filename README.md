@@ -53,7 +53,7 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 | ------------------------------------------------ | ---------------------------------- | -------------------------------------- |
 | [`@ifi/oh-pi`](./packages/oh-pi)                 | One-command installer for all pkgs | `npx @ifi/oh-pi`                       |
 | [`@ifi/oh-pi-core`](./packages/core)             | Shared types, registries, i18n     | (library, not installed directly)      |
-| [`@ifi/oh-pi-extensions`](./packages/extensions)          | 13 extensions (see below)                   | `pi install npm:@ifi/oh-pi-extensions`      |
+| [`@ifi/oh-pi-extensions`](./packages/extensions)          | 14 extensions (see below)                   | `pi install npm:@ifi/oh-pi-extensions`      |
 | [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)          | Multi-agent swarm extension                 | `pi install npm:@ifi/oh-pi-ant-colony`      |
 | [`@ifi/pi-extension-subagents`](./packages/subagents)     | Full-featured subagent delegation extension | `pi install npm:@ifi/pi-extension-subagents` |
 | [`@ifi/pi-plan`](./packages/plan)                         | Branch-aware planning mode extension        | `pi install npm:@ifi/pi-plan`               |
@@ -233,7 +233,7 @@ Replaces the default pi footer with a rich status bar showing real-time metrics:
 ```
 
 **Shows:** Model name with thinking-level indicator, input/output tokens, accumulated cost, context
-window %, elapsed time, working directory, and git branch.
+window %, elapsed time, working directory, git branch, and repo/worktree context when available.
 
 **How it works:** Uses `ctx.ui.setFooter()` with a component that reads
 `ctx.sessionManager.getBranch()` for token/cost data and `footerData.getGitBranch()` for git info.
@@ -261,6 +261,18 @@ current draft in `$VISUAL` or `$EDITOR`, then syncing the saved text back into p
 
 **Notes:** This complements pi's built-in `app.editor.external` binding (`Ctrl+G` by default).
 Users who want a different primary key can still remap that binding in `keybindings.json`.
+
+### 🌲 Worktree (`worktree`) — **default: on**
+
+Adds centralized git worktree awareness for oh-pi. It detects whether the current checkout is the
+main repo or a linked worktree, shows when the current worktree is pi-owned, and tracks owner +
+purpose metadata for pi-created worktrees.
+
+**Commands:** `/worktree` | `/worktree status` | `/worktree list` | `/worktree open [branch|path]` | `/worktree create <branch> [purpose]` | `/worktree cleanup <branch|path|id|all>`
+
+**Behavior:** pi-owned worktrees are created under shared pi storage, namespaced by the canonical
+repo root. Cleanup focuses on pi-owned worktrees only and leaves external/manual worktrees alone
+unless you explicitly intervene.
 
 ### ⏳ Background Process (`bg-process`) — **default: off**
 

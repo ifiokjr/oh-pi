@@ -58,12 +58,16 @@ export function createExtensionHarness() {
 			userMessages.push(message);
 		},
 		appendEntry() {},
+		exec: async () => ({ stdout: "", stderr: "", exitCode: 0 }),
 		async setModel(model: any) {
 			ctx.model = model;
 			return true;
 		},
 		getThinkingLevel() {
 			return currentThinking;
+		},
+		getSessionName() {
+			return null;
 		},
 		setThinkingLevel(level: string) {
 			currentThinking = level;

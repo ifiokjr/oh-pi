@@ -12,10 +12,12 @@
  * The footer auto-refreshes every 30 seconds and on git branch changes.
  */
 
+import path from "node:path";
 import type { AssistantMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext, ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth } from "@mariozechner/pi-tui";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode";
+import { formatOwnerLabel, getRepoWorktreeSnapshot, type RepoWorktreeSnapshot } from "./worktree-shared";
 
 /** OSC 8 hyperlink: renders `text` as a clickable terminal link to `url`. */
 export function hyperlink(url: string, text: string): string {
@@ -25,6 +27,7 @@ export function hyperlink(url: string, text: string): string {
 export type PrInfo = {
 	number: number;
 	url: string;
+	headRefName?: string;
 };
 
 const PR_PROBE_COOLDOWN_MS = 60_000;
@@ -83,7 +86,9 @@ export default function (pi: ExtensionAPI) {
 	/** Cached PR info for the current branch. */
 	let activeFooterData: ReadonlyFooterDataProvider | null = null;
 	let activeCtx: ExtensionContext | null = null;
-	let cachedPr: PrInfo | null = null;
+	let cachedPrs: PrInfo[] = [];
+	let cachedWorktreeSnapshot: RepoWorktreeSnapshot | null = null;
+	let lastWorktreeRefreshAt = 0;
 	/** Branch name when the PR was last probed. */
 	let prProbedForBranch: string | null = null;
 	/** Last time a PR probe was attempted. */
@@ -95,7 +100,19 @@ export default function (pi: ExtensionAPI) {
 		usageTotals = collectFooterUsageTotals(ctx);
 	};
 
-	const probePr = (branch: string | null) => {
+	const syncWorktreeSnapshot = (cwd = process.cwd()) => {
+		cachedWorktreeSnapshot = getRepoWorktreeSnapshot(cwd);
+		lastWorktreeRefreshAt = Date.now();
+	};
+
+	const getWorktreeSnapshot = () => {
+		if (Date.now() - lastWorktreeRefreshAt > 30_000) {
+			syncWorktreeSnapshot();
+		}
+		return cachedWorktreeSnapshot;
+	};
+
+	const probePrs = (branch: string | null) => {
 		if (!branch || prProbeInFlight) {
 			return;
 		}
@@ -104,30 +121,28 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 		if (branch !== prProbedForBranch) {
-			cachedPr = null;
+			cachedPrs = [];
 		}
 		prProbeInFlight = true;
 		prProbedForBranch = branch;
 		lastPrProbeAt = now;
-		pi.exec("gh", ["pr", "view", "--json", "number,url", "--jq", "{number,url}"], { timeout: 8000 })
+		pi.exec("gh", ["pr", "list", "--head", branch, "--state", "open", "--json", "number,url,headRefName"], {
+			timeout: 8000,
+		})
 			.then(({ stdout, exitCode }) => {
 				if (exitCode !== 0 || !stdout.trim()) {
-					cachedPr = null;
+					cachedPrs = [];
 					return;
 				}
 				try {
-					const parsed = JSON.parse(stdout.trim()) as { number?: number; url?: string };
-					if (parsed.number && parsed.url) {
-						cachedPr = { number: parsed.number, url: parsed.url };
-					} else {
-						cachedPr = null;
-					}
+					const parsed = JSON.parse(stdout.trim()) as Array<{ number?: number; url?: string; headRefName?: string }>;
+					cachedPrs = parsed.filter((entry): entry is PrInfo => !!entry.number && !!entry.url);
 				} catch {
-					cachedPr = null;
+					cachedPrs = [];
 				}
 			})
 			.catch(() => {
-				cachedPr = null;
+				cachedPrs = [];
 			})
 			.finally(() => {
 				prProbeInFlight = false;
@@ -137,17 +152,25 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		sessionStart = Date.now();
 		syncUsageTotals(ctx);
+		syncWorktreeSnapshot(ctx.cwd);
 		activeCtx = ctx;
 
 		ctx.ui.setFooter((tui, theme, footerData) => {
 			activeFooterData = footerData;
+			const probeActivePrs = () => {
+				syncWorktreeSnapshot(ctx.cwd);
+				probePrs(getWorktreeSnapshot()?.current?.branch ?? footerData.getGitBranch());
+			};
 			const unsub = footerData.onBranchChange(() => {
-				probePr(footerData.getGitBranch());
+				probeActivePrs();
 				tui.requestRender();
 			});
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
-			const timer = setInterval(() => tui.requestRender(), 30000);
-			probePr(footerData.getGitBranch());
+			const timer = setInterval(() => {
+				probeActivePrs();
+				tui.requestRender();
+			}, 30000);
+			probeActivePrs();
 
 			return {
 				dispose() {
@@ -178,14 +201,20 @@ export default function (pi: ExtensionAPI) {
 					const parts = process.cwd().split("/");
 					const short = parts.length > 2 ? parts.slice(-2).join("/") : process.cwd();
 					const cwdStr = theme.fg("muted", `⌂ ${short}`);
+					const worktreeSnapshot = getWorktreeSnapshot();
+					const repoStr = worktreeSnapshot ? theme.fg("muted", `repo ${path.basename(worktreeSnapshot.repoRoot)}`) : "";
+					const worktreeStr = worktreeSnapshot?.isLinkedWorktree
+						? theme.fg(
+								worktreeSnapshot.current?.isManaged ? "warning" : "muted",
+								`wt ${worktreeSnapshot.current?.branch ?? path.basename(worktreeSnapshot.currentWorktreeRoot)}${worktreeSnapshot.current?.isManaged ? " pi" : ""}`,
+							)
+						: "";
 
-					const branch = footerData.getGitBranch();
+					const branch = worktreeSnapshot?.current?.branch ?? footerData.getGitBranch();
 					let branchStr = branch ? theme.fg("accent", `⎇ ${branch}`) : "";
-					if (cachedPr) {
-						const prLabel = theme.fg("success", `PR #${cachedPr.number}`);
-						branchStr = branchStr
-							? `${branchStr} ${hyperlink(cachedPr.url, prLabel)}`
-							: hyperlink(cachedPr.url, prLabel);
+					if (cachedPrs.length > 0) {
+						const prLinks = cachedPrs.map((pr) => hyperlink(pr.url, theme.fg("success", `PR #${pr.number}`))).join(" ");
+						branchStr = branchStr ? `${branchStr} ${prLinks}` : prLinks;
 					}
 
 					const thinking = pi.getThinkingLevel();
@@ -195,9 +224,16 @@ export default function (pi: ExtensionAPI) {
 					const modelStr = `${theme.fg(thinkColor, "◆")} ${theme.fg("accent", modelId)}`;
 
 					const sep = theme.fg("dim", " | ");
-					const leftParts = [modelStr, tokenStats, elapsed, cwdStr];
+					const leftParts = [modelStr, tokenStats, elapsed];
+					if (repoStr) {
+						leftParts.push(repoStr);
+					}
+					leftParts.push(cwdStr);
 					if (branchStr) {
 						leftParts.push(branchStr);
+					}
+					if (worktreeStr) {
+						leftParts.push(worktreeStr);
 					}
 					const left = leftParts.join(sep);
 
@@ -209,6 +245,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_switch", (event, ctx) => {
 		syncUsageTotals(ctx);
+		syncWorktreeSnapshot(ctx.cwd);
 		if (event.reason === "new") {
 			sessionStart = Date.now();
 		}
@@ -275,16 +312,37 @@ export default function (pi: ExtensionAPI) {
 		lines.push(`  ${divider}`);
 		lines.push(`  ${theme.fg("accent", "Directory")}${sep}${process.cwd()}`);
 
-		const branch = activeFooterData?.getGitBranch?.();
+		const worktreeSnapshot = getWorktreeSnapshot();
+		if (worktreeSnapshot) {
+			lines.push(`  ${theme.fg("accent", "Repo Root")}${sep}${worktreeSnapshot.repoRoot}`);
+			lines.push(`  ${theme.fg("accent", "Worktree Root")}${sep}${worktreeSnapshot.currentWorktreeRoot}`);
+			lines.push(
+				`  ${theme.fg("accent", "Worktree Kind")}${sep}${worktreeSnapshot.isLinkedWorktree ? (worktreeSnapshot.current?.isManaged ? "pi-owned linked worktree" : "external linked worktree") : "main checkout"}`,
+			);
+			if (worktreeSnapshot.current?.metadata) {
+				lines.push(`  ${theme.fg("accent", "Purpose")}${sep}${worktreeSnapshot.current.metadata.purpose}`);
+				lines.push(
+					`  ${theme.fg("accent", "Owner")}${sep}${formatOwnerLabel(worktreeSnapshot.current.metadata.owner)}`,
+				);
+			}
+			lines.push(
+				`  ${theme.fg("accent", "Worktrees")}${sep}${worktreeSnapshot.worktrees.length} total${worktreeSnapshot.staleManagedWorktrees.length > 0 ? `${sep}${worktreeSnapshot.staleManagedWorktrees.length} stale pi record(s)` : ""}`,
+			);
+		}
+
+		const branch = worktreeSnapshot?.current?.branch ?? activeFooterData?.getGitBranch?.();
 		if (branch) {
 			lines.push(`  ${theme.fg("accent", "Branch")}${sep}${theme.fg("accent", branch)}`);
 		}
 
-		if (cachedPr) {
-			const prLink = hyperlink(cachedPr.url, `#${cachedPr.number}`);
-			lines.push(
-				`  ${theme.fg("accent", "Pull Request")}${sep}${theme.fg("success", prLink)}${sep}${theme.fg("dim", cachedPr.url)}`,
-			);
+		if (cachedPrs.length > 0) {
+			const prLabel = cachedPrs.length > 1 ? "Pull Requests" : "Pull Request";
+			for (const pr of cachedPrs) {
+				const prLink = hyperlink(pr.url, `#${pr.number}`);
+				lines.push(
+					`  ${theme.fg("accent", prLabel)}${sep}${theme.fg("success", prLink)}${sep}${theme.fg("dim", pr.url)}`,
+				);
+			}
 		}
 		lines.push("");
 

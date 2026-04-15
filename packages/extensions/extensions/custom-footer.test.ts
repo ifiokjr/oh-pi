@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({}));
+vi.mock("@mariozechner/pi-coding-agent", () => ({
+	getAgentDir: () => "/mock-home/.pi/agent",
+}));
 vi.mock("@mariozechner/pi-ai", () => ({}));
 vi.mock("@mariozechner/pi-tui", () => ({
 	truncateToWidth: (text: string, width: number) => text.slice(0, width),
@@ -202,10 +204,13 @@ describe("custom-footer extension", () => {
 		expect(component.render(200)).toEqual([]);
 	});
 
-	it("shows a clickable PR link in the footer when a PR is open", async () => {
+	it("shows clickable PR links in the footer when PRs are open for the current worktree branch", async () => {
 		const pi = createMockPi();
 		pi.exec = vi.fn().mockResolvedValue({
-			stdout: JSON.stringify({ number: 77, url: "https://github.com/ifiokjr/oh-pi/pull/77" }),
+			stdout: JSON.stringify([
+				{ number: 77, url: "https://github.com/ifiokjr/oh-pi/pull/77", headRefName: "feat/footer-pr-link" },
+				{ number: 81, url: "https://github.com/ifiokjr/oh-pi/pull/81", headRefName: "feat/footer-pr-link" },
+			]),
 			exitCode: 0,
 		});
 		customFooter(pi as any);
@@ -237,12 +242,14 @@ describe("custom-footer extension", () => {
 
 		const rendered = component.render(300)[0];
 		expect(rendered).toContain("PR #77");
+		expect(rendered).toContain("PR #81");
 		expect(rendered).toContain("https://github.com/ifiokjr/oh-pi/pull/77");
+		expect(rendered).toContain("https://github.com/ifiokjr/oh-pi/pull/81");
 	});
 
 	it("does not show PR link when no PR is open", async () => {
 		const pi = createMockPi();
-		pi.exec = vi.fn().mockResolvedValue({ stdout: "", exitCode: 1 });
+		pi.exec = vi.fn().mockResolvedValue({ stdout: "[]", exitCode: 0 });
 		customFooter(pi as any);
 
 		let footerFactory: any;
@@ -328,7 +335,7 @@ describe("custom-footer extension", () => {
 		expect(rendered).toContain("$0.03");
 		expect(rendered).toContain("1.2k");
 		expect(rendered).toContain("23% used");
-		expect(rendered).toContain("feat/test-branch");
+		expect(rendered).toContain("Branch");
 		expect(rendered).toContain("pi-scheduler");
 		expect(rendered).toContain("2 active");
 		expect(rendered).toContain("watchdog");

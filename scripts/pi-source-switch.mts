@@ -131,13 +131,67 @@ export function resolveWorkspacePackageSources(repoPath: string, packageNames: r
 	return resolvedSources;
 }
 
+export function dedupeManagedPackageEntries(
+	entries: PackageSetting[],
+	resolvePackageName: (source: string) => string | undefined,
+): PackageSetting[] {
+	const choiceByPackage = new Map<string, { index: number; entry: PackageSetting }>();
+
+	for (let index = 0; index < entries.length; index++) {
+		const entry = entries[index];
+		const source = getPackageSource(entry);
+		if (!source) {
+			continue;
+		}
+
+		const packageName = resolvePackageName(source);
+		if (!packageName || !SWITCHER_PACKAGES.includes(packageName)) {
+			continue;
+		}
+
+		const current = choiceByPackage.get(packageName);
+		if (!current) {
+			choiceByPackage.set(packageName, { index, entry });
+			continue;
+		}
+
+		if (typeof entry === "object" && typeof current.entry !== "object") {
+			choiceByPackage.set(packageName, { index, entry });
+			continue;
+		}
+
+		if (typeof entry === "object" && typeof current.entry === "object") {
+			choiceByPackage.set(packageName, { index, entry });
+			continue;
+		}
+
+		if (typeof entry !== "object" && typeof current.entry !== "object") {
+			choiceByPackage.set(packageName, { index, entry });
+		}
+	}
+
+	return entries.filter((entry, index) => {
+		const source = getPackageSource(entry);
+		if (!source) {
+			return true;
+		}
+
+		const packageName = resolvePackageName(source);
+		if (!packageName || !SWITCHER_PACKAGES.includes(packageName)) {
+			return true;
+		}
+
+		return choiceByPackage.get(packageName)?.index === index;
+	});
+}
+
 export function rewriteManagedPackageSources(
 	entries: PackageSetting[],
 	desiredSources: ReadonlyMap<string, string>,
 	resolvePackageName: (source: string) => string | undefined,
 ): PackageSetting[] {
 	const remainingPackages = new Set(desiredSources.keys());
-	const nextEntries = entries.map((entry) => {
+	const rewrittenEntries = entries.map((entry) => {
 		const currentSource = getPackageSource(entry);
 		if (!currentSource) {
 			return entry;
@@ -163,11 +217,11 @@ export function rewriteManagedPackageSources(
 		}
 		const source = desiredSources.get(packageName);
 		if (source) {
-			nextEntries.push(source);
+			rewrittenEntries.push(source);
 		}
 	}
 
-	return nextEntries;
+	return dedupeManagedPackageEntries(rewrittenEntries, resolvePackageName);
 }
 
 function parseArgs(argv: string[]): Options {

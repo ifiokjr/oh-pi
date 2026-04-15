@@ -127,6 +127,12 @@ export interface ColonyWorkspace {
 	worktreeRoot: string | null;
 	branch: string | null;
 	baseBranch: string | null;
+	/** Whether this worktree was created and tracked by pi. */
+	managedByPi?: boolean;
+	/** The human-readable reason the worktree exists. */
+	purpose?: string | null;
+	/** Which pi instance created the worktree. */
+	ownerInstanceId?: string | null;
 	/** Optional note (e.g. fallback reason when worktree creation fails). */
 	note: string | null;
 }

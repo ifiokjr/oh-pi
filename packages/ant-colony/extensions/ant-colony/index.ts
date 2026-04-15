@@ -340,6 +340,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			modelOverrides: Record<string, string>;
 			cwd: string;
 			modelRegistry?: ModelRegistry;
+			sessionFile?: string | null;
+			sessionName?: string | null;
 		},
 		signal?: AbortSignal | null,
 	) {
@@ -349,6 +351,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		const workspace = prepareColonyWorkspace({
 			cwd: params.cwd,
 			runtimeId: `sync-${Date.now().toString(36)}`,
+			goal: params.goal,
+			sessionFile: params.sessionFile,
+			sessionName: params.sessionName,
 			storageOptions,
 		});
 
@@ -400,6 +405,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			modelOverrides: Record<string, string>;
 			cwd: string;
 			modelRegistry?: ModelRegistry;
+			sessionFile?: string | null;
+			sessionName?: string | null;
 		},
 		options?: { resume?: boolean; stableIdHint?: string; workspaceHint?: ColonyWorkspace | null },
 	): { id: string; workspace: ColonyWorkspace } {
@@ -410,10 +417,20 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			? resumeColonyWorkspace({
 					cwd: params.cwd,
 					runtimeId: colonyId,
+					goal: params.goal,
+					sessionFile: params.sessionFile,
+					sessionName: params.sessionName,
 					savedWorkspace: options?.workspaceHint ?? null,
 					storageOptions,
 				})
-			: prepareColonyWorkspace({ cwd: params.cwd, runtimeId: colonyId, storageOptions });
+			: prepareColonyWorkspace({
+					cwd: params.cwd,
+					runtimeId: colonyId,
+					goal: params.goal,
+					sessionFile: params.sessionFile,
+					sessionName: params.sessionName,
+					storageOptions,
+				});
 		const now = Date.now();
 		const colony: BackgroundColony = {
 			id: colonyId,
@@ -1087,6 +1104,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				modelOverrides,
 				cwd: ctx.cwd,
 				modelRegistry: ctx.modelRegistry ?? undefined,
+				sessionFile: ctx.sessionManager?.getSessionFile?.() ?? null,
+				sessionName: typeof pi.getSessionName === "function" ? (pi.getSessionName() ?? null) : null,
 			};
 
 			// Non-interactive mode (print mode): synchronously wait for colony completion
@@ -1308,6 +1327,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				currentModel,
 				modelOverrides: {},
 				modelRegistry: ctx.modelRegistry ?? undefined,
+				sessionFile: ctx.sessionManager?.getSessionFile?.() ?? null,
+				sessionName: typeof pi.getSessionName === "function" ? (pi.getSessionName() ?? null) : null,
 			});
 			ctx.ui.notify(
 				`${antIcon()}[${launched.id}] Colony launched (${colonies.size} active): ${goal.slice(0, 70)}${goal.length > 70 ? "..." : ""}\nWorkspace: ${formatWorkspaceSummary(launched.workspace)}`,
@@ -1419,6 +1440,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						currentModel: ctx.currentModel,
 						modelOverrides: {},
 						modelRegistry: ctx.modelRegistry,
+						sessionFile: ctx.sessionManager?.getSessionFile?.() ?? null,
+						sessionName: typeof pi.getSessionName === "function" ? (pi.getSessionName() ?? null) : null,
 					},
 					{ resume: true, stableIdHint: found.colonyId, workspaceHint: found.state.workspace ?? null },
 				);

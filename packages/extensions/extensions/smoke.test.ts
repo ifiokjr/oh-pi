@@ -8,6 +8,7 @@ import safeGuardExtension from "./safe-guard.js";
 import schedulerExtension from "./scheduler.js";
 import toolMetadataExtension from "./tool-metadata.js";
 import usageTrackerExtension from "./usage-tracker.js";
+import worktreeExtension from "./worktree.js";
 
 describe("extensions runtime smoke tests", () => {
 	it("registers scheduler commands and handles a basic tool flow", async () => {
@@ -99,6 +100,12 @@ describe("extensions runtime smoke tests", () => {
 		externalEditorExtension(harness.pi as never);
 		expect(harness.commands.has("external-editor")).toBe(true);
 		expect(harness.shortcuts.has("ctrl+shift+e")).toBe(true);
+	});
+
+	it("registers worktree command without crashing", () => {
+		const harness = createExtensionHarness();
+		worktreeExtension(harness.pi as never);
+		expect(harness.commands.has("worktree")).toBe(true);
 	});
 
 	it("blocks protected writes in headless mode via safe-guard", async () => {

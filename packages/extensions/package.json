@@ -20,7 +20,8 @@
       "./extensions/safe-guard.ts",
       "./extensions/scheduler.ts",
       "./extensions/tool-metadata.ts",
-      "./extensions/usage-tracker.ts"
+      "./extensions/usage-tracker.ts",
+      "./extensions/worktree.ts"
     ]
   },
   "files": [

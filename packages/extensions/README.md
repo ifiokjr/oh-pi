@@ -19,6 +19,7 @@ This package includes extensions such as:
 - scheduler
 - btw / qq
 - watchdog / safe-mode
+- worktree
 
 ## Install
 
@@ -35,7 +36,9 @@ npx @ifi/oh-pi
 ## What it provides
 
 These extensions add commands, tools, UI widgets, safety checks, background process handling,
-usage monitoring, adaptive model routing, scheduling features, tool execution metadata, external-editor integration, and runtime performance protection (`/watchdog`, `/watchdog blame`, `/safe-mode`) to pi.
+usage monitoring, adaptive model routing, scheduling features, tool execution metadata,
+external-editor integration, git worktree awareness, and runtime performance protection
+(`/watchdog`, `/watchdog blame`, `/safe-mode`) to pi.
 
 `git-guard` also blocks git bash invocations that are likely to open an interactive editor in agent environments (for example `git rebase --continue` without non-interactive editor overrides), preventing hangs before they happen.
 
@@ -50,6 +53,19 @@ The `external-editor` extension adds:
 When the editor exits successfully, the updated text is synced back into pi's main draft editor.
 This complements pi's built-in `app.editor.external` binding (`Ctrl+G` by default) with a
 discoverable slash command and an extra shortcut.
+
+## Worktree
+
+The `worktree` extension adds centralized git worktree awareness for oh-pi:
+
+- `/worktree` or `/worktree status` — show the canonical repo root, current worktree root, and pi ownership metadata
+- `/worktree list` — list all repo worktrees and distinguish pi-owned vs external/manual checkouts
+- `/worktree open [branch|path]` — open a selected worktree in the system file opener and print a `cd` fallback
+- `/worktree create <branch> [purpose]` — create a pi-owned worktree under shared pi storage with owner + purpose metadata
+- `/worktree cleanup <branch|path|id|all>` — remove pi-owned worktrees while leaving external/manual worktrees alone by default
+
+pi-owned worktrees are stored under shared pi storage using a workspace-mirrored root so every repo
+gets a stable namespace. Each managed worktree records which pi instance/session created it and why.
 
 ## Adaptive routing
 

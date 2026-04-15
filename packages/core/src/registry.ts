@@ -145,6 +145,13 @@ export const EXTENSIONS = [
 		},
 		default: false,
 	},
+	{
+		name: "worktree",
+		get label() {
+			return `${icon("package")} Worktree — Centralized pi-owned git worktree status and cleanup`;
+		},
+		default: true,
+	},
 ];
 
 /** Keybinding schemes — default (no overrides), vim-style, and emacs-style. */

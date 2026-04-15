@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+	dedupeManagedPackageEntries,
 	parseNpmPackageName,
 	resolveManagedPackageNameFromSource,
 	resolveWorkspacePackageSources,
@@ -46,6 +47,33 @@ describe("pi source switcher helpers", () => {
 			{ source: "/repo/packages/extensions", extensions: ["-extensions/safe-guard.ts"] },
 			"/repo/packages/themes",
 			"/repo/packages/cursor",
+		]);
+	});
+
+	it("dedupes managed package entries while preserving object-style config", () => {
+		const nextEntries = dedupeManagedPackageEntries(
+			[
+				"npm:@ifi/oh-pi",
+				{ source: "/tmp/old/extensions", extensions: ["-extensions/safe-guard.ts"] },
+				"/tmp/new/extensions",
+				"/tmp/old/themes",
+				"/tmp/new/themes",
+			],
+			(source) => {
+				if (source.includes("extensions")) {
+					return "@ifi/oh-pi-extensions";
+				}
+				if (source.includes("themes")) {
+					return "@ifi/oh-pi-themes";
+				}
+				return parseNpmPackageName(source);
+			},
+		);
+
+		expect(nextEntries).toEqual([
+			"npm:@ifi/oh-pi",
+			{ source: "/tmp/old/extensions", extensions: ["-extensions/safe-guard.ts"] },
+			"/tmp/new/themes",
 		]);
 	});
 

@@ -18,3 +18,28 @@ export type {
 	ProviderConfig,
 	ProviderSetupStrategy,
 } from "./types.js";
+export type {
+	CreateManagedWorktreeOptions,
+	CreateManagedWorktreeResult,
+	GitWorktreeEntry,
+	ManagedWorktreeMetadata,
+	ManagedWorktreeOwner,
+	RemoveManagedWorktreeResult,
+	RepoWorktreeSnapshot,
+	WorktreeRegistry,
+} from "./worktree.js";
+export {
+	buildPaiInstanceId,
+	createManagedWorktree,
+	createOwnerMetadata,
+	formatOwnerLabel,
+	formatWorktreeKind,
+	getManagedWorktreeParentDir,
+	getRepoWorktreeSnapshot,
+	getRepoWorktreeStorageRoot,
+	getSharedWorktreeRoot,
+	getWorktreeRegistryPath,
+	loadWorktreeRegistry,
+	removeManagedWorktree,
+	touchManagedWorktreeSeen,
+} from "./worktree.js";

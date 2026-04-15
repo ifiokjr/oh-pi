@@ -8,6 +8,7 @@ import {
 	getColonyWorktreeParentDir,
 	migrateLegacyProjectColonies,
 } from "../extensions/ant-colony/storage.js";
+import { getManagedWorktreeParentDir } from "../extensions/ant-colony/worktree-registry.js";
 
 const tmpDirs: string[] = [];
 
@@ -28,16 +29,14 @@ afterEach(() => {
 });
 
 describe("ant-colony shared storage", () => {
-	it("stores colony state and worktrees under the shared pi-style root by default", () => {
+	it("stores colony state under ant-colony storage and worktrees under the shared pi worktree root by default", () => {
 		const cwd = "/Users/test/work/repo";
 		const sharedRoot = "/mock-home/.pi/agent/ant-colony";
 
 		expect(getColonyStateParentDir(cwd, { mode: "shared", sharedRoot })).toBe(
 			"/mock-home/.pi/agent/ant-colony/root/Users/test/work/repo/colonies",
 		);
-		expect(getColonyWorktreeParentDir(cwd, { mode: "shared", sharedRoot })).toBe(
-			"/mock-home/.pi/agent/ant-colony/root/Users/test/work/repo/worktrees",
-		);
+		expect(getColonyWorktreeParentDir(cwd, { mode: "shared", sharedRoot })).toBe(getManagedWorktreeParentDir(cwd));
 	});
 
 	it("keeps project mode available as an explicit opt-in", () => {

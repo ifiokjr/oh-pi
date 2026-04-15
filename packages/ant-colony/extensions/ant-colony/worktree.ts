@@ -3,12 +3,23 @@ import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { type ColonyStorageOptions, getColonyWorktreeParentDir, resolveColonyStorageOptions } from "./storage.js";
 import type { ColonyWorkspace } from "./types.js";
+import {
+	buildPaiInstanceId,
+	createManagedWorktree,
+	createOwnerMetadata,
+	loadWorktreeRegistry,
+	removeManagedWorktree,
+} from "./worktree-registry.js";
 
 const WORKTREE_ENV_FLAG = "PI_ANT_COLONY_WORKTREE";
+const antColonyOwnerInstanceId = `${buildPaiInstanceId()}-ant-colony`;
 
 export interface PrepareColonyWorkspaceOptions {
 	cwd: string;
 	runtimeId: string;
+	goal?: string;
+	sessionFile?: string | null;
+	sessionName?: string | null;
 	enabled?: boolean;
 	storageOptions?: ColonyStorageOptions;
 }
@@ -38,6 +49,17 @@ function randomSuffix(): string {
 	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function trimPurpose(value: string, max = 120): string {
+	return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
+function buildPurpose(runtimeId: string, goal?: string): string {
+	if (!goal?.trim()) {
+		return `Ant colony runtime ${runtimeId}`;
+	}
+	return `Ant colony (${runtimeId}): ${trimPurpose(goal.trim())}`;
+}
+
 function fallbackWorkspace(originCwd: string, note: string): ColonyWorkspace {
 	return {
 		mode: "shared",
@@ -47,6 +69,9 @@ function fallbackWorkspace(originCwd: string, note: string): ColonyWorkspace {
 		worktreeRoot: null,
 		branch: null,
 		baseBranch: null,
+		managedByPi: false,
+		purpose: null,
+		ownerInstanceId: null,
 		note,
 	};
 }
@@ -60,9 +85,70 @@ function resolveExecutionCwd(worktreeRoot: string, repoRoot: string, originCwd: 
 	return existsSync(candidate) ? candidate : worktreeRoot;
 }
 
+function isEmptyDir(path: string): boolean {
+	try {
+		return readdirSync(path).length === 0;
+	} catch {
+		return false;
+	}
+}
+
+function cleanupFilesystemArtifacts(worktreeRoot: string): void {
+	try {
+		const parent = dirname(worktreeRoot);
+		rmSync(worktreeRoot, { recursive: true, force: true });
+		if (existsSync(parent) && isEmptyDir(parent)) {
+			rmSync(parent, { recursive: true, force: true });
+		}
+	} catch {
+		// ignore filesystem cleanup failures
+	}
+}
+
+function createProjectModeWorktree(
+	originCwd: string,
+	runtimeId: string,
+	baseBranch: string | null,
+	repoRoot: string,
+	storageOptions: Required<ColonyStorageOptions>,
+): ColonyWorkspace {
+	const safeRuntime = sanitizeSegment(runtimeId);
+	const suffix = randomSuffix();
+	const branch = `ant-colony/${safeRuntime}-${suffix}`;
+	const worktreeParent = getColonyWorktreeParentDir(originCwd, storageOptions);
+	const worktreeRoot = join(worktreeParent, `${safeRuntime}-${suffix}`);
+
+	mkdirSync(worktreeParent, { recursive: true });
+	git(repoRoot, ["worktree", "add", "-b", branch, worktreeRoot, "HEAD"]);
+
+	return {
+		mode: "worktree",
+		originCwd,
+		executionCwd: resolveExecutionCwd(worktreeRoot, repoRoot, originCwd),
+		repoRoot,
+		worktreeRoot,
+		branch,
+		baseBranch,
+		managedByPi: false,
+		purpose: null,
+		ownerInstanceId: null,
+		note: null,
+	};
+}
+
 export function cleanupIsolatedWorktree(workspace: ColonyWorkspace): string | null {
 	if (workspace.mode !== "worktree" || !workspace.repoRoot || !workspace.worktreeRoot || !workspace.branch) {
 		return null;
+	}
+
+	if (workspace.managedByPi) {
+		const metadata = loadWorktreeRegistry(workspace.repoRoot).managedWorktrees.find(
+			(entry) => entry.worktreePath === workspace.worktreeRoot,
+		);
+		if (metadata) {
+			const result = removeManagedWorktree(metadata);
+			return `Cleanup: ${result.note}`;
+		}
 	}
 
 	const notes: string[] = [];
@@ -77,10 +163,8 @@ export function cleanupIsolatedWorktree(workspace: ColonyWorkspace): string | nu
 	}
 
 	try {
-		if (workspace.branch) {
-			git(workspace.repoRoot, ["branch", "-D", workspace.branch]);
-			notes.push("deleted temporary branch");
-		}
+		git(workspace.repoRoot, ["branch", "-D", workspace.branch]);
+		notes.push("deleted temporary branch");
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : String(error);
 		notes.push(`branch cleanup skipped (${reason})`);
@@ -92,25 +176,8 @@ export function cleanupIsolatedWorktree(workspace: ColonyWorkspace): string | nu
 		// ignore prune failures; this is best-effort hygiene.
 	}
 
-	try {
-		const parent = dirname(workspace.worktreeRoot);
-		rmSync(workspace.worktreeRoot, { recursive: true, force: true });
-		if (existsSync(parent) && isEmptyDir(parent)) {
-			rmSync(parent, { recursive: true, force: true });
-		}
-	} catch {
-		// ignore filesystem cleanup failures.
-	}
-
+	cleanupFilesystemArtifacts(workspace.worktreeRoot);
 	return notes.length > 0 ? `Cleanup: ${notes.join("; ")}.` : "Cleanup: no stale isolated worktree artifacts found.";
-}
-
-function isEmptyDir(path: string): boolean {
-	try {
-		return readdirSync(path).length === 0;
-	} catch {
-		return false;
-	}
 }
 
 export function worktreeEnabledByDefault(): boolean {
@@ -127,6 +194,9 @@ export function worktreeEnabledByDefault(): boolean {
 Prepare the execution workspace for a colony run. When worktree isolation is enabled and git
 supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch; otherwise it
 falls back to the shared working directory and records the reason.
+
+Shared-mode colonies now create pi-owned worktrees through the same centralized worktree registry
+used by the `/worktree` extension, so owner and purpose metadata stay visible for cleanup.
 
 <!-- {/antColonyPrepareColonyWorkspaceDocs} -->
 */
@@ -146,24 +216,38 @@ export function prepareColonyWorkspace(opts: PrepareColonyWorkspaceOptions): Col
 		const repoRoot = resolve(git(originCwd, ["rev-parse", "--show-toplevel"]));
 		const headRef = git(originCwd, ["rev-parse", "--abbrev-ref", "HEAD"]);
 		const baseBranch = headRef === "HEAD" ? null : headRef;
+		const storageOptions = resolveColonyStorageOptions(opts.storageOptions);
+		if (storageOptions.mode === "project") {
+			return createProjectModeWorktree(originCwd, opts.runtimeId, baseBranch, repoRoot, storageOptions);
+		}
+
 		const safeRuntime = sanitizeSegment(opts.runtimeId);
 		const suffix = randomSuffix();
 		const branch = `ant-colony/${safeRuntime}-${suffix}`;
-		const storageOptions = resolveColonyStorageOptions(opts.storageOptions);
-		const worktreeParent = getColonyWorktreeParentDir(originCwd, storageOptions);
-		const worktreeRoot = join(worktreeParent, `${safeRuntime}-${suffix}`);
-
-		mkdirSync(worktreeParent, { recursive: true });
-		git(repoRoot, ["worktree", "add", "-b", branch, worktreeRoot, "HEAD"]);
+		const purpose = buildPurpose(opts.runtimeId, opts.goal);
+		const result = createManagedWorktree({
+			cwd: originCwd,
+			branch,
+			purpose,
+			owner: createOwnerMetadata({
+				instanceId: antColonyOwnerInstanceId,
+				cwd: originCwd,
+				sessionFile: opts.sessionFile ?? null,
+				sessionName: opts.sessionName ?? null,
+			}),
+		});
 
 		return {
 			mode: "worktree",
 			originCwd,
-			executionCwd: resolveExecutionCwd(worktreeRoot, repoRoot, originCwd),
+			executionCwd: resolveExecutionCwd(result.worktreePath, repoRoot, originCwd),
 			repoRoot,
-			worktreeRoot,
-			branch,
+			worktreeRoot: result.worktreePath,
+			branch: result.branch,
 			baseBranch,
+			managedByPi: true,
+			purpose,
+			ownerInstanceId: antColonyOwnerInstanceId,
 			note: null,
 		};
 	} catch (error) {
@@ -225,19 +309,30 @@ export function resumeColonyWorkspace(opts: ResumeColonyWorkspaceOptions): Colon
 export function formatWorkspaceSummary(workspace: ColonyWorkspace): string {
 	if (workspace.mode === "worktree") {
 		const branch = workspace.branch ? `${workspace.branch} ` : "";
-		return `worktree ${branch}@ ${workspace.executionCwd}`.trim();
+		const owner = workspace.managedByPi ? " pi-owned" : "";
+		return `worktree${owner} ${branch}@ ${workspace.executionCwd}`.trim();
 	}
 	return `shared cwd @ ${workspace.executionCwd}`;
 }
 
 export function formatWorkspaceReport(workspace: ColonyWorkspace): string {
 	if (workspace.mode === "worktree") {
-		const lines = ["### 🧪 Workspace", "Mode: isolated git worktree", `Path: ${workspace.executionCwd}`];
+		const lines = [
+			"### 🧪 Workspace",
+			`Mode: isolated git worktree${workspace.managedByPi ? " (pi-owned)" : ""}`,
+			`Path: ${workspace.executionCwd}`,
+		];
 		if (workspace.branch) {
 			lines.push(`Branch: ${workspace.branch}`);
 		}
 		if (workspace.baseBranch) {
 			lines.push(`Base branch: ${workspace.baseBranch}`);
+		}
+		if (workspace.purpose) {
+			lines.push(`Purpose: ${workspace.purpose}`);
+		}
+		if (workspace.ownerInstanceId) {
+			lines.push(`Owner instance: ${workspace.ownerInstanceId}`);
 		}
 		if (workspace.note) {
 			lines.push(`Note: ${workspace.note}`);
