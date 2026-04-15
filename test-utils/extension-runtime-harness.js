@@ -66,9 +66,6 @@ export function createExtensionHarness() {
 		getThinkingLevel() {
 			return currentThinking;
 		},
-		getSessionName() {
-			return null;
-		},
 		setThinkingLevel(level) {
 			currentThinking = level;
 		},

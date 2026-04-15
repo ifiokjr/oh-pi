@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { DANGEROUS_PATTERNS, PROTECTED_PATHS } from "./safe-guard";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@mariozechner/pi-coding-agent", () => ({
+	getAgentDir: () => "/mock-home/.pi/agent",
+}));
+
+import { DANGEROUS_PATTERNS, findProtectedPath, isPiManagedWorktreePath, PROTECTED_PATHS } from "./safe-guard";
 
 describe("DANGEROUS_PATTERNS", () => {
 	const matches = (cmd: string) => DANGEROUS_PATTERNS.some((p) => p.test(cmd));
@@ -22,5 +27,15 @@ describe("PROTECTED_PATHS", () => {
 	it("contains all expected paths", () => {
 		expect(PROTECTED_PATHS).toEqual([".env", ".git/", "node_modules/", ".pi/", "id_rsa", ".ssh/"]);
 	});
+
 	it("has length 6", () => expect(PROTECTED_PATHS).toHaveLength(6));
+
+	it("treats pi-managed worktree paths as safe from the broad .pi guard", () => {
+		expect(isPiManagedWorktreePath("/mock-home/.pi/agent/worktrees/oh-pi/feat-branch/src/index.ts")).toBe(true);
+		expect(findProtectedPath("/mock-home/.pi/agent/worktrees/oh-pi/feat-branch/src/index.ts")).toBeUndefined();
+	});
+
+	it("still protects true pi config paths outside managed worktrees", () => {
+		expect(findProtectedPath("/mock-home/.pi/agent/settings.json")).toBe(".pi/");
+	});
 });

@@ -7,7 +7,8 @@
  * 2. **Path guard** — blocks writes to sensitive paths (.env, .git/, .ssh/, etc.)
  *    with user confirmation in interactive mode, or outright blocking in headless mode
  */
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import path from "node:path";
+import { type ExtensionAPI, getAgentDir } from "@mariozechner/pi-coding-agent";
 
 /** Regex patterns that match potentially destructive bash commands. */
 export const DANGEROUS_PATTERNS = [
@@ -22,6 +23,26 @@ export const DANGEROUS_PATTERNS = [
 
 /** File paths that should never be written to without explicit confirmation. */
 export const PROTECTED_PATHS = [".env", ".git/", "node_modules/", ".pi/", "id_rsa", ".ssh/"];
+
+function normalizeForMatch(value: string): string {
+	return value.replaceAll("\\", "/");
+}
+
+export function isPiManagedWorktreePath(filePath: string): boolean {
+	const normalizedPath = normalizeForMatch(path.resolve(filePath));
+	const managedWorktreeRoot = normalizeForMatch(path.join(getAgentDir(), "worktrees"));
+	return normalizedPath.startsWith(`${managedWorktreeRoot}/`);
+}
+
+export function findProtectedPath(filePath: string): string | undefined {
+	return PROTECTED_PATHS.find((protectedPath) => {
+		if (!filePath.includes(protectedPath)) {
+			return false;
+		}
+
+		return protectedPath !== ".pi/" || !isPiManagedWorktreePath(filePath);
+	});
+}
 
 /**
  * Extension entry point — registers a `tool_call` hook that intercepts
@@ -45,7 +66,7 @@ export default function (pi: ExtensionAPI) {
 		// Check write/edit for protected paths
 		if (event.toolName === "write" || event.toolName === "edit") {
 			const filePath = (event.input as { path?: string }).path ?? "";
-			const hit = PROTECTED_PATHS.find((p) => filePath.includes(p));
+			const hit = findProtectedPath(filePath);
 			if (hit) {
 				if (ctx.hasUI) {
 					const ok = await ctx.ui.confirm("Protected Path", `Allow write to ${filePath}?`);
