@@ -39,6 +39,12 @@ export interface ScheduleTask {
 	resumeReason?: ResumeReason;
 	ownerInstanceId?: string;
 	ownerSessionId?: string | null;
+	continueUntilComplete?: boolean;
+	completionSignal?: string;
+	retryIntervalMs?: number;
+	maxAttempts?: number;
+	awaitingCompletion?: boolean;
+	lastOutcomeSnippet?: string;
 }
 
 export interface SchedulerLease {

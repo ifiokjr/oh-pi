@@ -83,6 +83,9 @@ storage using a workspace-mirrored path.
 
 <!-- {/extensionsSchedulerOverview} -->
 
+Use `continueUntilComplete: true` (plus optional `completionSignal`, `retryInterval`, and
+`maxAttempts`) when a scheduled check should keep retrying until completion is detected.
+
 ## Package layout
 
 ```text
