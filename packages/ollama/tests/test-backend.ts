@@ -1,11 +1,15 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 
+type BackendModel = { id: string; capabilities?: string[]; contextWindow?: number; family?: string; parameterSize?: string; quantization?: string };
+
 export interface TestOllamaBackend {
 	apiUrl: string;
 	origin: string;
 	keysUrl: string;
-	setModels(models: Array<{ id: string; capabilities?: string[]; contextWindow?: number; family?: string; parameterSize?: string; quantization?: string }>): void;
+	setModels(models: BackendModel[]): void;
+	setPublicModels(models: BackendModel[]): void;
+	setAuthenticatedModels(models: BackendModel[]): void;
 	setRejectAuth(reject: boolean): void;
 	setRejectedModelShows(modelIds: string[]): void;
 	getAuthHeaders(): string[];
@@ -13,30 +17,33 @@ export interface TestOllamaBackend {
 }
 
 export async function createTestOllamaBackend(): Promise<TestOllamaBackend> {
-	let models: Array<{ id: string; capabilities?: string[]; contextWindow?: number; family?: string; parameterSize?: string; quantization?: string }> = [];
+	let models: BackendModel[] = [];
+	let publicModels: BackendModel[] | null = null;
+	let authenticatedModels: BackendModel[] | null = null;
 	let rejectAuth = false;
 	let rejectedModelShows = new Set<string>();
 	const authHeaders: string[] = [];
 
 	const server = http.createServer((req, res) => {
 		const url = req.url ?? "/";
+		const auth = String(req.headers.authorization ?? "");
+		const usingAuth = auth.length > 0;
+		const activeModels = usingAuth ? (authenticatedModels ?? models) : (publicModels ?? models);
 		if (url === "/v1/models" && req.method === "GET") {
-			const auth = String(req.headers.authorization ?? "");
 			authHeaders.push(auth);
-			if (rejectAuth) {
+			if (rejectAuth && usingAuth) {
 				res.writeHead(401, { "Content-Type": "text/plain" });
 				res.end("unauthorized");
 				return;
 			}
 			res.writeHead(200, { "Content-Type": "application/json" });
-			res.end(JSON.stringify({ data: models.map((model) => ({ id: model.id, object: "model" })) }));
+			res.end(JSON.stringify({ data: activeModels.map((model) => ({ id: model.id, object: "model" })) }));
 			return;
 		}
 
 		if (url === "/api/show" && req.method === "POST") {
-			const auth = String(req.headers.authorization ?? "");
 			authHeaders.push(auth);
-			if (rejectAuth) {
+			if (rejectAuth && usingAuth) {
 				res.writeHead(401, { "Content-Type": "text/plain" });
 				res.end("unauthorized");
 				return;
@@ -52,7 +59,7 @@ export async function createTestOllamaBackend(): Promise<TestOllamaBackend> {
 					res.end("show failed");
 					return;
 				}
-				const match = models.find((model) => model.id === parsed.model);
+				const match = activeModels.find((model) => model.id === parsed.model);
 				if (!match) {
 					res.writeHead(404, { "Content-Type": "text/plain" });
 					res.end("model not found");
@@ -95,6 +102,14 @@ export async function createTestOllamaBackend(): Promise<TestOllamaBackend> {
 		keysUrl: `${origin}/settings/keys`,
 		setModels(nextModels) {
 			models = nextModels;
+			publicModels = null;
+			authenticatedModels = null;
+		},
+		setPublicModels(nextModels) {
+			publicModels = nextModels;
+		},
+		setAuthenticatedModels(nextModels) {
+			authenticatedModels = nextModels;
 		},
 		setRejectAuth(reject) {
 			rejectAuth = reject;

@@ -2,6 +2,7 @@ import type { Api, Model, OAuthCredentials } from "@mariozechner/pi-ai";
 import { getOllamaCloudRuntimeConfig, getOllamaLocalRuntimeConfig, type OllamaRuntimeConfig } from "./config.js";
 
 export type OllamaModelSource = "local" | "cloud";
+export type OllamaLocalAvailability = "installed" | "downloadable";
 
 export type OllamaProviderModel = {
 	id: string;
@@ -18,6 +19,7 @@ export type OllamaProviderModel = {
 	maxTokens: number;
 	compat?: Model<Api>["compat"];
 	source?: OllamaModelSource;
+	localAvailability?: OllamaLocalAvailability;
 	family?: string;
 	parameterSize?: string;
 	quantization?: string;
@@ -73,6 +75,7 @@ const FALLBACK_OLLAMA_CLOUD_MODELS: OllamaProviderModel[] = [
 	toOllamaModel({ id: "glm-4.6", source: "cloud", reasoning: true, input: ["text"], contextWindow: 202_752, maxTokens: 25_344 }),
 	toOllamaModel({ id: "glm-4.7", source: "cloud", reasoning: true, input: ["text"], contextWindow: 202_752, maxTokens: 25_344 }),
 	toOllamaModel({ id: "glm-5", source: "cloud", reasoning: true, input: ["text"], contextWindow: 202_752, maxTokens: 25_344 }),
+	toOllamaModel({ id: "glm-5.1", source: "cloud", reasoning: true, input: ["text"], contextWindow: 202_752, maxTokens: 25_344 }),
 	toOllamaModel({ id: "gpt-oss:120b", source: "cloud", reasoning: true, input: ["text"], contextWindow: 131_072, maxTokens: 16_384 }),
 	toOllamaModel({ id: "gpt-oss:20b", source: "cloud", reasoning: true, input: ["text"], contextWindow: 131_072, maxTokens: 16_384 }),
 	toOllamaModel({ id: "kimi-k2-thinking", source: "cloud", reasoning: true, input: ["text"], contextWindow: 262_144, maxTokens: 32_768 }),
@@ -117,13 +120,24 @@ export async function discoverOllamaLocalModels(options: { signal?: AbortSignal 
 	});
 }
 
-export async function discoverOllamaCloudModels(apiKey: string, options: { signal?: AbortSignal } = {}): Promise<OllamaProviderModel[] | null> {
-	return discoverOllamaModels(getOllamaCloudRuntimeConfig(), {
+export async function discoverOllamaCloudModels(apiKey?: string, options: { signal?: AbortSignal } = {}): Promise<OllamaProviderModel[] | null> {
+	const config = getOllamaCloudRuntimeConfig();
+	const fallbackModels = getFallbackOllamaCloudModels();
+	const publicModels = await discoverOllamaModels(config, {
 		source: "cloud",
-		apiKey,
-		fallbackModels: getFallbackOllamaCloudModels(),
+		fallbackModels,
 		signal: options.signal,
 	});
+	if (!apiKey) {
+		return publicModels;
+	}
+	const authenticatedModels = await discoverOllamaModels(config, {
+		source: "cloud",
+		apiKey,
+		fallbackModels,
+		signal: options.signal,
+	}).catch(() => null);
+	return mergeDiscoveredModels(publicModels, authenticatedModels);
 }
 
 export async function enrichOllamaCloudCredentials(
@@ -148,6 +162,37 @@ export function toProviderModels(models: OllamaProviderModel[]): OllamaProviderM
 	return sanitizeStoredModels(models);
 }
 
+export function toDownloadableOllamaLocalModel(model: OllamaProviderModel): OllamaProviderModel {
+	return toOllamaModel({
+		...model,
+		source: "local",
+		localAvailability: "downloadable",
+		name: `${stripSourceSuffix(model.name)} (Local download)`,
+	});
+}
+
+export function mergeOllamaLocalCatalog(
+	installedModels: readonly OllamaProviderModel[],
+	downloadableModels: readonly OllamaProviderModel[],
+): OllamaProviderModel[] {
+	const merged = new Map<string, OllamaProviderModel>();
+	for (const model of downloadableModels) {
+		merged.set(model.id, toDownloadableOllamaLocalModel(model));
+	}
+	for (const model of installedModels) {
+		merged.set(
+			model.id,
+			toOllamaModel({
+				...model,
+				source: "local",
+				localAvailability: "installed",
+				name: `${stripSourceSuffix(model.name)} (Local)`,
+			}),
+		);
+	}
+	return [...merged.values()].sort((left, right) => left.id.localeCompare(right.id));
+}
+
 export function toOllamaModel(model: Partial<OllamaProviderModel> & Pick<OllamaProviderModel, "id">): OllamaProviderModel {
 	const contextWindow = normalizePositiveInteger(model.contextWindow, DEFAULT_CONTEXT_WINDOW);
 	const maxTokens = normalizePositiveInteger(model.maxTokens, inferMaxTokens(contextWindow));
@@ -161,6 +206,7 @@ export function toOllamaModel(model: Partial<OllamaProviderModel> & Pick<OllamaP
 		maxTokens,
 		compat: { ...OLLAMA_OPENAI_COMPAT, ...(model.compat ?? {}) },
 		source: model.source,
+		localAvailability: sanitizeLocalAvailability(model.localAvailability),
 		family: sanitizeOptionalString(model.family),
 		parameterSize: sanitizeOptionalString(model.parameterSize),
 		quantization: sanitizeOptionalString(model.quantization),
@@ -216,6 +262,7 @@ function cloneModel(model: OllamaProviderModel): OllamaProviderModel {
 		input: [...model.input],
 		cost: { ...model.cost },
 		compat: model.compat ? { ...model.compat } : undefined,
+		localAvailability: model.localAvailability,
 		capabilities: model.capabilities ? [...model.capabilities] : undefined,
 	};
 }
@@ -228,7 +275,9 @@ function normalizeDiscoveredModel(
 ): OllamaProviderModel | null {
 	const fallback = fallbackModels.find((model) => model.id === id);
 	if (!payload) {
-		return fallback ? cloneModel(fallback) : toOllamaModel({ id, source });
+		return fallback
+			? cloneModel(fallback)
+			: toOllamaModel({ id, source, localAvailability: source === "local" ? "installed" : undefined });
 	}
 	const capabilities = Array.isArray(payload.capabilities)
 		? payload.capabilities.filter((capability): capability is string => typeof capability === "string")
@@ -238,6 +287,7 @@ function normalizeDiscoveredModel(
 	return toOllamaModel({
 		id,
 		source,
+		localAvailability: source === "local" ? "installed" : undefined,
 		reasoning: capabilitySet.has("thinking") || fallback?.reasoning,
 		input: capabilitySet.has("vision") ? ["text", "image"] : (fallback?.input ?? ["text"]),
 		contextWindow,
@@ -312,14 +362,22 @@ function applySourceSuffix(name: string, source: OllamaModelSource | undefined):
 	if (!source) {
 		return name;
 	}
-	if (/\((local|cloud)\)$/i.test(name)) {
+	if (/\((local|cloud|local download)\)$/i.test(name)) {
 		return name;
 	}
 	return `${name} (${source === "local" ? "Local" : "Cloud"})`;
 }
 
+function stripSourceSuffix(name: string): string {
+	return name.replace(/\s*\((local|cloud|local download)\)$/i, "").trim();
+}
+
 function sanitizeOptionalString(value: string | undefined): string | undefined {
 	return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function sanitizeLocalAvailability(value: OllamaProviderModel["localAvailability"] | undefined): OllamaLocalAvailability | undefined {
+	return value === "installed" || value === "downloadable" ? value : undefined;
 }
 
 function sanitizeCapabilities(capabilities: string[] | undefined): string[] | undefined {
@@ -365,6 +423,29 @@ async function fetchJson<T>(
 		throw new Error(`Ollama request failed (${response.status}): ${body || response.statusText}`);
 	}
 	return (await response.json()) as T;
+}
+
+function mergeDiscoveredModels(
+	publicModels: OllamaProviderModel[] | null,
+	authenticatedModels: OllamaProviderModel[] | null,
+): OllamaProviderModel[] | null {
+	const merged = new Map<string, OllamaProviderModel>();
+	for (const model of publicModels ?? []) {
+		merged.set(model.id, cloneModel(model));
+	}
+	for (const model of authenticatedModels ?? []) {
+		const existing = merged.get(model.id);
+		merged.set(model.id, {
+			...cloneModel(existing ?? model),
+			...cloneModel(model),
+			input: [...new Set([...(existing?.input ?? []), ...model.input])] as ("text" | "image")[],
+			capabilities: sanitizeCapabilities([...(existing?.capabilities ?? []), ...(model.capabilities ?? [])]),
+		});
+	}
+	if (merged.size > 0) {
+		return [...merged.values()].sort((left, right) => left.id.localeCompare(right.id));
+	}
+	return null;
 }
 
 async function mapConcurrent<T, TResult>(

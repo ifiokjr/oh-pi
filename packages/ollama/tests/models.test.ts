@@ -24,6 +24,7 @@ describe("ollama models", () => {
 		const models = getFallbackOllamaCloudModels();
 		expect(models.some((model) => model.id === "gpt-oss:120b")).toBe(true);
 		expect(models.some((model) => model.id === "qwen3-vl:235b")).toBe(true);
+		expect(models.some((model) => model.id === "glm-5.1")).toBe(true);
 	});
 
 	it("normalizes model defaults", () => {
@@ -51,7 +52,42 @@ describe("ollama models", () => {
 		expect(models?.[0]?.parameterSize).toBe("120B");
 		expect(models?.[0]?.quantization).toBe("Q4_K_M");
 		expect(models?.[1]?.input).toEqual(["text", "image"]);
-		expect(backend.getAuthHeaders().every((header) => header === "Bearer test-key")).toBe(true);
+		expect(backend.getAuthHeaders()).toEqual(["", "", "", "Bearer test-key", "Bearer test-key", "Bearer test-key"]);
+		await backend.close();
+	});
+
+	it("prefers the public cloud catalog when authenticated discovery is narrower", async () => {
+		const backend = await createTestOllamaBackend();
+		backend.setPublicModels([
+			{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752, family: "glm5.1", parameterSize: "756B", quantization: "FP8" },
+			{ id: "kimi-k2.5", capabilities: ["completion", "tools", "thinking", "vision"], contextWindow: 262144, family: "kimi-k2.5", parameterSize: "1T" },
+			{ id: "qwen3-next:80b", capabilities: ["completion", "tools", "thinking"], contextWindow: 262144, family: "qwen3-next", parameterSize: "80B" },
+		]);
+		backend.setAuthenticatedModels([
+			{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752, family: "glm5.1", parameterSize: "756B", quantization: "FP8" },
+		]);
+		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
+		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
+		process.env.PI_OLLAMA_CLOUD_SHOW_URL = `${backend.origin}/api/show`;
+		const models = await discoverOllamaCloudModels("test-key");
+		expect(models?.map((model) => model.id)).toEqual(["glm-5.1", "kimi-k2.5", "qwen3-next:80b"]);
+		await backend.close();
+	});
+
+	it("discovers public cloud models without auth", async () => {
+		const backend = await createTestOllamaBackend();
+		backend.setModels([
+			{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752, family: "glm5.1", parameterSize: "756B", quantization: "FP8" },
+			{ id: "kimi-k2.5", capabilities: ["completion", "tools", "thinking", "vision"], contextWindow: 262144, family: "kimi-k2.5", parameterSize: "1T" },
+		]);
+		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
+		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
+		process.env.PI_OLLAMA_CLOUD_SHOW_URL = `${backend.origin}/api/show`;
+		const models = await discoverOllamaCloudModels();
+		expect(models?.map((model) => model.id)).toEqual(["glm-5.1", "kimi-k2.5"]);
+		expect(models?.[0]?.reasoning).toBe(true);
+		expect(models?.[1]?.input).toEqual(["text", "image"]);
+		expect(backend.getAuthHeaders()).toEqual(["", "", ""]);
 		await backend.close();
 	});
 
