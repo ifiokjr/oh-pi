@@ -1,8 +1,5 @@
 ---
-"@ifi/oh-pi": patch
-"@ifi/oh-pi-core": patch
-"@ifi/oh-pi-extensions": patch
-"@ifi/oh-pi-skills": patch
+default: minor
 ---
 
-Add a native worktree extension with centralized pi-owned git worktree metadata, footer/status surfacing, and safe cleanup that only targets pi-managed worktrees by default.
+Add a native worktree extension with centralized pi-owned git worktree metadata, footer/status surfacing, safe cleanup that only targets pi-managed worktrees by default, and allow edits inside pi-managed worktree paths without repeated protected-path prompts.

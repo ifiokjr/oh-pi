@@ -37,9 +37,9 @@ Project-local `.ant-colony/` storage remains available as an explicit opt-in for
 
 <!-- {=antColonyGetColonyWorktreeParentDirDocs} -->
 
-Resolve the parent directory for isolated colony worktrees. Shared mode now uses the centralized
-pi worktree registry root so colony worktrees appear alongside `/worktree`, while project mode
-places them under the legacy project-local `.ant-colony/worktrees/` path.
+Resolve the parent directory for isolated colony worktrees. Shared mode keeps them under the
+workspace-mirrored shared root in `worktrees/`, while project mode places them under the legacy
+project-local `.ant-colony/worktrees/` path.
 
 <!-- {/antColonyGetColonyWorktreeParentDirDocs} -->
 
@@ -56,10 +56,8 @@ Shared storage layout:
 <!-- {=antColonyPrepareColonyWorkspaceDocs} -->
 
 Prepare the execution workspace for a colony run. When worktree isolation is enabled and git
-supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch. Shared-mode
-runs create pi-owned worktrees through the centralized worktree registry so owner and purpose
-metadata stay visible in `/worktree`. When worktrees are unavailable, the colony falls back to the
-shared working directory and records the reason.
+supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch; otherwise it
+falls back to the shared working directory and records the reason.
 
 <!-- {/antColonyPrepareColonyWorkspaceDocs} -->
 

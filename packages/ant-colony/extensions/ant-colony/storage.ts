@@ -122,9 +122,9 @@ export function getColonyStateParentDir(cwd: string, options?: ColonyStorageOpti
 /**
 <!-- {=antColonyGetColonyWorktreeParentDirDocs} -->
 
-Resolve the parent directory for isolated colony worktrees. Shared mode now uses the centralized
-pi worktree registry root so colony worktrees show up in the same shared namespace as `/worktree`,
-while project mode keeps using the legacy project-local `.ant-colony/worktrees/` path.
+Resolve the parent directory for isolated colony worktrees. Shared mode keeps them under the
+workspace-mirrored shared root in `worktrees/`, while project mode places them under the legacy
+project-local `.ant-colony/worktrees/` path.
 
 <!-- {/antColonyGetColonyWorktreeParentDirDocs} -->
 */

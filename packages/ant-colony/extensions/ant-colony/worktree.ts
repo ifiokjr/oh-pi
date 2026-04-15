@@ -195,9 +195,6 @@ Prepare the execution workspace for a colony run. When worktree isolation is ena
 supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch; otherwise it
 falls back to the shared working directory and records the reason.
 
-Shared-mode colonies now create pi-owned worktrees through the same centralized worktree registry
-used by the `/worktree` extension, so owner and purpose metadata stay visible for cleanup.
-
 <!-- {/antColonyPrepareColonyWorkspaceDocs} -->
 */
 export function prepareColonyWorkspace(opts: PrepareColonyWorkspaceOptions): ColonyWorkspace {
