@@ -239,9 +239,14 @@ function registerOllamaLifecycle(pi: ExtensionAPI): void {
 		ollamaCliStatus = await getOllamaCliStatus();
 		registerOllamaLocalProvider(pi);
 
-		const credential = getStoredCloudCredentialFromContext(ctx);
-		await refreshCloudModels(pi, ctx, credential);
-		ctx.modelRegistry.refresh?.();
+		try {
+			const credential = getStoredCloudCredentialFromContext(ctx);
+			await refreshCloudModels(pi, ctx, credential);
+			ctx.modelRegistry.refresh?.();
+		} catch {
+			// Auth storage can be unavailable during early startup depending on initialization order.
+			// Keep boot resilient and rely on manual /ollama refresh-models as fallback.
+		}
 
 		if (!ollamaCliStatus.available && ctx.hasUI && !missingCliWarningShown) {
 			missingCliWarningShown = true;
@@ -304,7 +309,7 @@ async function refreshCloudModels(pi: ExtensionAPI, ctx: CommandContextLike, cre
 		const refreshed = credential.expires <= Date.now()
 			? await refreshOllamaCloudCredential(credential)
 			: await refreshOllamaCloudCredentialModels(credential);
-		ctx.modelRegistry.authStorage.set(OLLAMA_CLOUD_PROVIDER, { type: "oauth", ...refreshed });
+		setCloudCredentialInContext(ctx, refreshed);
 		cloudEnvDiscoveryState.models = getCredentialModels(refreshed);
 		cloudEnvDiscoveryState.lastRefresh = Date.now();
 		cloudEnvDiscoveryState.lastError = null;
@@ -642,10 +647,26 @@ function getStoredCloudCredentialFromContext(ctx: CommandContextLike): OllamaClo
 	if (typeof getter !== "function") {
 		return null;
 	}
-	const credential = getter(OLLAMA_CLOUD_PROVIDER);
-	return credential && typeof credential === "object" && (credential as { type?: string }).type === "oauth"
-		? (credential as OllamaCloudCredentials)
-		: null;
+	try {
+		const credential = getter(OLLAMA_CLOUD_PROVIDER);
+		return credential && typeof credential === "object" && (credential as { type?: string }).type === "oauth"
+			? (credential as OllamaCloudCredentials)
+			: null;
+	} catch {
+		return null;
+	}
+}
+
+function setCloudCredentialInContext(ctx: CommandContextLike, credential: OllamaCloudCredentials): void {
+	const setter = ctx.modelRegistry?.authStorage?.set;
+	if (typeof setter !== "function") {
+		return;
+	}
+	try {
+		setter(OLLAMA_CLOUD_PROVIDER, { type: "oauth", ...credential });
+	} catch {
+		// Ignore auth-storage races and keep runtime usable.
+	}
 }
 
 function createOllamaProcessEnv(): NodeJS.ProcessEnv {

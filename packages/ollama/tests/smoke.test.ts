@@ -26,6 +26,22 @@ describe("ollama provider smoke tests", () => {
 		expect(typeof harness.providers.get("ollama-cloud")?.streamSimple).toBe("function");
 	});
 
+	it("does not crash on session_start when auth storage is not ready", async () => {
+		const harness = createExtensionHarness();
+		(harness.ctx as any).modelRegistry = {
+			...(harness.ctx.modelRegistry as object),
+			authStorage: {
+				get() {
+					throw new Error("auth storage not initialized");
+				},
+				set() {},
+			},
+		};
+		ollamaProviderExtension(harness.pi as never);
+
+		await expect(harness.emitAsync("session_start", { type: "session_start" }, harness.ctx)).resolves.toBeDefined();
+	});
+
 	it("bootstraps the public cloud catalog without an API key", async () => {
 		const backend = await createTestOllamaBackend();
 		backend.setModels([
