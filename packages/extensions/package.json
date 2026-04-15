@@ -7,6 +7,7 @@
   ],
   "pi": {
     "extensions": [
+      "./extensions/watchdog.ts",
       "./extensions/adaptive-routing.ts",
       "./extensions/auto-session-name.ts",
       "./extensions/auto-update.ts",
@@ -19,8 +20,7 @@
       "./extensions/safe-guard.ts",
       "./extensions/scheduler.ts",
       "./extensions/tool-metadata.ts",
-      "./extensions/usage-tracker.ts",
-      "./extensions/watchdog.ts"
+      "./extensions/usage-tracker.ts"
     ]
   },
   "files": [

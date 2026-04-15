@@ -29,6 +29,12 @@ import {
 	setSafeModeState,
 	subscribeSafeMode,
 } from "./runtime-mode";
+import {
+	type ExtensionDiagnostic,
+	formatExtensionDiagnostic,
+	getExtensionDiagnostics,
+	installRuntimeDiagnostics,
+} from "./watchdog-runtime-diagnostics";
 
 const MB = 1024 * 1024;
 const DEFAULT_SAMPLE_INTERVAL_MS = 5_000;
@@ -309,6 +315,14 @@ function shortSafeModeStatus(state: SafeModeState): string {
 	return `safe mode is on (${source}${state.reason ? `: ${state.reason}` : ""})`;
 }
 
+function formatLikelyCulpritSummary(diagnostic: ExtensionDiagnostic | undefined): string | null {
+	if (!diagnostic) {
+		return null;
+	}
+	const details = diagnostic.reasons.slice(0, 2).join(" · ");
+	return details ? `likely culprit ${diagnostic.extensionId} (${details})` : `likely culprit ${diagnostic.extensionId}`;
+}
+
 function buildOverlayLines(
 	theme: { fg: (color: string, text: string) => string; bold?: (text: string) => string },
 	input: {
@@ -319,6 +333,7 @@ function buildOverlayLines(
 		thresholds: WatchdogThresholds;
 		safeModeState: SafeModeState;
 		sampleIntervalMs: number;
+		diagnostics: ExtensionDiagnostic[];
 	},
 ): string[] {
 	const now = Date.now();
@@ -357,6 +372,15 @@ function buildOverlayLines(
 		}
 	}
 	lines.push("");
+	lines.push(theme.fg("accent", "Likely extension culprits"));
+	if (input.diagnostics.length === 0) {
+		lines.push(theme.fg("dim", "No suspicious extension activity recorded."));
+	} else {
+		for (const diagnostic of input.diagnostics.slice(0, 5)) {
+			lines.push(`${theme.fg("warning", diagnostic.extensionId)} · ${diagnostic.reasons.join(" · ")}`);
+		}
+	}
+	lines.push("");
 	lines.push(theme.fg("dim", `Config: ${WATCHDOG_CONFIG_PATH}`));
 	lines.push(theme.fg("dim", "Keys: [r] sample now · [s] toggle safe mode · [q/Esc/Space] close"));
 	return lines;
@@ -374,6 +398,7 @@ terminal.
 <!-- {/extensionsWatchdogAlertBehaviorDocs} -->
 */
 export default function watchdogExtension(pi: ExtensionAPI) {
+	installRuntimeDiagnostics(pi);
 	const config = loadWatchdogConfig();
 	const thresholds = resolveWatchdogThresholds(config);
 	const sampleIntervalMs = resolveWatchdogSampleIntervalMs(config);
@@ -445,7 +470,11 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 
 		consecutiveAlerts += 1;
 		pushBounded(alertHistory, alert, ALERT_HISTORY_LIMIT);
-		latestAlertMessage = `watchdog: ${alert.reasons.join(", ")}`;
+		const culprit = getExtensionDiagnostics(now)[0];
+		const culpritSummary = formatLikelyCulpritSummary(culprit);
+		latestAlertMessage = culpritSummary
+			? `watchdog: ${alert.reasons.join(", ")} · ${culpritSummary}`
+			: `watchdog: ${alert.reasons.join(", ")}`;
 		setAlertStatus(latestAlertMessage);
 
 		if (
@@ -521,7 +550,24 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 
 	const notifyStatus = (ctx: ExtensionCommandContext | ExtensionContext) => {
 		takeSample();
-		ctx.ui.notify(`${formatWatchdogStatus(latestSample)} · ${formatThresholdSummary(thresholds)}`, "info");
+		const culprit = getExtensionDiagnostics()[0];
+		const culpritSummary = formatLikelyCulpritSummary(culprit);
+		ctx.ui.notify(
+			`${formatWatchdogStatus(latestSample)} · ${formatThresholdSummary(thresholds)}${culpritSummary ? ` · ${culpritSummary}` : ""}`,
+			"info",
+		);
+	};
+
+	const notifyBlame = (ctx: ExtensionCommandContext | ExtensionContext) => {
+		const diagnostics = getExtensionDiagnostics();
+		if (diagnostics.length === 0) {
+			ctx.ui.notify("No suspicious extension activity recorded yet.", "info");
+			return;
+		}
+		ctx.ui.notify(
+			`Watchdog diagnostics: ${diagnostics.slice(0, 3).map(formatExtensionDiagnostic).join(" | ")}`,
+			"warning",
+		);
 	};
 
 	const notifyConfig = (ctx: ExtensionCommandContext | ExtensionContext) => {
@@ -546,6 +592,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 						thresholds,
 						safeModeState: getSafeModeState(),
 						sampleIntervalMs,
+						diagnostics: getExtensionDiagnostics(),
 					}).map((line) => line.slice(0, width));
 				},
 				handleInput(data: string) {
@@ -584,7 +631,8 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("watchdog", {
-		description: "Inspect or control the performance watchdog: /watchdog [status|overlay|config|reset|on|off|sample]",
+		description:
+			"Inspect or control the performance watchdog: /watchdog [status|overlay|config|reset|on|off|sample|blame]",
 		async handler(args, ctx) {
 			activeCtx = ctx;
 			setSafeModeStatus();
@@ -616,6 +664,9 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 					return;
 				case "config":
 					notifyConfig(ctx);
+					return;
+				case "blame":
+					notifyBlame(ctx);
 					return;
 				default:
 					notifyStatus(ctx);

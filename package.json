@@ -4,6 +4,7 @@
 	"workspaces": ["packages/*"],
 	"pi": {
 		"extensions": [
+			"./packages/extensions/extensions/watchdog.ts",
 			"./packages/extensions/extensions/adaptive-routing.ts",
 			"./packages/extensions/extensions/auto-session-name.ts",
 			"./packages/extensions/extensions/auto-update.ts",
@@ -17,7 +18,6 @@
 			"./packages/extensions/extensions/scheduler.ts",
 			"./packages/extensions/extensions/tool-metadata.ts",
 			"./packages/extensions/extensions/usage-tracker.ts",
-			"./packages/extensions/extensions/watchdog.ts",
 			"./packages/ant-colony/extensions/ant-colony/index.ts",
 			"./packages/subagents/index.ts",
 			"./packages/subagents/notify.ts",
