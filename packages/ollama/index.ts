@@ -102,7 +102,7 @@ function registerOllamaCloudProvider(pi: ExtensionAPI): void {
 		baseUrl: getOllamaCloudRuntimeConfig().apiUrl,
 		oauth: createOllamaCloudOAuthProvider(),
 		models: toProviderModels(cloudEnvDiscoveryState.models),
-		streamSimple: streamSimpleOpenAICompletions,
+		streamSimple: streamSimpleOllamaCloud,
 	});
 }
 
@@ -363,6 +363,10 @@ async function pullLocalModel(pi: ExtensionAPI, ctx: CommandContextLike, modelId
 
 	activeLocalPulls.set(modelId, run);
 	return run;
+}
+
+function streamSimpleOllamaCloud(model: Model<any>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream {
+	return streamSimpleOpenAICompletions(model as Model<"openai-completions">, context, options);
 }
 
 function streamSimpleOllamaLocal(model: Model<any>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream {
