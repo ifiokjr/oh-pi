@@ -60,12 +60,19 @@ describe("auto-session-name extension", () => {
 		expect(harness.userMessages.at(-1)).toBe("continue");
 	});
 
-	it("emits a resume hint containing the session id on shutdown", () => {
+	it("emits resume hints on session switch and shutdown", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.sessionManager.getSessionFile = () => "/tmp/sessions/test-session.jsonl";
 		autoSessionNameExtension(harness.pi as never);
 
-		harness.emit("session_shutdown", { type: "session_shutdown" }, harness.ctx);
+		harness.emit("session_switch", { type: "session_switch" }, harness.ctx);
+		expect(harness.messages.at(-1)?.content).toContain("Session switched");
 		expect(harness.messages.at(-1)?.content).toContain("pi --session test-session");
+		expect(harness.messages.at(-1)?.content).toContain("pi resume test-session");
+
+		harness.emit("session_shutdown", { type: "session_shutdown" }, harness.ctx);
+		expect(harness.messages.at(-1)?.content).toContain("Session saved");
+		expect(harness.messages.at(-1)?.content).toContain("pi --session test-session");
+		expect(harness.messages.at(-1)?.content).toContain("pi resume test-session");
 	});
 });

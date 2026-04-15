@@ -59,6 +59,14 @@ function deriveSessionId(sessionFile: string | undefined): string | undefined {
 	return path.basename(sessionFile).replace(/\.jsonl$/i, "") || undefined;
 }
 
+function buildResumeCommandHint(sessionId: string): string {
+	return [
+		`Session id: ${sessionId}`,
+		`Resume now: pi --session ${sessionId}`,
+		`Alias path (if your shell forwards it): pi resume ${sessionId}`,
+	].join("\n");
+}
+
 function isFocusShift(firstUserText: string, latestUserText: string): boolean {
 	if (!(firstUserText && latestUserText)) {
 		return false;
@@ -102,6 +110,20 @@ export default function autoSessionNameExtension(pi: ExtensionAPI) {
 	let lastAutoName = "";
 	let compactContinuationQueued = false;
 
+	const emitResumeHint = (reason: "shutdown" | "switch", sessionFile: string | undefined) => {
+		const sessionId = deriveSessionId(sessionFile);
+		if (!sessionId) {
+			return;
+		}
+
+		const prefix = reason === "shutdown" ? "Session saved." : "Session switched.";
+		pi.sendMessage({
+			customType: "session-resume-hint",
+			content: `${prefix}\n${buildResumeCommandHint(sessionId)}`,
+			display: true,
+		});
+	};
+
 	pi.on("session_start", () => {
 		const existing = (pi.getSessionName?.() ?? "").trim();
 		lastAutoName = existing;
@@ -137,17 +159,11 @@ export default function autoSessionNameExtension(pi: ExtensionAPI) {
 		}
 	});
 
-	pi.on("session_shutdown", (_event, ctx) => {
-		const sessionFile = ctx.sessionManager?.getSessionFile?.();
-		const sessionId = deriveSessionId(sessionFile);
-		if (!sessionId) {
-			return;
-		}
+	pi.on("session_switch", (_event, ctx) => {
+		emitResumeHint("switch", ctx.sessionManager?.getSessionFile?.());
+	});
 
-		pi.sendMessage({
-			customType: "session-resume-hint",
-			content: `Session saved as ${sessionId}. Resume with: pi --session ${sessionId}`,
-			display: true,
-		});
+	pi.on("session_shutdown", (_event, ctx) => {
+		emitResumeHint("shutdown", ctx.sessionManager?.getSessionFile?.());
 	});
 }
