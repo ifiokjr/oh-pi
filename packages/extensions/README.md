@@ -11,6 +11,7 @@ This package includes extensions such as:
 - auto-session-name
 - custom-footer
 - compact-header
+- external-editor / /external-editor
 - auto-update
 - bg-process
 - usage-tracker
@@ -33,9 +34,21 @@ npx @ifi/oh-pi
 ## What it provides
 
 These extensions add commands, tools, UI widgets, safety checks, background process handling,
-usage monitoring, adaptive model routing, scheduling features, and runtime performance protection (`/watchdog`, `/safe-mode`) to pi.
+usage monitoring, adaptive model routing, scheduling features, external-editor integration, and runtime performance protection (`/watchdog`, `/safe-mode`) to pi.
 
 `git-guard` also blocks git bash invocations that are likely to open an interactive editor in agent environments (for example `git rebase --continue` without non-interactive editor overrides), preventing hangs before they happen.
+
+## External editor
+
+The `external-editor` extension adds:
+
+- `/external-editor` — open the current draft in `$VISUAL` or `$EDITOR`
+- `/external-editor status` — show the configured editor and available bindings
+- `Ctrl+Shift+E` — open the current draft in the configured external editor
+
+When the editor exits successfully, the updated text is synced back into pi's main draft editor.
+This complements pi's built-in `app.editor.external` binding (`Ctrl+G` by default) with a
+discoverable slash command and an extra shortcut.
 
 ## Adaptive routing
 

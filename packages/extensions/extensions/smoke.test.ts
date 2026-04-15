@@ -3,6 +3,7 @@ import { createExtensionHarness } from "../../../test-utils/extension-runtime-ha
 import adaptiveRoutingExtension from "./adaptive-routing.js";
 import autoUpdateExtension from "./auto-update.js";
 import btwExtension from "./btw.js";
+import externalEditorExtension from "./external-editor.js";
 import safeGuardExtension from "./safe-guard.js";
 import schedulerExtension from "./scheduler.js";
 import usageTrackerExtension from "./usage-tracker.js";
@@ -73,6 +74,13 @@ describe("extensions runtime smoke tests", () => {
 		const harness = createExtensionHarness();
 		adaptiveRoutingExtension(harness.pi as never);
 		expect(harness.commands.has("route")).toBe(true);
+	});
+
+	it("registers external editor command and shortcut without crashing", () => {
+		const harness = createExtensionHarness();
+		externalEditorExtension(harness.pi as never);
+		expect(harness.commands.has("external-editor")).toBe(true);
+		expect(harness.shortcuts.has("ctrl+shift+e")).toBe(true);
 	});
 
 	it("blocks protected writes in headless mode via safe-guard", async () => {

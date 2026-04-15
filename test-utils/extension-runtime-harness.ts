@@ -10,6 +10,8 @@ export function createExtensionHarness() {
 	const notifications: Array<{ msg: string; type: string }> = [];
 	const statusMap = new Map<string, any>();
 	const shortcuts = new Map<string, any>();
+	let editorText = "";
+	let editorComponentFactory: any;
 	const messageRenderers = new Map<string, any>();
 	const providers = new Map<string, any>();
 	const eventBus = new EventEmitter();
@@ -115,6 +117,15 @@ export function createExtensionHarness() {
 				}
 			},
 			setWidget() {},
+			setEditorText(text: string) {
+				editorText = text;
+			},
+			getEditorText() {
+				return editorText;
+			},
+			setEditorComponent(factory: any) {
+				editorComponentFactory = factory;
+			},
 			select: async () => null,
 			confirm: async () => true,
 			input: async () => null,
@@ -134,6 +145,17 @@ export function createExtensionHarness() {
 		notifications,
 		statusMap,
 		shortcuts,
+		editorState: {
+			get text() {
+				return editorText;
+			},
+			set text(value: string) {
+				editorText = value;
+			},
+			get factory() {
+				return editorComponentFactory;
+			},
+		},
 		messageRenderers,
 		providers,
 		emit(event: string, ...args: any[]) {

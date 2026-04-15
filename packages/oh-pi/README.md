@@ -24,7 +24,7 @@ npx @ifi/oh-pi --remove             # uninstall all oh-pi packages from pi
 
 | Package                 | Contents                                                                                    |
 | ----------------------- | ------------------------------------------------------------------------------------------- |
-| `@ifi/oh-pi-extensions`      | safe-guard, git-guard, auto-session, custom-footer, compact-header, auto-update, bg-process, watchdog |
+| `@ifi/oh-pi-extensions`      | safe-guard, git-guard, auto-session, custom-footer, compact-header, external-editor, auto-update, bg-process, watchdog |
 | `@ifi/oh-pi-ant-colony`       | Multi-agent swarm extension (`/colony`, colony commands)                                     |
 | `@ifi/pi-extension-subagents` | Subagent orchestration extension (`subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`) |
 | `@ifi/pi-plan`                | Planning mode extension (`/plan`, `Alt+P`, `task_agents`, `set_plan`)                       |

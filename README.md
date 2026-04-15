@@ -53,7 +53,7 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 | ------------------------------------------------ | ---------------------------------- | -------------------------------------- |
 | [`@ifi/oh-pi`](./packages/oh-pi)                 | One-command installer for all pkgs | `npx @ifi/oh-pi`                       |
 | [`@ifi/oh-pi-core`](./packages/core)             | Shared types, registries, i18n     | (library, not installed directly)      |
-| [`@ifi/oh-pi-extensions`](./packages/extensions)          | 9 extensions (see below)                    | `pi install npm:@ifi/oh-pi-extensions`      |
+| [`@ifi/oh-pi-extensions`](./packages/extensions)          | 13 extensions (see below)                   | `pi install npm:@ifi/oh-pi-extensions`      |
 | [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)          | Multi-agent swarm extension                 | `pi install npm:@ifi/oh-pi-ant-colony`      |
 | [`@ifi/pi-extension-subagents`](./packages/subagents)     | Full-featured subagent delegation extension | `pi install npm:@ifi/pi-extension-subagents` |
 | [`@ifi/pi-plan`](./packages/plan)                         | Branch-aware planning mode extension        | `pi install npm:@ifi/pi-plan`               |
@@ -251,6 +251,16 @@ with the new version and install command. Never blocks — fully async.
 
 **How it works:** On `session_start`, runs `npm view oh-pi version` in the background via
 `pi.exec()`. Compares with the local version using semver.
+
+### ⌨️ External Editor (`external-editor`) — **default: on**
+
+Adds a discoverable `/external-editor` command and a `Ctrl+Shift+E` shortcut for opening the
+current draft in `$VISUAL` or `$EDITOR`, then syncing the saved text back into pi.
+
+**Commands:** `/external-editor` | `/external-editor status`
+
+**Notes:** This complements pi's built-in `app.editor.external` binding (`Ctrl+G` by default).
+Users who want a different primary key can still remap that binding in `keybindings.json`.
 
 ### ⏳ Background Process (`bg-process`) — **default: off**
 

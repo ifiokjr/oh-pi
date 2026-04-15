@@ -14,6 +14,7 @@
       "./extensions/btw.ts",
       "./extensions/compact-header.ts",
       "./extensions/custom-footer.ts",
+      "./extensions/external-editor.ts",
       "./extensions/git-guard.ts",
       "./extensions/safe-guard.ts",
       "./extensions/scheduler.ts",
