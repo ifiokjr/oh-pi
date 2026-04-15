@@ -23,6 +23,7 @@ describe("ollama provider smoke tests", () => {
 		expect(harness.commands.has("ollama-cloud")).toBe(true);
 		expect(harness.providers.has("ollama")).toBe(true);
 		expect(harness.providers.has("ollama-cloud")).toBe(true);
+		expect(typeof harness.providers.get("ollama-cloud")?.streamSimple).toBe("function");
 	});
 
 	it("bootstraps the public cloud catalog without an API key", async () => {
