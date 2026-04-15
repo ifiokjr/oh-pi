@@ -10,6 +10,7 @@ This package includes extensions such as:
 - git-guard
 - auto-session-name
 - custom-footer
+- tool-metadata
 - compact-header
 - external-editor / /external-editor
 - auto-update
@@ -34,7 +35,7 @@ npx @ifi/oh-pi
 ## What it provides
 
 These extensions add commands, tools, UI widgets, safety checks, background process handling,
-usage monitoring, adaptive model routing, scheduling features, external-editor integration, and runtime performance protection (`/watchdog`, `/safe-mode`) to pi.
+usage monitoring, adaptive model routing, scheduling features, tool execution metadata, external-editor integration, and runtime performance protection (`/watchdog`, `/safe-mode`) to pi.
 
 `git-guard` also blocks git bash invocations that are likely to open an interactive editor in agent environments (for example `git rebase --continue` without non-interactive editor overrides), preventing hangs before they happen.
 

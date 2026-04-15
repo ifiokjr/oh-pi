@@ -15,6 +15,7 @@
 			"./packages/extensions/extensions/git-guard.ts",
 			"./packages/extensions/extensions/safe-guard.ts",
 			"./packages/extensions/extensions/scheduler.ts",
+			"./packages/extensions/extensions/tool-metadata.ts",
 			"./packages/extensions/extensions/usage-tracker.ts",
 			"./packages/extensions/extensions/watchdog.ts",
 			"./packages/ant-colony/extensions/ant-colony/index.ts",

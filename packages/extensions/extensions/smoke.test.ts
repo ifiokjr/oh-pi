@@ -6,6 +6,7 @@ import btwExtension from "./btw.js";
 import externalEditorExtension from "./external-editor.js";
 import safeGuardExtension from "./safe-guard.js";
 import schedulerExtension from "./scheduler.js";
+import toolMetadataExtension from "./tool-metadata.js";
 import usageTrackerExtension from "./usage-tracker.js";
 
 describe("extensions runtime smoke tests", () => {
@@ -44,6 +45,23 @@ describe("extensions runtime smoke tests", () => {
 		expect(harness.commands.has("usage-refresh")).toBe(true);
 		expect(harness.tools.has("usage_report")).toBe(true);
 		expect(harness.shortcuts.has("ctrl+u")).toBe(true);
+	});
+
+	it("registers tool metadata hooks without crashing", async () => {
+		const harness = createExtensionHarness();
+		toolMetadataExtension(harness.pi as never);
+		const [patch] = await harness.emitAsync(
+			"tool_result",
+			{
+				toolCallId: "tool-1",
+				toolName: "read",
+				input: { path: "README.md" },
+				content: [{ type: "text", text: "ok" }],
+				details: {},
+			},
+			harness.ctx,
+		);
+		expect(patch.details.toolMetadata).toBeDefined();
 	});
 
 	it("registers auto-update startup hook without crashing", () => {

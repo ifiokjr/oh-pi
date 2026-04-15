@@ -18,6 +18,7 @@
       "./extensions/git-guard.ts",
       "./extensions/safe-guard.ts",
       "./extensions/scheduler.ts",
+      "./extensions/tool-metadata.ts",
       "./extensions/usage-tracker.ts",
       "./extensions/watchdog.ts"
     ]

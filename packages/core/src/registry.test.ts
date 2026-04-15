@@ -86,6 +86,12 @@ describe("EXTENSIONS", () => {
 		expect(spec).toBeDefined();
 		expect(spec?.default).toBe(false);
 	});
+
+	it("enables tool metadata by default", () => {
+		const toolMetadata = EXTENSIONS.find((ext) => ext.name === "tool-metadata");
+		expect(toolMetadata).toBeDefined();
+		expect(toolMetadata?.default).toBe(true);
+	});
 });
 
 describe("KEYBINDING_SCHEMES", () => {
