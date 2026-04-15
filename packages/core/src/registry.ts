@@ -90,6 +90,13 @@ export const EXTENSIONS = [
 		default: true,
 	},
 	{
+		name: "tool-metadata",
+		get label() {
+			return `${icon("clock")} Tool Metadata — Add completion timestamps, durations, and context snapshots to tool results`;
+		},
+		default: true,
+	},
+	{
 		name: "compact-header",
 		get label() {
 			return `${icon("bolt")} Compact Header — Dense startup info replacing verbose output`;
