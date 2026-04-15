@@ -2675,4 +2675,50 @@ describe("edge cases", () => {
 		await pi._commands.get("unschedule").handler(`  ${taskId}  `, ctx);
 		expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBe(true);
 	});
+
+	it("supports continue-until-complete options in schedule_prompt add", async () => {
+		const tool = pi._tools.get("schedule_prompt");
+		const result = await tool.execute("id", {
+			action: "add",
+			prompt: "check deployment and keep going",
+			duration: "5m",
+			continueUntilComplete: true,
+			retryInterval: "90s",
+			completionSignal: "DEPLOYMENT_DONE",
+			maxAttempts: 4,
+		});
+
+		expect(result.content[0].text).toContain("Will retry until marked complete");
+		expect(result.details.task.continueUntilComplete).toBe(true);
+		expect(result.details.task.retryIntervalMs).toBe(2 * ONE_MINUTE);
+		expect(result.details.task.completionSignal).toBe("DEPLOYMENT_DONE");
+		expect(result.details.task.maxAttempts).toBe(4);
+	});
+
+	it("retries until completion for continue-until-complete one-shot tasks", () => {
+		const runtime = new SchedulerRuntime(pi as any);
+		runtime.setRuntimeContext(ctx as any);
+		const task = runtime.addOneShotTask("check build status", ONE_MINUTE, {
+			continueUntilComplete: true,
+			completionSignal: "BUILD_DONE",
+			retryIntervalMs: ONE_MINUTE,
+			maxAttempts: 3,
+		});
+
+		runtime.dispatchTask(task);
+		expect(pi._userMessages.at(-1)).toBe("check build status");
+		expect(runtime.getTask(task.id)?.awaitingCompletion).toBe(true);
+		expect(runtime.getTask(task.id)?.lastStatus).toBe("pending");
+
+		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "still running, not complete yet" }] });
+		expect(runtime.getTask(task.id)).toBeDefined();
+		expect(runtime.getTask(task.id)?.awaitingCompletion).toBe(false);
+		expect(runtime.getTask(task.id)?.lastStatus).toBe("pending");
+
+		const retryTask = runtime.getTask(task.id);
+		expect(retryTask).toBeDefined();
+		runtime.dispatchTask(retryTask!);
+		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "BUILD_DONE" }] });
+		expect(runtime.getTask(task.id)).toBeUndefined();
+	});
 });

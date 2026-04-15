@@ -112,6 +112,13 @@ type TaskMutationResult = {
 	error?: string;
 };
 
+type CompletionOptions = {
+	continueUntilComplete?: boolean;
+	completionSignal?: string;
+	retryIntervalMs?: number;
+	maxAttempts?: number;
+};
+
 // ── Runtime ─────────────────────────────────────────────────────────────────
 
 export class SchedulerRuntime {
@@ -128,6 +135,7 @@ export class SchedulerRuntime {
 	private dispatchMode: SchedulerDispatchMode = "auto";
 	private startupOwnershipHandled = false;
 	private safeModeEnabled = false;
+	private awaitingTaskId: string | null = null;
 
 	constructor(private readonly pi: ExtensionAPI) {}
 
@@ -211,6 +219,10 @@ export class SchedulerRuntime {
 		task.enabled = enabled;
 		if (!enabled) {
 			task.pending = false;
+			task.awaitingCompletion = false;
+			if (this.awaitingTaskId === task.id) {
+				this.awaitingTaskId = null;
+			}
 		}
 		if (enabled && task.resumeReason === "overdue") {
 			task.resumeRequired = false;
@@ -225,6 +237,9 @@ export class SchedulerRuntime {
 	deleteTask(id: string): boolean {
 		const removed = this.tasks.delete(id);
 		if (removed) {
+			if (this.awaitingTaskId === id) {
+				this.awaitingTaskId = null;
+			}
 			this.persistTasks();
 			this.updateStatus();
 		}
@@ -234,6 +249,7 @@ export class SchedulerRuntime {
 	clearTasks(): number {
 		const count = this.tasks.size;
 		this.tasks.clear();
+		this.awaitingTaskId = null;
 		this.persistTasks();
 		this.updateStatus();
 		return count;
@@ -338,12 +354,19 @@ export class SchedulerRuntime {
 			const preview = task.prompt.length > 72 ? `${task.prompt.slice(0, 69)}...` : task.prompt;
 			lines.push(`${task.id}  ${state}  ${mode}  next ${next}`);
 			lines.push(`  owner=${this.taskOwnerLabel(task)}  runs=${task.runCount}  last=${last}  status=${status}`);
+			if (task.lastOutcomeSnippet) {
+				lines.push(`  outcome=${this.truncateText(task.lastOutcomeSnippet, 72)}`);
+			}
 			lines.push(`  ${preview}`);
 		}
 		return lines.join("\n");
 	}
 
-	addRecurringIntervalTask(prompt: string, intervalMs: number, options: { scope?: ScheduleScope } = {}): ScheduleTask {
+	addRecurringIntervalTask(
+		prompt: string,
+		intervalMs: number,
+		options: { scope?: ScheduleScope } & CompletionOptions = {},
+	): ScheduleTask {
 		const id = this.createId();
 		const createdAt = Date.now();
 		const safeIntervalMs = Number.isFinite(intervalMs)
@@ -364,6 +387,11 @@ export class SchedulerRuntime {
 			jitterMs,
 			runCount: 0,
 			pending: false,
+			continueUntilComplete: options.continueUntilComplete ?? false,
+			completionSignal: options.completionSignal?.trim() || undefined,
+			retryIntervalMs: options.retryIntervalMs,
+			maxAttempts: options.maxAttempts,
+			awaitingCompletion: false,
 		};
 		this.assignOwner(task, task.scope ?? "instance");
 		this.tasks.set(id, task);
@@ -375,7 +403,7 @@ export class SchedulerRuntime {
 	addRecurringCronTask(
 		prompt: string,
 		cronExpression: string,
-		options: { scope?: ScheduleScope } = {},
+		options: { scope?: ScheduleScope } & CompletionOptions = {},
 	): ScheduleTask | undefined {
 		const normalizedCron = normalizeCronExpression(cronExpression);
 		if (!normalizedCron) {
@@ -402,6 +430,11 @@ export class SchedulerRuntime {
 			jitterMs: 0,
 			runCount: 0,
 			pending: false,
+			continueUntilComplete: options.continueUntilComplete ?? false,
+			completionSignal: options.completionSignal?.trim() || undefined,
+			retryIntervalMs: options.retryIntervalMs,
+			maxAttempts: options.maxAttempts,
+			awaitingCompletion: false,
 		};
 		this.assignOwner(task, task.scope ?? "instance");
 		this.tasks.set(id, task);
@@ -410,7 +443,11 @@ export class SchedulerRuntime {
 		return task;
 	}
 
-	addOneShotTask(prompt: string, delayMs: number, options: { scope?: ScheduleScope } = {}): ScheduleTask {
+	addOneShotTask(
+		prompt: string,
+		delayMs: number,
+		options: { scope?: ScheduleScope } & CompletionOptions = {},
+	): ScheduleTask {
 		const id = this.createId();
 		const createdAt = Date.now();
 		const task: ScheduleTask = {
@@ -424,6 +461,11 @@ export class SchedulerRuntime {
 			jitterMs: 0,
 			runCount: 0,
 			pending: false,
+			continueUntilComplete: options.continueUntilComplete ?? false,
+			completionSignal: options.completionSignal?.trim() || undefined,
+			retryIntervalMs: options.retryIntervalMs,
+			maxAttempts: options.maxAttempts,
+			awaitingCompletion: false,
 		};
 		this.assignOwner(task, task.scope ?? "instance");
 		this.tasks.set(id, task);
@@ -566,7 +608,7 @@ export class SchedulerRuntime {
 				continue;
 			}
 
-			if (!task.enabled || task.resumeRequired) {
+			if (!task.enabled || task.resumeRequired || task.awaitingCompletion) {
 				continue;
 			}
 			if (now >= task.nextRunAt) {
@@ -612,7 +654,9 @@ export class SchedulerRuntime {
 		}
 
 		const nextTask = Array.from(this.tasks.values())
-			.filter((task) => task.enabled && task.pending && this.canCurrentInstanceDispatchTask(task))
+			.filter(
+				(task) => task.enabled && task.pending && !task.awaitingCompletion && this.canCurrentInstanceDispatchTask(task),
+			)
 			.sort((a, b) => a.nextRunAt - b.nextRunAt)[0];
 
 		if (!nextTask) {
@@ -941,9 +985,18 @@ export class SchedulerRuntime {
 		task.resumeRequired = false;
 		task.resumeReason = undefined;
 		task.lastRunAt = now;
-		task.lastStatus = "success";
 		task.runCount += 1;
 
+		if (task.continueUntilComplete) {
+			task.awaitingCompletion = true;
+			task.lastStatus = "pending";
+			this.awaitingTaskId = task.id;
+			this.persistTasks();
+			this.updateStatus();
+			return;
+		}
+
+		task.lastStatus = "success";
 		if (task.kind === "once") {
 			this.tasks.delete(task.id);
 			this.persistTasks();
@@ -951,17 +1004,139 @@ export class SchedulerRuntime {
 			return;
 		}
 
+		this.scheduleRecurringNextRun(task, now);
+		this.persistTasks();
+		this.updateStatus();
+	}
+
+	handleAgentEnd(event: { messages?: Array<{ role?: string; content?: unknown }> }) {
+		if (!this.awaitingTaskId) {
+			return;
+		}
+
+		const task = this.tasks.get(this.awaitingTaskId);
+		this.awaitingTaskId = null;
+		if (!task?.continueUntilComplete) {
+			return;
+		}
+
+		task.awaitingCompletion = false;
+		const now = Date.now();
+		const latestAssistantText = this.extractLatestAssistantText(event.messages ?? []);
+		task.lastOutcomeSnippet = latestAssistantText.slice(0, 220) || undefined;
+
+		const completed = this.isCompletionDetected(task, latestAssistantText);
+		if (completed) {
+			task.lastStatus = "success";
+			if (task.kind === "once") {
+				this.tasks.delete(task.id);
+			} else {
+				this.scheduleRecurringNextRun(task, now);
+			}
+			this.persistTasks();
+			this.updateStatus();
+			return;
+		}
+
+		const maxAttempts = task.maxAttempts;
+		if (Number.isFinite(maxAttempts) && (task.runCount ?? 0) >= (maxAttempts ?? 0)) {
+			task.enabled = false;
+			task.lastStatus = "error";
+			task.pending = false;
+			task.nextRunAt = now + (task.retryIntervalMs ?? ONE_MINUTE);
+			if (this.runtimeCtx?.hasUI && !this.safeModeEnabled) {
+				this.runtimeCtx.ui.notify(
+					`Scheduler task ${task.id} paused after ${task.runCount} attempt${task.runCount === 1 ? "" : "s"} without completion.`,
+					"warning",
+				);
+			}
+			this.persistTasks();
+			this.updateStatus();
+			return;
+		}
+
+		task.lastStatus = "pending";
+		task.pending = false;
+		task.nextRunAt = now + (task.retryIntervalMs ?? task.intervalMs ?? ONE_MINUTE);
+		this.persistTasks();
+		this.updateStatus();
+	}
+
+	private extractLatestAssistantText(messages: Array<{ role?: string; content?: unknown }>): string {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const message = messages[i];
+			if (message?.role !== "assistant") {
+				continue;
+			}
+			const content = message.content;
+			if (typeof content === "string") {
+				return content.trim();
+			}
+			if (Array.isArray(content)) {
+				return content
+					.map((item) =>
+						typeof item === "object" && item && "text" in item && typeof item.text === "string" ? item.text : "",
+					)
+					.join(" ")
+					.trim();
+			}
+		}
+		return "";
+	}
+
+	private isCompletionDetected(task: ScheduleTask, assistantText: string): boolean {
+		const text = assistantText.trim();
+		if (!text) {
+			return false;
+		}
+
+		const signal = task.completionSignal?.trim();
+		if (signal) {
+			const regexMatch = signal.match(/^\/(.*)\/([gimsuy]*)$/);
+			if (regexMatch) {
+				try {
+					return new RegExp(regexMatch[1], regexMatch[2]).test(text);
+				} catch {
+					// Ignore invalid regex and fall back to substring matching.
+				}
+			}
+			if (text.toLowerCase().includes(signal.toLowerCase())) {
+				return true;
+			}
+		}
+
+		const lower = text.toLowerCase();
+		if (
+			lower.includes("not complete") ||
+			lower.includes("still running") ||
+			lower.includes("in progress") ||
+			lower.includes("pending")
+		) {
+			return false;
+		}
+
+		return (
+			lower.includes("task complete") ||
+			lower.includes("completed") ||
+			lower.includes("finished") ||
+			lower.includes("done") ||
+			lower.includes("resolved") ||
+			lower.includes("success")
+		);
+	}
+
+	private scheduleRecurringNextRun(task: ScheduleTask, now: number) {
+		if (task.kind === "once") {
+			return;
+		}
+
 		if (task.cronExpression) {
 			const next = computeNextCronRunAt(task.cronExpression, now + 1_000);
 			if (!next) {
 				this.tasks.delete(task.id);
-				this.persistTasks();
-				this.updateStatus();
 				return;
 			}
 			task.nextRunAt = next;
-			this.persistTasks();
-			this.updateStatus();
 			return;
 		}
 
@@ -982,10 +1157,7 @@ export class SchedulerRuntime {
 		if (!Number.isFinite(next) || guard >= 10_000) {
 			next = now + intervalMs;
 		}
-
 		task.nextRunAt = next;
-		this.persistTasks();
-		this.updateStatus();
 	}
 
 	createId(): string {
@@ -997,13 +1169,13 @@ export class SchedulerRuntime {
 	}
 
 	taskMode(task: ScheduleTask): string {
-		if (task.kind === "once") {
-			return "once";
-		}
-		if (task.cronExpression) {
-			return `cron ${task.cronExpression}`;
-		}
-		return `every ${formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL)}`;
+		const base =
+			task.kind === "once"
+				? "once"
+				: task.cronExpression
+					? `cron ${task.cronExpression}`
+					: `every ${formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL)}`;
+		return task.continueUntilComplete ? `${base} until-complete` : base;
 	}
 
 	private taskOptionLabel(task: ScheduleTask): string {
@@ -1380,6 +1552,18 @@ export class SchedulerRuntime {
 					runCount: task.runCount ?? 0,
 					resumeRequired: task.resumeRequired ?? false,
 					resumeReason: task.resumeReason,
+					continueUntilComplete: task.continueUntilComplete ?? false,
+					completionSignal: task.completionSignal?.trim() || undefined,
+					retryIntervalMs:
+						typeof task.retryIntervalMs === "number" && Number.isFinite(task.retryIntervalMs)
+							? Math.max(task.retryIntervalMs, ONE_MINUTE)
+							: undefined,
+					maxAttempts:
+						typeof task.maxAttempts === "number" && Number.isFinite(task.maxAttempts)
+							? Math.max(1, Math.floor(task.maxAttempts))
+							: undefined,
+					awaitingCompletion: false,
+					lastOutcomeSnippet: task.lastOutcomeSnippet,
 				};
 				if (normalized.kind === "recurring" && normalized.expiresAt && now >= normalized.expiresAt) {
 					mutated = true;
@@ -1447,6 +1631,9 @@ export class SchedulerRuntime {
 	private taskStatusLabel(task: ScheduleTask): string {
 		if (task.resumeRequired) {
 			return `resume_required (${task.resumeReason ?? "unknown"})`;
+		}
+		if (task.awaitingCompletion) {
+			return "awaiting_completion";
 		}
 		return task.lastStatus ?? "pending";
 	}

@@ -3,6 +3,8 @@ import { Type } from "@sinclair/typebox";
 import type { SchedulerRuntime } from "./scheduler.js";
 import {
 	formatDurationShort,
+	normalizeDuration,
+	parseDuration,
 	parseLoopScheduleArgs,
 	parseRemindScheduleArgs,
 	validateSchedulePromptAddInput,
@@ -44,6 +46,24 @@ const SchedulePromptToolParams = Type.Object({
 		}),
 	),
 	id: Type.Optional(Type.String({ description: "Task id for delete/enable/disable/adopt/release action" })),
+	continueUntilComplete: Type.Optional(
+		Type.Union([Type.Literal(true), Type.Literal(false)], {
+			description: "Keep re-running this task until completion is detected.",
+		}),
+	),
+	completionSignal: Type.Optional(
+		Type.String({
+			description: "Optional completion marker (substring or /regex/flags) that indicates the task is complete.",
+		}),
+	),
+	retryInterval: Type.Optional(
+		Type.String({
+			description: "Delay between retries while waiting for completion (e.g. 2m, 10m).",
+		}),
+	),
+	maxAttempts: Type.Optional(
+		Type.Number({ description: "Optional maximum number of runs when continueUntilComplete is enabled." }),
+	),
 });
 
 type ToolResult = { content: { type: "text"; text: string }[]; details: Record<string, unknown> };
@@ -277,6 +297,7 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			"Use this tool when the user asks to remind/check back later, revisit something in the future, or monitor PRs, CI, builds, deploys, or background work.",
 			"For recurring tasks use kind='recurring' with duration like 5m or 2h, or provide cron.",
 			"For one-time reminders use kind='once' with duration like 30m or 1h.",
+			"Set continueUntilComplete=true when the user explicitly wants retries until the task is done.",
 			"Default scope is instance. Use scope='workspace' only for monitors that should be adoptable across pi instances in the same workspace.",
 			"Scheduled tasks run only while pi is active and idle. Persisted overdue or foreign-owned tasks are restored for manual review instead of auto-running at startup.",
 		],
@@ -291,6 +312,10 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				cron?: string;
 				scope?: ScheduleScope;
 				id?: string;
+				continueUntilComplete?: boolean;
+				completionSignal?: string;
+				retryInterval?: string;
+				maxAttempts?: number;
 			},
 		): Promise<{ content: { type: "text"; text: string }[]; details: Record<string, unknown> }> => {
 			const { action } = params;
@@ -335,10 +360,11 @@ function handleToolList(runtime: SchedulerRuntime): ToolResult {
 	}
 
 	const lines = list.map((task) => {
-		const schedule =
+		const scheduleBase =
 			task.kind === "once"
 				? "-"
 				: (task.cronExpression ?? formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL));
+		const schedule = task.continueUntilComplete ? `${scheduleBase} (until-complete)` : scheduleBase;
 		const state = task.resumeRequired ? `due:${task.resumeReason ?? "unknown"}` : task.enabled ? "on" : "off";
 		const status = task.resumeRequired ? "resume_required" : (task.lastStatus ?? "pending");
 		const last = task.lastRunAt ? runtime.formatRelativeTime(task.lastRunAt) : "never";
@@ -464,8 +490,78 @@ function validationErrorMessage(error: string): string {
 	}
 }
 
+function resolveCompletionOptions(params: {
+	continueUntilComplete?: boolean;
+	completionSignal?: string;
+	retryInterval?: string;
+	maxAttempts?: number;
+}):
+	| {
+			ok: true;
+			options: {
+				continueUntilComplete?: boolean;
+				completionSignal?: string;
+				retryIntervalMs?: number;
+				maxAttempts?: number;
+			};
+			note?: string;
+	  }
+	| { ok: false; error: string } {
+	if (!params.continueUntilComplete) {
+		return {
+			ok: true,
+			options: {
+				continueUntilComplete: false,
+			},
+		};
+	}
+
+	let retryIntervalMs: number | undefined;
+	let note: string | undefined;
+	if (params.retryInterval) {
+		const parsed = parseDuration(params.retryInterval);
+		if (!parsed) {
+			return { ok: false, error: "invalid_retry_interval" };
+		}
+		const normalized = normalizeDuration(parsed);
+		retryIntervalMs = normalized.durationMs;
+		note = normalized.note;
+	}
+
+	let maxAttempts: number | undefined;
+	if (params.maxAttempts !== undefined) {
+		if (!Number.isFinite(params.maxAttempts) || params.maxAttempts < 1) {
+			return { ok: false, error: "invalid_max_attempts" };
+		}
+		maxAttempts = Math.floor(params.maxAttempts);
+	}
+
+	const completionSignal = params.completionSignal?.trim();
+	return {
+		ok: true,
+		options: {
+			continueUntilComplete: true,
+			completionSignal: completionSignal || undefined,
+			retryIntervalMs,
+			maxAttempts,
+		},
+		note,
+	};
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Handles validation + messaging for multiple schedule modes and completion policies.
 function handleToolAdd(
-	params: { kind?: TaskKind; prompt?: string; duration?: string; cron?: string; scope?: ScheduleScope },
+	params: {
+		kind?: TaskKind;
+		prompt?: string;
+		duration?: string;
+		cron?: string;
+		scope?: ScheduleScope;
+		continueUntilComplete?: boolean;
+		completionSignal?: string;
+		retryInterval?: string;
+		maxAttempts?: number;
+	},
 	runtime: SchedulerRuntime,
 ): ToolResult {
 	const prompt = params.prompt?.trim();
@@ -483,6 +579,27 @@ function handleToolAdd(
 		};
 	}
 
+	const completion = resolveCompletionOptions({
+		continueUntilComplete: params.continueUntilComplete,
+		completionSignal: params.completionSignal,
+		retryInterval: params.retryInterval,
+		maxAttempts: params.maxAttempts,
+	});
+	if (!completion.ok) {
+		return {
+			content: [
+				{
+					type: "text",
+					text:
+						completion.error === "invalid_retry_interval"
+							? "Error: retryInterval must be a duration like 2m, 10m, or 1h."
+							: "Error: maxAttempts must be a positive number.",
+				},
+			],
+			details: { action: "add", error: completion.error },
+		};
+	}
+
 	const validated = validateSchedulePromptAddInput({
 		kind: params.kind,
 		duration: params.duration,
@@ -496,13 +613,18 @@ function handleToolAdd(
 	}
 
 	if (validated.plan.kind === "once") {
-		const task = runtime.addOneShotTask(prompt, validated.plan.durationMs, { scope: params.scope });
+		const task = runtime.addOneShotTask(prompt, validated.plan.durationMs, {
+			scope: params.scope,
+			...completion.options,
+		});
 		return {
 			content: [
 				{
 					type: "text",
 					text: `Reminder scheduled (id: ${task.id}) for ${runtime.formatRelativeTime(task.nextRunAt)} as ${task.scope ?? "instance"}-scoped.${
 						validated.plan.note ? ` ${validated.plan.note}` : ""
+					}${completion.options.continueUntilComplete ? " Will retry until marked complete." : ""}${
+						completion.note ? ` ${completion.note}` : ""
 					}`,
 				},
 			],
@@ -511,7 +633,10 @@ function handleToolAdd(
 	}
 
 	if (validated.plan.mode === "cron") {
-		const task = runtime.addRecurringCronTask(prompt, validated.plan.cronExpression, { scope: params.scope });
+		const task = runtime.addRecurringCronTask(prompt, validated.plan.cronExpression, {
+			scope: params.scope,
+			...completion.options,
+		});
 		if (!task) {
 			return {
 				content: [
@@ -526,6 +651,8 @@ function handleToolAdd(
 					type: "text",
 					text: `Recurring cron task scheduled (id: ${task.id}) with '${task.cronExpression}' as ${task.scope ?? "instance"}-scoped. Expires in 3 days.${
 						validated.plan.note ? ` ${validated.plan.note}` : ""
+					}${completion.options.continueUntilComplete ? " Will retry until marked complete." : ""}${
+						completion.note ? ` ${completion.note}` : ""
 					}`,
 				},
 			],
@@ -533,13 +660,18 @@ function handleToolAdd(
 		};
 	}
 
-	const task = runtime.addRecurringIntervalTask(prompt, validated.plan.durationMs, { scope: params.scope });
+	const task = runtime.addRecurringIntervalTask(prompt, validated.plan.durationMs, {
+		scope: params.scope,
+		...completion.options,
+	});
 	return {
 		content: [
 			{
 				type: "text",
 				text: `Recurring task scheduled (id: ${task.id}) every ${formatDurationShort(validated.plan.durationMs)} as ${task.scope ?? "instance"}-scoped. Expires in 3 days.${
 					validated.plan.note ? ` ${validated.plan.note}` : ""
+				}${completion.options.continueUntilComplete ? " Will retry until marked complete." : ""}${
+					completion.note ? ` ${completion.note}` : ""
 				}`,
 			},
 		],
@@ -563,6 +695,10 @@ export function registerEvents(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 	pi.on("session_switch", refreshRuntimeContext);
 	pi.on("session_fork", refreshRuntimeContext);
 	pi.on("session_tree", refreshRuntimeContext);
+
+	pi.on("agent_end", (event) => {
+		runtime.handleAgentEnd(event as { messages?: Array<{ role?: string; content?: unknown }> });
+	});
 
 	pi.on("session_shutdown", async (_event, ctx) => {
 		runtime.setRuntimeContext(ctx);

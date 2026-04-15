@@ -81,6 +81,9 @@ The scheduler extension adds recurring checks, one-time reminders, and the LLM-c
 checks. Tasks run only while pi is active and idle, and scheduler state is persisted in shared pi
 storage using a workspace-mirrored path.
 
+Use `continueUntilComplete: true` (plus optional `completionSignal`, `retryInterval`, and
+`maxAttempts`) when a scheduled check should keep retrying until completion is detected.
+
 <!-- {/extensionsSchedulerOverview} -->
 
 ## Package layout
