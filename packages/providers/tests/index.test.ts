@@ -86,7 +86,7 @@ describe("provider catalog extension", () => {
 				set: vi.fn(),
 			},
 			refresh,
-		};
+		} as never;
 
 		providerCatalogExtension(harness.pi as never);
 		await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
@@ -133,7 +133,7 @@ describe("provider catalog extension", () => {
 				}),
 			},
 			refresh,
-		};
+		} as never;
 
 		const pickerCalls: string[][] = [];
 		harness.ctx.ui.select = vi.fn((_title: string, options: string[]) => {
@@ -142,8 +142,8 @@ describe("provider catalog extension", () => {
 				return Promise.resolve(PROVIDER_PICKER_NEXT);
 			}
 			return Promise.resolve(`${provider.name} — ${provider.id} · login`);
-		});
-		harness.ctx.ui.input = vi.fn(async () => "provider-api-key");
+		}) as never;
+		harness.ctx.ui.input = vi.fn(async () => "provider-api-key") as never;
 
 		providerCatalogExtension(harness.pi as never);
 		const command = harness.commands.get("providers");
