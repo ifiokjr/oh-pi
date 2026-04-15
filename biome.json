@@ -17,6 +17,7 @@
 			"packages/subagents/tests/**/*.ts",
 			"packages/plan/tests/**/*.ts",
 			"packages/shared-qna/tests/**/*.ts",
+			"packages/providers/**/*.ts",
 			"packages/spec/extension/**/*.ts",
 			"packages/spec/tests/**/*.ts",
 			"packages/web-server/src/**/*.ts",
