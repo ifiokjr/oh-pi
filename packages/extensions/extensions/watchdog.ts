@@ -49,6 +49,7 @@ const ALERT_HISTORY_LIMIT = 20;
 const OVERLAY_WIDTH = 84;
 const OVERLAY_MAX_HEIGHT = "80%";
 const SAFE_MODE_REASON_MAX_LENGTH = 96;
+const STARTUP_CONFIG_LOAD_DELAY_MS = 250;
 /**
 <!-- {=extensionsWatchdogConfigPathDocs} -->
 
@@ -399,11 +400,9 @@ terminal.
 */
 export default function watchdogExtension(pi: ExtensionAPI) {
 	installRuntimeDiagnostics(pi);
-	const config = loadWatchdogConfig();
-	const thresholds = resolveWatchdogThresholds(config);
-	const sampleIntervalMs = resolveWatchdogSampleIntervalMs(config);
+	let thresholds = DEFAULT_WATCHDOG_THRESHOLDS;
+	let sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_MS;
 	const histogram = monitorEventLoopDelay({ resolution: HISTOGRAM_RESOLUTION_MS });
-	histogram.enable();
 
 	const coreCount = Math.max(1, cpus().length || 1);
 	const sampleHistory: WatchdogSample[] = [];
@@ -414,10 +413,12 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	let consecutiveAlerts = 0;
 	let alertNotificationCount = 0;
 	let latestAlertMessage: string | null = null;
-	let enabled = config.enabled !== false;
+	let enabled = true;
 	let timer: ReturnType<typeof setInterval> | null = null;
 	let lastCpuUsage = process.cpuUsage();
 	let lastSampleAt = Date.now();
+	let configLoaded = false;
+	let startupConfigTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const setAlertStatus = (text: string | undefined) => {
 		if (activeCtx?.hasUI) {
@@ -429,6 +430,74 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		if (activeCtx?.hasUI) {
 			activeCtx.ui.setStatus("safe-mode", formatSafeModeStatusHint(state));
 		}
+	};
+
+	const stopTimer = () => {
+		if (!timer) {
+			return;
+		}
+		clearInterval(timer);
+		timer = null;
+	};
+
+	const ensureTimer = () => {
+		if (timer || !enabled) {
+			return;
+		}
+		timer = setInterval(() => {
+			takeSample();
+		}, sampleIntervalMs);
+		timer.unref?.();
+	};
+
+	const applyLoadedConfig = (config: WatchdogConfig) => {
+		const nextThresholds = resolveWatchdogThresholds(config);
+		const nextSampleIntervalMs = resolveWatchdogSampleIntervalMs(config);
+		const nextEnabled = config.enabled !== false;
+		const intervalChanged = nextSampleIntervalMs !== sampleIntervalMs;
+		const enabledChanged = nextEnabled !== enabled;
+
+		thresholds = nextThresholds;
+		sampleIntervalMs = nextSampleIntervalMs;
+		enabled = nextEnabled;
+		configLoaded = true;
+
+		if (intervalChanged || !enabled || enabledChanged) {
+			stopTimer();
+		}
+		if (!enabled) {
+			setAlertStatus(undefined);
+			return;
+		}
+		ensureTimer();
+	};
+
+	const cancelStartupConfigLoad = () => {
+		if (!startupConfigTimer) {
+			return;
+		}
+		clearTimeout(startupConfigTimer);
+		startupConfigTimer = null;
+	};
+
+	const loadConfigNow = () => {
+		cancelStartupConfigLoad();
+		if (configLoaded) {
+			return;
+		}
+		applyLoadedConfig(loadWatchdogConfig());
+	};
+
+	const scheduleStartupConfigLoad = () => {
+		cancelStartupConfigLoad();
+		if (configLoaded) {
+			return;
+		}
+		startupConfigTimer = setTimeout(() => {
+			startupConfigTimer = null;
+			loadConfigNow();
+		}, STARTUP_CONFIG_LOAD_DELAY_MS);
+		startupConfigTimer.unref?.();
 	};
 
 	const takeSample = () => {
@@ -511,24 +580,6 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		return latestSample;
 	};
 
-	const ensureTimer = () => {
-		if (timer || !enabled) {
-			return;
-		}
-		timer = setInterval(() => {
-			takeSample();
-		}, sampleIntervalMs);
-		timer.unref?.();
-	};
-
-	const stopTimer = () => {
-		if (!timer) {
-			return;
-		}
-		clearInterval(timer);
-		timer = null;
-	};
-
 	const resetCounters = () => {
 		histogram.enable();
 		lastCpuUsage = process.cpuUsage();
@@ -549,6 +600,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	};
 
 	const notifyStatus = (ctx: ExtensionCommandContext | ExtensionContext) => {
+		loadConfigNow();
 		takeSample();
 		const culprit = getExtensionDiagnostics()[0];
 		const culpritSummary = formatLikelyCulpritSummary(culprit);
@@ -571,6 +623,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	};
 
 	const notifyConfig = (ctx: ExtensionCommandContext | ExtensionContext) => {
+		loadConfigNow();
 		ctx.ui.notify(
 			`watchdog config: ${enabled ? "enabled" : "disabled"} · interval ${sampleIntervalMs}ms · ${formatThresholdSummary(thresholds)} · ${WATCHDOG_CONFIG_PATH}`,
 			"info",
@@ -579,6 +632,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 
 	const openOverlay = async (ctx: ExtensionCommandContext | ExtensionContext) => {
 		activeCtx = ctx;
+		loadConfigNow();
 		setSafeModeStatus();
 		takeSample();
 		await ctx.ui.custom(
@@ -636,6 +690,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		async handler(args, ctx) {
 			activeCtx = ctx;
 			setSafeModeStatus();
+			loadConfigNow();
 			const command = args.trim().toLowerCase() || "status";
 			switch (command) {
 				case "on":
@@ -706,16 +761,19 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		resetCounters();
 		setSafeModeStatus();
 		ensureTimer();
+		scheduleStartupConfigLoad();
 	});
 
 	pi.on("session_switch", (_event, ctx) => {
 		activeCtx = ctx;
+		loadConfigNow();
 		resetCounters();
 		setSafeModeStatus();
 		ensureTimer();
 	});
 
 	pi.on("session_shutdown", () => {
+		cancelStartupConfigLoad();
 		setAlertStatus(undefined);
 		if (activeCtx?.hasUI) {
 			activeCtx.ui.setStatus("safe-mode", undefined);

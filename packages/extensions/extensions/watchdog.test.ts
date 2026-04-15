@@ -237,6 +237,45 @@ describe("watchdog helpers", () => {
 });
 
 describe("watchdog extension", () => {
+	it("does not load watchdog config during extension registration", () => {
+		const pi = createMockPi();
+		watchdogExtension(pi as any);
+
+		expect(mockExistsSync).not.toHaveBeenCalled();
+		expect(mockReadFileSync).not.toHaveBeenCalled();
+	});
+
+	it("defers watchdog config loading until after the startup window", async () => {
+		const pi = createMockPi();
+		const ctx = createMockCtx();
+		mockExistsSync.mockReturnValue(true);
+		mockReadFileSync.mockReturnValue(JSON.stringify({ enabled: false }));
+		watchdogExtension(pi as any);
+
+		await pi._emit("session_start", {}, ctx);
+		expect(mockExistsSync).not.toHaveBeenCalled();
+		expect(mockReadFileSync).not.toHaveBeenCalled();
+
+		await vi.advanceTimersByTimeAsync(250);
+		expect(mockExistsSync).toHaveBeenCalledTimes(1);
+		expect(mockReadFileSync).toHaveBeenCalledTimes(1);
+	});
+
+	it("cancels deferred watchdog config loading on session_shutdown", async () => {
+		const pi = createMockPi();
+		const ctx = createMockCtx();
+		mockExistsSync.mockReturnValue(true);
+		mockReadFileSync.mockReturnValue(JSON.stringify({ enabled: false }));
+		watchdogExtension(pi as any);
+
+		await pi._emit("session_start", {}, ctx);
+		await pi._emit("session_shutdown");
+		await vi.advanceTimersByTimeAsync(250);
+
+		expect(mockExistsSync).not.toHaveBeenCalled();
+		expect(mockReadFileSync).not.toHaveBeenCalled();
+	});
+
 	it("applies safe mode and broadcasts an event", () => {
 		const pi = createMockPi();
 		const seen: any[] = [];
