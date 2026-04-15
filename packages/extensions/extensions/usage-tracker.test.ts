@@ -114,6 +114,26 @@ function makeRateLimitCacheJson(overrides: Record<string, any> = {}) {
 	});
 }
 
+function makeOpenAiRateLimitCacheEntry() {
+	return {
+		provider: "openai",
+		windows: [
+			{
+				label: "Codex (5h)",
+				percentLeft: 61,
+				resetDescription: "in 10m",
+				windowMinutes: 300,
+			},
+		],
+		credits: null,
+		account: "test@example.com",
+		plan: "pro",
+		note: null,
+		probedAt: Date.now() - 60_000,
+		error: null,
+	};
+}
+
 function makeFetchResponse(
 	opts: { status?: number; ok?: boolean; headers?: Record<string, string>; body?: unknown } = {},
 ) {
@@ -209,6 +229,7 @@ function createMockCtx(entries: any[] = []) {
 	const notifications: any[] = [];
 
 	return {
+		hasUI: true,
 		sessionManager: { getBranch: () => entries },
 		getContextUsage: () => ({ tokens: 45000, contextWindow: 200000, percent: 22.5 }),
 		model: { id: "claude-sonnet-4-20250514", provider: "anthropic" },
@@ -223,6 +244,7 @@ function createMockCtx(entries: any[] = []) {
 			notify(msg: string, type: string) {
 				notifications.push({ msg, type });
 			},
+			select: vi.fn(async (_title: string, options: string[]) => options[0]),
 			custom: vi.fn().mockResolvedValue(undefined),
 		},
 		_widgets: widgets,
@@ -1008,12 +1030,27 @@ describe("usage-tracker extension", () => {
 			expect(ctx._widgets.has("usage-tracker")).toBe(true);
 		});
 
-		it("renders both session and 30d totals", () => {
+		it("renders current-provider session totals in the widget", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 			pi._emit(
 				"turn_end",
-				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.02 }), toolResults: [] },
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage({ provider: "anthropic", model: "claude-sonnet-4-20250514", costTotal: 0.02 }),
+					toolResults: [],
+				},
+				ctx,
+			);
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 1,
+					message: makeAssistantMessage({ provider: "openai", model: "gpt-4o", costTotal: 0.03 }),
+					toolResults: [],
+				},
 				ctx,
 			);
 
@@ -1028,8 +1065,8 @@ describe("usage-tracker extension", () => {
 			expect(widgetFactory).toBeDefined();
 			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
 			const rendered = component?.render(200).join("\n") ?? "";
-			expect(rendered).toContain("$");
-			expect(rendered).toContain("30d:");
+			expect(rendered).toContain("$0.020");
+			expect(rendered).not.toContain("$0.050");
 		});
 
 		it("shows cached Anthropic windows in the widget when live probing is rate-limited", () => {
@@ -1066,6 +1103,44 @@ describe("usage-tracker extension", () => {
 			const rendered = component?.render(200).join("\n") ?? "";
 			expect(rendered).toContain("Anthropic");
 			expect(rendered).toContain("72%");
+		});
+
+		it("shows only the current provider in the widget when multiple providers have cached usage", () => {
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path) === AUTH_JSON_PATH || String(path) === RATE_LIMIT_CACHE_PATH) {
+					return true;
+				}
+				return false;
+			});
+			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path) === AUTH_JSON_PATH) {
+					return makeAuthJson();
+				}
+				if (String(path) === RATE_LIMIT_CACHE_PATH) {
+					return makeRateLimitCacheJson({ openai: makeOpenAiRateLimitCacheEntry() });
+				}
+				return "{}";
+			});
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
+			ctx.model = { id: "gpt-4o", provider: "openai" } as any;
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						render: (width: number) => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
+			const rendered = component?.render(200).join("\n") ?? "";
+			expect(rendered).toContain("OpenAI");
+			expect(rendered).toContain("61%");
+			expect(rendered).not.toContain("Anthropic");
 		});
 
 		it("truncates widget output to terminal width", () => {
@@ -1135,7 +1210,7 @@ describe("usage-tracker extension", () => {
 	});
 
 	describe("/usage command", () => {
-		it("shows overlay with rate limit detail sections from API probes", async () => {
+		it("shows the current provider dashboard by default", async () => {
 			mockFetch.mockResolvedValue(
 				makeFetchResponse({
 					body: {
@@ -1175,10 +1250,109 @@ describe("usage-tracker extension", () => {
 			);
 			const rendered = component.render(220).join("\n");
 			expect(rendered).toContain("Anthropic Rate Limits");
-			expect(rendered).toContain("Avg");
+			expect(rendered).toContain("Selected");
+			expect(rendered).toContain("current");
 			expect(rendered).toContain("Cache");
-			expect(rendered).toContain("Pace");
 			expect(rendered).toContain("used)");
+		});
+
+		it("lets you pick a provider before showing the overlay", async () => {
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path) === AUTH_JSON_PATH || String(path) === RATE_LIMIT_CACHE_PATH) {
+					return true;
+				}
+				return false;
+			});
+			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path) === AUTH_JSON_PATH) {
+					return makeAuthJson();
+				}
+				if (String(path) === RATE_LIMIT_CACHE_PATH) {
+					return makeRateLimitCacheJson({ openai: makeOpenAiRateLimitCacheEntry() });
+				}
+				return "{}";
+			});
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
+			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
+			(ctx.ui.select as ReturnType<typeof vi.fn>).mockImplementation(async (_title: string, options: string[]) =>
+				options.find((option) => option.includes("OpenAI")),
+			);
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+			pi._emit(
+				"turn_end",
+				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.015 }), toolResults: [] },
+				ctx,
+			);
+
+			await runWithTimers(() => pi._commands.get("usage").handler("", ctx));
+
+			expect(ctx.ui.select).toHaveBeenCalledWith(
+				expect.stringContaining("Type to search"),
+				expect.arrayContaining([
+					expect.stringContaining("Anthropic — current model"),
+					expect.stringContaining("OpenAI"),
+				]),
+			);
+			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), { overlay: true });
+
+			const rendererFactory = (ctx.ui.custom as ReturnType<typeof vi.fn>).mock.calls[0][0] as (...args: unknown[]) => {
+				render: (width: number) => string[];
+			};
+			const component = rendererFactory(
+				{ requestRender: vi.fn() },
+				{ fg: (_color: string, text: string) => text },
+				{},
+				vi.fn(),
+			);
+			const rendered = component.render(220).join("\n");
+			expect(rendered).toContain("OpenAI Rate Limits");
+			expect(rendered).toContain("selected");
+			expect(rendered).not.toContain("Anthropic Rate Limits");
+		});
+
+		it("supports direct provider arguments and skips the picker", async () => {
+			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			await runWithTimers(() => pi._commands.get("usage").handler("claude", ctx));
+
+			expect(ctx.ui.select).not.toHaveBeenCalled();
+			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), { overlay: true });
+		});
+
+		it("surfaces recently viewed providers in the picker", async () => {
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path) === AUTH_JSON_PATH || String(path) === RATE_LIMIT_CACHE_PATH) {
+					return true;
+				}
+				return false;
+			});
+			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+				if (String(path) === AUTH_JSON_PATH) {
+					return makeAuthJson();
+				}
+				if (String(path) === RATE_LIMIT_CACHE_PATH) {
+					return makeRateLimitCacheJson({ openai: makeOpenAiRateLimitCacheEntry() });
+				}
+				return "{}";
+			});
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
+			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
+			(ctx.ui.select as ReturnType<typeof vi.fn>).mockImplementation(
+				async (_title: string, options: string[]) => options[0],
+			);
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			await runWithTimers(() => pi._commands.get("usage").handler("openai", ctx));
+			await runWithTimers(() => pi._commands.get("usage").handler("", ctx));
+
+			const pickerOptions = (ctx.ui.select as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string[];
+			expect(pickerOptions).toEqual(expect.arrayContaining([expect.stringContaining("OpenAI — recently viewed")]));
 		});
 	});
 
