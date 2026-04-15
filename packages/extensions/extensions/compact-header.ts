@@ -13,6 +13,8 @@ import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode";
 
 /** Read `plainIcons` from settings.json (global or project-local). */
+const STARTUP_PLAIN_ICONS_SYNC_DELAY_MS = 250;
+
 function loadPlainIconsSetting(): boolean {
 	for (const dir of [join(process.cwd(), ".pi"), getAgentDir()]) {
 		try {
@@ -29,6 +31,22 @@ function loadPlainIconsSetting(): boolean {
 }
 
 export default function (pi: ExtensionAPI) {
+	let plainIconsSyncTimer: ReturnType<typeof setTimeout> | undefined;
+	const cancelPlainIconsSync = () => {
+		if (!plainIconsSyncTimer) {
+			return;
+		}
+		clearTimeout(plainIconsSyncTimer);
+		plainIconsSyncTimer = undefined;
+	};
+	const syncPlainIconsSetting = () => {
+		if (process.env.OH_PI_PLAIN_ICONS) {
+			return;
+		}
+		if (loadPlainIconsSetting()) {
+			process.env.OH_PI_PLAIN_ICONS = "1";
+		}
+	};
 	// Register --plain-icons CLI flag
 	pi.registerFlag("plain-icons", {
 		description: "Use ASCII-safe icons instead of emoji (same as OH_PI_PLAIN_ICONS=1 or plainIcons in settings.json)",
@@ -38,15 +56,17 @@ export default function (pi: ExtensionAPI) {
 
 	// Bridge settings.json and --plain-icons flag to the env var
 	// (env var takes precedence, then flag, then settings.json)
-	if (!process.env.OH_PI_PLAIN_ICONS) {
-		const fromFlag = pi.getFlag("plain-icons");
-		if (fromFlag === true) {
-			process.env.OH_PI_PLAIN_ICONS = "1";
-		} else if (loadPlainIconsSetting()) {
-			process.env.OH_PI_PLAIN_ICONS = "1";
-		}
+	if (!process.env.OH_PI_PLAIN_ICONS && pi.getFlag("plain-icons") === true) {
+		process.env.OH_PI_PLAIN_ICONS = "1";
 	}
 	pi.on("session_start", async (_event, ctx) => {
+		cancelPlainIconsSync();
+		plainIconsSyncTimer = setTimeout(() => {
+			plainIconsSyncTimer = undefined;
+			syncPlainIconsSetting();
+		}, STARTUP_PLAIN_ICONS_SYNC_DELAY_MS);
+		plainIconsSyncTimer.unref?.();
+
 		if (!ctx.hasUI) {
 			return;
 		}
@@ -130,5 +150,9 @@ export default function (pi: ExtensionAPI) {
 				invalidate() {},
 			};
 		});
+	});
+
+	pi.on("session_shutdown", async () => {
+		cancelPlainIconsSync();
 	});
 }
