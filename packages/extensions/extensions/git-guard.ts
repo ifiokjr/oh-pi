@@ -9,9 +9,10 @@
  *
  * Supports Kitty (OSC 99) and generic terminal (OSC 777) notification protocols.
  */
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 
 export const INTERACTIVE_GIT_WARNING_PREFIX = "Interactive git command blocked";
+const DIRTY_REPO_CHECK_DELAY_MS = 250;
 
 interface InteractiveGitDetection {
 	reason: string;
@@ -130,6 +131,26 @@ function terminalNotify(title: string, body: string): void {
 export default function (pi: ExtensionAPI) {
 	/** Counts the number of agent turns for the checkpoint label. */
 	let turnCount = 0;
+	let dirtyRepoTimer: ReturnType<typeof setTimeout> | null = null;
+
+	const scheduleDirtyRepoCheck = (ctx: ExtensionContext) => {
+		if (dirtyRepoTimer) {
+			clearTimeout(dirtyRepoTimer);
+		}
+
+		dirtyRepoTimer = setTimeout(async () => {
+			dirtyRepoTimer = null;
+			try {
+				const { stdout } = await pi.exec("git", ["status", "--porcelain"]);
+				if (stdout.trim() && ctx.hasUI) {
+					const lines = stdout.trim().split("\n").length;
+					ctx.ui.notify(`Dirty repo: ${lines} uncommitted change(s)`, "warning");
+				}
+			} catch {
+				// Not a git repo — nothing to warn about
+			}
+		}, DIRTY_REPO_CHECK_DELAY_MS);
+	};
 
 	pi.on("tool_call", async (event) => {
 		if (event.toolName !== "bash") {
@@ -146,17 +167,9 @@ export default function (pi: ExtensionAPI) {
 		};
 	});
 
-	// Warn on dirty repo at session start
+	// Warn on dirty repo at session start, but defer it so startup avoids immediate git work.
 	pi.on("session_start", async (_event, ctx) => {
-		try {
-			const { stdout } = await pi.exec("git", ["status", "--porcelain"]);
-			if (stdout.trim() && ctx.hasUI) {
-				const lines = stdout.trim().split("\n").length;
-				ctx.ui.notify(`Dirty repo: ${lines} uncommitted change(s)`, "warning");
-			}
-		} catch {
-			// Not a git repo — nothing to warn about
-		}
+		scheduleDirtyRepoCheck(ctx);
 	});
 
 	// Stash checkpoint before each turn
@@ -173,5 +186,13 @@ export default function (pi: ExtensionAPI) {
 	pi.on("agent_end", () => {
 		terminalNotify("oh-pi", `Done after ${turnCount} turn(s). Ready for input.`);
 		turnCount = 0;
+	});
+
+	pi.on("session_shutdown", () => {
+		if (!dirtyRepoTimer) {
+			return;
+		}
+		clearTimeout(dirtyRepoTimer);
+		dirtyRepoTimer = null;
 	});
 }

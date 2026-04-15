@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { detectInteractiveGitCommand, INTERACTIVE_GIT_WARNING_PREFIX } from "./git-guard.js";
+import { describe, expect, it, vi } from "vitest";
+import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
+import gitGuardExtension, { detectInteractiveGitCommand, INTERACTIVE_GIT_WARNING_PREFIX } from "./git-guard.js";
 
 describe("detectInteractiveGitCommand", () => {
 	it("detects git rebase --continue without non-interactive editor overrides", () => {
@@ -42,5 +43,25 @@ describe("detectInteractiveGitCommand", () => {
 describe("INTERACTIVE_GIT_WARNING_PREFIX", () => {
 	it("stays stable for user-facing block messages", () => {
 		expect(INTERACTIVE_GIT_WARNING_PREFIX).toBe("Interactive git command blocked");
+	});
+});
+
+describe("git-guard extension", () => {
+	it("defers dirty-repo startup checks until after the initial startup window", async () => {
+		vi.useFakeTimers();
+		try {
+			const harness = createExtensionHarness();
+			harness.pi.exec = vi.fn(async () => ({ stdout: " M README.md\n?? notes.txt\n", exitCode: 0 }));
+
+			gitGuardExtension(harness.pi as never);
+			harness.emit("session_start", {}, harness.ctx);
+
+			expect(harness.pi.exec).not.toHaveBeenCalled();
+			await vi.advanceTimersByTimeAsync(500);
+			expect(harness.pi.exec).toHaveBeenCalledWith("git", ["status", "--porcelain"]);
+			expect(harness.notifications.at(-1)?.msg).toContain("Dirty repo: 2 uncommitted change(s)");
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
