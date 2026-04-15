@@ -102,6 +102,7 @@ function registerOllamaCloudProvider(pi: ExtensionAPI): void {
 		baseUrl: getOllamaCloudRuntimeConfig().apiUrl,
 		oauth: createOllamaCloudOAuthProvider(),
 		models: toProviderModels(cloudEnvDiscoveryState.models),
+		streamSimple: streamSimpleOllamaCloud,
 	});
 }
 
@@ -238,6 +239,10 @@ function registerOllamaLifecycle(pi: ExtensionAPI): void {
 		ollamaCliStatus = await getOllamaCliStatus();
 		registerOllamaLocalProvider(pi);
 
+		const credential = getStoredCloudCredentialFromContext(ctx);
+		await refreshCloudModels(pi, ctx, credential);
+		ctx.modelRegistry.refresh?.();
+
 		if (!ollamaCliStatus.available && ctx.hasUI && !missingCliWarningShown) {
 			missingCliWarningShown = true;
 			ctx.ui.notify(
@@ -300,7 +305,12 @@ async function refreshCloudModels(pi: ExtensionAPI, ctx: CommandContextLike, cre
 			? await refreshOllamaCloudCredential(credential)
 			: await refreshOllamaCloudCredentialModels(credential);
 		ctx.modelRegistry.authStorage.set(OLLAMA_CLOUD_PROVIDER, { type: "oauth", ...refreshed });
-		return getCredentialModels(refreshed);
+		cloudEnvDiscoveryState.models = getCredentialModels(refreshed);
+		cloudEnvDiscoveryState.lastRefresh = Date.now();
+		cloudEnvDiscoveryState.lastError = null;
+		registerOllamaCloudProvider(pi);
+		registerOllamaLocalProvider(pi);
+		return cloudEnvDiscoveryState.models;
 	}
 	return refreshRegisteredCloudEnvModels(pi);
 }
@@ -353,6 +363,10 @@ async function pullLocalModel(pi: ExtensionAPI, ctx: CommandContextLike, modelId
 
 	activeLocalPulls.set(modelId, run);
 	return run;
+}
+
+function streamSimpleOllamaCloud(model: Model<any>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream {
+	return streamSimpleOpenAICompletions(model as Model<"openai-completions">, context, options);
 }
 
 function streamSimpleOllamaLocal(model: Model<any>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream {
@@ -618,6 +632,17 @@ function formatRefreshAge(timestamp: number | null | undefined): string {
 
 function getStoredCloudCredential(ctx: { modelRegistry: { authStorage: { get: (provider: string) => unknown } } }): OllamaCloudCredentials | null {
 	const credential = ctx.modelRegistry.authStorage.get(OLLAMA_CLOUD_PROVIDER);
+	return credential && typeof credential === "object" && (credential as { type?: string }).type === "oauth"
+		? (credential as OllamaCloudCredentials)
+		: null;
+}
+
+function getStoredCloudCredentialFromContext(ctx: CommandContextLike): OllamaCloudCredentials | null {
+	const getter = ctx.modelRegistry?.authStorage?.get;
+	if (typeof getter !== "function") {
+		return null;
+	}
+	const credential = getter(OLLAMA_CLOUD_PROVIDER);
 	return credential && typeof credential === "object" && (credential as { type?: string }).type === "oauth"
 		? (credential as OllamaCloudCredentials)
 		: null;
