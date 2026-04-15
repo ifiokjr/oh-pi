@@ -61,6 +61,8 @@ import { registerSubagentCommands } from "./command-registration.js";
 import { ensureAccessibleDir, expandTildePath, getSubagentSessionRoot, loadSubagentConfig } from "./bootstrap.js";
 import { createSubagentRuntimeMonitor } from "./runtime-monitor.js";
 
+const STARTUP_ARTIFACT_CLEANUP_DELAY_MS = 250;
+
 // ExtensionConfig is now imported from ./types.js
 
 export default function registerSubagentExtension(pi: ExtensionAPI): void {
@@ -1048,6 +1050,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		}
 	});
 
+	let startupCleanupTimer: ReturnType<typeof setTimeout> | undefined;
 	const cleanupSessionArtifacts = (ctx: ExtensionContext) => {
 		try {
 			const sessionFile = ctx.sessionManager.getSessionFile();
@@ -1056,50 +1059,52 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			}
 		} catch {}
 	};
+	const cancelStartupCleanup = () => {
+		if (!startupCleanupTimer) {
+			return;
+		}
+		clearTimeout(startupCleanupTimer);
+		startupCleanupTimer = undefined;
+	};
+	const scheduleStartupCleanup = (ctx: ExtensionContext) => {
+		cancelStartupCleanup();
+		startupCleanupTimer = setTimeout(() => {
+			startupCleanupTimer = undefined;
+			cleanupSessionArtifacts(ctx);
+		}, STARTUP_ARTIFACT_CLEANUP_DELAY_MS);
+		startupCleanupTimer.unref?.();
+	};
+	const resetSessionState = (ctx: ExtensionContext, options: { deferArtifactCleanup?: boolean } = {}) => {
+		baseCwd = ctx.cwd;
+		currentSessionId =
+			ctx.sessionManager.getSessionFile() ?? `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+		if (options.deferArtifactCleanup) {
+			scheduleStartupCleanup(ctx);
+		} else {
+			cancelStartupCleanup();
+			cleanupSessionArtifacts(ctx);
+		}
+		for (const timer of cleanupTimers.values()) clearTimeout(timer);
+		cleanupTimers.clear();
+		asyncJobs.clear();
+		runtimeMonitor.clearResults();
+		if (ctx.hasUI) {
+			lastUiContext = ctx;
+			renderWidget(ctx, []);
+		}
+	};
 
 	pi.on("session_start", (_event, ctx) => {
-		baseCwd = ctx.cwd;
-		currentSessionId =
-			ctx.sessionManager.getSessionFile() ?? `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-		cleanupSessionArtifacts(ctx);
-		for (const timer of cleanupTimers.values()) clearTimeout(timer);
-		cleanupTimers.clear();
-		asyncJobs.clear();
-		runtimeMonitor.clearResults();
-		if (ctx.hasUI) {
-			lastUiContext = ctx;
-			renderWidget(ctx, []);
-		}
+		resetSessionState(ctx, { deferArtifactCleanup: true });
 	});
 	pi.on("session_switch", (_event, ctx) => {
-		baseCwd = ctx.cwd;
-		currentSessionId =
-			ctx.sessionManager.getSessionFile() ?? `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-		cleanupSessionArtifacts(ctx);
-		for (const timer of cleanupTimers.values()) clearTimeout(timer);
-		cleanupTimers.clear();
-		asyncJobs.clear();
-		runtimeMonitor.clearResults();
-		if (ctx.hasUI) {
-			lastUiContext = ctx;
-			renderWidget(ctx, []);
-		}
+		resetSessionState(ctx);
 	});
 	pi.on("session_branch", (_event, ctx) => {
-		baseCwd = ctx.cwd;
-		currentSessionId =
-			ctx.sessionManager.getSessionFile() ?? `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-		cleanupSessionArtifacts(ctx);
-		for (const timer of cleanupTimers.values()) clearTimeout(timer);
-		cleanupTimers.clear();
-		asyncJobs.clear();
-		runtimeMonitor.clearResults();
-		if (ctx.hasUI) {
-			lastUiContext = ctx;
-			renderWidget(ctx, []);
-		}
+		resetSessionState(ctx);
 	});
 	pi.on("session_shutdown", () => {
+		cancelStartupCleanup();
 		runtimeMonitor.stop();
 		// Clear all pending cleanup timers
 		for (const timer of cleanupTimers.values()) {

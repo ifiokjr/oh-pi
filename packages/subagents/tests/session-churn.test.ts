@@ -1,14 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockRenderWidget, mockReadStatus, mockWatcherClose, mockCoalescerClear, mockCoalescerSchedule } = vi.hoisted(
-	() => ({
-		mockRenderWidget: vi.fn(),
-		mockReadStatus: vi.fn(() => null),
-		mockWatcherClose: vi.fn(),
-		mockCoalescerClear: vi.fn(),
-		mockCoalescerSchedule: vi.fn(),
-	}),
-);
+const {
+	mockRenderWidget,
+	mockReadStatus,
+	mockWatcherClose,
+	mockCoalescerClear,
+	mockCoalescerSchedule,
+	mockCleanupOldArtifacts,
+} = vi.hoisted(() => ({
+	mockRenderWidget: vi.fn(),
+	mockReadStatus: vi.fn(() => null),
+	mockWatcherClose: vi.fn(),
+	mockCoalescerClear: vi.fn(),
+	mockCoalescerSchedule: vi.fn(),
+	mockCleanupOldArtifacts: vi.fn(),
+}));
 
 vi.mock("node:fs", () => ({
 	constants: { R_OK: 4, W_OK: 2 },
@@ -52,7 +58,7 @@ vi.mock("../chain-clarify.js", () => ({
 }));
 vi.mock("../artifacts.js", () => ({
 	cleanupAllArtifactDirs: vi.fn(),
-	cleanupOldArtifacts: vi.fn(),
+	cleanupOldArtifacts: mockCleanupOldArtifacts,
 	getArtifactsDir: vi.fn(() => "/tmp/artifacts"),
 }));
 vi.mock("../types.js", () => ({
@@ -188,6 +194,7 @@ beforeEach(() => {
 	mockWatcherClose.mockReset();
 	mockCoalescerClear.mockReset();
 	mockCoalescerSchedule.mockReset();
+	mockCleanupOldArtifacts.mockReset();
 });
 
 afterEach(() => {
@@ -196,6 +203,30 @@ afterEach(() => {
 });
 
 describe("subagent session churn", () => {
+	it("defers session_start artifact cleanup until after the startup window", async () => {
+		const pi = createMockPi();
+		const ctx = createCtx();
+
+		registerSubagentExtension(pi as any);
+		await pi._emit("session_start", {}, ctx);
+		expect(mockCleanupOldArtifacts).not.toHaveBeenCalled();
+
+		await vi.advanceTimersByTimeAsync(250);
+		expect(mockCleanupOldArtifacts).toHaveBeenCalledWith("/tmp/artifacts", 7);
+	});
+
+	it("cancels deferred startup cleanup on session_shutdown", async () => {
+		const pi = createMockPi();
+		const ctx = createCtx();
+
+		registerSubagentExtension(pi as any);
+		await pi._emit("session_start", {}, ctx);
+		await pi._emit("session_shutdown");
+		await vi.advanceTimersByTimeAsync(250);
+
+		expect(mockCleanupOldArtifacts).not.toHaveBeenCalled();
+	});
+
 	it("keeps a single poller while many async jobs are added in one session", async () => {
 		const pi = createMockPi();
 		const ctx = createCtx();
@@ -239,8 +270,8 @@ describe("subagent session churn", () => {
 
 		expect(setIntervalSpy).toHaveBeenCalledTimes(10);
 		expect(clearIntervalSpy).toHaveBeenCalledTimes(10);
-		expect(setTimeoutSpy).toHaveBeenCalledTimes(30);
-		expect(clearTimeoutSpy).toHaveBeenCalledTimes(30);
+		expect(setTimeoutSpy).toHaveBeenCalledTimes(40);
+		expect(clearTimeoutSpy).toHaveBeenCalledTimes(40);
 		expect(mockCoalescerClear).toHaveBeenCalledTimes(20);
 	});
 });
