@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import { keyHint, type ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { keyHint, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { registerPlanModeCommand } from "./flow";
 import { resolveActivePlanFilePath } from "./plan-files";
@@ -32,6 +32,7 @@ interface PlanModeExitDetails {
 }
 
 const PLAN_MODE_EXIT_ENTRY_TYPE = "pi-plan:exit";
+const STARTUP_REFRESH_DELAY_MS = 250;
 
 export default function (pi: ExtensionAPI) {
 	const stateManager = createPlanModeStateManager(pi);
@@ -181,19 +182,41 @@ export default function (pi: ExtensionAPI) {
 		};
 	});
 
-	pi.on("session_start", async (_event, ctx) => {
+	let startupRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+	const cancelStartupRefresh = () => {
+		if (!startupRefreshTimer) {
+			return;
+		}
+		clearTimeout(startupRefreshTimer);
+		startupRefreshTimer = undefined;
+	};
+	const refreshState = (ctx: ExtensionContext) => {
+		cancelStartupRefresh();
 		stateManager.refresh(ctx);
+	};
+
+	pi.on("session_start", async (_event, ctx) => {
+		cancelStartupRefresh();
+		startupRefreshTimer = setTimeout(() => {
+			startupRefreshTimer = undefined;
+			stateManager.refresh(ctx);
+		}, STARTUP_REFRESH_DELAY_MS);
+		startupRefreshTimer.unref?.();
 	});
 
 	pi.on("session_switch", async (_event, ctx) => {
-		stateManager.refresh(ctx);
+		refreshState(ctx);
 	});
 
 	pi.on("session_tree", async (_event, ctx) => {
-		stateManager.refresh(ctx);
+		refreshState(ctx);
 	});
 
 	pi.on("session_fork", async (_event, ctx) => {
-		stateManager.refresh(ctx);
+		refreshState(ctx);
+	});
+
+	pi.on("session_shutdown", async () => {
+		cancelStartupRefresh();
 	});
 }
