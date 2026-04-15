@@ -20,7 +20,7 @@ terminal.
 import * as fs from "node:fs";
 import { cpus, homedir } from "node:os";
 import * as path from "node:path";
-import { monitorEventLoopDelay } from "node:perf_hooks";
+import { type IntervalHistogram, monitorEventLoopDelay } from "node:perf_hooks";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import {
 	getSafeModeState,
@@ -98,6 +98,36 @@ export const DEFAULT_WATCHDOG_THRESHOLDS: WatchdogThresholds = {
 	eventLoopP99Ms: 120,
 	eventLoopMaxMs: 250,
 };
+
+export type EventLoopHistogram = Pick<
+	IntervalHistogram,
+	"enable" | "disable" | "reset" | "mean" | "max" | "percentile"
+>;
+
+const NOOP_HISTOGRAM: EventLoopHistogram = {
+	enable() {
+		// Intentionally empty: the fallback histogram has nothing to start.
+	},
+	disable() {
+		// Intentionally empty: the fallback histogram has nothing to stop.
+	},
+	reset() {
+		// Intentionally empty: the fallback histogram always stays zeroed.
+	},
+	mean: 0,
+	max: 0,
+	percentile: () => 0,
+};
+
+export function tryCreateHistogram(resolutionMs: number): EventLoopHistogram {
+	try {
+		const h = monitorEventLoopDelay({ resolution: resolutionMs });
+		h.enable();
+		return h;
+	} catch {
+		return NOOP_HISTOGRAM;
+	}
+}
 
 function toMilliseconds(value: number): number {
 	return Number.isFinite(value) ? value / 1_000_000 : 0;
@@ -402,8 +432,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	const config = loadWatchdogConfig();
 	const thresholds = resolveWatchdogThresholds(config);
 	const sampleIntervalMs = resolveWatchdogSampleIntervalMs(config);
-	const histogram = monitorEventLoopDelay({ resolution: HISTOGRAM_RESOLUTION_MS });
-	histogram.enable();
+	const histogram = tryCreateHistogram(HISTOGRAM_RESOLUTION_MS);
 
 	const coreCount = Math.max(1, cpus().length || 1);
 	const sampleHistory: WatchdogSample[] = [];
