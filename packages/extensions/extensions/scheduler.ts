@@ -37,6 +37,7 @@ import {
 import { registerCommands, registerEvents, registerTools } from "./scheduler-registration.js";
 import {
 	DEFAULT_LOOP_INTERVAL,
+	DEFAULT_RECURRING_EXPIRY_MS,
 	DISPATCH_RATE_LIMIT_WINDOW_MS,
 	FIFTEEN_MINUTES,
 	getLegacySchedulerStoragePath,
@@ -45,8 +46,10 @@ import {
 	getSchedulerStorageRoot,
 	MAX_DISPATCH_TIMESTAMPS,
 	MAX_DISPATCHES_PER_WINDOW,
+	MAX_RECURRING_EXPIRY_MS,
 	MAX_TASKS,
 	MIN_RECURRING_INTERVAL,
+	ONE_HOUR,
 	ONE_MINUTE,
 	type ResumeReason,
 	SCHEDULER_LEASE_HEARTBEAT_MS,
@@ -84,6 +87,7 @@ export type {
 } from "./scheduler-shared.js";
 export {
 	DEFAULT_LOOP_INTERVAL,
+	DEFAULT_RECURRING_EXPIRY_MS,
 	DISPATCH_RATE_LIMIT_WINDOW_MS,
 	FIFTEEN_MINUTES,
 	getLegacySchedulerStoragePath,
@@ -92,8 +96,10 @@ export {
 	getSchedulerStorageRoot,
 	MAX_DISPATCH_TIMESTAMPS,
 	MAX_DISPATCHES_PER_WINDOW,
+	MAX_RECURRING_EXPIRY_MS,
 	MAX_TASKS,
 	MIN_RECURRING_INTERVAL,
+	ONE_HOUR,
 	ONE_MINUTE,
 	SCHEDULER_LEASE_HEARTBEAT_MS,
 	SCHEDULER_LEASE_STALE_AFTER_MS,
@@ -127,6 +133,7 @@ type CompletionOptions = {
 export class SchedulerRuntime {
 	private readonly tasks = new Map<string, ScheduleTask>();
 	private schedulerTimer: ReturnType<typeof setInterval> | undefined;
+	private schedulerRetryTimer: ReturnType<typeof setTimeout> | undefined;
 	private runtimeCtx: ExtensionContext | undefined;
 	private dispatching = false;
 	private storagePath: string | undefined;
@@ -203,7 +210,35 @@ export class SchedulerRuntime {
 		const target = ctx ?? this.runtimeCtx;
 		if (target?.hasUI) {
 			target.ui.setStatus("pi-scheduler", undefined);
+			target.ui.setStatus("pi-scheduler-stale", undefined);
 		}
+	}
+
+	private resolveRecurringExpiryMs(expiresInMs?: number): number {
+		if (!Number.isFinite(expiresInMs)) {
+			return DEFAULT_RECURRING_EXPIRY_MS;
+		}
+		return Math.min(
+			Math.max(Math.ceil(expiresInMs ?? DEFAULT_RECURRING_EXPIRY_MS), ONE_MINUTE),
+			MAX_RECURRING_EXPIRY_MS,
+		);
+	}
+
+	private queueSchedulerTick(delayMs = 0) {
+		this.startScheduler();
+		if (this.schedulerRetryTimer) {
+			clearTimeout(this.schedulerRetryTimer);
+		}
+		this.schedulerRetryTimer = setTimeout(
+			() => {
+				this.schedulerRetryTimer = undefined;
+				this.tickScheduler().catch(() => {
+					// Best-effort scheduler tick; errors are non-fatal.
+				});
+			},
+			Math.max(0, Math.floor(delayMs)),
+		);
+		this.schedulerRetryTimer.unref?.();
 	}
 
 	getSortedTasks(): ScheduleTask[] {
@@ -234,6 +269,9 @@ export class SchedulerRuntime {
 		this.reconcileTaskOwnership();
 		this.persistTasks();
 		this.updateStatus();
+		if (enabled && task.nextRunAt <= Date.now()) {
+			this.queueSchedulerTick(50);
+		}
 		return true;
 	}
 
@@ -399,7 +437,7 @@ export class SchedulerRuntime {
 	addRecurringIntervalTask(
 		prompt: string,
 		intervalMs: number,
-		options: { scope?: ScheduleScope } & CompletionOptions = {},
+		options: { scope?: ScheduleScope; expiresInMs?: number } & CompletionOptions = {},
 	): ScheduleTask {
 		const id = this.createId();
 		const createdAt = Date.now();
@@ -408,6 +446,7 @@ export class SchedulerRuntime {
 			: MIN_RECURRING_INTERVAL;
 		const jitterMs = this.computeJitterMs(id, safeIntervalMs);
 		const nextRunAt = createdAt + safeIntervalMs + jitterMs;
+		const expiresInMs = this.resolveRecurringExpiryMs(options.expiresInMs);
 		const task: ScheduleTask = {
 			id,
 			prompt,
@@ -417,7 +456,7 @@ export class SchedulerRuntime {
 			createdAt,
 			nextRunAt,
 			intervalMs: safeIntervalMs,
-			expiresAt: createdAt + THREE_DAYS,
+			expiresAt: createdAt + expiresInMs,
 			jitterMs,
 			runCount: 0,
 			pending: false,
@@ -438,7 +477,7 @@ export class SchedulerRuntime {
 	addRecurringCronTask(
 		prompt: string,
 		cronExpression: string,
-		options: { scope?: ScheduleScope } & CompletionOptions = {},
+		options: { scope?: ScheduleScope; expiresInMs?: number } & CompletionOptions = {},
 	): ScheduleTask | undefined {
 		const normalizedCron = normalizeCronExpression(cronExpression);
 		if (!normalizedCron) {
@@ -452,6 +491,7 @@ export class SchedulerRuntime {
 			return undefined;
 		}
 
+		const expiresInMs = this.resolveRecurringExpiryMs(options.expiresInMs);
 		const task: ScheduleTask = {
 			id,
 			prompt,
@@ -461,7 +501,7 @@ export class SchedulerRuntime {
 			createdAt,
 			nextRunAt,
 			cronExpression: normalizedCron.expression,
-			expiresAt: createdAt + THREE_DAYS,
+			expiresAt: createdAt + expiresInMs,
 			jitterMs: 0,
 			runCount: 0,
 			pending: false,
@@ -528,6 +568,10 @@ export class SchedulerRuntime {
 		if (this.schedulerTimer) {
 			clearInterval(this.schedulerTimer);
 			this.schedulerTimer = undefined;
+		}
+		if (this.schedulerRetryTimer) {
+			clearTimeout(this.schedulerRetryTimer);
+			this.schedulerRetryTimer = undefined;
 		}
 		this.dispatchTimestamps.length = 0;
 		this.releaseLeaseIfOwned();
@@ -691,11 +735,17 @@ export class SchedulerRuntime {
 			return;
 		}
 		if (!this.runtimeCtx.isIdle() || this.runtimeCtx.hasPendingMessages()) {
+			if (Array.from(this.tasks.values()).some((task) => task.enabled && task.pending && !task.awaitingCompletion)) {
+				this.queueSchedulerTick(1_000);
+			}
 			return;
 		}
 		if (!this.hasDispatchCapacity(now)) {
 			this.emitRuntimeDiagnostics("dispatch throttled");
 			this.notifyRateLimit(now);
+			if (Array.from(this.tasks.values()).some((task) => task.enabled && task.pending && !task.awaitingCompletion)) {
+				this.queueSchedulerTick(1_000);
+			}
 			return;
 		}
 
@@ -960,16 +1010,7 @@ export class SchedulerRuntime {
 			}
 
 			if (action === "Run now") {
-				task.nextRunAt = Date.now();
-				task.pending = true;
-				task.resumeRequired = false;
-				task.resumeReason = undefined;
-				this.reconcileTaskOwnership();
-				this.persistTasks();
-				this.updateStatus();
-				this.tickScheduler().catch(() => {
-					// Best-effort immediate dispatch; errors are non-fatal.
-				});
+				this.runTaskNow(task.id);
 				ctx.ui.notify(`Queued ${task.id} to run now.`, "info");
 				continue;
 			}
@@ -1067,6 +1108,31 @@ export class SchedulerRuntime {
 			ctx.ui.notify(normalized.note, "info");
 		}
 		this.updateStatus();
+	}
+
+	runTaskNow(id: string): boolean {
+		const task = this.tasks.get(id);
+		if (!task) {
+			return false;
+		}
+
+		task.enabled = true;
+		task.nextRunAt = Date.now();
+		task.pending = true;
+		task.awaitingCompletion = false;
+		task.resumeRequired = false;
+		task.resumeReason = undefined;
+		if (this.awaitingTaskId === task.id) {
+			this.awaitingTaskId = null;
+		}
+		if ((task.scope ?? "instance") === "instance") {
+			this.assignOwner(task, "instance");
+		}
+		this.reconcileTaskOwnership();
+		this.persistTasks();
+		this.updateStatus();
+		this.queueSchedulerTick(100);
+		return true;
 	}
 
 	dispatchTask(task: ScheduleTask) {
@@ -1687,6 +1753,17 @@ export class SchedulerRuntime {
 					creatorInstanceId: task.creatorInstanceId,
 					creatorSessionId: task.creatorSessionId,
 				};
+				if (normalized.kind === "recurring") {
+					const createdAt = Number.isFinite(normalized.createdAt) ? normalized.createdAt : now;
+					const cappedExpiresAt = Math.min(
+						normalized.expiresAt ?? createdAt + DEFAULT_RECURRING_EXPIRY_MS,
+						createdAt + MAX_RECURRING_EXPIRY_MS,
+					);
+					if (normalized.expiresAt !== cappedExpiresAt) {
+						mutated = true;
+					}
+					normalized.expiresAt = cappedExpiresAt;
+				}
 				if (normalized.kind === "recurring" && normalized.expiresAt && now >= normalized.expiresAt) {
 					mutated = true;
 					continue;

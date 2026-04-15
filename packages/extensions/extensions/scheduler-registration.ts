@@ -9,7 +9,14 @@ import {
 	parseRemindScheduleArgs,
 	validateSchedulePromptAddInput,
 } from "./scheduler-parsing.js";
-import { DEFAULT_LOOP_INTERVAL, MAX_TASKS, type ScheduleScope, type TaskKind } from "./scheduler-shared.js";
+import {
+	DEFAULT_LOOP_INTERVAL,
+	DEFAULT_RECURRING_EXPIRY_MS,
+	MAX_RECURRING_EXPIRY_MS,
+	MAX_TASKS,
+	type ScheduleScope,
+	type TaskKind,
+} from "./scheduler-shared.js";
 
 const SchedulePromptToolParams = Type.Object({
 	action: Type.Union(
@@ -41,6 +48,11 @@ const SchedulePromptToolParams = Type.Object({
 				"Cron expression for recurring tasks. Accepts 5-field (minute hour dom month dow) or 6-field (sec minute hour dom month dow).",
 		}),
 	),
+	expires: Type.Optional(
+		Type.String({
+			description: "Optional recurring task expiry like 30m, 1h, or 1 day. Defaults to 1 day and is capped at 1 day.",
+		}),
+	),
 	scope: Type.Optional(
 		Type.Union([Type.Literal("instance"), Type.Literal("workspace")], {
 			description: "Task ownership scope. Use workspace for monitors that should survive instance changes.",
@@ -69,27 +81,78 @@ const SchedulePromptToolParams = Type.Object({
 
 type ToolResult = { content: { type: "text"; text: string }[]; details: Record<string, unknown> };
 
-function parseScopeFlag(input: string): { scope: ScheduleScope | undefined; rest: string } {
-	const trimmed = input.trim();
-	if (trimmed.startsWith("--workspace ") || trimmed === "--workspace") {
-		return { scope: "workspace", rest: trimmed.slice("--workspace".length).trim() };
+function parseLeadingDurationValue(input: string): { duration: string; rest: string } | undefined {
+	const tokens = input.trim().split(/\s+/).filter(Boolean);
+	const maxPrefix = Math.min(3, tokens.length);
+	for (let i = 1; i <= maxPrefix; i++) {
+		const candidate = tokens.slice(0, i).join(" ");
+		if (!parseDuration(candidate)) {
+			continue;
+		}
+		return {
+			duration: candidate,
+			rest: tokens.slice(i).join(" ").trim(),
+		};
 	}
-	if (trimmed.startsWith("--instance ") || trimmed === "--instance") {
-		return { scope: "instance", rest: trimmed.slice("--instance".length).trim() };
+	return undefined;
+}
+
+function parseScheduleFlags(input: string): {
+	scope: ScheduleScope | undefined;
+	expires?: string;
+	rest: string;
+	error?: string;
+} {
+	let rest = input.trim();
+	let scope: ScheduleScope | undefined;
+	let expires: string | undefined;
+
+	while (rest.startsWith("--")) {
+		if (rest.startsWith("--workspace ") || rest === "--workspace") {
+			scope = "workspace";
+			rest = rest.slice("--workspace".length).trim();
+			continue;
+		}
+		if (rest.startsWith("--instance ") || rest === "--instance") {
+			scope = "instance";
+			rest = rest.slice("--instance".length).trim();
+			continue;
+		}
+		if (rest.startsWith("--expires ")) {
+			const parsedExpiry = parseLeadingDurationValue(rest.slice("--expires".length).trim());
+			if (!parsedExpiry) {
+				return { scope, expires, rest: input.trim(), error: "invalid_expires" };
+			}
+			expires = parsedExpiry.duration;
+			rest = parsedExpiry.rest;
+			continue;
+		}
+		return { scope, expires, rest: input.trim(), error: "unknown_flag" };
 	}
-	return { scope: undefined, rest: trimmed };
+
+	return { scope, expires, rest };
 }
 
 export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 	pi.registerCommand("loop", {
 		description:
-			"Schedule recurring prompt: /loop 5m <prompt>, /loop --workspace 5m <prompt>, or /loop cron <expr> <prompt>",
+			"Schedule recurring prompt: /loop 5m <prompt>, /loop --workspace 5m <prompt>, /loop --expires 1h 5m <prompt>, or /loop cron <expr> <prompt>",
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Command handler validates flags, schedule forms, and user-facing notes.
 		handler: async (args, ctx) => {
-			const scoped = parseScopeFlag(args);
-			const parsed = parseLoopScheduleArgs(scoped.rest);
+			const parsedFlags = parseScheduleFlags(args);
+			if (parsedFlags.error) {
+				ctx.ui.notify(
+					parsedFlags.error === "invalid_expires"
+						? "Usage: /loop --expires 1h 5m check build (expires must be a duration like 30m, 1h, or 1 day)."
+						: "Usage: /loop [--workspace|--instance] [--expires <duration>] 5m check build",
+					"warning",
+				);
+				return;
+			}
+			const parsed = parseLoopScheduleArgs(parsedFlags.rest);
 			if (!parsed) {
 				ctx.ui.notify(
-					"Usage: /loop 5m check build OR /loop --workspace 5m check build OR /loop cron '*/5 * * * *' check build (minimum cron cadence is 1m)",
+					"Usage: /loop 5m check build OR /loop --workspace 5m check build OR /loop --expires 1h 5m check build OR /loop cron '*/5 * * * *' check build (minimum cron cadence is 1m)",
 					"warning",
 				);
 				return;
@@ -101,32 +164,42 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			}
 
 			if (parsed.recurring.mode === "cron") {
+				const expires = resolveRecurringExpiryOptions(parsedFlags.expires);
 				const task = runtime.addRecurringCronTask(parsed.prompt, parsed.recurring.cronExpression, {
-					scope: scoped.scope,
+					scope: parsedFlags.scope,
+					expiresInMs: expires.ok ? expires.expiresInMs : DEFAULT_RECURRING_EXPIRY_MS,
 				});
 				if (!task) {
 					ctx.ui.notify("Invalid cron schedule. Cron tasks must run no more often than once per minute.", "error");
 					return;
 				}
 				ctx.ui.notify(
-					`Scheduled cron ${task.cronExpression} (id: ${task.id}). Expires in 3 days. Scope: ${task.scope ?? "instance"}.`,
+					`Scheduled cron ${task.cronExpression} (id: ${task.id}). Expires in ${formatDurationShort(task.expiresAt! - task.createdAt)}. Scope: ${task.scope ?? "instance"}.`,
 					"info",
 				);
 				if (parsed.recurring.note) {
 					ctx.ui.notify(parsed.recurring.note, "info");
 				}
+				if (expires.ok && expires.note) {
+					ctx.ui.notify(expires.note, "info");
+				}
 				return;
 			}
 
+			const expires = resolveRecurringExpiryOptions(parsedFlags.expires);
 			const task = runtime.addRecurringIntervalTask(parsed.prompt, parsed.recurring.durationMs, {
-				scope: scoped.scope,
+				scope: parsedFlags.scope,
+				expiresInMs: expires.ok ? expires.expiresInMs : DEFAULT_RECURRING_EXPIRY_MS,
 			});
 			ctx.ui.notify(
-				`Scheduled every ${formatDurationShort(parsed.recurring.durationMs)} (id: ${task.id}). Expires in 3 days. Scope: ${task.scope ?? "instance"}.`,
+				`Scheduled every ${formatDurationShort(parsed.recurring.durationMs)} (id: ${task.id}). Expires in ${formatDurationShort(task.expiresAt! - task.createdAt)}. Scope: ${task.scope ?? "instance"}.`,
 				"info",
 			);
 			if (parsed.recurring.note) {
 				ctx.ui.notify(parsed.recurring.note, "info");
+			}
+			if (expires.ok && expires.note) {
+				ctx.ui.notify(expires.note, "info");
 			}
 		},
 	});
@@ -134,8 +207,16 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 	pi.registerCommand("remind", {
 		description: "Schedule one-time reminder: /remind in 45m <prompt> or /remind --workspace in 45m <prompt>",
 		handler: async (args, ctx) => {
-			const scoped = parseScopeFlag(args);
-			const parsed = parseRemindScheduleArgs(scoped.rest);
+			const parsedFlags = parseScheduleFlags(args);
+			if (parsedFlags.error) {
+				ctx.ui.notify("Usage: /remind [--workspace|--instance] in 45m check deployment", "warning");
+				return;
+			}
+			if (parsedFlags.expires) {
+				ctx.ui.notify("/remind creates one-time tasks, so --expires is only supported with /loop.", "warning");
+				return;
+			}
+			const parsed = parseRemindScheduleArgs(parsedFlags.rest);
 			if (!parsed) {
 				ctx.ui.notify("Usage: /remind in 45m check deployment", "warning");
 				return;
@@ -146,7 +227,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				return;
 			}
 
-			const task = runtime.addOneShotTask(parsed.prompt, parsed.durationMs, { scope: scoped.scope });
+			const task = runtime.addOneShotTask(parsed.prompt, parsed.durationMs, { scope: parsedFlags.scope });
 			ctx.ui.notify(
 				`Reminder set for ${runtime.formatRelativeTime(task.nextRunAt)} (id: ${task.id}, scope: ${task.scope ?? "instance"}).`,
 				"info",
@@ -307,6 +388,7 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			"Use this tool when the user asks to remind/check back later, revisit something in the future, or monitor PRs, CI, builds, deploys, or background work.",
 			"For recurring tasks use kind='recurring' with duration like 5m or 2h, or provide cron.",
 			"For one-time reminders use kind='once' with duration like 30m or 1h.",
+			"Set expires for recurring tasks when the monitor should stop automatically; defaults to 1 day and is capped at 1 day.",
 			"Set continueUntilComplete=true when the user explicitly wants retries until the task is done.",
 			"Default scope is instance. Use scope='workspace' only for monitors that should be adoptable across pi instances in the same workspace.",
 			"Scheduled tasks run only while pi is active and idle. Persisted overdue or foreign-owned tasks are restored for manual review instead of auto-running at startup.",
@@ -320,6 +402,7 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				prompt?: string;
 				duration?: string;
 				cron?: string;
+				expires?: string;
 				scope?: ScheduleScope;
 				id?: string;
 				continueUntilComplete?: boolean;
@@ -522,6 +605,31 @@ function validationErrorMessage(error: string): string {
 	}
 }
 
+function resolveRecurringExpiryOptions(
+	expires: string | undefined,
+): { ok: true; expiresInMs: number; note?: string } | { ok: false; error: string } {
+	if (!expires?.trim()) {
+		return { ok: true, expiresInMs: DEFAULT_RECURRING_EXPIRY_MS };
+	}
+
+	const parsed = parseDuration(expires);
+	if (!parsed) {
+		return { ok: false, error: "invalid_expiry" };
+	}
+
+	const normalized = normalizeDuration(parsed);
+	const expiresInMs = Math.min(normalized.durationMs, MAX_RECURRING_EXPIRY_MS);
+	const notes = [normalized.note];
+	if (expiresInMs !== normalized.durationMs) {
+		notes.push(`Capped at ${formatDurationShort(MAX_RECURRING_EXPIRY_MS)} (maximum recurring expiry).`);
+	}
+	return {
+		ok: true,
+		expiresInMs,
+		note: notes.filter(Boolean).join(" ") || undefined,
+	};
+}
+
 function resolveCompletionOptions(params: {
 	continueUntilComplete?: boolean;
 	completionSignal?: string;
@@ -588,6 +696,7 @@ function handleToolAdd(
 		prompt?: string;
 		duration?: string;
 		cron?: string;
+		expires?: string;
 		scope?: ScheduleScope;
 		continueUntilComplete?: boolean;
 		completionSignal?: string;
@@ -644,6 +753,14 @@ function handleToolAdd(
 		};
 	}
 
+	const recurringExpiry = resolveRecurringExpiryOptions(params.expires);
+	if (!recurringExpiry.ok) {
+		return {
+			content: [{ type: "text", text: "Error: expires must be a duration like 30m, 1h, or 1 day." }],
+			details: { action: "add", error: recurringExpiry.error },
+		};
+	}
+
 	if (validated.plan.kind === "once") {
 		const task = runtime.addOneShotTask(prompt, validated.plan.durationMs, {
 			scope: params.scope,
@@ -667,6 +784,7 @@ function handleToolAdd(
 	if (validated.plan.mode === "cron") {
 		const task = runtime.addRecurringCronTask(prompt, validated.plan.cronExpression, {
 			scope: params.scope,
+			expiresInMs: recurringExpiry.expiresInMs,
 			...completion.options,
 		});
 		if (!task) {
@@ -681,11 +799,11 @@ function handleToolAdd(
 			content: [
 				{
 					type: "text",
-					text: `Recurring cron task scheduled (id: ${task.id}) with '${task.cronExpression}' as ${task.scope ?? "instance"}-scoped. Expires in 3 days.${
+					text: `Recurring cron task scheduled (id: ${task.id}) with '${task.cronExpression}' as ${task.scope ?? "instance"}-scoped. Expires in ${formatDurationShort(recurringExpiry.expiresInMs)}.${
 						validated.plan.note ? ` ${validated.plan.note}` : ""
 					}${completion.options.continueUntilComplete ? " Will retry until marked complete." : ""}${
 						completion.note ? ` ${completion.note}` : ""
-					}`,
+					}${recurringExpiry.note ? ` ${recurringExpiry.note}` : ""}`,
 				},
 			],
 			details: { action: "add", task },
@@ -694,17 +812,18 @@ function handleToolAdd(
 
 	const task = runtime.addRecurringIntervalTask(prompt, validated.plan.durationMs, {
 		scope: params.scope,
+		expiresInMs: recurringExpiry.expiresInMs,
 		...completion.options,
 	});
 	return {
 		content: [
 			{
 				type: "text",
-				text: `Recurring task scheduled (id: ${task.id}) every ${formatDurationShort(validated.plan.durationMs)} as ${task.scope ?? "instance"}-scoped. Expires in 3 days.${
+				text: `Recurring task scheduled (id: ${task.id}) every ${formatDurationShort(validated.plan.durationMs)} as ${task.scope ?? "instance"}-scoped. Expires in ${formatDurationShort(recurringExpiry.expiresInMs)}.${
 					validated.plan.note ? ` ${validated.plan.note}` : ""
 				}${completion.options.continueUntilComplete ? " Will retry until marked complete." : ""}${
 					completion.note ? ` ${completion.note}` : ""
-				}`,
+				}${recurringExpiry.note ? ` ${recurringExpiry.note}` : ""}`,
 			},
 		],
 		details: { action: "add", task },
@@ -712,29 +831,36 @@ function handleToolAdd(
 }
 
 export function registerEvents(pi: ExtensionAPI, runtime: SchedulerRuntime) {
+	const activeSessionKeys = new Set<string>();
+	const getSessionKey = (ctx: ExtensionContext) => ctx.sessionManager?.getSessionFile?.() ?? `${ctx.cwd}::default`;
 	const refreshRuntimeContext = (_event: unknown, ctx: ExtensionContext) => {
+		activeSessionKeys.add(getSessionKey(ctx));
 		runtime.setRuntimeContext(ctx);
 		runtime.updateStatus();
+		runtime.startScheduler();
 	};
 
 	pi.on("session_start", async (event, ctx) => {
 		refreshRuntimeContext(event, ctx);
 		await runtime.handleStartupOwnership(ctx);
-		runtime.startScheduler();
 		runtime.notifyResumeRequiredTasks();
 	});
 
 	pi.on("session_switch", refreshRuntimeContext);
 	pi.on("session_fork", refreshRuntimeContext);
 	pi.on("session_tree", refreshRuntimeContext);
+	pi.on("session_branch", refreshRuntimeContext);
 
 	pi.on("agent_end", (event) => {
 		runtime.handleAgentEnd(event as { messages?: Array<{ role?: string; content?: unknown }> });
 	});
 
 	pi.on("session_shutdown", async (_event, ctx) => {
-		runtime.setRuntimeContext(ctx);
-		runtime.stopScheduler();
+		activeSessionKeys.delete(getSessionKey(ctx));
+		if (activeSessionKeys.size === 0) {
+			runtime.setRuntimeContext(ctx);
+			runtime.stopScheduler();
+		}
 		runtime.clearStatus(ctx);
 	});
 

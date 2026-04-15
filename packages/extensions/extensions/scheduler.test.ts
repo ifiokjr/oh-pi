@@ -162,6 +162,7 @@ import {
 import schedulerExtension, {
 	computeNextCronRunAt,
 	DEFAULT_LOOP_INTERVAL,
+	DEFAULT_RECURRING_EXPIRY_MS,
 	DISPATCH_RATE_LIMIT_WINDOW_MS,
 	FIFTEEN_MINUTES,
 	formatDurationShort,
@@ -173,6 +174,7 @@ import schedulerExtension, {
 	MIN_RECURRING_INTERVAL,
 	normalizeCronExpression,
 	normalizeDuration,
+	ONE_HOUR,
 	ONE_MINUTE,
 	parseDuration,
 	parseLoopScheduleArgs,
@@ -803,22 +805,34 @@ describe("SchedulerRuntime", () => {
 	});
 
 	describe("recurring task expiry", () => {
-		it("sets expiresAt to 3 days after creation for interval tasks", () => {
+		it("sets expiresAt to 1 day after creation for interval tasks by default", () => {
 			const now = Date.now();
 			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
-			expect(task.expiresAt).toBe(now + THREE_DAYS);
+			expect(task.expiresAt).toBe(now + DEFAULT_RECURRING_EXPIRY_MS);
 		});
 
-		it("sets expiresAt to 3 days after creation for cron tasks", () => {
+		it("sets expiresAt to 1 day after creation for cron tasks by default", () => {
 			const now = Date.now();
 			const task = runtime.addRecurringCronTask("check", "0 */5 * * * *");
 			expect(task).toBeDefined();
-			expect(task!.expiresAt).toBe(now + THREE_DAYS);
+			expect(task!.expiresAt).toBe(now + DEFAULT_RECURRING_EXPIRY_MS);
 		});
 
 		it("does not set expiresAt for one-shot tasks", () => {
 			const task = runtime.addOneShotTask("remind", 30 * ONE_MINUTE);
 			expect(task.expiresAt).toBeUndefined();
+		});
+
+		it("accepts shorter custom recurring expiries", () => {
+			const now = Date.now();
+			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE, { expiresInMs: ONE_HOUR });
+			expect(task.expiresAt).toBe(now + ONE_HOUR);
+		});
+
+		it("caps recurring expiries at 1 day", () => {
+			const now = Date.now();
+			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE, { expiresInMs: THREE_DAYS });
+			expect(task.expiresAt).toBe(now + DEFAULT_RECURRING_EXPIRY_MS);
 		});
 	});
 
@@ -980,8 +994,8 @@ describe("SchedulerRuntime", () => {
 			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
 			expect(runtime.taskCount).toBe(1);
 
-			// Advance past 3 days
-			vi.advanceTimersByTime(THREE_DAYS + 1000);
+			// Advance past the default recurring expiry window.
+			vi.advanceTimersByTime(DEFAULT_RECURRING_EXPIRY_MS + 1000);
 			await runtime.tickScheduler();
 
 			expect(runtime.taskCount).toBe(0);
@@ -1160,6 +1174,26 @@ describe("SchedulerRuntime", () => {
 
 			expect(task.lastStatus).toBe("error");
 			expect(task.pending).toBe(true);
+		});
+	});
+
+	describe("runTaskNow", () => {
+		it("adopts foreign instance-scoped tasks before running them", async () => {
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+
+			const task = runtime.addOneShotTask("check ci", ONE_MINUTE);
+			task.ownerInstanceId = "foreign-instance";
+			task.ownerSessionId = "/mock-home/.pi/agent/sessions/foreign.jsonl";
+			task.resumeRequired = true;
+			task.resumeReason = "stale_owner";
+
+			expect(runtime.runTaskNow(task.id)).toBe(true);
+			vi.advanceTimersByTime(150);
+			await Promise.resolve();
+
+			expect(pi._userMessages).toEqual(["check ci"]);
+			expect(runtime.getTask(task.id)).toBeUndefined();
 		});
 	});
 
@@ -1674,6 +1708,22 @@ describe("command handlers", () => {
 			expect(ctx._notifications.some((n: any) => n.msg.includes("Scope: workspace"))).toBe(true);
 		});
 
+		it("supports custom recurring expiry flags", async () => {
+			await pi._commands.get("loop").handler("--expires 1h 5m check build", ctx);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Expires in 1h"))).toBe(true);
+		});
+
+		it("caps custom recurring expiry flags at 1 day", async () => {
+			await pi._commands.get("loop").handler("--expires 2 days 5m check build", ctx);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Expires in 1d"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Capped at 1d"))).toBe(true);
+		});
+
+		it("shows warning on invalid expiry flags", async () => {
+			await pi._commands.get("loop").handler("--expires banana 5m check build", ctx);
+			expect(ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("expires"))).toBe(true);
+		});
+
 		it("shows warning on empty args", async () => {
 			await pi._commands.get("loop").handler("", ctx);
 			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBe(true);
@@ -1710,6 +1760,13 @@ describe("command handlers", () => {
 		it("shows warning on invalid args", async () => {
 			await pi._commands.get("remind").handler("", ctx);
 			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBe(true);
+		});
+
+		it("rejects expiry flags for one-shot reminders", async () => {
+			await pi._commands.get("remind").handler("--expires 1h in 45m check tests", ctx);
+			expect(
+				ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("only supported with /loop")),
+			).toBe(true);
 		});
 
 		it("shows warning on missing duration", async () => {
@@ -2317,7 +2374,25 @@ describe("event wiring", () => {
 		pi._emit("session_tree", { type: "session_tree" }, ctx);
 	});
 
-	it("stops scheduler and clears status on session_shutdown", () => {
+	it("keeps the scheduler running when another session shuts down", async () => {
+		const ctx = createMockCtx({
+			sessionManager: { getSessionFile: () => "/mock-home/.pi/agent/sessions/current.jsonl" },
+		});
+		const otherCtx = createMockCtx({
+			sessionManager: { getSessionFile: () => "/mock-home/.pi/agent/sessions/other.jsonl" },
+		});
+		pi._emit("session_start", { type: "session_start" }, ctx);
+		pi._emit("session_start", { type: "session_start" }, otherCtx);
+		pi._emit("session_switch", { type: "session_switch" }, ctx);
+		await pi._commands.get("remind")?.handler("in 1m check build", ctx);
+
+		pi._emit("session_shutdown", { type: "session_shutdown" }, otherCtx);
+		await vi.advanceTimersByTimeAsync(ONE_MINUTE + 2_000);
+
+		expect(pi._userMessages).toContain("check build");
+	});
+
+	it("stops scheduler and clears status when the last session shuts down", () => {
 		const ctx = createMockCtx();
 		pi._emit("session_start", { type: "session_start" }, ctx);
 

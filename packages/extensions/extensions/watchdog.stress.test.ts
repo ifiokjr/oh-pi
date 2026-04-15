@@ -38,7 +38,9 @@ import watchdogExtension from "./watchdog";
 
 function createMockPi() {
 	const handlers = new Map<string, ((...args: any[]) => any)[]>();
+	const eventHandlers = new Map<string, ((...args: any[]) => any)[]>();
 	const commands = new Map<string, any>();
+	const tools = new Map<string, any>();
 
 	return {
 		on(event: string, handler: (...args: any[]) => any) {
@@ -50,10 +52,24 @@ function createMockPi() {
 		registerCommand(name: string, command: any) {
 			commands.set(name, command);
 		},
+		registerTool(tool: { name: string }) {
+			tools.set(tool.name, tool);
+		},
 		events: {
-			emit() {},
+			on(event: string, handler: (...args: any[]) => any) {
+				if (!eventHandlers.has(event)) {
+					eventHandlers.set(event, []);
+				}
+				eventHandlers.get(event)?.push(handler);
+			},
+			emit(event: string, ...args: any[]) {
+				for (const handler of eventHandlers.get(event) ?? []) {
+					handler(...args);
+				}
+			},
 		},
 		_commands: commands,
+		_tools: tools,
 		async _emit(event: string, ...args: any[]) {
 			for (const handler of handlers.get(event) ?? []) {
 				await handler(...args);
