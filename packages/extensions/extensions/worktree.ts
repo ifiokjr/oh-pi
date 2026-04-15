@@ -17,6 +17,7 @@ import {
 
 const COMMAND = "worktree";
 const COMMAND_ALIASES = [COMMAND, "Worktree", "wt"] as const;
+const WORKTREE_STATUS_REFRESH_DELAY_MS = 250;
 const instanceId = buildPaiInstanceId();
 
 function relativeDisplayPath(root: string, target: string): string {
@@ -514,12 +515,40 @@ function buildCommandSpec(pi: ExtensionAPI) {
 }
 
 export default function worktreeExtension(pi: ExtensionAPI) {
+	let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+	const scheduleStatusRefresh = (ctx: ExtensionContext, delayMs = WORKTREE_STATUS_REFRESH_DELAY_MS) => {
+		if (refreshTimer) {
+			clearTimeout(refreshTimer);
+		}
+
+		refreshTimer = setTimeout(
+			() => {
+				refreshTimer = null;
+				refreshStatus(ctx);
+			},
+			Math.max(0, delayMs),
+		);
+	};
+
+	const clearStatusRefresh = () => {
+		if (!refreshTimer) {
+			return;
+		}
+		clearTimeout(refreshTimer);
+		refreshTimer = null;
+	};
+
 	pi.on("session_start", (_event, ctx) => {
-		refreshStatus(ctx);
+		scheduleStatusRefresh(ctx);
 	});
 
 	pi.on("session_switch", (_event, ctx) => {
-		refreshStatus(ctx);
+		scheduleStatusRefresh(ctx);
+	});
+
+	pi.on("session_shutdown", () => {
+		clearStatusRefresh();
 	});
 
 	const spec = buildCommandSpec(pi);

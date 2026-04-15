@@ -64,6 +64,25 @@ describe("worktree extension", () => {
 		expect(harness.commands.has("wt")).toBe(true);
 	});
 
+	it("defers status refresh on session start so startup avoids immediate git work", async () => {
+		vi.useFakeTimers();
+		try {
+			const harness = createExtensionHarness();
+			harness.ctx.cwd = "/repo";
+			worktreeShared.getRepoWorktreeSnapshot.mockReturnValue(makeSnapshot());
+
+			worktreeExtension(harness.pi as never);
+			harness.emit("session_start", {}, harness.ctx);
+			expect(worktreeShared.getRepoWorktreeSnapshot).not.toHaveBeenCalled();
+
+			await vi.advanceTimersByTimeAsync(500);
+			expect(worktreeShared.getRepoWorktreeSnapshot).toHaveBeenCalledWith("/repo");
+			expect(harness.statusMap.get("pi-worktree")).toContain("main checkout");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it("creates a pi-owned worktree and reports owner + purpose metadata", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.cwd = "/repo";
