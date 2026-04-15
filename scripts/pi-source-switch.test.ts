@@ -3,9 +3,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+	buildPiExecutableCandidates,
 	dedupeManagedPackageEntries,
 	parseNpmPackageName,
 	resolveManagedPackageNameFromSource,
+	resolvePiCommand,
 	resolveWorkspacePackageSources,
 	rewriteManagedPackageSources,
 } from "./pi-source-switch.mts";
@@ -102,5 +104,26 @@ describe("pi source switcher helpers", () => {
 		writeFileSync(path.join(packageDir, "package.json"), JSON.stringify({ name: "@ifi/oh-pi-themes" }));
 
 		expect(resolveManagedPackageNameFromSource(packageDir, repoDir)).toBe("@ifi/oh-pi-themes");
+	});
+
+	it("adds common global pnpm and pi bin directories when building pi candidates", () => {
+		const candidates = buildPiExecutableCandidates({
+			env: { PATH: "", PNPM_HOME: "/custom/pnpm-home" },
+			homeDir: "/Users/tester",
+			platform: "darwin",
+		});
+
+		expect(candidates).toContain("pi");
+		expect(candidates).toContain("/custom/pnpm-home/pi");
+		expect(candidates).toContain("/Users/tester/Library/pnpm/pi");
+		expect(candidates).toContain("/Users/tester/.pi/agent/bin/pi");
+	});
+
+	it("resolves pi from fallback candidates after PATH misses", () => {
+		const resolved = resolvePiCommand(["pi", "/Users/tester/Library/pnpm/pi"], (candidate) => {
+			return candidate === "/Users/tester/Library/pnpm/pi";
+		});
+
+		expect(resolved).toBe("/Users/tester/Library/pnpm/pi");
 	});
 });

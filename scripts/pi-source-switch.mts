@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -286,6 +286,90 @@ function parseArgs(argv: string[]): Options {
 	return options;
 }
 
+function normalizeBinDirs(prefix: string, platform: NodeJS.Platform): string[] {
+	const trimmed = prefix.trim();
+	if (!trimmed) {
+		return [];
+	}
+	if (path.basename(trimmed).toLowerCase() === "bin") {
+		return [trimmed];
+	}
+	return platform === "win32" ? [trimmed, path.join(trimmed, "bin")] : [path.join(trimmed, "bin"), trimmed];
+}
+
+export function buildPiExecutableCandidates(options?: {
+	env?: NodeJS.ProcessEnv;
+	homeDir?: string;
+	platform?: NodeJS.Platform;
+}): string[] {
+	const env = options?.env ?? process.env;
+	const homeDir = options?.homeDir ?? homedir();
+	const platform = options?.platform ?? process.platform;
+	const executableNames = platform === "win32" ? ["pi.cmd", "pi.exe", "pi"] : ["pi"];
+	const candidates: string[] = [];
+	const seen = new Set<string>();
+
+	const add = (candidate: string | undefined) => {
+		if (!candidate) {
+			return;
+		}
+		const normalized = path.normalize(candidate);
+		if (seen.has(normalized)) {
+			return;
+		}
+		seen.add(normalized);
+		candidates.push(candidate);
+	};
+
+	for (const executableName of executableNames) {
+		add(executableName);
+	}
+
+	const pathEntries = (env.PATH ?? "").split(path.delimiter).filter(Boolean);
+	for (const dir of pathEntries) {
+		for (const executableName of executableNames) {
+			add(path.join(dir, executableName));
+		}
+	}
+
+	const binDirs = [
+		env.PI_CODING_AGENT_BIN,
+		env.PNPM_HOME,
+		env.npm_config_prefix,
+		env.NPM_CONFIG_PREFIX,
+		...normalizeBinDirs(path.join(homeDir, ".pi", "agent", "bin"), platform),
+		...normalizeBinDirs(path.join(homeDir, "Library", "pnpm"), platform),
+		...normalizeBinDirs(path.join(homeDir, ".local", "share", "pnpm"), platform),
+		...normalizeBinDirs(path.join(homeDir, ".pnpm-global"), platform),
+		...normalizeBinDirs(path.join(homeDir, ".npm-global"), platform),
+		...normalizeBinDirs(path.join(homeDir, ".local"), platform),
+	];
+
+	if (platform === "win32") {
+		binDirs.push(env.APPDATA ? path.join(env.APPDATA, "pnpm") : undefined);
+		binDirs.push(env.APPDATA ? path.join(env.APPDATA, "npm") : undefined);
+	}
+
+	for (const rawDir of binDirs) {
+		for (const dir of normalizeBinDirs(rawDir ?? "", platform)) {
+			for (const executableName of executableNames) {
+				add(path.join(dir, executableName));
+			}
+		}
+	}
+
+	return candidates;
+}
+
+export function resolvePiCommand(candidates: readonly string[], probe: (candidate: string) => boolean): string | undefined {
+	for (const candidate of candidates) {
+		if (probe(candidate)) {
+			return candidate;
+		}
+	}
+	return undefined;
+}
+
 function printHelp() {
 	console.log(`
 oh-pi source switcher — toggle pi between local workspace packages and published npm packages
@@ -316,14 +400,22 @@ Notes:
 }
 
 function findPi(): string {
-	const candidates = IS_WINDOWS ? ["pi.cmd", "pi"] : ["pi"];
-	for (const candidate of candidates) {
-		try {
-			execFileSync(candidate, ["--version"], { stdio: "ignore", shell: IS_WINDOWS });
-			return candidate;
-		} catch {
-			// Try the next candidate.
+	const candidates = buildPiExecutableCandidates();
+	const resolved = resolvePiCommand(candidates, (candidate) => {
+		if (path.isAbsolute(candidate) && !existsSync(candidate)) {
+			return false;
 		}
+
+		const result = spawnSync(candidate, ["--version"], { stdio: "ignore", shell: IS_WINDOWS });
+		if (!result.error) {
+			return true;
+		}
+
+		return result.error.code !== "ENOENT";
+	});
+
+	if (resolved) {
+		return resolved;
 	}
 
 	throw new Error("'pi' command not found. Install pi-coding-agent first: npm install -g @mariozechner/pi-coding-agent");
