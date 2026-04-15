@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@mariozechner/pi-ai", () => ({
 	completeSimple: vi.fn(),
@@ -22,7 +22,8 @@ vi.mock("@mariozechner/pi-coding-agent", () => ({
 	},
 }));
 
-import { resolveBtwApiKey } from "./btw.js";
+import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
+import btwExtension, { resolveBtwApiKey } from "./btw.js";
 
 const model = {
 	provider: "anthropic",
@@ -54,5 +55,61 @@ describe("resolveBtwApiKey", () => {
 
 	it("reconstructs a registry when the runtime registry lacks getApiKey", async () => {
 		await expect(resolveBtwApiKey(model as never, {})).resolves.toBe("dynamic:anthropic/claude-sonnet-4");
+	});
+});
+
+describe("btw startup restore", () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("defers session_start thread restoration until after the startup window", async () => {
+		const harness = createExtensionHarness();
+		const getBranch = vi.fn(() => [
+			{
+				type: "custom",
+				customType: "btw-thread-entry",
+				data: {
+					question: "What changed?",
+					thinking: "",
+					answer: "A few startup paths were deferred.",
+					provider: "anthropic",
+					model: "claude-sonnet-4",
+					thinkingLevel: "off",
+					timestamp: Date.now(),
+				},
+			},
+		]);
+		harness.ctx.sessionManager.getBranch = getBranch;
+		harness.ctx.ui.setWidget = vi.fn();
+
+		btwExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+		expect(getBranch).not.toHaveBeenCalled();
+
+		await vi.advanceTimersByTimeAsync(250);
+		expect(getBranch).toHaveBeenCalledTimes(1);
+		expect(harness.ctx.ui.setWidget).toHaveBeenCalledWith(
+			"btw",
+			expect.any(Function),
+			expect.objectContaining({ placement: "aboveEditor" }),
+		);
+	});
+
+	it("cancels deferred session_start restoration on session_shutdown", async () => {
+		const harness = createExtensionHarness();
+		const getBranch = vi.fn(() => []);
+		harness.ctx.sessionManager.getBranch = getBranch;
+
+		btwExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+		harness.emit("session_shutdown", { type: "session_shutdown" }, harness.ctx);
+		await vi.advanceTimersByTimeAsync(250);
+
+		expect(getBranch).not.toHaveBeenCalled();
 	});
 });

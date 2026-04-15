@@ -39,6 +39,7 @@ const BTW_SYSTEM_PROMPT = [
 	"Focus on answering the user's side questions, helping them think through ideas, or planning next steps.",
 	"Do not act as if you need to continue unfinished work from the main session unless the user explicitly asks you to prepare something for injection back to it.",
 ].join(" ");
+const STARTUP_THREAD_RESTORE_DELAY_MS = 250;
 
 type SessionThinkingLevel = "off" | AiThinkingLevel;
 
@@ -660,19 +661,38 @@ export default function (pi: ExtensionAPI) {
 
 	// ── Session lifecycle — restore / cleanup ─────────────────────────────────
 
-	pi.on("session_start", async (_event, ctx) => {
+	let startupRestoreTimer: ReturnType<typeof setTimeout> | undefined;
+	const cancelStartupRestore = () => {
+		if (!startupRestoreTimer) {
+			return;
+		}
+		clearTimeout(startupRestoreTimer);
+		startupRestoreTimer = undefined;
+	};
+	const restoreCurrentThread = (ctx: ExtensionContext) => {
+		cancelStartupRestore();
 		restoreThread(ctx);
+	};
+
+	pi.on("session_start", async (_event, ctx) => {
+		cancelStartupRestore();
+		startupRestoreTimer = setTimeout(() => {
+			startupRestoreTimer = undefined;
+			restoreThread(ctx);
+		}, STARTUP_THREAD_RESTORE_DELAY_MS);
+		startupRestoreTimer.unref?.();
 	});
 
 	pi.on("session_switch", async (_event, ctx) => {
-		restoreThread(ctx);
+		restoreCurrentThread(ctx);
 	});
 
 	pi.on("session_tree", async (_event, ctx) => {
-		restoreThread(ctx);
+		restoreCurrentThread(ctx);
 	});
 
 	pi.on("session_shutdown", async () => {
+		cancelStartupRestore();
 		abortActiveSlots();
 	});
 
