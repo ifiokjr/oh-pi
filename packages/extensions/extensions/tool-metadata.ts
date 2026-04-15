@@ -30,6 +30,8 @@ const MAX_TEXT_BLOCK_CHARS = 120_000;
 const MAX_TEXT_LINE_CHARS = 2_000;
 const MAX_TEXT_LINES = 2_000;
 const OUTPUT_GUARD_NOTE = "\n[tool output truncated for UI safety]";
+const MAX_DETAIL_FIELDS = 256;
+const MAX_DETAIL_DEPTH = 4;
 
 function pad(value: number): string {
 	return `${value}`.padStart(2, "0");
@@ -148,6 +150,70 @@ function sanitizeContent(content: unknown): { content: unknown[]; changed: boole
 	return { content: normalized, changed };
 }
 
+function sanitizeDetailsValue(
+	value: unknown,
+	depth = 0,
+	seen = new WeakSet<object>(),
+): { value: unknown; changed: boolean } {
+	if (typeof value === "string") {
+		const safe = sanitizeTextBlock(value);
+		return { value: safe.text, changed: safe.changed };
+	}
+	if (!(value && typeof value === "object")) {
+		return { value, changed: false };
+	}
+	if (seen.has(value)) {
+		return { value: "[circular]", changed: true };
+	}
+	if (depth >= MAX_DETAIL_DEPTH) {
+		return { value: "[depth-truncated]", changed: true };
+	}
+	seen.add(value);
+
+	if (Array.isArray(value)) {
+		let changed = false;
+		const limited = value.slice(0, MAX_DETAIL_FIELDS);
+		if (limited.length !== value.length) {
+			changed = true;
+		}
+		const next = limited.map((item) => {
+			const normalized = sanitizeDetailsValue(item, depth + 1, seen);
+			if (normalized.changed) {
+				changed = true;
+			}
+			return normalized.value;
+		});
+		return { value: next, changed };
+	}
+
+	let changed = false;
+	const nextEntries: Array<[string, unknown]> = [];
+	const entries = Object.entries(value as Record<string, unknown>).slice(0, MAX_DETAIL_FIELDS);
+	if (entries.length !== Object.keys(value as Record<string, unknown>).length) {
+		changed = true;
+	}
+	for (const [key, entryValue] of entries) {
+		const normalized = sanitizeDetailsValue(entryValue, depth + 1, seen);
+		if (normalized.changed) {
+			changed = true;
+		}
+		nextEntries.push([key, normalized.value]);
+	}
+
+	return { value: Object.fromEntries(nextEntries), changed };
+}
+
+function sanitizeDetails(details: unknown): { details: Record<string, unknown>; changed: boolean } {
+	if (!(details && typeof details === "object")) {
+		return { details: {}, changed: false };
+	}
+	const normalized = sanitizeDetailsValue(details);
+	if (normalized.value && typeof normalized.value === "object" && !Array.isArray(normalized.value)) {
+		return { details: normalized.value as Record<string, unknown>, changed: normalized.changed };
+	}
+	return { details: {}, changed: true };
+}
+
 function collectTextContentChars(content: unknown): number {
 	if (!Array.isArray(content)) {
 		return 0;
@@ -239,7 +305,8 @@ export default function toolMetadataExtension(pi: ExtensionAPI): void {
 		const started = pending.get(event.toolCallId);
 		pending.delete(event.toolCallId);
 
-		const { content: safeContent, changed } = sanitizeContent(event.content);
+		const { content: safeContent, changed: contentChanged } = sanitizeContent(event.content);
+		const { details: safeDetails, changed: detailsChanged } = sanitizeDetails(event.details);
 		const completedAt = Date.now();
 		const metadata = buildToolMetadata(
 			event.toolName,
@@ -253,17 +320,15 @@ export default function toolMetadataExtension(pi: ExtensionAPI): void {
 			metadata.startedAtLabel = metadata.completedAtLabel;
 		}
 
-		const details =
-			event.details && typeof event.details === "object"
-				? ({ ...(event.details as Record<string, unknown>) } satisfies Record<string, unknown>)
-				: {};
+		const details = safeDetails;
 		details[TOOL_METADATA_KEY] = metadata;
-		if (changed) {
+		if (contentChanged || detailsChanged) {
 			details.outputGuard = {
 				truncated: true,
 				maxChars: MAX_TEXT_BLOCK_CHARS,
 				maxLineChars: MAX_TEXT_LINE_CHARS,
 				maxLines: MAX_TEXT_LINES,
+				detailsSanitized: detailsChanged,
 			};
 		}
 

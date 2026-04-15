@@ -53,6 +53,29 @@ describe("tool-metadata extension", () => {
 		expect(patch.content[0].text).not.toContain("\u0000");
 	});
 
+	it("sanitizes oversized details payloads used by fallback renderers", async () => {
+		const harness = createExtensionHarness();
+		toolMetadataExtension(harness.pi as never);
+
+		const huge = `${"y".repeat(50_000)}\u0000${"z".repeat(50_000)}`;
+		const [patch] = await harness.emitAsync(
+			"tool_result",
+			{
+				toolCallId: "tool-details",
+				toolName: "bash",
+				input: { command: "huge" },
+				content: [{ type: "text", text: "ok" }],
+				details: { stdout: huge, nested: { stderr: huge } },
+			},
+			harness.ctx,
+		);
+
+		expect((patch.details.stdout as string).length).toBeLessThan(130_000);
+		expect(patch.details.stdout).not.toContain("\u0000");
+		expect((patch.details.nested as { stderr: string }).stderr.length).toBeLessThan(130_000);
+		expect(patch.details.outputGuard).toEqual(expect.objectContaining({ detailsSanitized: true }));
+	});
+
 	it("builds visible completion metadata for tool results", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.getContextUsage = vi
