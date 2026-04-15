@@ -61,7 +61,7 @@ import { registerSubagentCommands } from "./command-registration.js";
 import { ensureAccessibleDir, expandTildePath, getSubagentSessionRoot, loadSubagentConfig } from "./bootstrap.js";
 import { createSubagentRuntimeMonitor } from "./runtime-monitor.js";
 
-const STARTUP_ARTIFACT_CLEANUP_DELAY_MS = 250;
+const STARTUP_CLEANUP_DELAY_MS = 250;
 
 // ExtensionConfig is now imported from ./types.js
 
@@ -69,14 +69,10 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
 	ensureAccessibleDir(RESULTS_DIR);
 	ensureAccessibleDir(ASYNC_DIR);
 
-	// Cleanup old chain directories on startup (after 24h)
-	cleanupOldChainDirs();
-
 	const config = loadSubagentConfig();
 	const asyncByDefault = config.asyncByDefault === true;
 
 	const tempArtifactsDir = getArtifactsDir(null);
-	cleanupAllArtifactDirs(DEFAULT_ARTIFACT_CONFIG.cleanupDays);
 	let baseCwd = process.cwd();
 	let currentSessionId: string | null = null;
 	const asyncJobs = new Map<string, AsyncJobState>();
@@ -1051,6 +1047,15 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 	});
 
 	let startupCleanupTimer: ReturnType<typeof setTimeout> | undefined;
+	let startupGlobalCleanupCompleted = false;
+	const runGlobalStartupCleanup = () => {
+		if (startupGlobalCleanupCompleted) {
+			return;
+		}
+		startupGlobalCleanupCompleted = true;
+		cleanupOldChainDirs();
+		cleanupAllArtifactDirs(DEFAULT_ARTIFACT_CONFIG.cleanupDays);
+	};
 	const cleanupSessionArtifacts = (ctx: ExtensionContext) => {
 		try {
 			const sessionFile = ctx.sessionManager.getSessionFile();
@@ -1070,8 +1075,9 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		cancelStartupCleanup();
 		startupCleanupTimer = setTimeout(() => {
 			startupCleanupTimer = undefined;
+			runGlobalStartupCleanup();
 			cleanupSessionArtifacts(ctx);
-		}, STARTUP_ARTIFACT_CLEANUP_DELAY_MS);
+		}, STARTUP_CLEANUP_DELAY_MS);
 		startupCleanupTimer.unref?.();
 	};
 	const resetSessionState = (ctx: ExtensionContext, options: { deferArtifactCleanup?: boolean } = {}) => {

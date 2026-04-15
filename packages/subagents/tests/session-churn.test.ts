@@ -6,14 +6,18 @@ const {
 	mockWatcherClose,
 	mockCoalescerClear,
 	mockCoalescerSchedule,
+	mockCleanupAllArtifactDirs,
 	mockCleanupOldArtifacts,
+	mockCleanupOldChainDirs,
 } = vi.hoisted(() => ({
 	mockRenderWidget: vi.fn(),
 	mockReadStatus: vi.fn(() => null),
 	mockWatcherClose: vi.fn(),
 	mockCoalescerClear: vi.fn(),
 	mockCoalescerSchedule: vi.fn(),
+	mockCleanupAllArtifactDirs: vi.fn(),
 	mockCleanupOldArtifacts: vi.fn(),
+	mockCleanupOldChainDirs: vi.fn(),
 }));
 
 vi.mock("node:fs", () => ({
@@ -48,7 +52,7 @@ vi.mock("../agent-scope.js", () => ({
 	resolveExecutionAgentScope: () => "both",
 }));
 vi.mock("../settings.js", () => ({
-	cleanupOldChainDirs: vi.fn(),
+	cleanupOldChainDirs: mockCleanupOldChainDirs,
 	getStepAgents: vi.fn(() => []),
 	isParallelStep: vi.fn(() => false),
 	resolveStepBehavior: vi.fn(() => ({})),
@@ -57,7 +61,7 @@ vi.mock("../chain-clarify.js", () => ({
 	ChainClarifyComponent: class {},
 }));
 vi.mock("../artifacts.js", () => ({
-	cleanupAllArtifactDirs: vi.fn(),
+	cleanupAllArtifactDirs: mockCleanupAllArtifactDirs,
 	cleanupOldArtifacts: mockCleanupOldArtifacts,
 	getArtifactsDir: vi.fn(() => "/tmp/artifacts"),
 }));
@@ -194,7 +198,9 @@ beforeEach(() => {
 	mockWatcherClose.mockReset();
 	mockCoalescerClear.mockReset();
 	mockCoalescerSchedule.mockReset();
+	mockCleanupAllArtifactDirs.mockReset();
 	mockCleanupOldArtifacts.mockReset();
+	mockCleanupOldChainDirs.mockReset();
 });
 
 afterEach(() => {
@@ -203,15 +209,28 @@ afterEach(() => {
 });
 
 describe("subagent session churn", () => {
-	it("defers session_start artifact cleanup until after the startup window", async () => {
+	it("does not run global cleanup during extension registration", () => {
+		const pi = createMockPi();
+
+		registerSubagentExtension(pi as any);
+
+		expect(mockCleanupOldChainDirs).not.toHaveBeenCalled();
+		expect(mockCleanupAllArtifactDirs).not.toHaveBeenCalled();
+	});
+
+	it("defers startup cleanup until after the startup window", async () => {
 		const pi = createMockPi();
 		const ctx = createCtx();
 
 		registerSubagentExtension(pi as any);
 		await pi._emit("session_start", {}, ctx);
+		expect(mockCleanupOldChainDirs).not.toHaveBeenCalled();
+		expect(mockCleanupAllArtifactDirs).not.toHaveBeenCalled();
 		expect(mockCleanupOldArtifacts).not.toHaveBeenCalled();
 
 		await vi.advanceTimersByTimeAsync(250);
+		expect(mockCleanupOldChainDirs).toHaveBeenCalledTimes(1);
+		expect(mockCleanupAllArtifactDirs).toHaveBeenCalledWith(7);
 		expect(mockCleanupOldArtifacts).toHaveBeenCalledWith("/tmp/artifacts", 7);
 	});
 
@@ -224,6 +243,8 @@ describe("subagent session churn", () => {
 		await pi._emit("session_shutdown");
 		await vi.advanceTimersByTimeAsync(250);
 
+		expect(mockCleanupOldChainDirs).not.toHaveBeenCalled();
+		expect(mockCleanupAllArtifactDirs).not.toHaveBeenCalled();
 		expect(mockCleanupOldArtifacts).not.toHaveBeenCalled();
 	});
 
