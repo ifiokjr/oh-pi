@@ -92,6 +92,29 @@ describe("adaptive routing extension", () => {
 		vi.clearAllMocks();
 	});
 
+	it("keeps adaptive routing disabled by default when no config exists", async () => {
+		const harness = createExtensionHarness();
+		harness.ctx.model = sampleModel("google", "gemini-2.5-flash", "Gemini 2.5 Flash") as never;
+		harness.ctx.modelRegistry = {
+			getAvailable: () => [
+				sampleModel("google", "gemini-2.5-flash", "Gemini 2.5 Flash"),
+				sampleModel("anthropic", "claude-opus-4.6", "Claude Opus 4.6"),
+			],
+			getApiKey: async () => "key",
+		} as never;
+
+		adaptiveRoutingExtension(harness.pi as never);
+		await harness.emitAsync(
+			"before_agent_start",
+			{ type: "before_agent_start", prompt: "Design a better settings page UI.", systemPrompt: "system" },
+			harness.ctx,
+		);
+
+		expect(harness.ctx.model).toMatchObject({ provider: "google", id: "gemini-2.5-flash" });
+		expect(harness.notifications.some((item) => item.msg.includes("Adaptive route suggestion"))).toBe(false);
+		expect(harness.statusMap.has("adaptive-routing")).toBe(false);
+	});
+
 	it("registers route commands and auto-applies a routed premium model", async () => {
 		writeFileSync(
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),

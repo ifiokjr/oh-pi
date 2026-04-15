@@ -69,7 +69,7 @@ gets a stable namespace. Each managed worktree records which pi instance/session
 
 ## Adaptive routing
 
-Adaptive routing adds a user-friendly `/route` command set and an opt-in model-agnostic mode that can:
+Adaptive routing adds a user-friendly `/route` command set and an opt-in model-agnostic mode (off by default) that can:
 
 - classify prompts with a cheap router model
 - choose model and thinking level before a turn starts

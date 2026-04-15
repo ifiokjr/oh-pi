@@ -83,7 +83,7 @@ export const DEFAULT_FALLBACK_GROUPS: Record<string, FallbackGroupPolicy> = {
 };
 
 export const DEFAULT_ADAPTIVE_ROUTING_CONFIG: AdaptiveRoutingConfig = {
-	mode: "shadow",
+	mode: "off",
 	routerModels: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
 	stickyTurns: 1,
 	telemetry: {
