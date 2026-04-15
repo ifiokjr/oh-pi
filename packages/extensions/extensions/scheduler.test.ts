@@ -2247,6 +2247,51 @@ describe("event wiring", () => {
 		// Scheduler is started (no easy way to verify timer, but it should not throw)
 	});
 
+	it("cancels deferred startup ownership checks on session_shutdown", async () => {
+		const now = Date.now();
+		(existsSync as ReturnType<typeof vi.fn>).mockImplementation(
+			(file: string) => file.endsWith("scheduler.json") || file.endsWith("scheduler.lease.json"),
+		);
+		(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((file: string) => {
+			if (file.endsWith("scheduler.lease.json")) {
+				return JSON.stringify({
+					version: 1,
+					instanceId: "foreign-instance",
+					sessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
+					pid: 123,
+					cwd: "/mock-project",
+					heartbeatAt: now,
+				});
+			}
+			return JSON.stringify({
+				version: 1,
+				tasks: [
+					{
+						id: "foreign1",
+						prompt: "check build",
+						kind: "once",
+						enabled: true,
+						createdAt: now - ONE_MINUTE,
+						nextRunAt: now + ONE_MINUTE,
+						jitterMs: 0,
+						runCount: 0,
+						pending: false,
+						scope: "instance",
+						ownerInstanceId: "foreign-instance",
+						ownerSessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
+					},
+				],
+			});
+		});
+
+		const ctx = createMockCtx();
+		pi._emit("session_start", { type: "session_start" }, ctx);
+		pi._emit("session_shutdown", { type: "session_shutdown" }, ctx);
+		await vi.advanceTimersByTimeAsync(250);
+
+		expect(ctx.ui.select).not.toHaveBeenCalled();
+	});
+
 	it("warns about overdue restored tasks on session_start without dispatching them", async () => {
 		const now = Date.now();
 		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
@@ -2272,7 +2317,11 @@ describe("event wiring", () => {
 
 		const ctx = createMockCtx();
 		pi._emit("session_start", { type: "session_start" }, ctx);
-		await Promise.resolve();
+		expect(ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review"))).toBe(
+			false,
+		);
+
+		await vi.advanceTimersByTimeAsync(250);
 		expect(ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review"))).toBe(
 			true,
 		);
@@ -2318,9 +2367,9 @@ describe("event wiring", () => {
 
 		const ctx = createMockCtx({ select: vi.fn().mockResolvedValue("Leave tasks in the other instance") });
 		pi._emit("session_start", { type: "session_start" }, ctx);
-		await Promise.resolve();
-		await Promise.resolve();
+		expect(ctx.ui.select).not.toHaveBeenCalled();
 
+		await vi.advanceTimersByTimeAsync(250);
 		expect(ctx.ui.select).toHaveBeenCalled();
 		expect(ctx._notifications.some((n: any) => n.msg.includes("observe scheduler tasks"))).toBe(true);
 		expect(pi._userMessages).toHaveLength(0);
@@ -2347,8 +2396,7 @@ describe("event wiring", () => {
 
 		const ctx = createMockCtx({ select: vi.fn().mockResolvedValue("Review tasks") });
 		pi._emit("session_start", { type: "session_start" }, ctx);
-		await Promise.resolve();
-		await Promise.resolve();
+		await vi.advanceTimersByTimeAsync(250);
 
 		expect(ctx.ui.select).not.toHaveBeenCalled();
 		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBe(false);

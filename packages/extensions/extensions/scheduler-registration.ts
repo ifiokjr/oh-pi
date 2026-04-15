@@ -18,6 +18,8 @@ import {
 	type TaskKind,
 } from "./scheduler-shared.js";
 
+const STARTUP_OWNERSHIP_DELAY_MS = 250;
+
 const SchedulePromptToolParams = Type.Object({
 	action: Type.Union(
 		[
@@ -832,6 +834,7 @@ function handleToolAdd(
 
 export function registerEvents(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 	const activeSessionKeys = new Set<string>();
+	let startupOwnershipTimer: ReturnType<typeof setTimeout> | undefined;
 	const getSessionKey = (ctx: ExtensionContext) => ctx.sessionManager?.getSessionFile?.() ?? `${ctx.cwd}::default`;
 	const refreshRuntimeContext = (_event: unknown, ctx: ExtensionContext) => {
 		activeSessionKeys.add(getSessionKey(ctx));
@@ -839,11 +842,28 @@ export function registerEvents(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 		runtime.updateStatus();
 		runtime.startScheduler();
 	};
+	const scheduleStartupOwnership = (ctx: ExtensionContext) => {
+		if (startupOwnershipTimer) {
+			clearTimeout(startupOwnershipTimer);
+		}
 
-	pi.on("session_start", async (event, ctx) => {
+		startupOwnershipTimer = setTimeout(() => {
+			startupOwnershipTimer = undefined;
+			runtime
+				.handleStartupOwnership(ctx)
+				.then(() => {
+					runtime.notifyResumeRequiredTasks();
+				})
+				.catch(() => {
+					// Keep startup resilient if ownership inspection fails.
+				});
+		}, STARTUP_OWNERSHIP_DELAY_MS);
+		startupOwnershipTimer.unref?.();
+	};
+
+	pi.on("session_start", (event, ctx) => {
 		refreshRuntimeContext(event, ctx);
-		await runtime.handleStartupOwnership(ctx);
-		runtime.notifyResumeRequiredTasks();
+		scheduleStartupOwnership(ctx);
 	});
 
 	pi.on("session_switch", refreshRuntimeContext);
@@ -858,6 +878,10 @@ export function registerEvents(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 	pi.on("session_shutdown", async (_event, ctx) => {
 		activeSessionKeys.delete(getSessionKey(ctx));
 		if (activeSessionKeys.size === 0) {
+			if (startupOwnershipTimer) {
+				clearTimeout(startupOwnershipTimer);
+				startupOwnershipTimer = undefined;
+			}
 			runtime.setRuntimeContext(ctx);
 			runtime.stopScheduler();
 		}
