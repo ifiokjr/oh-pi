@@ -557,14 +557,6 @@ export class SchedulerRuntime {
 		}
 
 		const now = Date.now();
-
-		// Refresh the lease heartbeat unconditionally so other instances see this
-		// instance as alive even when pi is busy and not dispatching tasks. Without
-		// this, the lease goes stale after SCHEDULER_LEASE_STALE_AFTER_MS when the
-		// agent is processing messages, causing newer instances to grab the lease
-		// and mark this instance's tasks as stale_owner.
-		this.refreshLeaseHeartbeat(now);
-
 		let mutated = this.reconcileTaskOwnership();
 
 		for (const task of Array.from(this.tasks.values())) {
@@ -582,11 +574,26 @@ export class SchedulerRuntime {
 			}
 		}
 
+		const shouldHoldLease = this.hasManagedTasksForLease();
+		if (shouldHoldLease) {
+			// Refresh the lease heartbeat unconditionally so other instances see this
+			// instance as alive even when pi is busy and not dispatching tasks. Without
+			// this, the lease goes stale after SCHEDULER_LEASE_STALE_AFTER_MS when the
+			// agent is processing messages, causing newer instances to grab the lease
+			// and mark this instance's tasks as stale_owner.
+			this.refreshLeaseHeartbeat(now);
+		} else {
+			this.releaseLeaseIfOwned();
+		}
+
 		if (mutated) {
 			this.persistTasks();
 		}
 		this.updateStatus();
 
+		if (!shouldHoldLease) {
+			return;
+		}
 		if (this.dispatching) {
 			return;
 		}
@@ -626,7 +633,7 @@ export class SchedulerRuntime {
 		}
 		this.startupOwnershipHandled = true;
 		const leaseStatus = this.getLeaseStatus();
-		if (!leaseStatus.activeForeign) {
+		if (!leaseStatus.activeForeign || this.tasks.size === 0) {
 			this.dispatchMode = "auto";
 			return;
 		}
@@ -1074,6 +1081,10 @@ export class SchedulerRuntime {
 		return Array.from(this.tasks.values()).filter(
 			(task) => task.ownerInstanceId && task.ownerInstanceId !== this.instanceId,
 		).length;
+	}
+
+	private hasManagedTasksForLease(): boolean {
+		return Array.from(this.tasks.values()).some((task) => task.enabled && !task.resumeRequired);
 	}
 
 	private readLease(): SchedulerLease | undefined {
