@@ -15,6 +15,7 @@ export function createExtensionHarness() {
 	const messageRenderers = new Map();
 	const providers = new Map();
 	const eventBus = new EventEmitter();
+	let sessionName = "";
 
 	let currentThinking = "low";
 	const pi = {
@@ -76,6 +77,12 @@ export function createExtensionHarness() {
 		setActiveTools() {},
 		getFlag(name) {
 			return flags.get(name)?.default;
+		},
+		getSessionName() {
+			return sessionName;
+		},
+		setSessionName(name) {
+			sessionName = name;
 		},
 	};
 
@@ -158,6 +165,9 @@ export function createExtensionHarness() {
 		},
 		messageRenderers,
 		providers,
+		get sessionName() {
+			return sessionName;
+		},
 		emit(event, ...args) {
 			for (const handler of handlers.get(event) ?? []) {
 				handler(...args);

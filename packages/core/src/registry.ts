@@ -78,7 +78,7 @@ export const EXTENSIONS = [
 	{
 		name: "auto-session-name",
 		get label() {
-			return `${icon("memo")} Auto Session Name — Name sessions from first message`;
+			return `${icon("memo")} Auto Session Name — Dynamic session naming + compact auto-continue`;
 		},
 		default: true,
 	},

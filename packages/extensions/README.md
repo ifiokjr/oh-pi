@@ -217,3 +217,9 @@ supported range and falling back to the default interval when no valid override 
 ## Notes
 
 This package ships raw `.ts` extensions for pi to load directly.
+
+## Auto session naming and compaction continuity
+
+`auto-session-name` now keeps session titles fresh as work focus changes, triggers a
+`continue` follow-up after compaction, and emits a shutdown resume hint with the current
+session id.
