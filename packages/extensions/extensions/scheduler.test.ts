@@ -987,6 +987,19 @@ describe("SchedulerRuntime", () => {
 			await runtime.tickScheduler();
 			expect(pi._userMessages).toHaveLength(0);
 		});
+
+		it("does not acquire a lease when there are no managed tasks", async () => {
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+
+			await runtime.tickScheduler();
+
+			expect(
+				(writeFileSync as ReturnType<typeof vi.fn>).mock.calls.some(
+					([file]: [string]) => typeof file === "string" && file.endsWith("scheduler.lease.json.tmp"),
+				),
+			).toBe(false);
+		});
 	});
 
 	describe("dispatchTask", () => {
@@ -2202,6 +2215,34 @@ describe("event wiring", () => {
 		expect(pi._userMessages).toHaveLength(0);
 	});
 
+	it("does not prompt when a foreign lease exists but there are no scheduled tasks", async () => {
+		const now = Date.now();
+		(existsSync as ReturnType<typeof vi.fn>).mockImplementation(
+			(file: string) => file.endsWith("scheduler.json") || file.endsWith("scheduler.lease.json"),
+		);
+		(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((file: string) => {
+			if (file.endsWith("scheduler.lease.json")) {
+				return JSON.stringify({
+					version: 1,
+					instanceId: "foreign-instance",
+					sessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
+					pid: 123,
+					cwd: "/mock-project",
+					heartbeatAt: now,
+				});
+			}
+			return JSON.stringify({ version: 1, tasks: [] });
+		});
+
+		const ctx = createMockCtx({ select: vi.fn().mockResolvedValue("Review tasks") });
+		pi._emit("session_start", { type: "session_start" }, ctx);
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(ctx.ui.select).not.toHaveBeenCalled();
+		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBe(false);
+	});
+
 	it("updates status on session_switch", () => {
 		const ctx = createMockCtx();
 		pi._emit("session_start", { type: "session_start" }, ctx);
@@ -2426,7 +2467,25 @@ describe("lease heartbeat refresh", () => {
 					heartbeatAt: now,
 				});
 			}
-			return JSON.stringify({ version: 1, tasks: [] });
+			return JSON.stringify({
+				version: 1,
+				tasks: [
+					{
+						id: "owned123",
+						prompt: "check build",
+						kind: "once",
+						enabled: true,
+						createdAt: now - ONE_MINUTE,
+						nextRunAt: now + ONE_MINUTE,
+						jitterMs: 0,
+						runCount: 0,
+						pending: false,
+						scope: "instance",
+						ownerInstanceId: instanceId,
+						ownerSessionId: null,
+					},
+				],
+			});
 		});
 
 		// Create a context that is NOT idle.
