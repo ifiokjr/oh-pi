@@ -26,6 +26,10 @@ type PendingToolCall = {
 
 const APPROX_TOKEN_CHARS = 4;
 const TOOL_METADATA_KEY = "toolMetadata";
+const MAX_TEXT_BLOCK_CHARS = 120_000;
+const MAX_TEXT_LINE_CHARS = 2_000;
+const MAX_TEXT_LINES = 2_000;
+const OUTPUT_GUARD_NOTE = "\n[tool output truncated for UI safety]";
 
 function pad(value: number): string {
 	return `${value}`.padStart(2, "0");
@@ -68,6 +72,80 @@ function snapshotContextUsage(ctx: Pick<ExtensionContext, "getContextUsage">): C
 		percent: typeof usage.percent === "number" ? usage.percent : null,
 		contextWindow: typeof usage.contextWindow === "number" ? usage.contextWindow : null,
 	};
+}
+
+function chunkLine(line: string, maxChars: number): string[] {
+	if (line.length <= maxChars) {
+		return [line];
+	}
+
+	const chunks: string[] = [];
+	for (let i = 0; i < line.length; i += maxChars) {
+		chunks.push(line.slice(i, i + maxChars));
+	}
+	return chunks;
+}
+
+function sanitizeTextBlock(text: string): { text: string; changed: boolean } {
+	if (!text) {
+		return { text, changed: false };
+	}
+
+	const cleaned = text.replaceAll("\u0000", "");
+	let changed = cleaned !== text;
+
+	const lines = cleaned.split("\n");
+	const boundedLines = lines.slice(0, MAX_TEXT_LINES);
+	if (boundedLines.length !== lines.length) {
+		changed = true;
+	}
+
+	const wrapped: string[] = [];
+	for (const line of boundedLines) {
+		const parts = chunkLine(line, MAX_TEXT_LINE_CHARS);
+		if (parts.length > 1) {
+			changed = true;
+		}
+		wrapped.push(...parts);
+		if (wrapped.length >= MAX_TEXT_LINES) {
+			changed = true;
+			break;
+		}
+	}
+
+	let normalized = wrapped.slice(0, MAX_TEXT_LINES).join("\n");
+	if (normalized.length > MAX_TEXT_BLOCK_CHARS) {
+		normalized = normalized.slice(0, MAX_TEXT_BLOCK_CHARS);
+		changed = true;
+	}
+	if (changed) {
+		normalized += OUTPUT_GUARD_NOTE;
+	}
+	return { text: normalized, changed };
+}
+
+function sanitizeContent(content: unknown): { content: unknown[]; changed: boolean } {
+	if (!Array.isArray(content)) {
+		return { content: [], changed: false };
+	}
+
+	let changed = false;
+	const normalized = content.map((item) => {
+		if (!(item && typeof item === "object" && (item as { type?: unknown }).type === "text")) {
+			return item;
+		}
+		const originalText = (item as { text?: unknown }).text;
+		if (typeof originalText !== "string") {
+			return item;
+		}
+		const safeText = sanitizeTextBlock(originalText);
+		if (!safeText.changed) {
+			return item;
+		}
+		changed = true;
+		return { ...(item as Record<string, unknown>), text: safeText.text };
+	});
+	return { content: normalized, changed };
 }
 
 function collectTextContentChars(content: unknown): number {
@@ -161,13 +239,14 @@ export default function toolMetadataExtension(pi: ExtensionAPI): void {
 		const started = pending.get(event.toolCallId);
 		pending.delete(event.toolCallId);
 
+		const { content: safeContent, changed } = sanitizeContent(event.content);
 		const completedAt = Date.now();
 		const metadata = buildToolMetadata(
 			event.toolName,
 			started?.startedAt ?? completedAt,
 			completedAt,
 			event.input,
-			event.content,
+			safeContent,
 			ctx,
 		);
 		if (!started) {
@@ -179,9 +258,17 @@ export default function toolMetadataExtension(pi: ExtensionAPI): void {
 				? ({ ...(event.details as Record<string, unknown>) } satisfies Record<string, unknown>)
 				: {};
 		details[TOOL_METADATA_KEY] = metadata;
+		if (changed) {
+			details.outputGuard = {
+				truncated: true,
+				maxChars: MAX_TEXT_BLOCK_CHARS,
+				maxLineChars: MAX_TEXT_LINE_CHARS,
+				maxLines: MAX_TEXT_LINES,
+			};
+		}
 
 		return {
-			content: [...event.content, { type: "text" as const, text: formatToolMetadataText(metadata) }],
+			content: [...safeContent, { type: "text" as const, text: formatToolMetadataText(metadata) }],
 			details,
 		};
 	});
