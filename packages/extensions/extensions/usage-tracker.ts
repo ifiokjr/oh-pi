@@ -21,9 +21,9 @@ recent subscription windows when a live provider probe is temporarily rate-limit
 
 Key usage-tracker surfaces:
 
-- widget above the editor for at-a-glance quotas and session totals
-- `/usage` for the full dashboard overlay
-- `Ctrl+U` as a shortcut for the same overlay
+- widget above the editor for at-a-glance quotas and current-provider session totals
+- `/usage` to search/select a provider, then open that provider's dashboard
+- `Ctrl+U` as a shortcut for the current provider's dashboard
 - `/usage-toggle` to show or hide the widget
 - `/usage-refresh` to force fresh provider probes
 - `usage_report` so the agent can answer quota and spend questions directly
@@ -160,6 +160,8 @@ export default function usageTracker(pi: ExtensionAPI) {
 	let activeCtx: ExtensionContext | null = null;
 	/** Widget visibility. */
 	let widgetVisible = true;
+	/** Last provider explicitly opened in the usage dashboard. */
+	let lastSelectedUsageProvider: ProviderKey | null = null;
 	/** Cached rate limit probes. */
 	const rateLimits = new Map<string, ProviderRateLimits>();
 	/** Last probe timestamp per provider (for cooldown). */
@@ -346,6 +348,263 @@ export default function usageTracker(pi: ExtensionAPI) {
 		return scoped ? `${base}/${scoped}` : base;
 	}
 
+	function normalizeProviderKey(value: unknown): ProviderKey | null {
+		if (typeof value !== "string") {
+			return null;
+		}
+
+		switch (value.trim().toLowerCase()) {
+			case "anthropic":
+			case "claude":
+			case "sonnet":
+			case "opus":
+			case "haiku":
+				return "anthropic";
+			case "openai":
+			case "chatgpt":
+			case "codex":
+			case "gpt":
+			case "o1":
+			case "o3":
+			case "o4":
+			case "openai-codex":
+				return "openai";
+			case "google":
+			case "gemini":
+			case "flash":
+			case "pro-exp":
+			case "antigravity":
+			case "google-antigravity":
+			case "google-gemini-cli":
+				return "google";
+			case "ollama":
+			case "ollama-cloud":
+				return "ollama";
+			default:
+				return null;
+		}
+	}
+
+	function inferProviderFromModel(model: { id?: unknown; provider?: unknown } | null | undefined): ProviderKey | null {
+		const explicitProvider = normalizeProviderKey(model?.provider);
+		if (explicitProvider) {
+			return explicitProvider;
+		}
+
+		const id = typeof model?.id === "string" ? model.id.toLowerCase() : "";
+		if (!id) {
+			return null;
+		}
+
+		if (id.includes("claude") || id.includes("sonnet") || id.includes("opus") || id.includes("haiku")) {
+			return "anthropic";
+		}
+
+		if (id.includes("gpt") || id.includes("o1") || id.includes("o3") || id.includes("o4") || id.includes("codex")) {
+			return "openai";
+		}
+
+		if (id.includes("gemini") || id.includes("flash") || id.includes("pro-exp") || id.includes("antigravity")) {
+			return "google";
+		}
+
+		if (id.includes("ollama")) {
+			return "ollama";
+		}
+
+		return null;
+	}
+
+	function getActiveProvider(ctx: ExtensionContext | null | undefined = activeCtx): ProviderKey | null {
+		return inferProviderFromModel(ctx?.model as { id?: unknown; provider?: unknown } | null | undefined);
+	}
+
+	function getCurrentModelId(ctx: ExtensionContext | null | undefined = activeCtx): string {
+		return typeof ctx?.model?.id === "string" ? ctx.model.id : "no-model";
+	}
+
+	function getModelUsageEntries(provider: ProviderKey | null = null): ModelUsage[] {
+		const entries = [...models.values()];
+		if (!provider) {
+			return entries;
+		}
+		return entries.filter((entry) => normalizeProviderKey(entry.provider) === provider);
+	}
+
+	function getRateLimitEntries(provider: ProviderKey | null = null): ProviderRateLimits[] {
+		const entries = [...rateLimits.values()];
+		if (!provider) {
+			return entries;
+		}
+		return entries.filter((entry) => entry.provider === provider);
+	}
+
+	function getTotals(provider: ProviderKey | null = null) {
+		let input = 0;
+		let output = 0;
+		let cacheRead = 0;
+		let cacheWrite = 0;
+		let cost = 0;
+		let turns = 0;
+		for (const model of getModelUsageEntries(provider)) {
+			input += model.input;
+			output += model.output;
+			cacheRead += model.cacheRead;
+			cacheWrite += model.cacheWrite;
+			cost += model.costTotal;
+			turns += model.turns;
+		}
+		const totalTokens = input + output;
+		const avgTokensPerTurn = turns > 0 ? totalTokens / turns : 0;
+		const avgCostPerTurn = turns > 0 ? cost / turns : 0;
+		const rolling30dCost = getRolling30dCost();
+		return {
+			input,
+			output,
+			cacheRead,
+			cacheWrite,
+			cost,
+			turns,
+			totalTokens,
+			avgTokensPerTurn,
+			avgCostPerTurn,
+			rolling30dCost,
+		};
+	}
+
+	function getSelectableProviders(preferredProvider: ProviderKey | null): ProviderKey[] {
+		const ordered: ProviderKey[] = [];
+		const seen = new Set<ProviderKey>();
+
+		const add = (provider: ProviderKey | null) => {
+			if (!(provider && !seen.has(provider))) {
+				return;
+			}
+			seen.add(provider);
+			ordered.push(provider);
+		};
+
+		add(preferredProvider);
+		add(lastSelectedUsageProvider);
+
+		for (const rateLimit of rateLimits.values()) {
+			if (hasProviderDisplayData(rateLimit)) {
+				add(rateLimit.provider);
+			}
+		}
+
+		for (const model of models.values()) {
+			add(normalizeProviderKey(model.provider));
+		}
+
+		return ordered;
+	}
+
+	function formatProviderOption(
+		provider: ProviderKey,
+		currentProvider: ProviderKey | null,
+		ctx: ExtensionContext,
+	): string {
+		const totals = getTotals(provider);
+		const details: string[] = [];
+
+		if (provider === currentProvider) {
+			details.push(`current model (${getCurrentModelId(ctx)})`);
+		} else if (provider === lastSelectedUsageProvider) {
+			details.push("recently viewed");
+		}
+
+		if (getRateLimitEntries(provider).some(hasProviderDisplayData)) {
+			details.push("rate limits");
+		}
+
+		if (totals.turns > 0) {
+			details.push(`${totals.turns} ${totals.turns === 1 ? "turn" : "turns"}`);
+			details.push(fmtCost(totals.cost));
+		} else {
+			details.push("no session usage");
+		}
+
+		return [providerDisplayName(provider), ...details].join(" — ");
+	}
+
+	function resolveUsageProviderFromArgs(ctx: ExtensionContext, args: string): ProviderKey | null {
+		const raw = args.trim();
+		if (!raw) {
+			return null;
+		}
+
+		if (raw.toLowerCase() === "current") {
+			return getActiveProvider(ctx);
+		}
+
+		const direct = normalizeProviderKey(raw);
+		if (direct) {
+			return direct;
+		}
+
+		const lower = raw.toLowerCase();
+		return (
+			getSelectableProviders(getActiveProvider(ctx)).find((provider) => {
+				return providerDisplayName(provider).toLowerCase().includes(lower);
+			}) ?? null
+		);
+	}
+
+	async function selectUsageProvider(ctx: ExtensionContext, args: string): Promise<ProviderKey | null> {
+		const currentProvider = getActiveProvider(ctx);
+		const requestedProvider = resolveUsageProviderFromArgs(ctx, args);
+		if (requestedProvider) {
+			return requestedProvider;
+		}
+
+		if (args.trim()) {
+			ctx.ui.notify(`Unknown provider "${args.trim()}". Showing provider picker instead.`, "warning");
+		}
+
+		const providers = getSelectableProviders(currentProvider);
+		if (providers.length === 0) {
+			return currentProvider;
+		}
+		if (providers.length === 1 || typeof ctx.ui.select !== "function") {
+			return providers[0] ?? currentProvider;
+		}
+
+		const options = providers.map((provider) => formatProviderOption(provider, currentProvider, ctx));
+		const optionToProvider = new Map(options.map((option, index) => [option, providers[index]]));
+		const selected = await ctx.ui.select(
+			`Select usage provider\nCurrent model: ${getCurrentModelId(ctx)}\nType to search`,
+			options,
+		);
+		if (!selected) {
+			return null;
+		}
+		return optionToProvider.get(selected) ?? null;
+	}
+
+	async function openUsageOverlay(ctx: ExtensionContext, provider: ProviderKey | null): Promise<void> {
+		lastSelectedUsageProvider = provider;
+
+		await ctx.ui.custom(
+			(_tui, theme, _keybindings, done) => {
+				const lines = generateRichReport(ctx, theme, provider);
+				return {
+					render(width: number) {
+						return lines.map((line) => truncateAnsi(line, width));
+					},
+					handleInput(data: string) {
+						if (data === "q" || data === "\x1b" || data === "\r" || data === " ") {
+							done(undefined);
+						}
+					},
+					// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
+					dispose() {},
+				};
+			},
+			{ overlay: true },
+		);
+	}
+
 	function recordUsageSample(sample: UsageSample, options: { persist?: boolean } = {}): void {
 		const now = Date.now();
 		const input = Math.max(0, toFiniteNumber(sample.input));
@@ -401,7 +660,6 @@ export default function usageTracker(pi: ExtensionAPI) {
 		}
 
 		turnHistory.push({ timestamp: now, tokens: input + output, cost });
-		// Keep last 60 min
 		const cutoff = now - 3_600_000;
 		while (turnHistory.length > 0 && turnHistory[0].timestamp < cutoff) {
 			turnHistory.shift();
@@ -471,39 +729,6 @@ export default function usageTracker(pi: ExtensionAPI) {
 			cacheRead: toFiniteNumber(usage.cacheRead),
 			cacheWrite: toFiniteNumber(usage.cacheWrite),
 			costTotal: directCost > 0 ? directCost : nestedCost,
-		};
-	}
-
-	function getTotals() {
-		let input = 0;
-		let output = 0;
-		let cacheRead = 0;
-		let cacheWrite = 0;
-		let cost = 0;
-		let turns = 0;
-		for (const m of models.values()) {
-			input += m.input;
-			output += m.output;
-			cacheRead += m.cacheRead;
-			cacheWrite += m.cacheWrite;
-			cost += m.costTotal;
-			turns += m.turns;
-		}
-		const totalTokens = input + output;
-		const avgTokensPerTurn = turns > 0 ? totalTokens / turns : 0;
-		const avgCostPerTurn = turns > 0 ? cost / turns : 0;
-		const rolling30dCost = getRolling30dCost();
-		return {
-			input,
-			output,
-			cacheRead,
-			cacheWrite,
-			cost,
-			turns,
-			totalTokens,
-			avgTokensPerTurn,
-			avgCostPerTurn,
-			rolling30dCost,
 		};
 	}
 
@@ -673,32 +898,16 @@ export default function usageTracker(pi: ExtensionAPI) {
 	}
 
 	/**
-	 * Determine which providers to probe based on the current model.
+	 * Determine which provider to probe based on the current model.
 	 * Probes in the background (fire-and-forget) to not block the agent.
 	 */
 	function triggerProbe(ctx: ExtensionContext, force = false): void {
-		const model = ctx.model;
-		if (!model) {
+		const provider = getActiveProvider(ctx);
+		if (!provider) {
 			return;
 		}
-		const id = model.id.toLowerCase();
-		const provider =
-			typeof (model as { provider?: unknown }).provider === "string"
-				? String((model as { provider?: unknown }).provider).toLowerCase()
-				: "";
-		// Detect provider from model ID / provider id
-		if (provider === "ollama" || provider === "ollama-cloud") {
-			probeProvider("ollama", force);
-		}
-		if (id.includes("claude") || id.includes("sonnet") || id.includes("opus") || id.includes("haiku")) {
-			probeProvider("anthropic", force);
-		}
-		if (id.includes("gpt") || id.includes("o1") || id.includes("o3") || id.includes("o4") || id.includes("codex")) {
-			probeProvider("openai", force);
-		}
-		if (id.includes("gemini") || id.includes("flash") || id.includes("pro-exp") || id.includes("antigravity")) {
-			probeProvider("google", force);
-		}
+
+		probeProvider(provider, force);
 	}
 
 	/**
@@ -715,17 +924,13 @@ export default function usageTracker(pi: ExtensionAPI) {
 				probeProvider(provider, force);
 			}
 		}
-		const activeProvider =
-			activeCtx?.model && typeof (activeCtx.model as { provider?: unknown }).provider === "string"
-				? String((activeCtx.model as { provider?: unknown }).provider).toLowerCase()
-				: "";
+		const activeProvider = getActiveProvider();
 		const shouldProbeOllama =
 			Boolean(
 				process.env.OLLAMA_API_KEY?.trim() || process.env.OLLAMA_HOST?.trim() || process.env.OLLAMA_HOST_CLOUD?.trim(),
 			) ||
 			activeProvider === "ollama" ||
-			activeProvider === "ollama-cloud" ||
-			[...models.values()].some((model) => model.provider === "ollama" || model.provider === "ollama-cloud");
+			[...models.values()].some((model) => normalizeProviderKey(model.provider) === "ollama");
 		if (shouldProbeOllama && !seen.has("ollama")) {
 			seen.add("ollama");
 			probeProvider("ollama", force);
@@ -792,9 +997,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	/** Render rate limit windows as plain text (for LLM tool). */
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: report composition intentionally handles multiple optional detail lines.
-	function renderRateLimitsPlain(): string {
+	function renderRateLimitsPlain(provider: ProviderKey | null = null): string {
 		const lines: string[] = [];
-		for (const [, rl] of rateLimits) {
+		for (const rl of getRateLimitEntries(provider)) {
 			if (!hasProviderDisplayData(rl)) {
 				continue;
 			}
@@ -847,10 +1052,13 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	/** Render rate limit windows with theme colors (for TUI). */
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: UI output path includes pace, metadata, and per-window fallbacks.
-	function renderRateLimitsRich(theme: { fg: (c: string, t: string) => string }): string[] {
+	function renderRateLimitsRich(
+		theme: { fg: (c: string, t: string) => string },
+		provider: ProviderKey | null = null,
+	): string[] {
 		const lines: string[] = [];
 
-		for (const [, rl] of rateLimits) {
+		for (const rl of getRateLimitEntries(provider)) {
 			if (!hasProviderDisplayData(rl)) {
 				continue;
 			}
@@ -912,14 +1120,16 @@ export default function usageTracker(pi: ExtensionAPI) {
 	}
 
 	/** Compact rate limit line for the widget. */
-	function renderRateLimitsWidget(theme: { fg: (c: string, t: string) => string }): string {
+	function renderRateLimitsWidget(
+		theme: { fg: (c: string, t: string) => string },
+		provider: ProviderKey | null,
+	): string {
 		const parts: string[] = [];
-		for (const [, rl] of rateLimits) {
+		for (const rl of getRateLimitEntries(provider)) {
 			if (rl.error || rl.windows.length === 0) {
 				continue;
 			}
 			const name = providerDisplayName(rl.provider);
-			// Show the most constrained window (lowest %)
 			const most = rl.windows.reduce((a, b) => (a.percentLeft < b.percentLeft ? a : b));
 			const color = pctColor(most.percentLeft);
 			const bar = theme.fg(color, progressBar(most.percentLeft, 8));
@@ -932,15 +1142,25 @@ export default function usageTracker(pi: ExtensionAPI) {
 	}
 
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Plain-text report combines many optional telemetry sections.
-	function generatePlainReport(ctx: ExtensionContext): string {
-		const totals = getTotals();
+	function generatePlainReport(ctx: ExtensionContext, provider: ProviderKey | null = null): string {
+		const totals = getTotals(provider);
 		const elapsed = Date.now() - sessionStart;
-		const pace = getPace();
+		const pace = provider ? null : getPace();
 		const ctxUsage = ctx.getContextUsage();
+		const scopedModels = getModelUsageEntries(provider).sort((a, b) => b.costTotal - a.costTotal);
 		const lines: string[] = [];
+		const currentProvider = getActiveProvider(ctx);
 
-		// Rate limits first — that's the main thing
-		const rlText = renderRateLimitsPlain();
+		if (provider) {
+			const selectedProvider = providerDisplayName(provider);
+			lines.push(`=== ${selectedProvider} Usage ===`);
+			lines.push(`Selected provider: ${selectedProvider}${provider === currentProvider ? " (current)" : ""}`);
+			lines.push(`Current provider: ${currentProvider ? providerDisplayName(currentProvider) : "unknown"}`);
+			lines.push(`Current model: ${getCurrentModelId(ctx)}`);
+			lines.push("");
+		}
+
+		const rlText = renderRateLimitsPlain(provider);
 		if (rlText.trim()) {
 			lines.push("=== Provider Rate Limits ===");
 			lines.push("");
@@ -951,14 +1171,16 @@ export default function usageTracker(pi: ExtensionAPI) {
 			lines.push("");
 		}
 
-		lines.push("=== Session Usage ===");
+		lines.push(`=== ${provider ? "Selected Provider Session" : "Session Usage"} ===`);
 		lines.push("");
 		lines.push(`Duration: ${fmtDuration(elapsed)} | Turns: ${totals.turns}`);
 		lines.push(
 			`Tokens: ${fmtTokens(totals.input)} in / ${fmtTokens(totals.output)} out (${fmtTokens(totals.totalTokens)} total)`,
 		);
 		lines.push(`Cost: ${fmtCost(totals.cost)}`);
-		lines.push(`30d total cost: ${fmtCost(totals.rolling30dCost)}`);
+		if (!provider) {
+			lines.push(`30d total cost: ${fmtCost(totals.rolling30dCost)}`);
+		}
 		if (totals.turns > 0) {
 			lines.push(
 				`Avg/turn: ${fmtTokens(Math.round(totals.avgTokensPerTurn))} tokens, ${fmtCost(totals.avgCostPerTurn)}`,
@@ -979,56 +1201,84 @@ export default function usageTracker(pi: ExtensionAPI) {
 			);
 		}
 
-		const externalSources = getExternalSources();
-		if (externalSources.length > 0) {
-			const externalTotalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
-			const externalTurns = externalSources.reduce((sum, source) => sum + source.turns, 0);
-			const externalTokens = externalSources.reduce((sum, source) => sum + source.input + source.output, 0);
-			lines.push(
-				`External inference: ${fmtCost(externalTotalCost)} across ${externalTurns} turns (${fmtTokens(externalTokens)} tokens)`,
-			);
-			for (const source of externalSources) {
+		if (!provider) {
+			const externalSources = getExternalSources();
+			if (externalSources.length > 0) {
+				const externalTotalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
+				const externalTurns = externalSources.reduce((sum, source) => sum + source.turns, 0);
+				const externalTokens = externalSources.reduce((sum, source) => sum + source.input + source.output, 0);
 				lines.push(
-					`  - ${source.source}: ${fmtCost(source.costTotal)}, ${source.turns} turns, ${fmtTokens(source.input)} in / ${fmtTokens(source.output)} out`,
+					`External inference: ${fmtCost(externalTotalCost)} across ${externalTurns} turns (${fmtTokens(externalTokens)} tokens)`,
 				);
+				for (const source of externalSources) {
+					lines.push(
+						`  - ${source.source}: ${fmtCost(source.costTotal)}, ${source.turns} turns, ${fmtTokens(source.input)} in / ${fmtTokens(source.output)} out`,
+					);
+				}
 			}
 		}
 
-		if (models.size > 0) {
+		if (scopedModels.length > 0) {
 			lines.push("");
 			lines.push("--- Per-Model ---");
-			const sorted = [...models.values()].sort((a, b) => b.costTotal - a.costTotal);
-			for (const m of sorted) {
-				const costShare = totals.cost > 0 ? (m.costTotal / totals.cost) * 100 : 0;
-				const modelTokens = m.input + m.output;
-				const avgTokens = m.turns > 0 ? modelTokens / m.turns : 0;
+			for (const model of scopedModels) {
+				const costShare = totals.cost > 0 ? (model.costTotal / totals.cost) * 100 : 0;
+				const modelTokens = model.input + model.output;
+				const avgTokens = model.turns > 0 ? modelTokens / model.turns : 0;
 				lines.push(
-					`  ${m.model} (${m.provider}): ${m.turns} turns, ${fmtTokens(m.input)} in / ${fmtTokens(m.output)} out, ${fmtCost(m.costTotal)} (${costShare.toFixed(0)}% of session), avg ${fmtTokens(Math.round(avgTokens))}/turn`,
+					`  ${model.model} (${model.provider}): ${model.turns} turns, ${fmtTokens(model.input)} in / ${fmtTokens(model.output)} out, ${fmtCost(model.costTotal)} (${costShare.toFixed(0)}% of session), avg ${fmtTokens(Math.round(avgTokens))}/turn`,
 				);
-				if (m.cacheRead > 0 || m.cacheWrite > 0) {
-					lines.push(`    cache: ${fmtTokens(m.cacheRead)} read / ${fmtTokens(m.cacheWrite)} write`);
+				if (model.cacheRead > 0 || model.cacheWrite > 0) {
+					lines.push(`    cache: ${fmtTokens(model.cacheRead)} read / ${fmtTokens(model.cacheWrite)} write`);
 				}
 			}
+		} else if (provider) {
+			lines.push("");
+			lines.push(`No session usage recorded yet for ${providerDisplayName(provider)}.`);
+		}
+
+		if (provider && rlText.trim().length === 0 && totals.turns === 0) {
+			lines.push("");
+			lines.push("No provider usage has been recorded yet. Run a turn first or use /usage-refresh.");
 		}
 
 		return lines.join("\n");
 	}
 
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: rich dashboard aggregates multiple optional sections and formatting branches.
-	function generateRichReport(ctx: ExtensionContext, theme: { fg: (c: string, t: string) => string }): string[] {
-		const totals = getTotals();
+	function generateRichReport(
+		ctx: ExtensionContext,
+		theme: { fg: (c: string, t: string) => string },
+		provider: ProviderKey | null = null,
+	): string[] {
+		const totals = getTotals(provider);
 		const elapsed = Date.now() - sessionStart;
-		const pace = getPace();
+		const pace = provider ? null : getPace();
 		const ctxUsage = ctx.getContextUsage();
+		const scopedModels = getModelUsageEntries(provider).sort((a, b) => b.costTotal - a.costTotal);
 		const lines: string[] = [];
 		const sep = theme.fg("dim", " │ ");
 		const divider = theme.fg("dim", "─".repeat(60));
+		const currentProvider = getActiveProvider(ctx);
+		const rlLines = renderRateLimitsRich(theme, provider);
 
 		lines.push(theme.fg("accent", "╭─ Usage Dashboard ──────────────────────────────────────╮"));
 		lines.push("");
 
-		// ── Rate limits (the main feature) ──
-		const rlLines = renderRateLimitsRich(theme);
+		if (provider) {
+			const selectedProvider = providerDisplayName(provider);
+			const selectionState =
+				provider === currentProvider ? theme.fg("success", "current") : theme.fg("dim", "selected");
+			lines.push(
+				`  ${theme.fg("accent", "Selected")}${sep}${theme.fg("accent", selectedProvider)}${sep}${selectionState}`,
+			);
+			lines.push(
+				`  ${theme.fg("accent", "Current ")}${sep}${theme.fg("dim", currentProvider ? providerDisplayName(currentProvider) : "unknown")}`,
+			);
+			lines.push(`  ${theme.fg("accent", "Model   ")}${sep}${theme.fg("dim", getCurrentModelId(ctx))}`);
+			lines.push("");
+		}
+
 		if (rlLines.length > 0) {
 			lines.push(...rlLines);
 		} else {
@@ -1037,15 +1287,15 @@ export default function usageTracker(pi: ExtensionAPI) {
 		}
 
 		lines.push(`  ${divider}`);
-
-		// ── Session summary ──
 		lines.push(
-			`  ${theme.fg("accent", "Session")}${sep}${fmtDuration(elapsed)}${sep}${totals.turns} turns${sep}${theme.fg("warning", fmtCost(totals.cost))}`,
+			`  ${theme.fg("accent", provider ? "Session*" : "Session")}${sep}${fmtDuration(elapsed)}${sep}${totals.turns} turns${sep}${theme.fg("warning", fmtCost(totals.cost))}`,
 		);
 
-		lines.push(
-			`  ${theme.fg("accent", "30d    ")}${sep}${theme.fg("warning", fmtCost(totals.rolling30dCost))} ${theme.fg("dim", "total cost")}`,
-		);
+		if (!provider) {
+			lines.push(
+				`  ${theme.fg("accent", "30d    ")}${sep}${theme.fg("warning", fmtCost(totals.rolling30dCost))} ${theme.fg("dim", "total cost")}`,
+			);
+		}
 
 		lines.push(
 			`  ${theme.fg("accent", "Tokens ")}${sep}${theme.fg("success", fmtTokens(totals.input))} in${sep}${theme.fg("warning", fmtTokens(totals.output))} out${sep}${theme.fg("dim", fmtTokens(totals.totalTokens))} total`,
@@ -1072,60 +1322,76 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 		if (ctxUsage?.percent != null) {
 			const pct = ctxUsage.percent;
-			const color = pctColor(100 - pct); // invert: low remaining = danger
+			const color = pctColor(100 - pct);
 			lines.push(
 				`  ${theme.fg("accent", "Context")}${sep}${theme.fg(color, progressBar(100 - pct, 20))} ${theme.fg(color, `${(100 - pct).toFixed(0)}% free`)} of ${fmtTokens(ctxUsage.contextWindow)}`,
 			);
 		}
 
-		const externalSources = getExternalSources();
-		if (externalSources.length > 0) {
-			const externalTotalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
-			const externalTurns = externalSources.reduce((sum, source) => sum + source.turns, 0);
-			const externalTokens = externalSources.reduce((sum, source) => sum + source.input + source.output, 0);
-			lines.push(
-				`  ${theme.fg("accent", "External")}${sep}${theme.fg("warning", fmtCost(externalTotalCost))}${sep}${externalTurns} turns${sep}${fmtTokens(externalTokens)} tokens`,
-			);
-			for (const source of externalSources.slice(0, 4)) {
+		if (!provider) {
+			const externalSources = getExternalSources();
+			if (externalSources.length > 0) {
+				const externalTotalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
+				const externalTurns = externalSources.reduce((sum, source) => sum + source.turns, 0);
+				const externalTokens = externalSources.reduce((sum, source) => sum + source.input + source.output, 0);
 				lines.push(
-					`    ${theme.fg("dim", source.source)}${sep}${theme.fg("warning", fmtCost(source.costTotal))}${sep}${source.turns} turns${sep}${fmtTokens(source.input)} in / ${fmtTokens(source.output)} out`,
+					`  ${theme.fg("accent", "External")}${sep}${theme.fg("warning", fmtCost(externalTotalCost))}${sep}${externalTurns} turns${sep}${fmtTokens(externalTokens)} tokens`,
 				);
-			}
-			if (externalSources.length > 4) {
-				lines.push(`    ${theme.fg("dim", `+${externalSources.length - 4} more sources`)}`);
+				for (const source of externalSources.slice(0, 4)) {
+					lines.push(
+						`    ${theme.fg("dim", source.source)}${sep}${theme.fg("warning", fmtCost(source.costTotal))}${sep}${source.turns} turns${sep}${fmtTokens(source.input)} in / ${fmtTokens(source.output)} out`,
+					);
+				}
+				if (externalSources.length > 4) {
+					lines.push(`    ${theme.fg("dim", `+${externalSources.length - 4} more sources`)}`);
+				}
 			}
 		}
 
-		// ── Per-model breakdown ──
-		if (models.size > 0) {
+		if (scopedModels.length > 0) {
 			lines.push("");
 			lines.push(`  ${divider}`);
 			lines.push(`  ${theme.fg("accent", "Per-Model Breakdown")}`);
 			lines.push("");
 
-			const sorted = [...models.values()].sort((a, b) => b.costTotal - a.costTotal);
-			const maxCost = sorted[0]?.costTotal ?? 1;
+			const maxCost = scopedModels[0]?.costTotal ?? 1;
 
-			for (const m of sorted) {
-				const costPct = maxCost > 0 ? (m.costTotal / maxCost) * 100 : 0;
-				const costShare = totals.cost > 0 ? (m.costTotal / totals.cost) * 100 : 0;
-				const modelTokens = m.input + m.output;
-				const avgTokens = m.turns > 0 ? modelTokens / m.turns : 0;
+			for (const model of scopedModels) {
+				const costPct = maxCost > 0 ? (model.costTotal / maxCost) * 100 : 0;
+				const costShare = totals.cost > 0 ? (model.costTotal / totals.cost) * 100 : 0;
+				const modelTokens = model.input + model.output;
+				const avgTokens = model.turns > 0 ? modelTokens / model.turns : 0;
 				const bar = progressBar(costPct, 12);
-				lines.push(`  ${theme.fg("accent", "◆")} ${theme.fg("accent", m.model)} ${theme.fg("dim", `(${m.provider})`)}`);
 				lines.push(
-					`    ${bar} ${theme.fg("warning", fmtCost(m.costTotal))}${sep}${m.turns} turns${sep}${fmtTokens(m.input)} in / ${fmtTokens(m.output)} out${sep}${theme.fg("dim", `${costShare.toFixed(0)}% of cost`)}`,
+					`  ${theme.fg("accent", "◆")} ${theme.fg("accent", model.model)} ${theme.fg("dim", `(${model.provider})`)}`,
+				);
+				lines.push(
+					`    ${bar} ${theme.fg("warning", fmtCost(model.costTotal))}${sep}${model.turns} turns${sep}${fmtTokens(model.input)} in / ${fmtTokens(model.output)} out${sep}${theme.fg("dim", `${costShare.toFixed(0)}% of cost`)}`,
 				);
 				lines.push(`    ${theme.fg("dim", `avg ${fmtTokens(Math.round(avgTokens))} tok/turn`)}`);
-				if (m.cacheRead > 0 || m.cacheWrite > 0) {
+				if (model.cacheRead > 0 || model.cacheWrite > 0) {
 					lines.push(
-						`    ${theme.fg("dim", `cache ${fmtTokens(m.cacheRead)} read / ${fmtTokens(m.cacheWrite)} write`)}`,
+						`    ${theme.fg("dim", `cache ${fmtTokens(model.cacheRead)} read / ${fmtTokens(model.cacheWrite)} write`)}`,
 					);
 				}
 			}
+		} else if (provider) {
+			lines.push("");
+			lines.push(`  ${theme.fg("dim", `No session usage recorded yet for ${providerDisplayName(provider)}.`)}`);
+		}
+
+		if (provider && rlLines.length === 0 && totals.turns === 0) {
+			lines.push("");
+			lines.push(
+				`  ${theme.fg("dim", "No provider usage has been recorded yet. Run a turn first or use /usage-refresh.")}`,
+			);
 		}
 
 		lines.push("");
+		if (provider) {
+			lines.push(theme.fg("dim", "  * Session metrics are scoped to the selected provider."));
+			lines.push("");
+		}
 		lines.push(theme.fg("accent", "╰────────────────────────────────────────────────────────╯"));
 		lines.push(theme.fg("dim", "  Press q/Esc/Space to close"));
 
@@ -1134,36 +1400,28 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	// ─── Widget rendering ─────────────────────────────────────────────────
 
-	function renderWidget(_ctx: ExtensionContext, theme: { fg: (c: string, t: string) => string }): string[] {
+	function renderWidget(ctx: ExtensionContext, theme: { fg: (c: string, t: string) => string }): string[] {
 		if (!widgetVisible || getSafeModeState().enabled) {
 			return [];
 		}
 
-		const totals = getTotals();
+		const activeProvider = getActiveProvider(ctx);
+		const totals = getTotals(activeProvider);
 		const sep = theme.fg("dim", " │ ");
 		const parts: string[] = [];
 
-		// Rate limits — the primary info
-		const rlWidget = renderRateLimitsWidget(theme);
+		const rlWidget = renderRateLimitsWidget(theme, activeProvider);
 		if (rlWidget) {
 			parts.push(rlWidget);
 		}
 
-		// Session + rolling 30d cost (only if we have data)
-		if (totals.turns > 0) {
-			parts.push(theme.fg("warning", `$${fmtCost(totals.cost)}`));
-			parts.push(theme.fg("dim", `30d: ${fmtCost(totals.rolling30dCost)}`));
+		if (activeProvider && totals.turns > 0) {
+			parts.push(theme.fg("warning", fmtCost(totals.cost)));
 			parts.push(`${theme.fg("success", fmtTokens(totals.input))}/${theme.fg("warning", fmtTokens(totals.output))}`);
 		}
 
-		const externalSources = getExternalSources();
-		if (externalSources.length > 0) {
-			const externalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
-			parts.push(theme.fg("warning", `$${fmtCost(externalCost)}`));
-		}
-
 		if (parts.length === 0) {
-			return []; // Nothing to show yet
+			return [];
 		}
 
 		return [parts.join(sep)];
@@ -1217,31 +1475,18 @@ export default function usageTracker(pi: ExtensionAPI) {
 	// ─── /usage command ───────────────────────────────────────────────────
 
 	pi.registerCommand("usage", {
-		description: "Show rate limits, token usage, and cost breakdown",
-		async handler(_args, ctx) {
-			// Force a fresh probe of all configured providers before showing
+		description: "Pick a provider and show its usage dashboard",
+		async handler(args, ctx) {
 			triggerProbeAll(true);
-			// Small delay to let probe complete
 			await new Promise((resolve) => setTimeout(resolve, 500));
 
-			await ctx.ui.custom(
-				(_tui, theme, _keybindings, done) => {
-					const lines = generateRichReport(ctx, theme);
-					return {
-						render(width: number) {
-							return lines.map((line) => truncateAnsi(line, width));
-						},
-						handleInput(data: string) {
-							if (data === "q" || data === "\x1b" || data === "\r" || data === " ") {
-								done(undefined);
-							}
-						},
-						// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
-						dispose() {},
-					};
-				},
-				{ overlay: true },
-			);
+			const provider = await selectUsageProvider(ctx, args);
+			if (!provider) {
+				ctx.ui.notify("No provider usage has been recorded yet. Run a turn first or use /usage-refresh.", "info");
+				return;
+			}
+
+			await openUsageOverlay(ctx, provider);
 		},
 	});
 
@@ -1329,29 +1574,18 @@ export default function usageTracker(pi: ExtensionAPI) {
 	// ─── Keyboard shortcut ────────────────────────────────────────────────
 
 	pi.registerShortcut("ctrl+u", {
-		description: "Show usage dashboard (rate limits + costs)",
+		description: "Show usage dashboard with current-provider rate limits and costs",
 		async handler(ctx) {
 			triggerProbeAll(true);
 			await new Promise((resolve) => setTimeout(resolve, 500));
 
-			await ctx.ui.custom(
-				(_tui, theme, _keybindings, done) => {
-					const lines = generateRichReport(ctx, theme);
-					return {
-						render(width: number) {
-							return lines.map((line) => truncateAnsi(line, width));
-						},
-						handleInput(data: string) {
-							if (data === "q" || data === "\x1b" || data === "\r" || data === " ") {
-								done(undefined);
-							}
-						},
-						// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
-						dispose() {},
-					};
-				},
-				{ overlay: true },
-			);
+			const provider = getActiveProvider(ctx);
+			if (!provider) {
+				ctx.ui.notify("No active provider selected yet.", "info");
+				return;
+			}
+
+			await openUsageOverlay(ctx, provider);
 		},
 	});
 }

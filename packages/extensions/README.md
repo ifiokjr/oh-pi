@@ -153,9 +153,9 @@ recent subscription windows when a live provider probe is temporarily rate-limit
 
 Key usage-tracker surfaces:
 
-- widget above the editor for at-a-glance quotas and session totals
-- `/usage` for the full dashboard overlay
-- `Ctrl+U` as a shortcut for the same overlay
+- widget above the editor for at-a-glance quotas and current-provider session totals
+- `/usage` to search/select a provider, then open that provider's dashboard
+- `Ctrl+U` as a shortcut for the current provider's dashboard
 - `/usage-toggle` to show or hide the widget
 - `/usage-refresh` to force fresh provider probes
 - `usage_report` so the agent can answer quota and spend questions directly
