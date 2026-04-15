@@ -1,4 +1,4 @@
-import type { AuthCredential, ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import {
 	createApiKeyOAuthProvider,
 	loginProvider,
@@ -14,31 +14,26 @@ import {
 } from "./catalog.js";
 import { getEnvApiKey, resolveApiKeyConfig, SUPPORTED_PROVIDERS, type SupportedProviderDefinition } from "./config.js";
 
-type ProviderUi = {
-	notify: (message: string, level: "info" | "warning" | "error" | "success") => void;
-	select?: (title: string, options: string[]) => Promise<string | null>;
-	input?: (title: string, placeholder?: string) => Promise<string | null>;
+type ProviderAuthReader = Pick<ExtensionContext["modelRegistry"]["authStorage"], "get">;
+type ProviderAuthWriter = Pick<ExtensionContext["modelRegistry"]["authStorage"], "get" | "set">;
+
+type ProviderModelRegistry = {
+	authStorage: ProviderAuthWriter;
+	refresh?: ExtensionContext["modelRegistry"]["refresh"];
 };
 
 type ProviderRegistryContext = {
-	modelRegistry: {
-		authStorage: {
-			get: (provider: string) => AuthCredential | undefined;
-			set: (provider: string, credential: AuthCredential) => void;
-		};
-		refresh?: () => void;
-	};
+	modelRegistry: ProviderModelRegistry;
 };
 
-type ProviderCommandContext = ProviderRegistryContext & {
-	ui: ProviderUi;
+type ProviderCommandContext = {
+	modelRegistry: ProviderModelRegistry;
+	ui: Pick<ExtensionCommandContext["ui"], "notify" | "select" | "input">;
 };
 
 type ProviderStatusContext = {
 	modelRegistry: {
-		authStorage: {
-			get: (provider: string) => unknown;
-		};
+		authStorage: ProviderAuthReader;
 	};
 };
 
@@ -142,6 +137,7 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 	});
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Refresh handling branches clearly by stored credential vs env configuration paths.
 async function refreshProviders(
 	pi: ExtensionAPI,
 	ctx: ProviderRegistryContext,
@@ -165,13 +161,13 @@ async function refreshProviders(
 		const credential = getStoredCredential(ctx, provider.id);
 		if (credential) {
 			try {
-				const refreshed =
-					credential.expires <= Date.now()
-						? await refreshProviderCredential(provider, credential)
-						: await refreshProviderCredentialModels(provider, credential);
+				const isExpired = typeof credential.expires === "number" && credential.expires <= Date.now();
+				const refreshed = isExpired
+					? await refreshProviderCredential(provider, credential)
+					: await refreshProviderCredentialModels(provider, credential);
 				ctx.modelRegistry.authStorage.set(provider.id, { type: "oauth", ...refreshed });
 				runtimeState.models.set(provider.id, getCredentialModels(refreshed));
-				runtimeState.lastRefresh.set(provider.id, refreshed.lastModelRefresh);
+				runtimeState.lastRefresh.set(provider.id, refreshed.lastModelRefresh ?? Date.now());
 				runtimeState.lastError.set(provider.id, null);
 				registerProvider(pi, provider);
 				results.push({ provider, status: "refreshed", models: getCredentialModels(refreshed).length });
@@ -382,7 +378,8 @@ async function selectProviderPage(
 	if (providers.length === 0) {
 		return null;
 	}
-	if (providers.length === 1 || typeof ctx.ui.select !== "function") {
+	const select = ctx.ui.select;
+	if (providers.length === 1 || typeof select !== "function") {
 		return providers[0] ?? null;
 	}
 
@@ -411,7 +408,7 @@ async function selectProviderPage(
 			options.push(PROVIDER_PICKER_SEARCH);
 		}
 
-		const selection = await ctx.ui.select(
+		const selection = await select(
 			[
 				`Select provider to log in (${visibleProviders.length} total)`,
 				`Page ${page + 1}/${pageCount} · max ${PROVIDER_SELECTION_PAGE_SIZE} providers per page`,
@@ -431,7 +428,7 @@ async function selectProviderPage(
 			continue;
 		}
 		if (selection === PROVIDER_PICKER_SEARCH) {
-			const search = (await ctx.ui.input("Provider search", "Type a provider id or name"))?.trim() ?? "";
+			const search = (await promptProviderInput(ctx, "Provider search", "Type a provider id or name")).trim();
 			const nextProviders = search ? findProviders(search) : [...providers];
 			if (nextProviders.length === 0) {
 				ctx.ui.notify(`No provider matched "${search}".`, "warning");
@@ -470,24 +467,32 @@ async function loginProviderFromCommand(
 				}
 			},
 			async onPrompt(params) {
-				return (await ctx.ui.input(`Log in to ${provider.name}`, `${params.message}\n${provider.authUrl}`)) ?? "";
+				return await promptProviderInput(ctx, `Log in to ${provider.name}`, `${params.message}\n${provider.authUrl}`);
 			},
 		});
 		ctx.modelRegistry.authStorage.set(provider.id, { type: "oauth", ...credential });
 		runtimeState.models.set(provider.id, getCredentialModels(credential));
-		runtimeState.lastRefresh.set(provider.id, credential.lastModelRefresh);
+		runtimeState.lastRefresh.set(provider.id, credential.lastModelRefresh ?? Date.now());
 		runtimeState.lastError.set(provider.id, null);
 		registerProvider(pi, provider);
 		ctx.modelRegistry.refresh?.();
 		ctx.ui.notify(
 			`Logged in to ${provider.name}. ${getCredentialModels(credential).length} model${getCredentialModels(credential).length === 1 ? "" : "s"} available.`,
-			"success",
+			"info",
 		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		runtimeState.lastError.set(provider.id, message);
 		ctx.ui.notify(`Failed to log in to ${provider.name}: ${message}`, "error");
 	}
+}
+
+function promptProviderInput(ctx: ProviderCommandContext, title: string, placeholder?: string): Promise<string> {
+	const input = ctx.ui.input;
+	if (typeof input !== "function") {
+		throw new Error("Interactive input is unavailable for provider login.");
+	}
+	return input(title, placeholder).then((value) => value ?? "");
 }
 
 function toProviderModels(models: readonly ProviderCatalogModel[]): ProviderCatalogModel[] {
