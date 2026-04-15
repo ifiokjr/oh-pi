@@ -20,6 +20,14 @@ function manifestPaths(rootDir) {
 	return [rootManifest, ...packageManifests];
 }
 
+function workspacePackageNames(rootDir) {
+	return new Set(
+		manifestPaths(rootDir)
+			.map((manifestPath) => readJson(manifestPath).name)
+			.filter((name) => typeof name === "string" && name.length > 0),
+	);
+}
+
 function normalizeRelPath(rootDir, path) {
 	return path.startsWith(`${rootDir}/`) ? path.slice(rootDir.length + 1) : path;
 }
@@ -33,6 +41,7 @@ if (!existsSync(allowlistPath)) {
 
 const allowlist = readJson(allowlistPath);
 const allowedPackages = new Set(allowlist.packages ?? []);
+const workspacePackages = workspacePackageNames(rootDir);
 const unknownDeps = [];
 const suspiciousSpecs = [];
 let checked = 0;
@@ -47,7 +56,7 @@ for (const manifestPath of manifestPaths(rootDir)) {
 			if (typeof spec !== "string") {
 				continue;
 			}
-			if (LOCAL_PROTOCOLS.some((prefix) => spec.startsWith(prefix))) {
+			if (LOCAL_PROTOCOLS.some((prefix) => spec.startsWith(prefix)) || workspacePackages.has(name)) {
 				continue;
 			}
 

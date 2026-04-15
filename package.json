@@ -1,6 +1,34 @@
 {
 	"private": true,
 	"packageManager": "pnpm@10.33.0",
+	"workspaces": ["packages/*"],
+	"pi": {
+		"extensions": [
+			"./packages/extensions/extensions/adaptive-routing.ts",
+			"./packages/extensions/extensions/auto-session-name.ts",
+			"./packages/extensions/extensions/auto-update.ts",
+			"./packages/extensions/extensions/bg-process.ts",
+			"./packages/extensions/extensions/btw.ts",
+			"./packages/extensions/extensions/compact-header.ts",
+			"./packages/extensions/extensions/custom-footer.ts",
+			"./packages/extensions/extensions/git-guard.ts",
+			"./packages/extensions/extensions/safe-guard.ts",
+			"./packages/extensions/extensions/scheduler.ts",
+			"./packages/extensions/extensions/usage-tracker.ts",
+			"./packages/extensions/extensions/watchdog.ts",
+			"./packages/ant-colony/extensions/ant-colony/index.ts",
+			"./packages/subagents/index.ts",
+			"./packages/subagents/notify.ts",
+			"./packages/plan/index.ts",
+			"./packages/spec/extension/index.ts",
+			"./packages/web-remote/index.ts",
+			"./packages/cursor/index.ts",
+			"./packages/ollama/index.ts"
+		],
+		"prompts": ["./packages/prompts/prompts"],
+		"skills": ["./packages/skills/skills"],
+		"themes": ["./packages/themes/themes"]
+	},
 	"scripts": {
 		"build": "pnpm -r run build",
 		"build:fast": "pnpm -r run build:fast",

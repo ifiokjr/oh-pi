@@ -24,7 +24,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@ifi/pi-web-server": "workspace:*"
+    "@ifi/pi-web-server": "0.4.4"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": ">=0.56.1",

@@ -52,6 +52,23 @@ describe("extensions runtime smoke tests", () => {
 		expect(harness.notifications.length).toBeGreaterThanOrEqual(0);
 	});
 
+	it("blocks interactive git bash commands before they can hang", async () => {
+		const harness = createExtensionHarness();
+		const gitGuardExtension = (await import("./git-guard.js")).default;
+		gitGuardExtension(harness.pi as never);
+		const results = await harness.emitAsync(
+			"tool_call",
+			{ toolName: "bash", input: { command: "git rebase --continue" } },
+			harness.ctx,
+		);
+		expect(results[0]).toEqual(
+			expect.objectContaining({
+				block: true,
+				reason: expect.stringContaining("Interactive git command blocked"),
+			}),
+		);
+	});
+
 	it("registers adaptive routing commands without crashing", () => {
 		const harness = createExtensionHarness();
 		adaptiveRoutingExtension(harness.pi as never);

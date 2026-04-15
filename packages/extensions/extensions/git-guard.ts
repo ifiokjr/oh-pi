@@ -1,14 +1,114 @@
 /**
  * oh-pi Git Checkpoint Extension
  *
- * Provides three safety features for git-managed repositories:
- * 1. **Dirty repo warning** — notifies at session start if there are uncommitted changes
- * 2. **Turn checkpoints** — creates a git stash snapshot before each agent turn
- * 3. **Terminal notification** — sends a desktop/terminal notification when the agent finishes
+ * Provides four git-safety features for git-managed repositories:
+ * 1. **Interactive git guard** — blocks git bash commands that are likely to open an editor and hang
+ * 2. **Dirty repo warning** — notifies at session start if there are uncommitted changes
+ * 3. **Turn checkpoints** — creates a git stash snapshot before each agent turn
+ * 4. **Terminal notification** — sends a desktop/terminal notification when the agent finishes
  *
  * Supports Kitty (OSC 99) and generic terminal (OSC 777) notification protocols.
  */
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+
+export const INTERACTIVE_GIT_WARNING_PREFIX = "Interactive git command blocked";
+
+interface InteractiveGitDetection {
+	reason: string;
+	suggestion: string;
+}
+
+function hasNonInteractiveEditorOverride(command: string): boolean {
+	return /(\bGIT_EDITOR=\S+|\bGIT_SEQUENCE_EDITOR=\S+|-c\s+core\.editor=\S+|-c\s+sequence\.editor=\S+)/.test(command);
+}
+
+function hasExplicitCommitMessage(command: string): boolean {
+	return /(^|\s)(-m|--message|-F|--file|-C|--reuse-message)(=|\s+)/.test(command);
+}
+
+function hasExplicitMergeMessage(command: string): boolean {
+	return /(^|\s)(--no-edit|-m|-F|--file)\s+/.test(command) || /(^|\s)--no-edit(\s|$)/.test(command);
+}
+
+function hasExplicitTagMessage(command: string): boolean {
+	return /(^|\s)(-m|--message|-F|--file)\s+/.test(command);
+}
+
+function splitShellSegments(command: string): string[] {
+	return command
+		.split(/&&|\|\||[;|\n]/)
+		.map((segment) => segment.trim())
+		.filter(Boolean);
+}
+
+function stripLeadingEnvAssignments(segment: string): string {
+	let stripped = segment.trim().replace(/^\(+\s*/, "");
+	while (true) {
+		const next = stripped.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S+)\s+)*/, "");
+		if (next === stripped) {
+			return stripped;
+		}
+		stripped = next.trimStart();
+	}
+}
+
+export function detectInteractiveGitCommand(command: string): InteractiveGitDetection | null {
+	for (const segment of splitShellSegments(command)) {
+		const gitCommand = stripLeadingEnvAssignments(segment);
+		if (!/^git\b/.test(gitCommand)) {
+			continue;
+		}
+
+		if (
+			/^git\s+rebase(\s|$)/.test(gitCommand) &&
+			/(^|\s)--continue(\s|$)/.test(gitCommand) &&
+			!hasNonInteractiveEditorOverride(segment)
+		) {
+			return {
+				reason: "`git rebase --continue` can open an editor in agent environments.",
+				suggestion:
+					"Use `GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true git -c core.editor=true -c sequence.editor=true rebase --continue`.",
+			};
+		}
+
+		if (
+			/^git\s+commit(\s|$)/.test(gitCommand) &&
+			!hasExplicitCommitMessage(gitCommand) &&
+			!/(^|\s)--no-edit(\s|$)/.test(gitCommand) &&
+			!hasNonInteractiveEditorOverride(segment)
+		) {
+			return {
+				reason: "`git commit` without `-m`/`-F` can open an editor in agent environments.",
+				suggestion: 'Use `git commit -m "type(scope): description"`.',
+			};
+		}
+
+		if (
+			/^git\s+merge(\s|$)/.test(gitCommand) &&
+			!hasExplicitMergeMessage(gitCommand) &&
+			!hasNonInteractiveEditorOverride(segment)
+		) {
+			return {
+				reason: "`git merge` without `--no-edit` or an explicit message can open an editor in agent environments.",
+				suggestion: "Use `git merge --no-edit <branch>` or provide `-m` explicitly.",
+			};
+		}
+
+		if (
+			/^git\s+tag(\s|$)/.test(gitCommand) &&
+			/(^|\s)(-a|--annotate|-s|--sign)(\s|$)/.test(gitCommand) &&
+			!hasExplicitTagMessage(gitCommand) &&
+			!hasNonInteractiveEditorOverride(segment)
+		) {
+			return {
+				reason: "Annotated or signed `git tag` can open an editor in agent environments.",
+				suggestion: 'Use `git tag -a vX.Y.Z -m "message"`.',
+			};
+		}
+	}
+
+	return null;
+}
 
 /**
  * Send a terminal notification using the appropriate escape sequence.
@@ -30,6 +130,21 @@ function terminalNotify(title: string, body: string): void {
 export default function (pi: ExtensionAPI) {
 	/** Counts the number of agent turns for the checkpoint label. */
 	let turnCount = 0;
+
+	pi.on("tool_call", async (event) => {
+		if (event.toolName !== "bash") {
+			return;
+		}
+		const command = (event.input as { command?: string }).command ?? "";
+		const detected = detectInteractiveGitCommand(command);
+		if (!detected) {
+			return;
+		}
+		return {
+			block: true,
+			reason: `${INTERACTIVE_GIT_WARNING_PREFIX}: ${detected.reason} ${detected.suggestion}`,
+		};
+	});
 
 	// Warn on dirty repo at session start
 	pi.on("session_start", async (_event, ctx) => {

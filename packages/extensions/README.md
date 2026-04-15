@@ -35,6 +35,8 @@ npx @ifi/oh-pi
 These extensions add commands, tools, UI widgets, safety checks, background process handling,
 usage monitoring, adaptive model routing, scheduling features, and runtime performance protection (`/watchdog`, `/safe-mode`) to pi.
 
+`git-guard` also blocks git bash invocations that are likely to open an interactive editor in agent environments (for example `git rebase --continue` without non-interactive editor overrides), preventing hangs before they happen.
+
 ## Adaptive routing
 
 Adaptive routing adds a user-friendly `/route` command set and an opt-in model-agnostic mode that can:

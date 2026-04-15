@@ -39,8 +39,8 @@
     "url": "https://github.com/ifiokjr/oh-pi/issues"
   },
   "dependencies": {
-    "@ifi/pi-extension-subagents": "workspace:*",
-    "@ifi/pi-shared-qna": "workspace:*"
+    "@ifi/pi-extension-subagents": "0.4.4",
+    "@ifi/pi-shared-qna": "0.4.4"
   },
   "peerDependencies": {
     "@mariozechner/pi-agent-core": ">=0.56.1",
