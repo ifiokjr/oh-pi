@@ -78,6 +78,10 @@ import {
 
 // ─── Extension entry point ──────────────────────────────────────────────────
 
+const KEYBINDINGS_SYNC_DELAY_MS = 250;
+const STARTUP_REFRESH_DELAY_MS = 250;
+const STARTUP_DEFER_ENTRY_THRESHOLD = 250;
+
 /**
  * Ensure `ctrl+u` is unbound from the built-in `deleteToLineStart` action
  * so the usage-tracker shortcut takes priority without a conflict warning.
@@ -143,8 +147,23 @@ function getRateLimitCachePath(): string {
 }
 
 export default function usageTracker(pi: ExtensionAPI) {
-	// Unbind ctrl+u from deleteToLineStart so our shortcut wins cleanly
-	ensureCtrlUUnbound();
+	let keybindingsSyncScheduled = false;
+	let startupRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+	const scheduleCtrlUUnbound = () => {
+		if (keybindingsSyncScheduled) {
+			return;
+		}
+
+		keybindingsSyncScheduled = true;
+		setTimeout(() => {
+			keybindingsSyncScheduled = false;
+			ensureCtrlUUnbound();
+		}, KEYBINDINGS_SYNC_DELAY_MS);
+	};
+
+	// Unbind ctrl+u from deleteToLineStart without doing sync fs work on extension load.
+	scheduleCtrlUUnbound();
 
 	/** Per-model accumulated usage. Key = model ID. */
 	const models = new Map<string, ModelUsage>();
@@ -776,13 +795,41 @@ export default function usageTracker(pi: ExtensionAPI) {
 		sessionStart = Date.now();
 	}
 
-	function hydrateFromSession(ctx: ExtensionContext): void {
+	function hydrateFromSessionEntries(entries: ReturnType<ExtensionContext["sessionManager"]["getBranch"]>): void {
 		reset();
-		for (const entry of ctx.sessionManager.getBranch()) {
+		for (const entry of entries) {
 			if (entry.type === "message" && entry.message.role === "assistant") {
 				recordUsage(entry.message as AssistantMessage, { persist: false });
 			}
 		}
+	}
+
+	function clearStartupRefreshTimer(): void {
+		if (!startupRefreshTimer) {
+			return;
+		}
+		clearTimeout(startupRefreshTimer);
+		startupRefreshTimer = null;
+	}
+
+	function refreshStartupState(ctx: ExtensionContext): void {
+		clearStartupRefreshTimer();
+		const entries = ctx.sessionManager.getBranch();
+		const refresh = () => {
+			hydrateFromSessionEntries(entries);
+			triggerProbe(ctx);
+			broadcastUsageData();
+		};
+
+		if (entries.length < STARTUP_DEFER_ENTRY_THRESHOLD) {
+			refresh();
+			return;
+		}
+
+		startupRefreshTimer = setTimeout(() => {
+			startupRefreshTimer = null;
+			refresh();
+		}, STARTUP_REFRESH_DELAY_MS);
 	}
 
 	// ─── Rate limit probing ───────────────────────────────────────────────
@@ -1431,8 +1478,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	pi.on("session_start", (_event, ctx) => {
 		activeCtx = ctx;
-		hydrateFromSession(ctx);
-		triggerProbe(ctx);
+		refreshStartupState(ctx);
 
 		ctx.ui.setWidget("usage-tracker", (tui, theme) => {
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
@@ -1453,8 +1499,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	pi.on("session_switch", (_event, ctx) => {
 		activeCtx = ctx;
-		hydrateFromSession(ctx);
-		triggerProbe(ctx);
+		refreshStartupState(ctx);
 	});
 
 	pi.on("turn_end", (event, ctx) => {
@@ -1470,6 +1515,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 	pi.on("model_select", (_event, ctx) => {
 		activeCtx = ctx;
 		triggerProbe(ctx); // Probe the new provider
+	});
+
+	pi.on("session_shutdown", () => {
+		clearStartupRefreshTimer();
 	});
 
 	// ─── /usage command ───────────────────────────────────────────────────
