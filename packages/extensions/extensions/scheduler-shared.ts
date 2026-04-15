@@ -45,6 +45,8 @@ export interface ScheduleTask {
 	maxAttempts?: number;
 	awaitingCompletion?: boolean;
 	lastOutcomeSnippet?: string;
+	creatorInstanceId?: string;
+	creatorSessionId?: string | null;
 }
 
 export interface SchedulerLease {

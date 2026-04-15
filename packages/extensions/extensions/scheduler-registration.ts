@@ -23,6 +23,7 @@ const SchedulePromptToolParams = Type.Object({
 			Type.Literal("adopt"),
 			Type.Literal("release"),
 			Type.Literal("clear_foreign"),
+			Type.Literal("clear_other"),
 		],
 		{ description: "Action to perform" },
 	),
@@ -158,7 +159,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 
 	pi.registerCommand("schedule", {
 		description:
-			"Manage scheduled reminders and future check-ins. No args opens TUI manager. Also: list | enable <id> | disable <id> | delete <id> | clear | adopt <id|all> | release <id|all> | clear-foreign",
+			"Manage scheduled reminders and future check-ins. No args opens TUI manager. Also: list | enable <id> | disable <id> | delete <id> | clear | clear-other | adopt <id|all> | release <id|all> | clear-foreign",
 		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Command router with multiple subcommands.
 		handler: async (args, ctx) => {
 			const trimmed = args.trim();
@@ -214,6 +215,15 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				return;
 			}
 
+			if (action === "clear-other") {
+				const result = runtime.clearTasksNotCreatedHere();
+				ctx.ui.notify(
+					`Cleared ${result.count} scheduled task${result.count === 1 ? "" : "s"} not created in this instance.`,
+					"info",
+				);
+				return;
+			}
+
 			if (action === "adopt") {
 				const target = rawArg?.trim() || "all";
 				const result = runtime.adoptTasks(target);
@@ -261,7 +271,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			}
 
 			ctx.ui.notify(
-				"Usage: /schedule [tui|list|enable <id>|disable <id>|delete <id>|clear|adopt <id|all>|release <id|all>|clear-foreign]",
+				"Usage: /schedule [tui|list|enable <id>|disable <id>|delete <id>|clear|clear-other|adopt <id|all>|release <id|all>|clear-foreign]",
 				"warning",
 			);
 		},
@@ -290,9 +300,9 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 		name: "schedule_prompt",
 		label: "Schedule Prompt",
 		description:
-			"Create/list/enable/disable/delete/adopt/release/clear scheduled prompts. Use this when the user asks for reminders, to check back later, or to follow up on PRs, CI, builds, deployments, or any recurring check. add requires prompt; once tasks require duration; recurring supports interval (duration) or cron expression (cron).",
+			"Create/list/enable/disable/delete/adopt/release/clear scheduled prompts. Supports clear_other for tasks not created in this instance and clear_foreign for tasks owned by another instance. Use this when the user asks for reminders, to check back later, or to follow up on PRs, CI, builds, deployments, or any recurring check. add requires prompt; once tasks require duration; recurring supports interval (duration) or cron expression (cron).",
 		promptSnippet:
-			"Create/list/enable/disable/delete/adopt/release/clear scheduled prompts for one-time reminders, future follow-ups, and recurring PR/CI/build/deployment checks. Supports intervals/cron and one-time reminders while this pi instance remains active unless scope='workspace' is used.",
+			"Create/list/enable/disable/delete/adopt/release/clear scheduled prompts for one-time reminders, future follow-ups, and recurring PR/CI/build/deployment checks. Supports clear_other for tasks not created in this instance, clear_foreign for tasks owned by another instance, intervals/cron, and one-time reminders while this pi instance remains active unless scope='workspace' is used.",
 		promptGuidelines: [
 			"Use this tool when the user asks to remind/check back later, revisit something in the future, or monitor PRs, CI, builds, deploys, or background work.",
 			"For recurring tasks use kind='recurring' with duration like 5m or 2h, or provide cron.",
@@ -341,6 +351,9 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			if (action === "clear_foreign") {
 				return handleToolClearForeign(runtime);
 			}
+			if (action === "clear_other") {
+				return handleToolClearOther(runtime);
+			}
 			if (action === "add") {
 				return handleToolAdd(params, runtime);
 			}
@@ -365,16 +378,17 @@ function handleToolList(runtime: SchedulerRuntime): ToolResult {
 				? "-"
 				: (task.cronExpression ?? formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL));
 		const schedule = task.continueUntilComplete ? `${scheduleBase} (until-complete)` : scheduleBase;
+		const creator = task.creatorInstanceId ?? "legacy";
 		const state = task.resumeRequired ? `due:${task.resumeReason ?? "unknown"}` : task.enabled ? "on" : "off";
 		const status = task.resumeRequired ? "resume_required" : (task.lastStatus ?? "pending");
 		const last = task.lastRunAt ? runtime.formatRelativeTime(task.lastRunAt) : "never";
-		return `${task.id}\t${state}\t${task.kind}\t${task.scope ?? "instance"}\t${schedule}\t${runtime.formatRelativeTime(task.nextRunAt)}\t${task.runCount}\t${last}\t${status}\t${task.prompt}`;
+		return `${task.id}\t${creator}\t${state}\t${task.kind}\t${task.scope ?? "instance"}\t${schedule}\t${runtime.formatRelativeTime(task.nextRunAt)}\t${task.runCount}\t${last}\t${status}\t${task.prompt}`;
 	});
 	return {
 		content: [
 			{
 				type: "text",
-				text: `Scheduled tasks (id\tstate\tkind\tscope\tschedule\tnext\truns\tlast\tstatus\tprompt):\n${lines.join("\n")}`,
+				text: `Scheduled tasks (id\tcreator\tstate\tkind\tscope\tschedule\tnext\truns\tlast\tstatus\tprompt):\n${lines.join("\n")}`,
 			},
 		],
 		details: { action: "list", tasks: list },
@@ -470,6 +484,24 @@ function handleToolClearForeign(runtime: SchedulerRuntime): ToolResult {
 			{ type: "text", text: `Cleared ${result.count} foreign scheduled task${result.count === 1 ? "" : "s"}.` },
 		],
 		details: { action: "clear_foreign", cleared: result.count },
+	};
+}
+
+function handleToolClearOther(runtime: SchedulerRuntime): ToolResult {
+	const result = runtime.clearTasksNotCreatedHere();
+	return {
+		content: [
+			{
+				type: "text",
+				text: `Cleared ${result.count} scheduled task${result.count === 1 ? "" : "s"} not created in this instance.`,
+			},
+		],
+		details: {
+			action: "clear_other",
+			cleared: result.count,
+			otherCount: result.otherCount ?? 0,
+			legacyCount: result.legacyCount ?? 0,
+		},
 	};
 }
 

@@ -109,6 +109,8 @@ type SchedulerDispatchMode = "auto" | "observer";
 
 type TaskMutationResult = {
 	count: number;
+	otherCount?: number;
+	legacyCount?: number;
 	error?: string;
 };
 
@@ -255,6 +257,35 @@ export class SchedulerRuntime {
 		return count;
 	}
 
+	clearTasksNotCreatedHere(): TaskMutationResult {
+		let count = 0;
+		let otherCount = 0;
+		let legacyCount = 0;
+
+		for (const task of Array.from(this.tasks.values())) {
+			const origin = this.getTaskCreatorOrigin(task);
+			if (origin === "current") {
+				continue;
+			}
+
+			this.tasks.delete(task.id);
+			count += 1;
+
+			if (origin === "other") {
+				otherCount += 1;
+			} else {
+				legacyCount += 1;
+			}
+		}
+
+		if (count > 0) {
+			this.persistTasks();
+			this.updateStatus();
+		}
+
+		return { count, otherCount, legacyCount };
+	}
+
 	adoptTasks(target = "all"): TaskMutationResult {
 		const matching = this.resolveTaskTargets(target, (task) => task.ownerInstanceId !== this.instanceId);
 		if (matching.error) {
@@ -353,7 +384,9 @@ export class SchedulerRuntime {
 			const status = this.taskStatusLabel(task);
 			const preview = task.prompt.length > 72 ? `${task.prompt.slice(0, 69)}...` : task.prompt;
 			lines.push(`${task.id}  ${state}  ${mode}  next ${next}`);
-			lines.push(`  owner=${this.taskOwnerLabel(task)}  runs=${task.runCount}  last=${last}  status=${status}`);
+			lines.push(
+				`  creator=${this.taskCreatorLabel(task)}  owner=${this.taskOwnerLabel(task)}  runs=${task.runCount}  last=${last}  status=${status}`,
+			);
 			if (task.lastOutcomeSnippet) {
 				lines.push(`  outcome=${this.truncateText(task.lastOutcomeSnippet, 72)}`);
 			}
@@ -393,6 +426,7 @@ export class SchedulerRuntime {
 			maxAttempts: options.maxAttempts,
 			awaitingCompletion: false,
 		};
+		this.assignCreator(task);
 		this.assignOwner(task, task.scope ?? "instance");
 		this.tasks.set(id, task);
 		this.persistTasks();
@@ -436,6 +470,7 @@ export class SchedulerRuntime {
 			maxAttempts: options.maxAttempts,
 			awaitingCompletion: false,
 		};
+		this.assignCreator(task);
 		this.assignOwner(task, task.scope ?? "instance");
 		this.tasks.set(id, task);
 		this.persistTasks();
@@ -467,6 +502,7 @@ export class SchedulerRuntime {
 			maxAttempts: options.maxAttempts,
 			awaitingCompletion: false,
 		};
+		this.assignCreator(task);
 		this.assignOwner(task, task.scope ?? "instance");
 		this.tasks.set(id, task);
 		this.persistTasks();
@@ -742,26 +778,17 @@ export class SchedulerRuntime {
 				return;
 			}
 
-			const options = list.map((task) => this.taskOptionLabel(task));
-			options.push("🗑 Clear all");
-			options.push("+ Close");
-
+			const otherTasks = this.getTasksNotCreatedHere();
+			const clearOtherLabel =
+				otherTasks.length > 0 ? `🧹 Clear tasks not created here (${otherTasks.length})` : undefined;
+			const options = this.buildTaskManagerOptions(list, clearOtherLabel);
 			const selected = await ctx.ui.select(`Scheduled tasks for ${this.getWorkspaceLabel(ctx)} (select one)`, options);
-			if (!selected || selected === "+ Close") {
+			const selection = await this.handleTaskManagerSelection(ctx, selected, list, otherTasks, clearOtherLabel);
+			if (selection === "close") {
 				return;
 			}
-			if (selected === "🗑 Clear all") {
-				const count = list.length;
-				const ok = await ctx.ui.confirm(
-					"Clear all scheduled tasks?",
-					`Delete ${count} scheduled task${count === 1 ? "" : "s"} for ${this.getWorkspaceLabel(ctx)}?`,
-				);
-				if (!ok) {
-					continue;
-				}
-				this.clearTasks();
-				ctx.ui.notify(`Cleared ${count} scheduled task${count === 1 ? "" : "s"}.`, "info");
-				return;
+			if (selection === "refresh") {
+				continue;
 			}
 
 			const taskId = selected.slice(0, 8);
@@ -778,6 +805,60 @@ export class SchedulerRuntime {
 		}
 	}
 
+	private buildTaskManagerOptions(list: ScheduleTask[], clearOtherLabel?: string): string[] {
+		const options = list.map((task) => this.taskOptionLabel(task));
+		if (clearOtherLabel) {
+			options.push(clearOtherLabel);
+		}
+		options.push("🗑 Clear all");
+		options.push("+ Close");
+		return options;
+	}
+
+	private async handleTaskManagerSelection(
+		ctx: ExtensionContext,
+		selected: string | null,
+		list: ScheduleTask[],
+		otherTasks: ScheduleTask[],
+		clearOtherLabel?: string,
+	): Promise<"open-task" | "refresh" | "close"> {
+		if (!selected || selected === "+ Close") {
+			return "close";
+		}
+
+		if (clearOtherLabel && selected === clearOtherLabel) {
+			const ok = await ctx.ui.confirm(
+				"Clear tasks not created here?",
+				this.describeExternalCreatorClear(otherTasks, ctx),
+			);
+			if (!ok) {
+				return "refresh";
+			}
+			const result = this.clearTasksNotCreatedHere();
+			ctx.ui.notify(
+				`Cleared ${result.count} scheduled task${result.count === 1 ? "" : "s"} not created in this instance.`,
+				"info",
+			);
+			return "refresh";
+		}
+
+		if (selected === "🗑 Clear all") {
+			const count = list.length;
+			const ok = await ctx.ui.confirm(
+				"Clear all scheduled tasks?",
+				`Delete ${count} scheduled task${count === 1 ? "" : "s"} for ${this.getWorkspaceLabel(ctx)}?`,
+			);
+			if (!ok) {
+				return "refresh";
+			}
+			this.clearTasks();
+			ctx.ui.notify(`Cleared ${count} scheduled task${count === 1 ? "" : "s"}.`, "info");
+			return "close";
+		}
+
+		return "open-task";
+	}
+
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TUI flow with multiple interactive branches.
 	private async openTaskActions(ctx: ExtensionContext, taskId: string): Promise<boolean> {
 		while (true) {
@@ -787,9 +868,13 @@ export class SchedulerRuntime {
 				return false;
 			}
 
+			const createdHere = this.wasCreatedHere(task);
+			const deleteLabel = createdHere ? "🗑 Delete" : "🧹 Clear (not created here)";
 			const title = [
 				`${task.id} • ${this.taskMode(task)} • next ${this.formatRelativeTime(task.nextRunAt)} (${this.formatClock(task.nextRunAt)})`,
 				`Workspace: ${this.getWorkspaceLabel(ctx)}`,
+				`Created by: ${this.taskCreatorLabel(task)}`,
+				`Owner: ${this.taskOwnerLabel(task)}`,
 				`Prompt: ${task.prompt}`,
 			].join("\n");
 			const options = [
@@ -798,7 +883,7 @@ export class SchedulerRuntime {
 				"Run now",
 				"Adopt",
 				"Release",
-				"🗑 Delete",
+				deleteLabel,
 				"↩ Back",
 				"✕ Close",
 			];
@@ -838,15 +923,23 @@ export class SchedulerRuntime {
 				continue;
 			}
 
-			if (action === "🗑 Delete") {
-				const ok = await ctx.ui.confirm("Delete scheduled task?", `${task.id}: ${task.prompt}`);
+			if (action === deleteLabel) {
+				const ok = await ctx.ui.confirm(
+					createdHere ? "Delete scheduled task?" : "Clear task not created here?",
+					`${task.id}: ${task.prompt}`,
+				);
 				if (!ok) {
 					continue;
 				}
 				this.tasks.delete(task.id);
 				this.persistTasks();
 				this.updateStatus();
-				ctx.ui.notify(`Deleted scheduled task ${task.id}.`, "info");
+				ctx.ui.notify(
+					createdHere
+						? `Deleted scheduled task ${task.id}.`
+						: `Cleared scheduled task ${task.id} because it was not created in this instance.`,
+					"info",
+				);
 				return false;
 			}
 
@@ -1179,8 +1272,9 @@ export class SchedulerRuntime {
 	}
 
 	private taskOptionLabel(task: ScheduleTask): string {
+		const origin = this.taskCreatorShortLabel(task);
 		const state = task.resumeRequired ? `! ${task.resumeReason ?? "review"}` : task.enabled ? "+" : "-";
-		return `${task.id} • ${state} [${task.scope ?? "instance"}] ${this.taskMode(task)} • ${this.formatRelativeTime(task.nextRunAt)} • ${this.truncateText(task.prompt, 50)}`;
+		return `${task.id} • ${origin} • ${state} [${task.scope ?? "instance"}] ${this.taskMode(task)} • ${this.formatRelativeTime(task.nextRunAt)} • ${this.truncateText(task.prompt, 50)}`;
 	}
 
 	private getWorkspaceLabel(ctx?: ExtensionContext): string {
@@ -1223,6 +1317,11 @@ export class SchedulerRuntime {
 		}
 	}
 
+	private assignCreator(task: ScheduleTask) {
+		task.creatorInstanceId = this.instanceId;
+		task.creatorSessionId = this.sessionId;
+	}
+
 	private assignOwner(task: ScheduleTask, scope: ScheduleScope) {
 		task.scope = scope;
 		task.ownerInstanceId = this.instanceId;
@@ -1253,6 +1352,10 @@ export class SchedulerRuntime {
 		return Array.from(this.tasks.values()).filter(
 			(task) => task.ownerInstanceId && task.ownerInstanceId !== this.instanceId,
 		).length;
+	}
+
+	private getTasksNotCreatedHere(): ScheduleTask[] {
+		return this.getSortedTasks().filter((task) => !this.wasCreatedHere(task));
 	}
 
 	private hasManagedTasksForLease(): boolean {
@@ -1564,6 +1667,8 @@ export class SchedulerRuntime {
 							: undefined,
 					awaitingCompletion: false,
 					lastOutcomeSnippet: task.lastOutcomeSnippet,
+					creatorInstanceId: task.creatorInstanceId,
+					creatorSessionId: task.creatorSessionId,
 				};
 				if (normalized.kind === "recurring" && normalized.expiresAt && now >= normalized.expiresAt) {
 					mutated = true;
@@ -1638,6 +1743,42 @@ export class SchedulerRuntime {
 		return task.lastStatus ?? "pending";
 	}
 
+	private getTaskCreatorOrigin(task: ScheduleTask): "current" | "other" | "legacy" {
+		if (task.creatorInstanceId === this.instanceId) {
+			return "current";
+		}
+		if (task.creatorInstanceId) {
+			return "other";
+		}
+		return "legacy";
+	}
+
+	private wasCreatedHere(task: ScheduleTask): boolean {
+		return this.getTaskCreatorOrigin(task) === "current";
+	}
+
+	private taskCreatorShortLabel(task: ScheduleTask): string {
+		switch (this.getTaskCreatorOrigin(task)) {
+			case "current":
+				return "this pi";
+			case "other":
+				return "other pi";
+			default:
+				return "legacy";
+		}
+	}
+
+	private taskCreatorLabel(task: ScheduleTask): string {
+		switch (this.getTaskCreatorOrigin(task)) {
+			case "current":
+				return `this instance (${this.instanceId})`;
+			case "other":
+				return `${task.creatorInstanceId}${task.creatorSessionId ? ` (${task.creatorSessionId})` : ""}`;
+			default:
+				return "unknown (legacy task)";
+		}
+	}
+
 	private taskOwnerLabel(task: ScheduleTask): string {
 		if (task.ownerInstanceId === this.instanceId) {
 			return `this:${this.instanceId}`;
@@ -1646,6 +1787,19 @@ export class SchedulerRuntime {
 			return `${task.ownerInstanceId}${task.ownerSessionId ? ` (${task.ownerSessionId})` : ""}`;
 		}
 		return "unowned";
+	}
+
+	private describeExternalCreatorClear(tasks: ScheduleTask[], ctx?: ExtensionContext): string {
+		const otherCount = tasks.filter((task) => this.getTaskCreatorOrigin(task) === "other").length;
+		const legacyCount = tasks.length - otherCount;
+		const parts = [];
+		if (otherCount > 0) {
+			parts.push(`${otherCount} created by another instance`);
+		}
+		if (legacyCount > 0) {
+			parts.push(`${legacyCount} legacy task${legacyCount === 1 ? "" : "s"} with unknown creator`);
+		}
+		return `Delete ${tasks.length} scheduled task${tasks.length === 1 ? "" : "s"} for ${this.getWorkspaceLabel(ctx)} not created in this instance? (${parts.join(", ")})`;
 	}
 
 	notifyResumeRequiredTasks() {

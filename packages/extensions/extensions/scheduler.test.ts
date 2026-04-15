@@ -767,6 +767,25 @@ describe("SchedulerRuntime", () => {
 			const task = runtime.addOneShotTask("remind", 5 * ONE_MINUTE);
 			expect(task.scope).toBe("instance");
 			expect(task.ownerInstanceId).toBe(runtime.currentInstanceId);
+			expect(task.creatorInstanceId).toBe(runtime.currentInstanceId);
+		});
+
+		it("can clear tasks not created in this instance", () => {
+			const localTask = runtime.addRecurringIntervalTask("local", 5 * ONE_MINUTE);
+			const otherTask = runtime.addRecurringIntervalTask("other", 10 * ONE_MINUTE);
+			const legacyTask = runtime.addOneShotTask("legacy", 30 * ONE_MINUTE);
+
+			otherTask.creatorInstanceId = "foreign-instance";
+			otherTask.creatorSessionId = "/mock-home/.pi/agent/sessions/foreign.jsonl";
+			legacyTask.creatorInstanceId = undefined;
+			legacyTask.creatorSessionId = undefined;
+
+			const result = runtime.clearTasksNotCreatedHere();
+
+			expect(result).toMatchObject({ count: 2, otherCount: 1, legacyCount: 1 });
+			expect(runtime.getTask(localTask.id)).toBeDefined();
+			expect(runtime.getTask(otherTask.id)).toBeUndefined();
+			expect(runtime.getTask(legacyTask.id)).toBeUndefined();
 		});
 
 		it("adopts and releases tasks explicitly", () => {
@@ -881,6 +900,7 @@ describe("SchedulerRuntime", () => {
 			expect(list).toContain("Scheduled tasks for /mock-project/apps/api:");
 			expect(list).toContain("check build");
 			expect(list).toContain("every 5m");
+			expect(list).toContain("creator=this instance");
 			expect(list).toContain("runs=0");
 		});
 
@@ -1764,6 +1784,25 @@ describe("command handlers", () => {
 			expect(ctx._notifications.some((n: any) => n.msg.includes("Cleared 2 tasks"))).toBe(true);
 		});
 
+		it("clears tasks not created in this instance", async () => {
+			await pi._commands.get("loop").handler("5m check local", ctx);
+			await pi._commands.get("loop").handler("10m check other", ctx);
+			const localId = ctx._notifications[0].msg.match(/id: (\w+)/)?.[1];
+			const otherId = ctx._notifications[1].msg.match(/id: (\w+)/)?.[1];
+			const otherTask = pi._tools.get("schedule_prompt");
+			const listBefore = await otherTask.execute("id", { action: "list" });
+			const external = listBefore.details.tasks.find((task: any) => task.id === otherId);
+			external.creatorInstanceId = "foreign-instance";
+			external.creatorSessionId = "/mock-home/.pi/agent/sessions/foreign.jsonl";
+			ctx._notifications.length = 0;
+
+			await pi._commands.get("schedule").handler("clear-other", ctx);
+			const listAfter = await otherTask.execute("id", { action: "list" });
+			expect(ctx._notifications.some((n: any) => n.msg.includes("not created in this instance"))).toBe(true);
+			expect(listAfter.details.tasks).toHaveLength(1);
+			expect(listAfter.details.tasks[0].id).toBe(localId);
+		});
+
 		it("handles singular task in clear message", async () => {
 			await pi._commands.get("loop").handler("5m check a", ctx);
 			ctx._notifications.length = 0;
@@ -2063,6 +2102,21 @@ describe("schedule_prompt tool", () => {
 			const result = await tool.execute("id", { action: "clear" });
 			expect(result.content[0].text).toContain("Cleared 2");
 			expect(result.details.cleared).toBe(2);
+		});
+
+		it("clears tasks not created in this instance", async () => {
+			const first = await tool.execute("id", { action: "add", prompt: "local", duration: "5m" });
+			const second = await tool.execute("id", { action: "add", prompt: "other", duration: "10m" });
+			second.details.task.creatorInstanceId = "foreign-instance";
+			second.details.task.creatorSessionId = "/mock-home/.pi/agent/sessions/foreign.jsonl";
+
+			const result = await tool.execute("id", { action: "clear_other" });
+			expect(result.content[0].text).toContain("not created in this instance");
+			expect(result.details).toMatchObject({ cleared: 1, otherCount: 1, legacyCount: 0 });
+
+			const listResult = await tool.execute("id", { action: "list" });
+			expect(listResult.details.tasks).toHaveLength(1);
+			expect(listResult.details.tasks[0].id).toBe(first.details.task.id);
 		});
 
 		it("handles clear with zero tasks", async () => {
@@ -2591,7 +2645,7 @@ describe("edge cases", () => {
 		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBe(true);
 	});
 
-	it("shows workspace in the task manager and full prompt after selecting a task", async () => {
+	it("shows workspace, creator, and full prompt after selecting a task", async () => {
 		const prompt = "check the full deployment pipeline and report every failing stage";
 		await pi._commands.get("loop").handler(`5m ${prompt}`, ctx);
 		const select = vi
@@ -2605,10 +2659,16 @@ describe("edge cases", () => {
 		expect(select).toHaveBeenNthCalledWith(
 			1,
 			"Scheduled tasks for /mock-project/apps/api (select one)",
-			expect.arrayContaining([expect.stringContaining("every 5m"), "🗑 Clear all", "+ Close"]),
+			expect.arrayContaining([
+				expect.stringContaining("this pi"),
+				expect.stringContaining("every 5m"),
+				"🗑 Clear all",
+				"+ Close",
+			]),
 		);
 		const actionTitle = select.mock.calls[1][0];
 		expect(actionTitle).toContain("Workspace: /mock-project/apps/api");
+		expect(actionTitle).toContain("Created by: this instance");
 		expect(actionTitle).toContain(`Prompt: ${prompt}`);
 	});
 
@@ -2629,6 +2689,31 @@ describe("edge cases", () => {
 		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBe(false);
 		await pi._commands.get("schedule").handler("list", ctx);
 		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBe(true);
+	});
+
+	it("can clear tasks not created here directly from the task manager list", async () => {
+		await pi._commands.get("loop").handler("5m check local queue", ctx);
+		await pi._commands.get("loop").handler("10m check foreign queue", ctx);
+		const tool = pi._tools.get("schedule_prompt");
+		const before = await tool.execute("id", { action: "list" });
+		const foreignTask = before.details.tasks.find((task: any) => task.prompt.includes("foreign queue"));
+		foreignTask.creatorInstanceId = "foreign-instance";
+		foreignTask.creatorSessionId = "/mock-home/.pi/agent/sessions/foreign.jsonl";
+
+		const select = vi.fn().mockResolvedValueOnce("🧹 Clear tasks not created here (1)");
+		const confirm = vi.fn().mockResolvedValueOnce(true);
+		const taskCtx = createMockCtx({ cwd: "/mock-project/apps/api", select, confirm });
+
+		await pi._commands.get("schedule").handler("", taskCtx);
+
+		expect(confirm).toHaveBeenCalledWith(
+			"Clear tasks not created here?",
+			"Delete 1 scheduled task for /mock-project/apps/api not created in this instance? (1 created by another instance)",
+		);
+		expect(taskCtx._notifications.some((n: any) => n.msg.includes("not created in this instance"))).toBe(true);
+		const after = await tool.execute("id", { action: "list" });
+		expect(after.details.tasks).toHaveLength(1);
+		expect(after.details.tasks[0].prompt).toContain("local queue");
 	});
 
 	it("creates and then deletes a task via different commands", async () => {
