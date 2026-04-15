@@ -32,6 +32,16 @@ type Change = {
 	nextSource: string;
 };
 
+type ManagedPackageManifest = Partial<Record<"extensions" | "prompts" | "skills" | "themes" | "agents", string[]>>;
+
+type PackageSyncAction = "install" | "update";
+
+type PackageSyncOperation = {
+	packageName: string;
+	source: string;
+	action: PackageSyncAction;
+};
+
 export function parseNpmPackageName(source: string): string | undefined {
 	if (!source.startsWith("npm:")) {
 		return undefined;
@@ -97,7 +107,7 @@ export function resolveManagedPackageNameFromSource(source: string, sourceBaseDi
 	return parseNpmPackageName(source) ?? resolvePathPackageName(source, sourceBaseDir);
 }
 
-export function resolveWorkspacePackageSources(repoPath: string, packageNames: readonly string[]): Map<string, string> {
+function collectWorkspacePackages(repoPath: string): Map<string, string> {
 	const packagesDir = path.join(repoPath, "packages");
 	const workspacePackages = new Map<string, string>();
 
@@ -113,6 +123,12 @@ export function resolveWorkspacePackageSources(repoPath: string, packageNames: r
 		}
 	}
 
+	return workspacePackages;
+}
+
+export function resolveWorkspacePackageSources(repoPath: string, packageNames: readonly string[]): Map<string, string> {
+	const workspacePackages = collectWorkspacePackages(repoPath);
+	const packagesDir = path.join(repoPath, "packages");
 	const missingPackages: string[] = [];
 	const resolvedSources = new Map<string, string>();
 	for (const packageName of packageNames) {
@@ -129,6 +145,52 @@ export function resolveWorkspacePackageSources(repoPath: string, packageNames: r
 	}
 
 	return resolvedSources;
+}
+
+function normalizeManifestPath(value: string): string {
+	return value.replace(/^\.\//, "");
+}
+
+export function resolveWorkspacePackageManifests(
+	repoPath: string,
+	packageNames: readonly string[],
+): Map<string, ManagedPackageManifest> {
+	const workspacePackages = collectWorkspacePackages(repoPath);
+	const manifests = new Map<string, ManagedPackageManifest>();
+
+	for (const packageName of packageNames) {
+		const packageDir = workspacePackages.get(packageName);
+		if (!packageDir) {
+			continue;
+		}
+
+		const pkgJson = readJsonFile<{
+			pi?: Partial<Record<"extensions" | "prompts" | "skills" | "themes" | "agents", unknown>>;
+		}>(path.join(packageDir, "package.json"));
+		const pi = pkgJson?.pi;
+		if (!(pi && typeof pi === "object")) {
+			continue;
+		}
+
+		const manifest: ManagedPackageManifest = {};
+		for (const key of ["extensions", "prompts", "skills", "themes", "agents"] as const) {
+			const raw = pi[key];
+			if (!Array.isArray(raw)) {
+				continue;
+			}
+
+			const entries = raw.filter((value): value is string => typeof value === "string").map(normalizeManifestPath);
+			if (entries.length > 0) {
+				manifest[key] = entries;
+			}
+		}
+
+		if (Object.keys(manifest).length > 0) {
+			manifests.set(packageName, manifest);
+		}
+	}
+
+	return manifests;
 }
 
 export function dedupeManagedPackageEntries(
@@ -185,10 +247,44 @@ export function dedupeManagedPackageEntries(
 	});
 }
 
+export function mergeManagedPackageManifest(
+	entry: PackageSetting,
+	manifest: ManagedPackageManifest | undefined,
+): PackageSetting {
+	if (typeof entry === "string" || !manifest) {
+		return entry;
+	}
+
+	const nextEntry: Record<string, unknown> = { ...entry };
+	for (const [key, manifestEntries] of Object.entries(manifest) as Array<[keyof ManagedPackageManifest, string[] | undefined]>) {
+		if (!(manifestEntries && manifestEntries.length > 0)) {
+			continue;
+		}
+
+		const current = Array.isArray(nextEntry[key])
+			? nextEntry[key].filter((value): value is string => typeof value === "string")
+			: undefined;
+		if (current?.length === 0) {
+			continue;
+		}
+
+		const merged = [...manifestEntries];
+		for (const value of current ?? []) {
+			if (!merged.includes(value)) {
+				merged.push(value);
+			}
+		}
+		nextEntry[key] = merged;
+	}
+
+	return nextEntry as PackageSetting;
+}
+
 export function rewriteManagedPackageSources(
 	entries: PackageSetting[],
 	desiredSources: ReadonlyMap<string, string>,
 	resolvePackageName: (source: string) => string | undefined,
+	options: { manifests?: ReadonlyMap<string, ManagedPackageManifest> } = {},
 ): PackageSetting[] {
 	const remainingPackages = new Set(desiredSources.keys());
 	const rewrittenEntries = entries.map((entry) => {
@@ -208,7 +304,8 @@ export function rewriteManagedPackageSources(
 		}
 
 		remainingPackages.delete(packageName);
-		return currentSource === nextSource ? entry : withPackageSource(entry, nextSource);
+		const nextEntry = currentSource === nextSource ? entry : withPackageSource(entry, nextSource);
+		return mergeManagedPackageManifest(nextEntry, options.manifests?.get(packageName));
 	});
 
 	for (const packageName of SWITCHER_PACKAGES) {
@@ -383,7 +480,7 @@ Options:
   --path <repo>       Repo checkout to use for local package paths (default: current directory)
   -v, --version <v>  Pin remote installs to a published version
   -l, --pi-local     Write to project .pi/settings.json instead of user settings
-  --dry-run          Show the changes without writing settings or running pi update
+  --dry-run          Show the changes without writing settings or running pi install/update
   -h, --help         Show this help
 
 Examples:
@@ -512,22 +609,43 @@ function printStatus(currentSources: ReadonlyMap<string, string>, settingsPath: 
 	}
 }
 
-function updatePiSources(pi: string, desiredSources: ReadonlyMap<string, string>) {
-	let failures = 0;
-	console.log("\nUpdating packages with pi...\n");
+export function planPackageSyncOperations(
+	currentSources: ReadonlyMap<string, string>,
+	desiredSources: ReadonlyMap<string, string>,
+): PackageSyncOperation[] {
+	const operations: PackageSyncOperation[] = [];
 	for (const packageName of SWITCHER_PACKAGES) {
 		const source = desiredSources.get(packageName);
 		if (!source) {
 			continue;
 		}
+		operations.push({
+			packageName,
+			source,
+			action: currentSources.has(packageName) ? "update" : "install",
+		});
+	}
+	return operations;
+}
 
-		process.stdout.write(`  ${packageName} ... `);
+function updatePiSources(pi: string, currentSources: ReadonlyMap<string, string>, desiredSources: ReadonlyMap<string, string>) {
+	let failures = 0;
+	console.log("\nSyncing packages with pi...\n");
+	for (const operation of planPackageSyncOperations(currentSources, desiredSources)) {
+		process.stdout.write(`  ${operation.packageName} (${operation.action}) ... `);
 		try {
-			execFileSync(pi, ["update", source], { stdio: "pipe", timeout: 120_000, shell: IS_WINDOWS });
+			execFileSync(pi, [operation.action, operation.source], { stdio: "pipe", timeout: 120_000, shell: IS_WINDOWS });
 			console.log("✓");
 		} catch (error) {
-			console.log("✗");
 			const stderr = error instanceof Error && "stderr" in error ? String(error.stderr ?? "").trim() : "";
+			if (
+				operation.action === "install" &&
+				(stderr.includes("already installed") || stderr.includes("already exists"))
+			) {
+				console.log("✓ (already installed)");
+				continue;
+			}
+			console.log("✗");
 			if (stderr) {
 				console.error(`    ${stderr.split("\n")[0]}`);
 			}
@@ -536,7 +654,7 @@ function updatePiSources(pi: string, desiredSources: ReadonlyMap<string, string>
 	}
 
 	if (failures > 0) {
-		throw new Error(`${failures} package(s) failed to update`);
+		throw new Error(`${failures} package(s) failed to sync`);
 	}
 }
 
@@ -555,20 +673,23 @@ function main() {
 	}
 
 	const desiredSources = buildDesiredSources(options);
-	const nextEntries = rewriteManagedPackageSources(currentEntries, desiredSources, resolvePackageName);
+	const localManifests = options.mode === "local" ? resolveWorkspacePackageManifests(options.repoPath, SWITCHER_PACKAGES) : undefined;
+	const nextEntries = rewriteManagedPackageSources(currentEntries, desiredSources, resolvePackageName, {
+		manifests: localManifests,
+	});
 	const changes = describeChanges(currentSources, desiredSources);
 	printChangeSummary(options.mode, changes, settingsPath, options.repoPath, options.piLocal);
 
 	const nextSettings: SettingsFile = { ...settings, packages: nextEntries };
 	if (options.dryRun) {
-		console.log("\nDry run only — settings were not written and pi update was not run.");
+		console.log("\nDry run only — settings were not written and pi install/update was not run.");
 		console.log("When you apply this switch, fully restart pi; /reload can keep old package modules alive.");
 		return;
 	}
 
 	writeSettings(settingsPath, nextSettings);
 	const pi = findPi();
-	updatePiSources(pi, desiredSources);
+	updatePiSources(pi, currentSources, desiredSources);
 	console.log("\n✅ Done. Fully restart pi to reload the switched packages.");
 	console.log("⚠️  Avoid /reload after switching sources; it can keep previously loaded package modules alive.");
 }

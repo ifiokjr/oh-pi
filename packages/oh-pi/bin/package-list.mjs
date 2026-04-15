@@ -10,6 +10,10 @@ export const INSTALLER_PACKAGES = [
 	"@ifi/pi-web-remote",
 ];
 
-export const EXPERIMENTAL_PACKAGES = ["@ifi/pi-provider-cursor", "@ifi/pi-provider-ollama"];
+export const EXPERIMENTAL_PACKAGES = [
+	"@ifi/pi-provider-catalog",
+	"@ifi/pi-provider-cursor",
+	"@ifi/pi-provider-ollama",
+];
 
 export const SWITCHER_PACKAGES = [...INSTALLER_PACKAGES, ...EXPERIMENTAL_PACKAGES];

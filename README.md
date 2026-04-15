@@ -59,16 +59,17 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 | [`@ifi/pi-plan`](./packages/plan)                         | Branch-aware planning mode extension        | `pi install npm:@ifi/pi-plan`               |
 | [`@ifi/pi-shared-qna`](./packages/shared-qna)             | Shared Q&A TUI helpers                      | (library, not installed directly)           |
 | [`@ifi/pi-spec`](./packages/spec)                         | Native spec-driven workflow with `/spec`    | `pi install npm:@ifi/pi-spec`               |
-| [`@ifi/pi-provider-cursor`](./packages/cursor)            | Experimental Cursor OAuth provider          | `pi install npm:@ifi/pi-provider-cursor`    |
-| [`@ifi/pi-provider-ollama`](./packages/ollama)            | Experimental Ollama local + cloud provider  | `pi install npm:@ifi/pi-provider-ollama`    |
+| [`@ifi/pi-provider-catalog`](./packages/providers)        | Experimental OpenCode-backed provider catalog | `pi install npm:@ifi/pi-provider-catalog` |
+| [`@ifi/pi-provider-cursor`](./packages/cursor)            | Experimental Cursor OAuth provider            | `pi install npm:@ifi/pi-provider-cursor`  |
+| [`@ifi/pi-provider-ollama`](./packages/ollama)            | Experimental Ollama local + cloud provider    | `pi install npm:@ifi/pi-provider-ollama`  |
 | [`@ifi/oh-pi-themes`](./packages/themes)                  | 6 color themes                              | `pi install npm:@ifi/oh-pi-themes`          |
 | [`@ifi/oh-pi-prompts`](./packages/prompts)                | 10 prompt templates                         | `pi install npm:@ifi/oh-pi-prompts`         |
 | [`@ifi/oh-pi-skills`](./packages/skills)                  | 12 skill packs                              | `pi install npm:@ifi/oh-pi-skills`          |
 | [`@ifi/oh-pi-agents`](./packages/agents)                  | 5 AGENTS.md templates                       | (used by CLI only)                          |
 
-`@ifi/pi-provider-cursor` and `@ifi/pi-provider-ollama` stay opt-in for now and are **not**
-installed by `npx @ifi/oh-pi`. They are intentionally shipped as separate experimental provider
-packages.
+`@ifi/pi-provider-catalog`, `@ifi/pi-provider-cursor`, and `@ifi/pi-provider-ollama` stay opt-in
+for now and are **not** installed by `npx @ifi/oh-pi`. They are intentionally shipped as separate
+experimental provider packages.
 
 ### Native `/spec` Workflow
 
@@ -583,9 +584,9 @@ pnpm pi:switch status                     # show the current managed package sou
 What it does:
 
 - rewrites only the managed oh-pi package sources in your pi settings
-- preserves package-specific config objects already in `settings.json`
-- runs `pi update` for each managed package so the switched source is ready to use
-- includes the experimental provider packages in addition to the main installer set
+- preserves package-specific config objects already in `settings.json`, while refreshing local package manifests so newly added extensions like `worktree` are picked up
+- runs `pi install` for newly added managed packages and `pi update` for packages you already had configured
+- includes the experimental provider packages in addition to the main installer set, including `@ifi/pi-provider-catalog`
 - lets you validate a branch or detached worktree before you publish
 
 After switching, fully restart `pi`. Do not rely on `/reload` for source switches because it can
