@@ -24,6 +24,35 @@ describe("tool-metadata extension", () => {
 		expect(formatDuration(65_000)).toBe("1m5s");
 	});
 
+	it("sanitizes oversized text output to avoid TUI rendering crashes", async () => {
+		const harness = createExtensionHarness();
+		toolMetadataExtension(harness.pi as never);
+
+		const longLine = "x".repeat(12_000);
+		const [patch] = await harness.emitAsync(
+			"tool_result",
+			{
+				toolCallId: "tool-big",
+				toolName: "bash",
+				input: { command: "printf huge" },
+				content: [{ type: "text", text: `${longLine}\u0000${longLine}` }],
+				details: {},
+			},
+			harness.ctx,
+		);
+
+		expect(patch.details.outputGuard).toEqual(
+			expect.objectContaining({
+				truncated: true,
+				maxChars: 120_000,
+				maxLineChars: 2_000,
+				maxLines: 2_000,
+			}),
+		);
+		expect(patch.content[0].text).toContain("[tool output truncated for UI safety]");
+		expect(patch.content[0].text).not.toContain("\u0000");
+	});
+
 	it("builds visible completion metadata for tool results", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.getContextUsage = vi
