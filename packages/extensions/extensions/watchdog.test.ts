@@ -45,10 +45,13 @@ import watchdogExtension, {
 	resolveWatchdogThresholds,
 	WATCHDOG_CONFIG_PATH,
 } from "./watchdog";
+import { recordRuntimeMetric, resetRuntimeDiagnosticsForTests } from "./watchdog-runtime-diagnostics";
 
 function createMockPi() {
 	const handlers = new Map<string, ((...args: any[]) => any)[]>();
 	const commands = new Map<string, any>();
+	const tools = new Map<string, any>();
+	const shortcuts = new Map<string, any>();
 	const eventHandlers = new Map<string, ((data: unknown) => void)[]>();
 
 	return {
@@ -60,6 +63,12 @@ function createMockPi() {
 		},
 		registerCommand(name: string, command: any) {
 			commands.set(name, command);
+		},
+		registerTool(tool: any) {
+			tools.set(tool.name, tool);
+		},
+		registerShortcut(name: string, shortcut: any) {
+			shortcuts.set(name, shortcut);
 		},
 		events: {
 			on(event: string, handler: (data: unknown) => void) {
@@ -75,6 +84,8 @@ function createMockPi() {
 			},
 		},
 		_commands: commands,
+		_tools: tools,
+		_shortcuts: shortcuts,
 		async _emit(event: string, ...args: any[]) {
 			for (const handler of handlers.get(event) ?? []) {
 				await handler(...args);
@@ -129,12 +140,14 @@ beforeEach(() => {
 	mockExistsSync.mockReturnValue(false);
 	mockReadFileSync.mockReset();
 	resetSafeModeStateForTests();
+	resetRuntimeDiagnosticsForTests();
 });
 
 afterEach(() => {
 	vi.restoreAllMocks();
 	vi.useRealTimers();
 	resetSafeModeStateForTests();
+	resetRuntimeDiagnosticsForTests();
 });
 
 describe("watchdog helpers", () => {
@@ -326,6 +339,18 @@ describe("watchdog extension", () => {
 			vi.fn(),
 		);
 		expect(component.render(200).join("\n")).toContain("No alerts yet.");
+	});
+
+	it("surfaces likely culprit extensions in watchdog diagnostics", async () => {
+		const pi = createMockPi();
+		const ctx = createMockCtx();
+		watchdogExtension(pi as any);
+		recordRuntimeMetric({ extensionId: "scheduler", pendingTasks: 8, dueTasks: 3, note: "dispatch throttled" });
+
+		await pi._commands.get("watchdog").handler("blame", ctx);
+
+		expect(ctx._notifications.at(-1)?.msg).toContain("scheduler");
+		expect(ctx._notifications.at(-1)?.msg).toContain("queued tasks");
 	});
 
 	it("opens a watchdog overlay dashboard", async () => {

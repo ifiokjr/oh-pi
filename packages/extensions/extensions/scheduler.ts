@@ -57,6 +57,7 @@ import {
 	type ScheduleTask,
 	THREE_DAYS,
 } from "./scheduler-shared.js";
+import { RUNTIME_DIAGNOSTICS_EVENT } from "./watchdog-runtime-diagnostics.js";
 
 export {
 	computeCronCadenceMs,
@@ -505,7 +506,21 @@ export class SchedulerRuntime {
 		this.startScheduler();
 	}
 
+	private emitRuntimeDiagnostics(note?: string) {
+		const enabledTasks = Array.from(this.tasks.values()).filter((task) => task.enabled);
+		const dueTasks = enabledTasks.filter((task) => task.resumeRequired || task.pending).length;
+		this.pi.events.emit(RUNTIME_DIAGNOSTICS_EVENT, {
+			extensionId: "scheduler",
+			pendingTasks: this.tasks.size,
+			activeTasks: enabledTasks.length,
+			dueTasks,
+			mode: this.dispatchMode,
+			note,
+		});
+	}
+
 	updateStatus() {
+		this.emitRuntimeDiagnostics();
 		if (!this.runtimeCtx?.hasUI) {
 			return;
 		}
@@ -643,6 +658,7 @@ export class SchedulerRuntime {
 			return;
 		}
 		if (!this.hasDispatchCapacity(now)) {
+			this.emitRuntimeDiagnostics("dispatch throttled");
 			this.notifyRateLimit(now);
 			return;
 		}
@@ -967,6 +983,7 @@ export class SchedulerRuntime {
 		const now = Date.now();
 		if (!this.hasDispatchCapacity(now)) {
 			task.pending = true;
+			this.emitRuntimeDiagnostics("dispatch throttled");
 			this.notifyRateLimit(now);
 			return;
 		}
