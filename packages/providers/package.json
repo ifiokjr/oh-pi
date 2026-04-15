@@ -1,0 +1,48 @@
+{
+	"name": "@ifi/pi-provider-catalog",
+	"version": "0.4.4",
+	"description": "Experimental multi-provider package for pi backed by the OpenCode models.dev catalog.",
+	"type": "module",
+	"keywords": [
+		"pi-package",
+		"pi",
+		"pi-coding-agent",
+		"provider",
+		"models.dev",
+		"opencode",
+		"experimental"
+	],
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	},
+	"files": [
+		"*.ts",
+		"README.md",
+		"!**/*.test.ts",
+		"!tests/**"
+	],
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/providers"
+	},
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/providers",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"scripts": {
+		"build": "pnpm run typecheck && pnpm run test:worktree",
+		"typecheck": "tsgo --project ./tsconfig.json --noEmit",
+		"test:worktree": "vitest run --config ./vitest.worktree.config.ts"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-agent-core": ">=0.56.1",
+		"@mariozechner/pi-ai": ">=0.56.1",
+		"@mariozechner/pi-coding-agent": ">=0.56.1",
+		"@mariozechner/pi-tui": ">=0.56.1",
+		"@sinclair/typebox": "*"
+	}
+}
