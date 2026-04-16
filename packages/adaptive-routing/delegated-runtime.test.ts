@@ -11,7 +11,7 @@ vi.mock("@mariozechner/pi-coding-agent", () => ({
 	getAgentDir,
 }));
 vi.mock("@ifi/oh-pi-core", async () => {
-	return await import("../core/src/model-intelligence.ts");
+	return await import("../core/src/model-intelligence.js");
 });
 
 import {
@@ -28,7 +28,7 @@ const sampleModels = [
 		fullId: "openai/gpt-5-mini",
 		name: "GPT-5 Mini",
 		reasoning: true,
-		input: ["text", "image"] as const,
+		input: ["text", "image"],
 		contextWindow: 400_000,
 		maxTokens: 128_000,
 		cost: { input: 0.25, output: 2, cacheRead: 0, cacheWrite: 0 },
@@ -39,7 +39,7 @@ const sampleModels = [
 		fullId: "google/gemini-2.5-flash",
 		name: "Gemini 2.5 Flash",
 		reasoning: true,
-		input: ["text", "image"] as const,
+		input: ["text", "image"],
 		contextWindow: 1_000_000,
 		maxTokens: 64_000,
 		cost: { input: 0.1, output: 0.4, cacheRead: 0, cacheWrite: 0 },

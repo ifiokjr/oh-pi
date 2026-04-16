@@ -13,7 +13,7 @@ vi.mock("@mariozechner/pi-coding-agent", () => ({
 }));
 
 vi.mock("@ifi/oh-pi-core", async () => {
-	return await import("../core/src/model-intelligence.ts");
+	return await import("../core/src/model-intelligence.js");
 });
 
 vi.mock("@mariozechner/pi-ai", () => ({

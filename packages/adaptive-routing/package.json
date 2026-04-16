@@ -21,6 +21,9 @@
     "README.md",
     "!**/*.test.ts"
   ],
+  "dependencies": {
+    "@ifi/oh-pi-core": "0.4.4"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
