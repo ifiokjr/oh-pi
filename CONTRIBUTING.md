@@ -74,13 +74,15 @@ frontmatter, knope will ignore that changeset in this repo.
 4. Create and commit a changeset: `knope document-change`
 5. Ensure the build passes: `pnpm build`
 6. Ensure lint passes: `pnpm lint`
-7. Push and create a PR
+7. For code changes, run `pnpm test`. If the PR changes executable code, also run `pnpm test:coverage && pnpm test:patch-coverage`
+8. Push and create a PR
 
 ### PR Requirements
 
 - Title follows Conventional Commits format
 - Description clearly explains the change and rationale
 - A changeset file is included for every non-release change
+- New executable PR changes keep patch coverage at 100%
 - One PR addresses one issue
 - No unrelated code changes
 

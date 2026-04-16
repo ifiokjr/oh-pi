@@ -546,15 +546,31 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for contributor workflow, changeset req
 ### Commands
 
 ```bash
-pnpm build          # Build every workspace package that exposes a build script
-pnpm typecheck      # Type check with tsgo (fast)
-pnpm test           # Run all tests
-pnpm test:coverage  # Run tests with repo-wide coverage reporting
-pnpm lint           # Biome lint + format check
-pnpm security:check # Dependency allowlist + vulnerability audits
-pnpm lint:fix       # Auto-fix lint issues
-pnpm format         # Format all files
+pnpm build               # Build every workspace package that exposes a build script
+pnpm typecheck           # Type check with tsgo (fast)
+pnpm test                # Run all tests
+pnpm test:coverage       # Run tests with repo-wide coverage reporting
+pnpm test:patch-coverage # Enforce 100% patch coverage from coverage/lcov.info
+pnpm lint                # Biome lint + format check
+pnpm security:check      # Dependency allowlist + vulnerability audits
+pnpm lint:fix            # Auto-fix lint issues
+pnpm format              # Format all files
 ```
+
+### Coverage policy
+
+- Overall/project coverage is currently enforced at **60%**.
+- Patch coverage for new PR changes is enforced at **100%**.
+- The local contributor loop for coverage-sensitive work is:
+
+```bash
+pnpm test:coverage
+pnpm test:patch-coverage
+```
+
+That keeps the repo-wide floor honest while still requiring new code paths in a PR to be fully
+covered. CI uses the same `pnpm test:patch-coverage` command on pull requests, so local results and
+CI results stay aligned.
 
 ### Test a local checkout in pi
 
