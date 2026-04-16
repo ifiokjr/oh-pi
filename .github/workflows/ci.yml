@@ -440,7 +440,7 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - run: pnpm install --link-workspace-packages
+      - run: pnpm install --force --link-workspace-packages
 
       - name: Build all packages
         run: pnpm build
