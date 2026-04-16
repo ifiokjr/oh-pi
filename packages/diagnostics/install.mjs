@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const PACKAGE_NAME = "@ifi/pi-diagnostics";
+export const PACKAGE_NAME = "@ifi/pi-diagnostics";
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
 	const args = argv.slice(2);
 	let local = false;
 	let remove = false;
@@ -18,16 +19,15 @@ function parseArgs(argv) {
 		} else if (arg === "--help" || arg === "-h") {
 			help = true;
 		} else {
-			console.error(`Unknown argument: ${arg}`);
-			process.exit(1);
+			throw new Error(`Unknown argument: ${arg}`);
 		}
 	}
 
 	return { local, remove, help };
 }
 
-function printHelp() {
-	console.log(`
+export function printHelp(log = console.log) {
+	log(`
 pi-diagnostics — install the @ifi diagnostics extension into pi
 
 Usage:
@@ -45,23 +45,21 @@ Direct install:
 `.trim());
 }
 
-function findPi() {
+export function findPi(execute = execFileSync) {
 	try {
-		execFileSync("pi", ["--version"], { stdio: "ignore" });
+		execute("pi", ["--version"], { stdio: "ignore" });
 		return "pi";
 	} catch {
-		console.error("Error: 'pi' command not found. Install pi-coding-agent first:");
-		console.error("  npm install -g @mariozechner/pi-coding-agent");
-		process.exit(1);
+		return null;
 	}
 }
 
-function run(pi, command, args) {
+export function run(pi, command, args, execute = execFileSync, error = console.error) {
 	try {
-		execFileSync(pi, [command, ...args], { stdio: "pipe", timeout: 60_000 });
+		execute(pi, [command, ...args], { stdio: "pipe", timeout: 60_000 });
 		return { ok: true, status: "ok" };
-	} catch (error) {
-		const stderr = error?.stderr?.toString?.().trim?.() ?? "";
+	} catch (caughtError) {
+		const stderr = caughtError?.stderr?.toString?.().trim?.() ?? "";
 		if (stderr.includes("already installed") || stderr.includes("already exists")) {
 			return { ok: true, status: "already-installed" };
 		}
@@ -69,37 +67,65 @@ function run(pi, command, args) {
 			return { ok: true, status: "already-removed" };
 		}
 		if (stderr) {
-			console.error(stderr.split("\n")[0]);
+			error(stderr.split("\n")[0]);
 		}
 		return { ok: false, status: "error" };
 	}
 }
 
-const opts = parseArgs(process.argv);
-if (opts.help) {
-	printHelp();
-	process.exit(0);
+export function main(
+	argv = process.argv,
+	{ execute = execFileSync, log = console.log, error = console.error } = {},
+) {
+	let opts;
+	try {
+		opts = parseArgs(argv);
+	} catch (caughtError) {
+		error(caughtError instanceof Error ? caughtError.message : String(caughtError));
+		return 1;
+	}
+
+	if (opts.help) {
+		printHelp(log);
+		return 0;
+	}
+
+	const pi = findPi(execute);
+	if (!pi) {
+		error("Error: 'pi' command not found. Install pi-coding-agent first:");
+		error("  npm install -g @mariozechner/pi-coding-agent");
+		return 1;
+	}
+
+	const source = `npm:${PACKAGE_NAME}`;
+	const localFlag = opts.local ? ["-l"] : [];
+	const result = opts.remove
+		? run(pi, "remove", [source, ...localFlag], execute, error)
+		: run(pi, "install", [source, ...localFlag], execute, error);
+
+	if (!result.ok) {
+		return 1;
+	}
+
+	if (opts.remove) {
+		log(
+			result.status === "already-removed"
+				? "\n✅ @ifi/pi-diagnostics is already absent from pi."
+				: "\n✅ Removed @ifi/pi-diagnostics from pi.",
+		);
+	} else {
+		log(
+			result.status === "already-installed"
+				? "\n✅ @ifi/pi-diagnostics is already installed in pi."
+				: "\n✅ Installed @ifi/pi-diagnostics into pi. Restart pi to load it.",
+		);
+	}
+
+	return 0;
 }
 
-const pi = findPi();
-const source = `npm:${PACKAGE_NAME}`;
-const localFlag = opts.local ? ["-l"] : [];
-const result = opts.remove ? run(pi, "remove", [source, ...localFlag]) : run(pi, "install", [source, ...localFlag]);
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 
-if (!result.ok) {
-	process.exit(1);
-}
-
-if (opts.remove) {
-	console.log(
-		result.status === "already-removed"
-			? "\n✅ @ifi/pi-diagnostics is already absent from pi."
-			: "\n✅ Removed @ifi/pi-diagnostics from pi.",
-	);
-} else {
-	console.log(
-		result.status === "already-installed"
-			? "\n✅ @ifi/pi-diagnostics is already installed in pi."
-			: "\n✅ Installed @ifi/pi-diagnostics into pi. Restart pi to load it.",
-	);
+if (isMain) {
+	process.exitCode = main();
 }

@@ -555,3 +555,22 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		},
 	});
 }
+
+export const diagnosticsInternals = {
+	classifyStopReason,
+	isPromptCompletionDiagnostics,
+	isDiagnosticsStateEntry,
+	getMessageDetails,
+	getMessageCustomType,
+	summarizePrompt,
+	countToolResults,
+	summarizeResponsePreview,
+	findLastAssistantMessage,
+	findPromptPreviewFromMessages,
+	buildPromptSummaryText,
+	buildPromptCompletion,
+	renderPromptCompletionMessage,
+	getBranchEntries,
+	restoreEnabledState,
+	restoreLastCompletion,
+};
