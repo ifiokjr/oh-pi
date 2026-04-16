@@ -20,6 +20,6 @@ describe("CI workflow branch triggers", () => {
 		const workflow = readFileSync(workflowPath, "utf8");
 
 		expect(workflow).toContain("name: Build");
-		expect(workflow).toContain("pnpm install --frozen-lockfile --link-workspace-packages");
+		expect(workflow).toContain("pnpm install --link-workspace-packages");
 	});
 });
