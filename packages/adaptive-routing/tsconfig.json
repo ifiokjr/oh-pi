@@ -2,8 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
+      "*": ["./*"],
       "@ifi/oh-pi-core": ["../core/src/index.ts"]
     }
   },
