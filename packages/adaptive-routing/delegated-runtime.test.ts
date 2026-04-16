@@ -19,9 +19,10 @@ import {
 	inspectDelegatedSelection,
 	readDelegatedSelectionLatencySnapshot,
 	readDelegatedSelectionUsageSnapshot,
+	type DelegatedAvailableModelRef,
 } from "./delegated-runtime.js";
 
-const sampleModels = [
+const sampleModels: DelegatedAvailableModelRef[] = [
 	{
 		provider: "openai",
 		id: "gpt-5-mini",
