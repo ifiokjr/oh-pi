@@ -16,6 +16,7 @@ import { Container, matchesKey, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { Nest } from "./nest.js";
 import { createUsageLimitsTracker, type QueenCallbacks, resumeColony, runColony } from "./queen.js";
+import { createStatusBarState } from "./status-cache.js";
 import { resolveColonyStorageOptions, shouldManageProjectGitignore } from "./storage.js";
 import type {
 	AntStreamEvent,
@@ -258,6 +259,15 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		pi.events.emit("ant-colony:render");
 	};
 
+	const statusBar = createStatusBarState();
+
+	const setColonyStatus = (
+		ctx: { ui?: { setStatus?: (key: string, value: string | undefined) => unknown } },
+		value: string | undefined,
+	) => {
+		statusBar.set(ctx, "ant-colony", value);
+	};
+
 	// Re-bind events on each session_start to ensure ctx is always current
 	let renderHandler: (() => void) | null = null;
 	let clearHandler: (() => void) | null = null;
@@ -280,13 +290,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			pi.events.off("oh-pi:safe-mode", safeModeHandler);
 		}
 
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Colony status rendering aggregates multiple live counters and safe-mode suppression.
 		renderHandler = () => {
-			if (safeModeEnabled) {
-				ctx.ui.setStatus("ant-colony", undefined);
-				return;
-			}
-			if (colonies.size === 0) {
+			if (safeModeEnabled || colonies.size === 0) {
+				setColonyStatus(ctx, undefined);
 				return;
 			}
 			const statusParts: string[] = [];
@@ -310,10 +316,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				statusParts.push(parts.join(" │ "));
 			}
 
-			ctx.ui.setStatus("ant-colony", statusParts.join("  ·  "));
+			setColonyStatus(ctx, statusParts.join("  ·  "));
 		};
 		clearHandler = () => {
-			ctx.ui.setStatus("ant-colony", undefined);
+			setColonyStatus(ctx, undefined);
 		};
 		notifyHandler = (data) => {
 			ctx.ui.notify(data.msg, data.level);
@@ -321,7 +327,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		safeModeHandler = (data) => {
 			safeModeEnabled = Boolean((data as { enabled?: boolean } | undefined)?.enabled);
 			if (safeModeEnabled) {
-				ctx.ui.setStatus("ant-colony", undefined);
+				setColonyStatus(ctx, undefined);
 			} else {
 				renderHandler?.();
 			}
