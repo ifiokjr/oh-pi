@@ -31,7 +31,7 @@ Key usage-tracker surfaces:
 <!-- {/extensionsUsageTrackerCommandsDocs} -->
 */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, promises as fsp, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { AssistantMessage } from "@mariozechner/pi-ai";
 import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@mariozechner/pi-coding-agent";
@@ -81,6 +81,7 @@ import {
 const KEYBINDINGS_SYNC_DELAY_MS = 250;
 const STARTUP_REFRESH_DELAY_MS = 250;
 const STARTUP_DEFER_ENTRY_THRESHOLD = 250;
+const PERSISTED_STATE_LOAD_DELAY_MS = 250;
 
 /**
  * Ensure `ctrl+u` is unbound from the built-in `deleteToLineStart` action
@@ -148,7 +149,11 @@ function getRateLimitCachePath(): string {
 
 export default function usageTracker(pi: ExtensionAPI) {
 	let keybindingsSyncScheduled = false;
+	let persistedStateLoadPromise: Promise<void> | null = null;
+	let persistedStateLoadScheduled = false;
+	let persistedStateLoadTimer: ReturnType<typeof setTimeout> | null = null;
 	let startupRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+	let requestWidgetRender: (() => void) | null = null;
 
 	const scheduleCtrlUUnbound = () => {
 		if (keybindingsSyncScheduled) {
@@ -215,12 +220,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 		return total;
 	}
 
-	function loadRollingHistory(): void {
+	async function loadRollingHistory(): Promise<void> {
 		try {
-			if (!existsSync(usageHistoryPath)) {
-				return;
-			}
-			const raw = JSON.parse(readFileSync(usageHistoryPath, "utf-8")) as { entries?: unknown };
+			const raw = JSON.parse(await fsp.readFile(usageHistoryPath, "utf-8")) as { entries?: unknown };
 			if (!Array.isArray(raw.entries)) {
 				return;
 			}
@@ -315,12 +317,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 		};
 	}
 
-	function loadRateLimitCache(): void {
+	async function loadRateLimitCache(): Promise<void> {
 		try {
-			if (!existsSync(rateLimitCachePath)) {
-				return;
-			}
-			const raw = JSON.parse(readFileSync(rateLimitCachePath, "utf-8")) as { providers?: unknown };
+			const raw = JSON.parse(await fsp.readFile(rateLimitCachePath, "utf-8")) as { providers?: unknown };
 			if (!raw.providers || typeof raw.providers !== "object") {
 				return;
 			}
@@ -329,7 +328,20 @@ export default function usageTracker(pi: ExtensionAPI) {
 				if (!providerRateLimits) {
 					continue;
 				}
-				rateLimits.set(providerRateLimits.provider, providerRateLimits);
+				const existing = rateLimits.get(providerRateLimits.provider);
+				if (existing && shouldPreserveStaleWindows(providerRateLimits, existing)) {
+					rateLimits.set(providerRateLimits.provider, {
+						...existing,
+						windows: providerRateLimits.windows.map((window) => ({ ...window })),
+						note: existing.note
+							? `${existing.note} Showing last known window values.`
+							: "Showing last known window values.",
+					});
+					continue;
+				}
+				if (!existing || existing.probedAt <= providerRateLimits.probedAt) {
+					rateLimits.set(providerRateLimits.provider, providerRateLimits);
+				}
 			}
 		} catch {
 			// Non-critical. The next live probe will repopulate provider data.
@@ -351,8 +363,43 @@ export default function usageTracker(pi: ExtensionAPI) {
 		}
 	}
 
-	loadRollingHistory();
-	loadRateLimitCache();
+	const loadPersistedState = async (): Promise<void> => {
+		if (persistedStateLoadPromise) {
+			await persistedStateLoadPromise;
+			return;
+		}
+
+		persistedStateLoadPromise = (async () => {
+			await Promise.all([loadRollingHistory(), loadRateLimitCache()]);
+			requestWidgetRender?.();
+			broadcastUsageData();
+		})();
+
+		await persistedStateLoadPromise;
+	};
+
+	const schedulePersistedStateLoad = () => {
+		if (persistedStateLoadPromise || persistedStateLoadScheduled) {
+			return;
+		}
+
+		persistedStateLoadScheduled = true;
+		persistedStateLoadTimer = setTimeout(() => {
+			persistedStateLoadScheduled = false;
+			persistedStateLoadTimer = null;
+			loadPersistedState().catch(() => undefined);
+		}, PERSISTED_STATE_LOAD_DELAY_MS);
+		persistedStateLoadTimer.unref?.();
+	};
+
+	const clearPersistedStateLoadTimer = () => {
+		if (!persistedStateLoadTimer) {
+			return;
+		}
+		clearTimeout(persistedStateLoadTimer);
+		persistedStateLoadTimer = null;
+		persistedStateLoadScheduled = false;
+	};
 
 	// ─── Data collection ──────────────────────────────────────────────────
 
@@ -1478,13 +1525,16 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	pi.on("session_start", (_event, ctx) => {
 		activeCtx = ctx;
+		schedulePersistedStateLoad();
 		refreshStartupState(ctx);
 
 		ctx.ui.setWidget("usage-tracker", (tui, theme) => {
+			requestWidgetRender = () => tui.requestRender();
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
 			const timer = setInterval(() => tui.requestRender(), 15_000);
 			return {
 				dispose() {
+					requestWidgetRender = null;
 					unsubSafeMode();
 					clearInterval(timer);
 				},
@@ -1499,6 +1549,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	pi.on("session_switch", (_event, ctx) => {
 		activeCtx = ctx;
+		schedulePersistedStateLoad();
 		refreshStartupState(ctx);
 	});
 
@@ -1518,6 +1569,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	});
 
 	pi.on("session_shutdown", () => {
+		clearPersistedStateLoadTimer();
 		clearStartupRefreshTimer();
 	});
 
@@ -1526,6 +1578,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	pi.registerCommand("usage", {
 		description: "Pick a provider and show its usage dashboard",
 		async handler(args, ctx) {
+			await loadPersistedState();
 			triggerProbeAll(true);
 			await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -1574,6 +1627,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	pi.registerCommand("usage-refresh", {
 		description: "Force refresh rate limit data from provider APIs",
 		async handler(_args, ctx) {
+			await loadPersistedState();
 			// Clear cooldowns to force fresh probes
 			lastProbeTime.clear();
 			triggerProbeAll(true);
@@ -1597,6 +1651,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 			),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			await loadPersistedState();
 			// Force a probe of all configured providers before reporting
 			triggerProbeAll(true);
 			await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -1625,6 +1680,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	pi.registerShortcut("ctrl+u", {
 		description: "Show usage dashboard with current-provider rate limits and costs",
 		async handler(ctx) {
+			await loadPersistedState();
 			triggerProbeAll(true);
 			await new Promise((resolve) => setTimeout(resolve, 500));
 

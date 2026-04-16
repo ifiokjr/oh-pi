@@ -10,6 +10,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
+const { mockFsReadFile, mockFsAccess } = vi.hoisted(() => ({
+	mockFsReadFile: vi.fn().mockResolvedValue("{}"),
+	mockFsAccess: vi.fn().mockRejectedValue(new Error("missing")),
+}));
+
 vi.mock("node:fs", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs")>();
 	return {
@@ -18,6 +23,11 @@ vi.mock("node:fs", async (importOriginal) => {
 		mkdirSync: vi.fn(),
 		readFileSync: vi.fn().mockReturnValue("{}"),
 		writeFileSync: vi.fn(),
+		promises: {
+			...actual.promises,
+			access: mockFsAccess,
+			readFile: mockFsReadFile,
+		},
 	};
 });
 
@@ -269,7 +279,7 @@ function stripAnsiForTest(text: string): string {
 
 // ─── Import ──────────────────────────────────────────────────────────────────
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, promises as fsPromises, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import usageTracker from "./usage-tracker.js";
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -295,6 +305,8 @@ describe("usage-tracker extension", () => {
 		});
 		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(mockFsAccess as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("missing"));
+		(mockFsReadFile as ReturnType<typeof vi.fn>).mockResolvedValue("{}");
 		mockFetch.mockResolvedValue(
 			makeFetchResponse({
 				headers: {
@@ -342,6 +354,71 @@ describe("usage-tracker extension", () => {
 			usageTracker(pi as any);
 			expect(pi._shortcuts.has("ctrl+u")).toBe(true);
 			expect(pi._shortcuts.get("ctrl+u").description).toContain("rate limits");
+		});
+
+		it("does not load persisted history or rate-limit cache during registration", () => {
+			usageTracker(pi as any);
+
+			expect(fsPromises.readFile).not.toHaveBeenCalled();
+		});
+
+		it("defers persisted history and cache loading until after startup", async () => {
+			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
+				if (String(path).includes("usage-tracker-history.json")) {
+					return JSON.stringify({ version: 1, entries: [{ timestamp: Date.now() - 60_000, cost: 1.25 }] });
+				}
+				if (String(path).includes("usage-tracker-rate-limits.json")) {
+					return makeRateLimitCacheJson({ openai: makeOpenAiRateLimitCacheEntry() });
+				}
+				return "{}";
+			});
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			expect(fsPromises.readFile).not.toHaveBeenCalled();
+
+			await vi.advanceTimersByTimeAsync(250);
+
+			expect(fsPromises.readFile).toHaveBeenCalledTimes(2);
+			expect((fsPromises.readFile as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toContain(
+				"usage-tracker-history.json",
+			);
+			expect((fsPromises.readFile as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain(
+				"usage-tracker-rate-limits.json",
+			);
+		});
+
+		it("loads persisted history on demand for usage_report before the startup timer fires", async () => {
+			const now = Date.now();
+			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
+				if (String(path).includes("usage-tracker-history.json")) {
+					return JSON.stringify({
+						version: 1,
+						entries: [{ timestamp: now - 60_000, cost: 1.23 }],
+					});
+				}
+				return "{}";
+			});
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const tool = pi._tools.get("usage_report");
+			const result = await runWithTimers(() => tool.execute("id", { format: "summary" }, undefined, undefined, ctx));
+
+			expect(fsPromises.readFile).toHaveBeenCalled();
+			expect(result.content[0].text).toContain("30d: $1.23");
+		});
+
+		it("cancels deferred persisted-state loading on session shutdown", async () => {
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+			pi._emit("session_shutdown", { type: "session_shutdown" }, ctx);
+
+			await vi.advanceTimersByTimeAsync(250);
+
+			expect(fsPromises.readFile).not.toHaveBeenCalled();
 		});
 	});
 
@@ -398,10 +475,7 @@ describe("usage-tracker extension", () => {
 	describe("rolling 30d totals", () => {
 		it("loads persisted 30d history from disk and shows it in summary", async () => {
 			const now = Date.now();
-			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) =>
-				String(path).includes("usage-tracker-history.json"),
-			);
-			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path).includes("usage-tracker-history.json")) {
 					return JSON.stringify({
 						version: 1,
@@ -437,10 +511,7 @@ describe("usage-tracker extension", () => {
 
 		it("drops history older than 30 days", async () => {
 			const now = Date.now();
-			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) =>
-				String(path).includes("usage-tracker-history.json"),
-			);
-			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
+			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path).includes("usage-tracker-history.json")) {
 					return JSON.stringify({
 						version: 1,
@@ -844,16 +915,14 @@ describe("usage-tracker extension", () => {
 		});
 
 		it("restores cached Anthropic windows across restarts when the live probe is rate-limited", async () => {
-			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
-				if (String(path) === AUTH_JSON_PATH || String(path) === RATE_LIMIT_CACHE_PATH) {
-					return true;
-				}
-				return false;
-			});
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => String(path) === AUTH_JSON_PATH);
 			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
 				if (String(path) === AUTH_JSON_PATH) {
 					return makeAuthJson();
 				}
+				return "{}";
+			});
+			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path) === RATE_LIMIT_CACHE_PATH) {
 					return makeRateLimitCacheJson();
 				}
@@ -1100,17 +1169,15 @@ describe("usage-tracker extension", () => {
 			expect(rendered).not.toContain("$0.050");
 		});
 
-		it("shows cached Anthropic windows in the widget when live probing is rate-limited", () => {
-			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
-				if (String(path) === AUTH_JSON_PATH || String(path) === RATE_LIMIT_CACHE_PATH) {
-					return true;
-				}
-				return false;
-			});
+		it("shows cached Anthropic windows in the widget when live probing is rate-limited", async () => {
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => String(path) === AUTH_JSON_PATH);
 			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
 				if (String(path) === AUTH_JSON_PATH) {
 					return makeAuthJson();
 				}
+				return "{}";
+			});
+			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path) === RATE_LIMIT_CACHE_PATH) {
 					return makeRateLimitCacheJson();
 				}
@@ -1120,6 +1187,7 @@ describe("usage-tracker extension", () => {
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
+			await vi.advanceTimersByTimeAsync(250);
 
 			const widgetFactory = ctx._widgets.get("usage-tracker") as
 				| ((
@@ -1136,17 +1204,15 @@ describe("usage-tracker extension", () => {
 			expect(rendered).toContain("72%");
 		});
 
-		it("shows only the current provider in the widget when multiple providers have cached usage", () => {
-			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
-				if (String(path) === AUTH_JSON_PATH || String(path) === RATE_LIMIT_CACHE_PATH) {
-					return true;
-				}
-				return false;
-			});
+		it("shows only the current provider in the widget when multiple providers have cached usage", async () => {
+			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => String(path) === AUTH_JSON_PATH);
 			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
 				if (String(path) === AUTH_JSON_PATH) {
 					return makeAuthJson();
 				}
+				return "{}";
+			});
+			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path) === RATE_LIMIT_CACHE_PATH) {
 					return makeRateLimitCacheJson({ openai: makeOpenAiRateLimitCacheEntry() });
 				}
@@ -1157,6 +1223,7 @@ describe("usage-tracker extension", () => {
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
+			await vi.advanceTimersByTimeAsync(250);
 
 			const widgetFactory = ctx._widgets.get("usage-tracker") as
 				| ((
