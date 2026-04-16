@@ -98,6 +98,7 @@ export function createExtensionHarness() {
 			getEntries: () => [],
 			getBranch: () => [],
 			getLeafId: () => "leaf-1",
+			getSessionId: () => undefined,
 			getSessionFile: () => undefined,
 		},
 		isIdle: () => true,
