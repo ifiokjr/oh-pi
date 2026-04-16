@@ -21,7 +21,7 @@ import {
 	parseLcovByFile,
 	parsePatchCoverageArgs,
 	runPatchCoverageCheck,
-} from "./check-patch-coverage.mjs";
+} from "./check-patch-coverage.ts";
 
 const tempDirs: string[] = [];
 

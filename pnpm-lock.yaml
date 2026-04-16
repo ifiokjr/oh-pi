@@ -50,13 +50,16 @@ importers:
         version: 7.0.0-dev.20260305.1
       '@vitest/coverage-v8':
         specifier: ^3.2.4
-        version: 3.2.4(vitest@3.2.4(@types/node@22.19.13)(yaml@2.8.3))
+        version: 3.2.4(vitest@3.2.4(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3))
+      tsx:
+        specifier: ^4.20.6
+        version: 4.21.0
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
       vitest:
         specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.13)(yaml@2.8.3)
+        version: 3.2.4(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3)
 
   packages/adaptive-routing:
     dependencies:
@@ -82,7 +85,7 @@ importers:
     dependencies:
       '@ifi/oh-pi-core':
         specifier: 0.4.4
-        version: link:../core
+        version: 0.4.4
       '@mariozechner/pi-agent-core':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
@@ -106,37 +109,37 @@ importers:
         version: 1.1.0
       '@ifi/oh-pi-agents':
         specifier: 0.4.4
-        version: link:../agents
+        version: 0.4.4
       '@ifi/oh-pi-ant-colony':
         specifier: 0.4.4
-        version: link:../ant-colony
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
       '@ifi/oh-pi-core':
         specifier: 0.4.4
-        version: link:../core
+        version: 0.4.4
       '@ifi/oh-pi-extensions':
         specifier: 0.4.4
-        version: link:../extensions
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
       '@ifi/oh-pi-prompts':
         specifier: 0.4.4
-        version: link:../prompts
+        version: 0.4.4
       '@ifi/oh-pi-skills':
         specifier: 0.4.4
-        version: link:../skills
+        version: 0.4.4
       '@ifi/oh-pi-themes':
         specifier: 0.4.4
-        version: link:../themes
+        version: 0.4.4
       '@ifi/pi-extension-subagents':
         specifier: 0.4.4
-        version: link:../subagents
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
       '@ifi/pi-plan':
         specifier: 0.4.4
-        version: link:../plan
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
       '@ifi/pi-shared-qna':
         specifier: 0.4.4
-        version: link:../shared-qna
+        version: 0.4.4(@mariozechner/pi-tui@0.56.1)
       '@ifi/pi-spec':
         specifier: 0.4.4
-        version: link:../spec
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
       chalk:
         specifier: ^5.6.2
         version: 5.6.2
@@ -193,7 +196,7 @@ importers:
     dependencies:
       '@ifi/pi-shared-qna':
         specifier: 0.4.4
-        version: link:../shared-qna
+        version: 0.4.4(@mariozechner/pi-tui@0.56.1)
       '@mariozechner/pi-agent-core':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
@@ -217,31 +220,31 @@ importers:
     dependencies:
       '@ifi/oh-pi-agents':
         specifier: 0.4.4
-        version: link:../agents
+        version: 0.4.4
       '@ifi/oh-pi-ant-colony':
         specifier: 0.4.4
-        version: link:../ant-colony
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
       '@ifi/oh-pi-extensions':
         specifier: 0.4.4
-        version: link:../extensions
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
       '@ifi/oh-pi-prompts':
         specifier: 0.4.4
-        version: link:../prompts
+        version: 0.4.4
       '@ifi/oh-pi-skills':
         specifier: 0.4.4
-        version: link:../skills
+        version: 0.4.4
       '@ifi/oh-pi-themes':
         specifier: 0.4.4
-        version: link:../themes
+        version: 0.4.4
       '@ifi/pi-extension-subagents':
         specifier: 0.4.4
-        version: link:../subagents
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
       '@ifi/pi-plan':
         specifier: 0.4.4
-        version: link:../plan
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
       '@ifi/pi-spec':
         specifier: 0.4.4
-        version: link:../spec
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
 
   packages/ollama:
     dependencies:
@@ -265,10 +268,10 @@ importers:
     dependencies:
       '@ifi/pi-extension-subagents':
         specifier: 0.4.4
-        version: link:../subagents
+        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
       '@ifi/pi-shared-qna':
         specifier: 0.4.4
-        version: link:../shared-qna
+        version: 0.4.4(@mariozechner/pi-tui@0.56.1)
       '@mariozechner/pi-agent-core':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
@@ -291,7 +294,7 @@ importers:
     dependencies:
       '@ifi/pi-shared-qna':
         specifier: 0.4.4
-        version: link:../shared-qna
+        version: 0.4.4(@mariozechner/pi-tui@0.56.1)
       '@mariozechner/pi-agent-core':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
@@ -338,7 +341,7 @@ importers:
     dependencies:
       '@ifi/oh-pi-core':
         specifier: 0.4.4
-        version: link:../core
+        version: 0.4.4
       '@mariozechner/pi-agent-core':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
@@ -363,7 +366,7 @@ importers:
     dependencies:
       '@ifi/pi-web-server':
         specifier: 0.4.4
-        version: link:../web-server
+        version: 0.4.4(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))
       '@mariozechner/pi-coding-agent':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
@@ -851,6 +854,81 @@ packages:
     resolution: {integrity: sha512-kQQo4xPUdnvPNXvfaPXBcy+1yFxv1LhjM8vGaUGlq4BOy2wyD4QcXrKDReqcUJbk6Yg5lNffxrbKLKrnB11djw==}
     engines: {node: '>=18'}
     hasBin: true
+
+  '@ifi/oh-pi-agents@0.4.4':
+    resolution: {integrity: sha512-lrBL1EzuWhZxQ/YX7LZrJLQBfCt0qRxTkNr1s8Y2o8/lQiUiEAsH6V80XnFXtkDZw/Yp8wCwolLuSbTR8O9KTQ==}
+
+  '@ifi/oh-pi-ant-colony@0.4.4':
+    resolution: {integrity: sha512-nio0C6uT7w22nK4IUr7LCUnnaaYrb1fd0RTFD0KcjdDccxVmQQA5Se3owvzGxf28uT6dj3S5nyhK/fy7/96+cg==}
+    peerDependencies:
+      '@mariozechner/pi-agent-core': '>=0.56.1'
+      '@mariozechner/pi-ai': '>=0.56.1'
+      '@mariozechner/pi-coding-agent': '>=0.56.1'
+      '@mariozechner/pi-tui': '>=0.56.1'
+      '@sinclair/typebox': '*'
+
+  '@ifi/oh-pi-core@0.4.4':
+    resolution: {integrity: sha512-i9yh+P++mYV75LWl31MukT6tASHYbi7Qhnhv1lMMBZLazK/A7e5OJNh3uUlw0fykSVTiFXGpvOnqMc2pwvRZEw==}
+    engines: {node: '>=20.0.0'}
+
+  '@ifi/oh-pi-extensions@0.4.4':
+    resolution: {integrity: sha512-tx97zKymuK47oGisEzRh9VkY/bkBec76BVomM+dO4ty/tqX8wCDUmP1RJVkVk9szITucPHpnGFTRC6lPaZEjkQ==}
+    peerDependencies:
+      '@mariozechner/pi-agent-core': '>=0.56.1'
+      '@mariozechner/pi-ai': '>=0.56.1'
+      '@mariozechner/pi-coding-agent': '>=0.56.1'
+      '@mariozechner/pi-tui': '>=0.56.1'
+      '@sinclair/typebox': '*'
+
+  '@ifi/oh-pi-prompts@0.4.4':
+    resolution: {integrity: sha512-bMhN9ltlLkz1DwD6Dk37s+7Mvp+4X1BTIs57xWLq0Ljr4O7NqJou3j5M7p+aRjmoWpz6BLfk19vdC1jQY4rqyQ==}
+
+  '@ifi/oh-pi-skills@0.4.4':
+    resolution: {integrity: sha512-TGDMYvAf8IxcPQBO+8GeBv+Po2FgRpRO7GfLG++qzyr+W6TVb1IIXaTuFA3aPTfO1apg0YQl4uQFiUnQxrg8XA==}
+
+  '@ifi/oh-pi-themes@0.4.4':
+    resolution: {integrity: sha512-pm/JKFqnr0I/NJrfT0KVkg1C/rEtHx+HSiDhKG5BQAyaX+1gbY2Doh9kLUijABWpeNgkuRwzpCm6F2+Lv8QYzA==}
+
+  '@ifi/pi-extension-subagents@0.4.4':
+    resolution: {integrity: sha512-uGpzhZxWyPseT5srhT14h9fXBPe9l/wmExg8ufr4PTi+vJx9PW8lqvlhUxIWsqw/5PORRuZiD1ZtzK3MTHCKdg==}
+    hasBin: true
+    peerDependencies:
+      '@mariozechner/pi-agent-core': '>=0.56.1'
+      '@mariozechner/pi-ai': '>=0.56.1'
+      '@mariozechner/pi-coding-agent': '>=0.56.1'
+      '@mariozechner/pi-tui': '>=0.56.1'
+      '@sinclair/typebox': '*'
+
+  '@ifi/pi-plan@0.4.4':
+    resolution: {integrity: sha512-m8VqVod1bp3s3KyLZU/DE5fDuO03dVUdyMxQoB9dY8YLUYH1cspJVxpa6K4dO1evYB6B/6pI41U2IrEm6f65/g==}
+    hasBin: true
+    peerDependencies:
+      '@mariozechner/pi-agent-core': '>=0.56.1'
+      '@mariozechner/pi-ai': '>=0.56.1'
+      '@mariozechner/pi-coding-agent': '>=0.56.1'
+      '@mariozechner/pi-tui': '>=0.56.1'
+      '@sinclair/typebox': '*'
+
+  '@ifi/pi-shared-qna@0.4.4':
+    resolution: {integrity: sha512-zNHh5LMlim57x6h/31N3FakERggY2QzwTBnCEo9DloPh57PjHJ9z+9lk+8nM3ktOP0wZkcY8OHr2a2f8jNgV4w==}
+    peerDependencies:
+      '@mariozechner/pi-tui': '*'
+
+  '@ifi/pi-spec@0.4.4':
+    resolution: {integrity: sha512-BOSklndS4VOdBcf33n4jHbIygia0oe3V2w4L8TCh0LEBnOqCzUJzYC/6L/xr4qXyGK5w0RdJxa/qMm0l7RGFmg==}
+    peerDependencies:
+      '@mariozechner/pi-agent-core': '>=0.56.1'
+      '@mariozechner/pi-ai': '>=0.56.1'
+      '@mariozechner/pi-coding-agent': '>=0.56.1'
+      '@mariozechner/pi-tui': '>=0.56.1'
+      '@sinclair/typebox': '*'
+
+  '@ifi/pi-web-server@0.4.4':
+    resolution: {integrity: sha512-BxyDz6gE8hJdp4Z4SIhRoh88dlI14XDzR3k/732lsH0frqUT14VUoYrktF9BHor5XCIH9zopvGFFVV8Qd0WUzw==}
+    engines: {node: '>=20.0.0'}
+    hasBin: true
+    peerDependencies:
+      '@mariozechner/pi-coding-agent': '>=0.56.1'
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -1720,6 +1798,9 @@ packages:
     resolution: {integrity: sha512-nBF+F1rAZVCu/p7rjzgA+Yb4lfYXrpl7a6VmJrU8wF9I1CKvP/QwPNZHnOlwbTkY6dvtFIzFMSyQXbLoTQPRpA==}
     engines: {node: '>=8'}
 
+  get-tsconfig@4.14.0:
+    resolution: {integrity: sha512-yTb+8DXzDREzgvYmh6s9vHsSVCHeC0G3PI5bEXNBHtmshPnO+S5O7qgLEOn0I5QvMy6kpZN8K1NKGyilLb93wA==}
+
   get-uri@6.0.5:
     resolution: {integrity: sha512-b1O07XYq8eRuVzBNgJLstU6FYc1tS6wnMtF1I1D9lE8LxZSOGZ7LhxN54yPP6mGw5f2CkXY2BQUL9Fx41qvcIg==}
     engines: {node: '>= 14'}
@@ -2016,6 +2097,9 @@ packages:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
 
+  resolve-pkg-maps@1.0.0:
+    resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
+
   retry@0.12.0:
     resolution: {integrity: sha512-9LkiTwjUh6rT555DtE9rTX+BKByPfrMzEAtnlEtdEwr3Nkffwiihqe2bWADg+OQRjt9gl6ICdmB/ZFDCGAtSow==}
     engines: {node: '>= 4'}
@@ -2160,6 +2244,11 @@ packages:
 
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
+
+  tsx@4.21.0:
+    resolution: {integrity: sha512-5C1sg4USs1lfG0GFb2RLXsdpXqBSEhAaA/0kPL01wxzpMqLILNxIxIOKiILz+cdg/pLnOUxFYOR5yhHU666wbw==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
@@ -2900,6 +2989,78 @@ snapshots:
       '@ifi/mdt-win32-arm64-msvc': 0.7.0
       '@ifi/mdt-win32-x64-msvc': 0.7.0
 
+  '@ifi/oh-pi-agents@0.4.4': {}
+
+  '@ifi/oh-pi-ant-colony@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)':
+    dependencies:
+      '@ifi/oh-pi-core': 0.4.4
+      '@mariozechner/pi-agent-core': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-ai': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-tui': 0.56.1
+      '@sinclair/typebox': 0.34.48
+
+  '@ifi/oh-pi-core@0.4.4':
+    dependencies:
+      '@clack/prompts': 1.1.0
+      chalk: 5.6.2
+
+  '@ifi/oh-pi-extensions@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)':
+    dependencies:
+      '@mariozechner/pi-agent-core': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-ai': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-tui': 0.56.1
+      '@sinclair/typebox': 0.34.48
+      croner: 10.0.1
+
+  '@ifi/oh-pi-prompts@0.4.4': {}
+
+  '@ifi/oh-pi-skills@0.4.4': {}
+
+  '@ifi/oh-pi-themes@0.4.4': {}
+
+  '@ifi/pi-extension-subagents@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)':
+    dependencies:
+      '@ifi/oh-pi-core': 0.4.4
+      '@mariozechner/pi-agent-core': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-ai': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-tui': 0.56.1
+      '@sinclair/typebox': 0.34.48
+
+  '@ifi/pi-plan@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)':
+    dependencies:
+      '@ifi/pi-extension-subagents': 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
+      '@ifi/pi-shared-qna': 0.4.4(@mariozechner/pi-tui@0.56.1)
+      '@mariozechner/pi-agent-core': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-ai': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-tui': 0.56.1
+      '@sinclair/typebox': 0.34.48
+
+  '@ifi/pi-shared-qna@0.4.4(@mariozechner/pi-tui@0.56.1)':
+    dependencies:
+      '@mariozechner/pi-tui': 0.56.1
+
+  '@ifi/pi-spec@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)':
+    dependencies:
+      '@mariozechner/pi-agent-core': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-ai': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-tui': 0.56.1
+      '@sinclair/typebox': 0.34.48
+
+  '@ifi/pi-web-server@0.4.4(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))':
+    dependencies:
+      '@hono/node-server': 1.19.13(hono@4.12.12)
+      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.19.0)(zod@3.25.76)
+      hono: 4.12.12
+      ws: 8.19.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   '@isaacs/cliui@8.0.2':
     dependencies:
       string-width: 5.1.2
@@ -3534,7 +3695,7 @@ snapshots:
       '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260305.1
       '@typescript/native-preview-win32-x64': 7.0.0-dev.20260305.1
 
-  '@vitest/coverage-v8@3.2.4(vitest@3.2.4(@types/node@22.19.13)(yaml@2.8.3))':
+  '@vitest/coverage-v8@3.2.4(vitest@3.2.4(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3))':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@bcoe/v8-coverage': 1.0.2
@@ -3549,7 +3710,7 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.2
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/node@22.19.13)(yaml@2.8.3)
+      vitest: 3.2.4(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3)
     transitivePeerDependencies:
       - supports-color
 
@@ -3561,13 +3722,13 @@ snapshots:
       chai: 5.3.3
       tinyrainbow: 2.0.0
 
-  '@vitest/mocker@3.2.4(vite@7.3.2(@types/node@22.19.13)(yaml@2.8.3))':
+  '@vitest/mocker@3.2.4(vite@7.3.2(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 3.2.4
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.3.2(@types/node@22.19.13)(yaml@2.8.3)
+      vite: 7.3.2(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3)
 
   '@vitest/pretty-format@3.2.4':
     dependencies:
@@ -3869,6 +4030,10 @@ snapshots:
   get-stream@5.2.0:
     dependencies:
       pump: 3.0.4
+
+  get-tsconfig@4.14.0:
+    dependencies:
+      resolve-pkg-maps: 1.0.0
 
   get-uri@6.0.5:
     dependencies:
@@ -4183,6 +4348,8 @@ snapshots:
 
   require-from-string@2.0.2: {}
 
+  resolve-pkg-maps@1.0.0: {}
+
   retry@0.12.0: {}
 
   retry@0.13.1: {}
@@ -4337,6 +4504,13 @@ snapshots:
 
   tslib@2.8.1: {}
 
+  tsx@4.21.0:
+    dependencies:
+      esbuild: 0.27.3
+      get-tsconfig: 4.14.0
+    optionalDependencies:
+      fsevents: 2.3.3
+
   typescript@5.9.3: {}
 
   uint8array-extras@1.5.0: {}
@@ -4345,13 +4519,13 @@ snapshots:
 
   undici@7.24.0: {}
 
-  vite-node@3.2.4(@types/node@22.19.13)(yaml@2.8.3):
+  vite-node@3.2.4(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:
       cac: 6.7.14
       debug: 4.4.3
       es-module-lexer: 1.7.0
       pathe: 2.0.3
-      vite: 7.3.2(@types/node@22.19.13)(yaml@2.8.3)
+      vite: 7.3.2(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3)
     transitivePeerDependencies:
       - '@types/node'
       - jiti
@@ -4366,7 +4540,7 @@ snapshots:
       - tsx
       - yaml
 
-  vite@7.3.2(@types/node@22.19.13)(yaml@2.8.3):
+  vite@7.3.2(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:
       esbuild: 0.27.3
       fdir: 6.5.0(picomatch@4.0.4)
@@ -4377,13 +4551,14 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.19.13
       fsevents: 2.3.3
+      tsx: 4.21.0
       yaml: 2.8.3
 
-  vitest@3.2.4(@types/node@22.19.13)(yaml@2.8.3):
+  vitest@3.2.4(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/expect': 3.2.4
-      '@vitest/mocker': 3.2.4(vite@7.3.2(@types/node@22.19.13)(yaml@2.8.3))
+      '@vitest/mocker': 3.2.4(vite@7.3.2(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3))
       '@vitest/pretty-format': 3.2.4
       '@vitest/runner': 3.2.4
       '@vitest/snapshot': 3.2.4
@@ -4401,8 +4576,8 @@ snapshots:
       tinyglobby: 0.2.15
       tinypool: 1.1.1
       tinyrainbow: 2.0.0
-      vite: 7.3.2(@types/node@22.19.13)(yaml@2.8.3)
-      vite-node: 3.2.4(@types/node@22.19.13)(yaml@2.8.3)
+      vite: 7.3.2(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3)
+      vite-node: 3.2.4(@types/node@22.19.13)(tsx@4.21.0)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.19.13

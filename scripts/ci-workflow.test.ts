@@ -15,4 +15,11 @@ describe("CI workflow branch triggers", () => {
 		expect(workflow).toContain("pull_request:");
 		expect(workflow.match(/branches: \[main, 'prep\/\*\*'\]/g)?.length).toBe(2);
 	});
+
+	it("links workspace packages before the build job runs", () => {
+		const workflow = readFileSync(workflowPath, "utf8");
+
+		expect(workflow).toContain("name: Build");
+		expect(workflow).toContain("pnpm install --link-workspace-packages");
+	});
 });
