@@ -12,6 +12,7 @@ const PI_PACKAGES = [
 ];
 const SMOKE_TESTS = [
 	"packages/extensions/extensions/smoke.test.ts",
+	"packages/diagnostics/tests/smoke.test.ts",
 	"packages/ant-colony/tests/smoke.test.ts",
 	"packages/subagents/tests/smoke.test.ts",
 	"packages/spec/tests/smoke.test.ts",

@@ -55,6 +55,7 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 | [`@ifi/oh-pi-extensions`](./packages/extensions)          | Core extension pack (see below)             | `pi install npm:@ifi/oh-pi-extensions`      |
 | [`@ifi/pi-extension-adaptive-routing`](./packages/adaptive-routing) | Optional adaptive + delegated routing       | `pi install npm:@ifi/pi-extension-adaptive-routing` |
 | [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)          | Multi-agent swarm extension                 | `pi install npm:@ifi/oh-pi-ant-colony`      |
+| [`@ifi/pi-diagnostics`](./packages/diagnostics)           | Prompt completion timing extension          | `pi install npm:@ifi/pi-diagnostics`         |
 | [`@ifi/pi-extension-subagents`](./packages/subagents)     | Full-featured subagent delegation extension | `pi install npm:@ifi/pi-extension-subagents` |
 | [`@ifi/pi-plan`](./packages/plan)                         | Branch-aware planning mode extension        | `pi install npm:@ifi/pi-plan`               |
 | [`@ifi/pi-shared-qna`](./packages/shared-qna)             | Shared Q&A TUI helpers                      | (library, not installed directly)           |
@@ -224,6 +225,22 @@ window %, elapsed time, working directory, git branch, and repo/worktree context
 **How it works:** Uses `ctx.ui.setFooter()` with a component that reads
 `ctx.sessionManager.getBranch()` for token/cost data and `footerData.getGitBranch()` for git info.
 Auto-refreshes every 30s.
+
+### ⏱ Diagnostics (`diagnostics`) — **default: on**
+
+Adds prompt-level completion diagnostics so you can see when a prompt started, when it finished,
+how long it took, and how each assistant turn progressed.
+
+**Surfaces:**
+
+- widget below the editor showing the active prompt or the last completed prompt
+- session log entry after each prompt finishes with human-readable start/end timestamps
+- expanded per-turn timing details for prompts that needed multiple assistant turns
+- `Ctrl+Shift+D` shortcut and `/diagnostics [status|toggle|on|off]`
+
+**How it works:** Reuses the same timestamp/duration formatting as `tool-metadata`, tracks
+`before_agent_start`, `turn_end`, and `agent_end`, then emits a custom diagnostic message when the
+agent goes idle for that prompt.
 
 ### ⚡ Compact Header (`compact-header`) — **default: on**
 

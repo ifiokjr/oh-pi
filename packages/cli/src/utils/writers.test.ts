@@ -68,6 +68,19 @@ describe("writeExtensions", () => {
 		expect(existsSync(join(dir, "extensions", "spec", "index.ts"))).toBe(true);
 		expect(existsSync(join(dir, "extensions", "spec", "assets", "templates", "spec-template.md"))).toBe(true);
 	});
+
+	it("copies the dedicated diagnostics package into the local extensions directory", () => {
+		const dir = makeTempDir();
+		writeExtensions(
+			dir,
+			makeConfig({
+				extensions: ["diagnostics"],
+			}),
+		);
+
+		expect(existsSync(join(dir, "extensions", "diagnostics", "index.ts"))).toBe(true);
+		expect(existsSync(join(dir, "extensions", "diagnostics", "diagnostics-shared.ts"))).toBe(true);
+	});
 });
 
 describe("writeAdaptiveRoutingConfig", () => {

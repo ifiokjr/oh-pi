@@ -273,6 +273,11 @@ export function writeExtensions(agentDir: string, config: OhPConfigWithRouting) 
 			continue;
 		}
 
+		if (ext === "diagnostics") {
+			copyDedicatedExtension(extDir, "diagnostics", resources.diagnosticsDir());
+			continue;
+		}
+
 		if (ext === "spec") {
 			copyDedicatedExtension(extDir, "spec", resources.specDir());
 			continue;

@@ -11,6 +11,7 @@ versioned_files = [
   "packages/cli/package.json",
   "packages/extensions/package.json",
   "packages/ant-colony/package.json",
+  "packages/diagnostics/package.json",
   "packages/themes/package.json",
   "packages/prompts/package.json",
   "packages/skills/package.json",

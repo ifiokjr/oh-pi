@@ -37,6 +37,7 @@ describe("git-install package manifest", () => {
 		const extensionPackages = [
 			"packages/extensions/package.json",
 			"packages/ant-colony/package.json",
+			"packages/diagnostics/package.json",
 			"packages/subagents/package.json",
 			"packages/plan/package.json",
 			"packages/spec/package.json",

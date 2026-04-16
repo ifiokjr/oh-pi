@@ -90,6 +90,13 @@ export const EXTENSIONS = [
 		default: true,
 	},
 	{
+		name: "diagnostics",
+		get label() {
+			return `${icon("chart")} Diagnostics — Log prompt completion timestamps, durations, and per-turn response timing`;
+		},
+		default: true,
+	},
+	{
 		name: "compact-header",
 		get label() {
 			return `${icon("bolt")} Compact Header — Dense startup info replacing verbose output`;
