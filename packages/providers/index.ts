@@ -1,4 +1,4 @@
-import { openScrollableSelect, type ScrollSelectOption } from "@ifi/pi-shared-qna";
+import * as sharedQna from "@ifi/pi-shared-qna";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import {
 	createApiKeyOAuthProvider,
@@ -14,6 +14,26 @@ import {
 	resolveProviderModels,
 } from "./catalog.js";
 import { getEnvApiKey, resolveApiKeyConfig, SUPPORTED_PROVIDERS, type SupportedProviderDefinition } from "./config.js";
+
+type ScrollSelectOption<T> = {
+	value: T;
+	label: string;
+};
+
+type ProviderScrollableSelectConfig<T> = {
+	title: string;
+	options: ScrollSelectOption<T>[];
+	footerHint?: string;
+	search?: {
+		title: string;
+		placeholder: string;
+		getOptions(query: string): ScrollSelectOption<T>[];
+		emptyMessage(query: string): string;
+	};
+	maxVisibleOptions?: number;
+	overlayWidth?: string;
+	overlayMaxHeight?: string;
+};
 
 type ProviderAuthReader = Pick<ExtensionContext["modelRegistry"]["authStorage"], "get">;
 type ProviderAuthWriter = Pick<ExtensionContext["modelRegistry"]["authStorage"], "get" | "set">;
@@ -406,7 +426,7 @@ async function selectProviderFromOverlay(
 	providers: readonly SupportedProviderDefinition[],
 ): Promise<SupportedProviderDefinition | null> {
 	const options = buildProviderPickerOptions(providers, ctx);
-	return await openScrollableSelect(ctx.ui, {
+	return await openProviderScrollableSelect(ctx.ui, {
 		title: `Select provider to log in (${providers.length} total)`,
 		options,
 		footerHint: typeof ctx.ui.input === "function" ? "type / to search" : undefined,
@@ -415,14 +435,14 @@ async function selectProviderFromOverlay(
 				? {
 						title: "Provider search",
 						placeholder: "Type a provider id or name",
-						getOptions(query) {
+						getOptions(query: string) {
 							if (!query) {
 								return options;
 							}
 
 							return buildProviderPickerOptions(findProviders(query), ctx);
 						},
-						emptyMessage(query) {
+						emptyMessage(query: string) {
 							return `No provider matched "${query}".`;
 						},
 					}
@@ -431,6 +451,52 @@ async function selectProviderFromOverlay(
 		overlayWidth: "80%",
 		overlayMaxHeight: "75%",
 	});
+}
+
+async function openProviderScrollableSelect<T>(
+	ui: Pick<ExtensionCommandContext["ui"], "custom" | "input">,
+	config: ProviderScrollableSelectConfig<T>,
+): Promise<T | null> {
+	const sharedOpenScrollableSelect = (sharedQna as { openScrollableSelect?: unknown }).openScrollableSelect;
+	if (typeof sharedOpenScrollableSelect === "function") {
+		return await (
+			sharedOpenScrollableSelect as (
+				ui: Pick<ExtensionCommandContext["ui"], "custom" | "input">,
+				config: ProviderScrollableSelectConfig<T>,
+			) => Promise<T | null>
+		)(ui, config);
+	}
+	if (typeof ui.custom !== "function") {
+		return config.options[0]?.value ?? null;
+	}
+	return await ui.custom(
+		(_tui, _theme, _keybindings, _done) => ({
+			invalidate() {
+				// No-op fallback invalidation.
+			},
+			render(width: number) {
+				return [
+					config.title,
+					...(config.footerHint ? [config.footerHint] : []),
+					...config.options.slice(0, config.maxVisibleOptions ?? 12).map((option) => `- ${option.label}`),
+				].map((line) => line.slice(0, width));
+			},
+			handleInput() {
+				// Fallback picker relies on the surrounding ui.custom implementation.
+			},
+			dispose() {
+				// No-op fallback cleanup.
+			},
+		}),
+		{
+			overlay: true,
+			overlayOptions: {
+				anchor: "center",
+				width: config.overlayWidth ?? "80%",
+				maxHeight: config.overlayMaxHeight ?? "75%",
+			},
+		},
+	);
 }
 
 function buildProviderPickerOptions(
