@@ -42,7 +42,7 @@
 		"security:check": "pnpm security:allowlist && pnpm security:audit:prod && pnpm security:audit:dev",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
-		"test:patch-coverage": "node ./scripts/check-patch-coverage.mjs --threshold 100 --lcov coverage/lcov.info",
+		"test:patch-coverage": "pnpm tsx ./scripts/check-patch-coverage.ts --threshold 100 --lcov coverage/lcov.info",
 		"bench": "pnpm bench:startup && pnpm bench:runtime && pnpm bench:extensions-render && pnpm bench:live-runtime",
 		"bench:startup": "OH_PI_RUN_BENCHMARKS=1 pnpm exec vitest run benchmarks/startup/startup-bench.test.ts",
 		"bench:runtime": "OH_PI_RUN_BENCHMARKS=1 pnpm exec vitest run benchmarks/runtime/runtime-bench.test.ts",
