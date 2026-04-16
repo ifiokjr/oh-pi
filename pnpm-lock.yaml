@@ -61,8 +61,8 @@ importers:
   packages/adaptive-routing:
     dependencies:
       '@ifi/oh-pi-core':
-        specifier: workspace:0.4.4
-        version: link:../core
+        specifier: 0.4.4
+        version: 0.4.4
       '@mariozechner/pi-agent-core':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
@@ -84,8 +84,8 @@ importers:
   packages/ant-colony:
     dependencies:
       '@ifi/oh-pi-core':
-        specifier: workspace:0.4.4
-        version: link:../core
+        specifier: 0.4.4
+        version: 0.4.4
       '@mariozechner/pi-agent-core':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
@@ -340,8 +340,8 @@ importers:
   packages/subagents:
     dependencies:
       '@ifi/oh-pi-core':
-        specifier: workspace:0.4.4
-        version: link:../core
+        specifier: 0.4.4
+        version: 0.4.4
       '@mariozechner/pi-agent-core':
         specifier: '>=0.56.1'
         version: 0.56.1(ws@8.19.0)(zod@3.25.76)
