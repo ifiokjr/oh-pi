@@ -658,8 +658,8 @@ function updatePiSources(pi: string, currentSources: ReadonlyMap<string, string>
 	}
 }
 
-function main() {
-	const options = parseArgs(process.argv);
+export function main(argv: string[] = process.argv) {
+	const options = parseArgs(argv);
 	const settingsPath = getSettingsPath(options.piLocal);
 	const settings = loadSettings(settingsPath);
 	const currentEntries = Array.isArray(settings.packages) ? settings.packages : [];

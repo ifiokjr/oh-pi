@@ -1,8 +1,6 @@
-import { spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { SWITCHER_PACKAGES } from "../packages/oh-pi/bin/package-list.mjs";
 import {
@@ -16,10 +14,10 @@ import {
 	resolveWorkspacePackageManifests,
 	resolveWorkspacePackageSources,
 	rewriteManagedPackageSources,
+	main,
 } from "./pi-source-switch.mts";
 
 const tempDirs: string[] = [];
-const scriptPath = fileURLToPath(new URL("./pi-source-switch.mts", import.meta.url));
 
 function createTempDir(prefix: string): string {
 	const dir = mkdtempSync(path.join(tmpdir(), prefix));
@@ -114,11 +112,48 @@ function runSwitcher(
 		env?: NodeJS.ProcessEnv;
 	} = {},
 ) {
-	return spawnSync(process.execPath, ["--experimental-strip-types", scriptPath, ...args], {
-		cwd: options.cwd ?? process.cwd(),
-		env: { ...process.env, ...options.env },
-		encoding: "utf8",
-	});
+	const stdout: string[] = [];
+	const stderr: string[] = [];
+	const originalArgv = process.argv;
+	const originalEnv = process.env;
+	const originalCwd = process.cwd();
+	const originalLog = console.log;
+	const originalError = console.error;
+
+	const nextEnv = { ...process.env, ...options.env };
+	let status = 0;
+
+	console.log = (...values) => {
+		stdout.push(`${values.join(" ")}\n`);
+	};
+	console.error = (...values) => {
+		stderr.push(`${values.join(" ")}\n`);
+	};
+	process.argv = [process.execPath, "./scripts/pi-source-switch.mts", ...args];
+	process.env = nextEnv;
+
+	try {
+		if (options.cwd) {
+			process.chdir(options.cwd);
+		}
+		main(process.argv);
+	} catch (error) {
+		status = 1;
+		const message = error instanceof Error ? error.message : String(error);
+		console.error(`\nError: ${message}`);
+	} finally {
+		process.argv = originalArgv;
+		process.env = originalEnv;
+		process.chdir(originalCwd);
+		console.log = originalLog;
+		console.error = originalError;
+	}
+
+	return {
+		status,
+		stdout: stdout.join(""),
+		stderr: stderr.join(""),
+	};
 }
 
 describe("pi source switcher helpers", () => {
