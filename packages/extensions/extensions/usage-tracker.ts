@@ -155,6 +155,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 	let startupRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let requestWidgetRender: (() => void) | null = null;
 
+	const requestUsageWidgetRender = () => {
+		requestWidgetRender?.();
+	};
+
 	const scheduleCtrlUUnbound = () => {
 		if (keybindingsSyncScheduled) {
 			return;
@@ -371,7 +375,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 		persistedStateLoadPromise = (async () => {
 			await Promise.all([loadRollingHistory(), loadRateLimitCache()]);
-			requestWidgetRender?.();
+			requestUsageWidgetRender();
 			broadcastUsageData();
 		})();
 
@@ -736,6 +740,8 @@ export default function usageTracker(pi: ExtensionAPI) {
 			pruneRollingHistory(now);
 			saveRollingHistory();
 		}
+
+		requestUsageWidgetRender();
 	}
 
 	function recordUsage(msg: AssistantMessage, options: { persist?: boolean } = {}): void {
@@ -864,6 +870,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		const entries = ctx.sessionManager.getBranch();
 		const refresh = () => {
 			hydrateFromSessionEntries(entries);
+			requestUsageWidgetRender();
 			triggerProbe(ctx);
 			broadcastUsageData();
 		};
@@ -908,6 +915,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 				rateLimits.set(provider, limits);
 				saveRateLimitCache();
 				lastProbeTime.set(provider, Date.now());
+				requestUsageWidgetRender();
 				return;
 			}
 
@@ -936,6 +944,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 				});
 				saveRateLimitCache();
 				lastProbeTime.set(provider, now);
+				requestUsageWidgetRender();
 				return;
 			}
 
@@ -954,6 +963,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 				});
 				saveRateLimitCache();
 				lastProbeTime.set(provider, now);
+				requestUsageWidgetRender();
 				return;
 			}
 
@@ -984,6 +994,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 			rateLimits.set(provider, limits);
 			saveRateLimitCache();
 			lastProbeTime.set(provider, Date.now());
+			requestUsageWidgetRender();
 		} catch {
 			// Probe failed — keep stale data if any
 		} finally {
@@ -1521,36 +1532,41 @@ export default function usageTracker(pi: ExtensionAPI) {
 		return [parts.join(sep)];
 	}
 
+	const mountWidget = (ctx: ExtensionContext) => {
+		ctx.ui.setWidget("usage-tracker", (tui, theme) => {
+			const componentRequestRender = () => tui.requestRender();
+			requestWidgetRender = componentRequestRender;
+			const unsubSafeMode = subscribeSafeMode(() => requestUsageWidgetRender());
+			return {
+				dispose() {
+					if (requestWidgetRender === componentRequestRender) {
+						requestWidgetRender = null;
+					}
+					unsubSafeMode();
+				},
+				// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
+				invalidate() {},
+				render(width: number) {
+					return renderWidget(activeCtx ?? ctx, theme).map((line) => truncateAnsi(line, width));
+				},
+			};
+		});
+	};
+
 	// ─── Event handlers ───────────────────────────────────────────────────
 
 	pi.on("session_start", (_event, ctx) => {
 		activeCtx = ctx;
 		schedulePersistedStateLoad();
 		refreshStartupState(ctx);
-
-		ctx.ui.setWidget("usage-tracker", (tui, theme) => {
-			requestWidgetRender = () => tui.requestRender();
-			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
-			const timer = setInterval(() => tui.requestRender(), 15_000);
-			return {
-				dispose() {
-					requestWidgetRender = null;
-					unsubSafeMode();
-					clearInterval(timer);
-				},
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
-				invalidate() {},
-				render(width: number) {
-					return renderWidget(ctx, theme).map((line) => truncateAnsi(line, width));
-				},
-			};
-		});
+		mountWidget(ctx);
 	});
 
 	pi.on("session_switch", (_event, ctx) => {
 		activeCtx = ctx;
 		schedulePersistedStateLoad();
 		refreshStartupState(ctx);
+		requestUsageWidgetRender();
 	});
 
 	pi.on("turn_end", (event, ctx) => {
@@ -1565,6 +1581,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	pi.on("model_select", (_event, ctx) => {
 		activeCtx = ctx;
+		requestUsageWidgetRender();
 		triggerProbe(ctx); // Probe the new provider
 	});
 
@@ -1599,21 +1616,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		async handler(_args, ctx) {
 			widgetVisible = !widgetVisible;
 			if (widgetVisible) {
-				ctx.ui.setWidget("usage-tracker", (tui, theme) => {
-					const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
-					const timer = setInterval(() => tui.requestRender(), 15_000);
-					return {
-						dispose() {
-							unsubSafeMode();
-							clearInterval(timer);
-						},
-						// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
-						invalidate() {},
-						render(width: number) {
-							return renderWidget(ctx, theme).map((line) => truncateAnsi(line, width));
-						},
-					};
-				});
+				mountWidget(ctx);
 				ctx.ui.notify("Usage widget shown.", "info");
 			} else {
 				ctx.ui.setWidget("usage-tracker", undefined);

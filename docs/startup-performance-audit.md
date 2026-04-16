@@ -106,12 +106,17 @@ The footer caches totals after startup, but the aggregation path is still O(n) o
 
 **Why it matters**
 
-The usage tracker hydrates from session history near startup and also schedules persisted-state loading and provider probing. For histories below the defer threshold it still does immediate session reconstruction.
+The usage tracker hydrates from session history near startup and also schedules persisted-state loading and provider probing. For histories below the defer threshold it still does immediate session reconstruction. Its widget used to wake on a fixed 15-second timer, which made it another likely contributor to background redraw churn after startup.
 
 **Current benchmark coverage**
 
 - `usage tracker session_start (200-entry history)`
 - included indirectly by the full-stack startup cases
+
+**Latest mitigation**
+
+- usage widget redraws should now be event-driven from usage/probe/session changes instead of a fixed 15-second timer
+- widget rendering should follow the latest active session context after `session_switch` without requiring a remount
 
 ### 5. `packages/ant-colony/extensions/ant-colony/*`
 

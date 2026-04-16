@@ -1169,6 +1169,96 @@ describe("usage-tracker extension", () => {
 			expect(rendered).not.toContain("$0.050");
 		});
 
+		it("re-renders the widget when new usage arrives", () => {
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						render: (width: number) => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const requestRender = vi.fn();
+			widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+			requestRender.mockClear();
+
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage({ costTotal: 0.02 }),
+					toolResults: [],
+				},
+				ctx,
+			);
+
+			expect(requestRender).toHaveBeenCalledTimes(1);
+		});
+
+		it("does not rely on a periodic widget timer while idle", () => {
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						render: (width: number) => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const requestRender = vi.fn();
+			widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+			requestRender.mockClear();
+
+			vi.advanceTimersByTime(60_000);
+
+			expect(requestRender).not.toHaveBeenCalled();
+		});
+
+		it("renders against the latest active session after session_switch", () => {
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage({ provider: "anthropic", model: "claude-sonnet-4-20250514", costTotal: 0.02 }),
+					toolResults: [],
+				},
+				ctx,
+			);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						render: (width: number) => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
+
+			const nextCtx = createMockCtx([
+				makeSessionEntry(makeAssistantMessage({ provider: "openai", model: "gpt-4o", costTotal: 0.03 })),
+			]);
+			nextCtx.model = { id: "gpt-4o", provider: "openai" } as any;
+			pi._emit("session_switch", { type: "session_switch" }, nextCtx);
+
+			const rendered = component?.render(200).join("\n") ?? "";
+			expect(rendered).toContain("$0.030");
+			expect(rendered).not.toContain("$0.020");
+		});
+
 		it("shows cached Anthropic windows in the widget when live probing is rate-limited", async () => {
 			(existsSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => String(path) === AUTH_JSON_PATH);
 			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
