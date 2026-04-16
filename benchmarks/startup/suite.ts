@@ -113,18 +113,30 @@ function extensionIdFromPath(extensionPath: string): string {
 	return fileName.replace(/\.ts$/, "");
 }
 
-function parseEnvList(name: string): Set<string> | null {
-	const rawValue = process.env[name]?.trim();
-	if (!rawValue || rawValue === "all") {
+export function parseBenchmarkEnvList(rawValue: string | undefined): Set<string> | null {
+	if (rawValue === undefined) {
 		return null;
 	}
 
+	const trimmedValue = rawValue.trim();
+	if (trimmedValue === "all") {
+		return null;
+	}
+
+	if (trimmedValue === "") {
+		return new Set();
+	}
+
 	return new Set(
-		rawValue
+		trimmedValue
 			.split(",")
 			.map((value) => value.trim())
 			.filter(Boolean),
 	);
+}
+
+function parseEnvList(name: string): Set<string> | null {
+	return parseBenchmarkEnvList(process.env[name]);
 }
 
 function parseExtensionFilter(): Set<string> | null {
