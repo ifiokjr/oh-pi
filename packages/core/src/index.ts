@@ -11,8 +11,6 @@ export type { IconMode, IconName } from "./icons.js";
 export { icon, isPlainIcons, setPlainIcons } from "./icons.js";
 export { EXTENSIONS, KEYBINDING_SCHEMES, MODEL_CAPABILITIES, PROVIDERS, THEMES } from "./registry.js";
 export type {
-	AdaptiveRoutingModeConfig,
-	AdaptiveRoutingSetupConfig,
 	DiscoveredModel,
 	Locale,
 	ModelCapabilities,

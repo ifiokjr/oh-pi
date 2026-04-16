@@ -1,6 +1,7 @@
 import * as p from "@clack/prompts";
-import { type OhPConfig, resolvePiAgentDir, t } from "@ifi/oh-pi-core";
+import { resolvePiAgentDir, t } from "@ifi/oh-pi-core";
 import chalk from "chalk";
+import type { OhPConfigWithRouting } from "../types.js";
 import type { EnvInfo } from "../utils/detect.js";
 import { applyConfig, backupConfig, installPi } from "../utils/install.js";
 
@@ -22,7 +23,7 @@ export function countExisting(env: EnvInfo, dir: string): number {
  * @param env - Current environment info
  */
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Interactive wizard confirmation flow with many user branches.
-export async function confirmApply(config: OhPConfig, env: EnvInfo) {
+export async function confirmApply(config: OhPConfigWithRouting, env: EnvInfo) {
 	const keepProviders = config.providerStrategy === "keep";
 	const addProviders = config.providerStrategy === "add";
 	const providerNames =

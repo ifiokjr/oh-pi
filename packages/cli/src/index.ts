@@ -1,4 +1,3 @@
-import type { OhPConfig } from "@ifi/oh-pi-core";
 import { EXTENSIONS, getLocale, selectLanguage } from "@ifi/oh-pi-core";
 import { runConfigWizard, type WizardBaseConfig } from "./tui/config-wizard.js";
 import { confirmApply } from "./tui/confirm-apply.js";
@@ -7,6 +6,7 @@ import { selectPreset } from "./tui/preset-select.js";
 import { setupProviders } from "./tui/provider-setup.js";
 import { setupAdaptiveRouting } from "./tui/routing-setup.js";
 import { welcome } from "./tui/welcome.js";
+import type { OhPConfigWithRouting } from "./types.js";
 import { detectEnv, type EnvInfo } from "./utils/detect.js";
 
 /**
@@ -19,7 +19,7 @@ export async function run() {
 	welcome(env);
 
 	const mode = await selectMode(env);
-	let config: OhPConfig;
+	let config: OhPConfigWithRouting;
 
 	if (mode === "quick") {
 		config = await quickFlow(env);
@@ -38,7 +38,7 @@ export async function run() {
  * @param env - Detected environment info
  * @returns Generated config with recommended defaults
  */
-async function quickFlow(env: EnvInfo): Promise<OhPConfig> {
+async function quickFlow(env: EnvInfo): Promise<OhPConfigWithRouting> {
 	const providerSetup = await setupProviders(env);
 	const adaptiveRouting = await setupAdaptiveRouting([
 		...(env.existingProviders ?? []).map((name) => ({ name, apiKey: "none" })),
@@ -61,7 +61,7 @@ async function quickFlow(env: EnvInfo): Promise<OhPConfig> {
  * @param env - Detected environment info
  * @returns Generated config based on selected preset
  */
-async function presetFlow(env: EnvInfo): Promise<OhPConfig> {
+async function presetFlow(env: EnvInfo): Promise<OhPConfigWithRouting> {
 	const preset = await selectPreset();
 	return runConfigWizard(env, preset);
 }
@@ -71,7 +71,7 @@ async function presetFlow(env: EnvInfo): Promise<OhPConfig> {
  * @param env - Detected environment info
  * @returns Fully customized config
  */
-function customFlow(env: EnvInfo): Promise<OhPConfig> {
+function customFlow(env: EnvInfo): Promise<OhPConfigWithRouting> {
 	const defaultExtensions = EXTENSIONS.filter((e) => e.default).map((e) => e.name);
 	const initial: WizardBaseConfig = {
 		theme: "dark",

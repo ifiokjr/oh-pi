@@ -1,5 +1,6 @@
 import * as p from "@clack/prompts";
-import type { AdaptiveRoutingModeConfig, AdaptiveRoutingSetupConfig, ProviderConfig } from "@ifi/oh-pi-core";
+import type { ProviderConfig } from "@ifi/oh-pi-core";
+import type { AdaptiveRoutingModeConfig, AdaptiveRoutingSetupConfig } from "../types.js";
 
 const ROUTING_CATEGORIES = [
 	{ name: "quick-discovery", label: "Quick discovery", recommended: ["groq", "ollama-cloud", "ollama", "openai"] },

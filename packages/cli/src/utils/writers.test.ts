@@ -1,8 +1,8 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { OhPConfig } from "@ifi/oh-pi-core";
 import { afterEach, describe, expect, it } from "vitest";
+import type { OhPConfigWithRouting } from "../types.js";
 import {
 	writeAdaptiveRoutingConfig,
 	writeAgents,
@@ -19,7 +19,7 @@ function makeTempDir(): string {
 	return dir;
 }
 
-function makeConfig(overrides: Partial<OhPConfig>): OhPConfig {
+function makeConfig(overrides: Partial<OhPConfigWithRouting>): OhPConfigWithRouting {
 	return {
 		providers: [],
 		theme: "dark",

@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { AdaptiveRoutingSetupConfig, OhPConfig } from "@ifi/oh-pi-core";
 import { KEYBINDING_SCHEMES, MODEL_CAPABILITIES, PROVIDERS } from "@ifi/oh-pi-core";
+import type { AdaptiveRoutingSetupConfig, OhPConfigWithRouting } from "../types.js";
 import { ensureDir, syncDir } from "./install.js";
 import { resources } from "./resources.js";
 
@@ -50,7 +50,7 @@ function syncPackageRoot(src: string, dest: string, excludedEntries: string[]) {
 
 /** Generate auth.json (API keys) and settings.json (model, theme, compaction). */
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Provider setup must handle many strategy/override combinations
-export function writeProviderEnv(agentDir: string, config: OhPConfig) {
+export function writeProviderEnv(agentDir: string, config: OhPConfigWithRouting) {
 	if (config.providerStrategy === "keep") {
 		return;
 	}
@@ -123,7 +123,7 @@ export function writeProviderEnv(agentDir: string, config: OhPConfig) {
 
 /** Generate models.json for custom endpoints and API mode overrides. */
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Model config must handle builtin/custom/discovered model combinations
-export function writeModelConfig(agentDir: string, config: OhPConfig) {
+export function writeModelConfig(agentDir: string, config: OhPConfigWithRouting) {
 	if (config.providerStrategy === "keep") {
 		return;
 	}
@@ -199,7 +199,7 @@ export function writeModelConfig(agentDir: string, config: OhPConfig) {
 }
 
 /** Generate keybindings.json from the selected keybinding scheme. */
-export function writeKeybindings(agentDir: string, config: OhPConfig) {
+export function writeKeybindings(agentDir: string, config: OhPConfigWithRouting) {
 	const kb = KEYBINDING_SCHEMES[config.keybindings];
 	if (kb && Object.keys(kb).length > 0) {
 		writeFileSync(join(agentDir, "keybindings.json"), JSON.stringify(kb, null, 2));
@@ -207,7 +207,7 @@ export function writeKeybindings(agentDir: string, config: OhPConfig) {
 }
 
 /** Generate AGENTS.md from the selected agent template. */
-export function writeAgents(agentDir: string, config: OhPConfig) {
+export function writeAgents(agentDir: string, config: OhPConfigWithRouting) {
 	const agentsSrc = resources.agent(config.agents);
 	try {
 		let content = readFileSync(agentsSrc, "utf8");
@@ -259,7 +259,7 @@ function copyPlanExtension(extDir: string) {
 }
 
 /** Copy selected extensions to the agent directory. */
-export function writeExtensions(agentDir: string, config: OhPConfig) {
+export function writeExtensions(agentDir: string, config: OhPConfigWithRouting) {
 	const extDir = join(agentDir, "extensions");
 	ensureDir(extDir);
 	for (const ext of config.extensions) {
@@ -310,7 +310,7 @@ function buildAdaptiveRoutingConfig(config: AdaptiveRoutingSetupConfig) {
 	};
 }
 
-export function writeAdaptiveRoutingConfig(agentDir: string, config: OhPConfig) {
+export function writeAdaptiveRoutingConfig(agentDir: string, config: OhPConfigWithRouting) {
 	if (!config.adaptiveRouting) {
 		return;
 	}
@@ -323,7 +323,7 @@ export function writeAdaptiveRoutingConfig(agentDir: string, config: OhPConfig) 
 }
 
 /** Copy selected prompt templates to the agent directory. */
-export function writePrompts(agentDir: string, config: OhPConfig) {
+export function writePrompts(agentDir: string, config: OhPConfigWithRouting) {
 	const promptDir = join(agentDir, "prompts");
 	ensureDir(promptDir);
 
@@ -338,7 +338,7 @@ export function writePrompts(agentDir: string, config: OhPConfig) {
 }
 
 /** Sync all skills to the agent directory. */
-export function writeSkills(agentDir: string, _config: OhPConfig) {
+export function writeSkills(agentDir: string, _config: OhPConfigWithRouting) {
 	const skillDir = join(agentDir, "skills");
 	const skillsSrcDir = resources.skillsDir();
 	try {
@@ -351,7 +351,7 @@ export function writeSkills(agentDir: string, _config: OhPConfig) {
 }
 
 /** Copy the selected theme to the agent directory. */
-export function writeTheme(agentDir: string, config: OhPConfig) {
+export function writeTheme(agentDir: string, config: OhPConfigWithRouting) {
 	const themeDir = join(agentDir, "themes");
 	ensureDir(themeDir);
 	const themeSrc = resources.theme(config.theme);

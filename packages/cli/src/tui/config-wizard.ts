@@ -1,7 +1,7 @@
 import * as p from "@clack/prompts";
-import type { OhPConfig } from "@ifi/oh-pi-core";
 import { EXTENSIONS, t } from "@ifi/oh-pi-core";
 import chalk from "chalk";
+import type { OhPConfigWithRouting } from "../types.js";
 import type { EnvInfo } from "../utils/detect.js";
 import { selectAgents } from "./agents-select.js";
 import { selectExtensions } from "./extension-select.js";
@@ -11,14 +11,14 @@ import { setupAdaptiveRouting, summarizeAdaptiveRouting } from "./routing-setup.
 import { selectTheme } from "./theme-select.js";
 
 export type WizardBaseConfig = Pick<
-	OhPConfig,
+	OhPConfigWithRouting,
 	"theme" | "keybindings" | "extensions" | "prompts" | "agents" | "thinking"
 >;
 type WizardStep = "providers" | "routing" | "appearance" | "features" | "agents" | "finish";
 
 interface WizardState {
 	providerSetup: ProviderSetupResult | null;
-	adaptiveRouting: OhPConfig["adaptiveRouting"];
+	adaptiveRouting: OhPConfigWithRouting["adaptiveRouting"];
 	theme: string;
 	keybindings: string;
 	extensions: string[];
@@ -35,7 +35,7 @@ function summarizeAppearance(theme: string, keybindings: string): string {
 	return `${t("confirm.theme")} ${theme} · ${t("confirm.keybindings")} ${keybindings}`;
 }
 
-function summarizeRouting(config: OhPConfig["adaptiveRouting"]): string {
+function summarizeRouting(config: OhPConfigWithRouting["adaptiveRouting"]): string {
 	return `Routing ${summarizeAdaptiveRouting(config)}`;
 }
 
@@ -82,7 +82,7 @@ function buildWizardOptions(state: WizardState) {
 	];
 }
 
-export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): Promise<OhPConfig> {
+export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): Promise<OhPConfigWithRouting> {
 	const defaultExtensions = EXTENSIONS.filter((e) => e.default).map((e) => e.name);
 	const state: WizardState = {
 		providerSetup: null,

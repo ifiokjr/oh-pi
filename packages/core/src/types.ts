@@ -35,13 +35,6 @@ export interface ProviderConfig {
 	multimodal?: boolean;
 }
 
-export type AdaptiveRoutingModeConfig = "off" | "shadow" | "auto";
-
-export interface AdaptiveRoutingSetupConfig {
-	mode: AdaptiveRoutingModeConfig;
-	categories: Record<string, string[]>;
-}
-
 /** Complete oh-pi configuration — produced by the TUI wizard and applied to ~/.pi/agent/. */
 export interface OhPConfig {
 	/** Configured LLM providers. */
@@ -62,8 +55,6 @@ export interface OhPConfig {
 	thinking: string;
 	/** UI locale for generated content. */
 	locale?: string;
-	/** Optional adaptive routing and delegated provider assignment setup. */
-	adaptiveRouting?: AdaptiveRoutingSetupConfig;
 	/** Context compaction threshold (0-1, proportion of context window; default 0.75). */
 	compactThreshold?: number;
 }
