@@ -1,7 +1,11 @@
 {
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
-		"noEmit": true
+		"noEmit": true,
+		"paths": {
+			"*": ["./*"],
+			"@ifi/pi-shared-qna": ["../shared-qna/index.ts"]
+		}
 	},
 	"include": ["**/*.ts"]
 }
