@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import { homedir, hostname } from "node:os";
 import * as path from "node:path";
@@ -48,7 +48,7 @@ export interface GitWorktreeEntry {
 	metadata: ManagedWorktreeMetadata | null;
 }
 
-export interface RepoWorktreeSnapshot {
+export interface RepoWorktreeContext {
 	cwd: string;
 	repoRoot: string;
 	currentWorktreeRoot: string;
@@ -57,7 +57,10 @@ export interface RepoWorktreeSnapshot {
 	gitDir: string;
 	currentBranch: string | null;
 	isLinkedWorktree: boolean;
-	current: GitWorktreeEntry | null;
+	current: Pick<GitWorktreeEntry, "path" | "branch" | "isMain" | "isManaged" | "metadata"> | null;
+}
+
+export interface RepoWorktreeSnapshot extends RepoWorktreeContext {
 	worktrees: GitWorktreeEntry[];
 	registry: WorktreeRegistry;
 	staleManagedWorktrees: ManagedWorktreeMetadata[];
@@ -81,6 +84,27 @@ export interface CreateManagedWorktreeResult {
 }
 
 const DEFAULT_WORKTREE_ROOT = path.join(getPiAgentDirectory(), "worktrees");
+const MANAGED_WORKTREE_TOUCH_INTERVAL_MS = 5 * 60_000;
+
+type RepoWorktreeCacheEntry<TSnapshot> = {
+	snapshot: TSnapshot | null;
+	inFlight: Promise<TSnapshot | null> | null;
+};
+
+type RepoWorktreeContextProbe = {
+	normalizedCwd: string;
+	currentWorktreeRoot: string;
+	commonDir: string;
+	gitDir: string;
+	currentBranch: string | null;
+};
+
+type RepoWorktreeProbe = RepoWorktreeContextProbe & {
+	worktreeListOutput: string;
+};
+
+const repoWorktreeContextCache = new Map<string, RepoWorktreeCacheEntry<RepoWorktreeContext>>();
+const repoWorktreeSnapshotCache = new Map<string, RepoWorktreeCacheEntry<RepoWorktreeSnapshot>>();
 
 function getPiAgentDirectory(): string {
 	const getAgentDir = (PiCodingAgent as { getAgentDir?: () => string }).getAgentDir;
@@ -111,6 +135,19 @@ function git(cwd: string, args: string[]): string {
 	}).trim();
 }
 
+function gitAsync(cwd: string, args: string[]): Promise<string> {
+	return new Promise((resolve, reject) => {
+		execFile("git", ["-C", cwd, ...args], { encoding: "utf-8" }, (error, stdout) => {
+			if (error) {
+				reject(error);
+				return;
+			}
+
+			resolve(stdout.trim());
+		});
+	});
+}
+
 function gitOk(cwd: string, args: string[]): boolean {
 	try {
 		git(cwd, args);
@@ -120,8 +157,49 @@ function gitOk(cwd: string, args: string[]): boolean {
 	}
 }
 
-function resolveGitPath(cwd: string, value: string): string {
-	return normalizePath(path.resolve(cwd, value));
+function getRepoWorktreeCacheKey(cwd: string, sharedRoot = DEFAULT_WORKTREE_ROOT): string {
+	return `${normalizePath(cwd)}::${getSharedWorktreeRoot(sharedRoot)}`;
+}
+
+export function clearRepoWorktreeSnapshotCache(): void {
+	repoWorktreeContextCache.clear();
+	repoWorktreeSnapshotCache.clear();
+}
+
+function storeRepoWorktreeCacheEntry<TSnapshot>(
+	cache: Map<string, RepoWorktreeCacheEntry<TSnapshot>>,
+	cwd: string,
+	sharedRoot: string,
+	snapshot: TSnapshot | null,
+	inFlight: Promise<TSnapshot | null> | null = null,
+): TSnapshot | null {
+	cache.set(getRepoWorktreeCacheKey(cwd, sharedRoot), {
+		snapshot,
+		inFlight,
+	});
+	return snapshot;
+}
+
+function getCachedRepoWorktreeCacheEntry<TSnapshot>(
+	cache: Map<string, RepoWorktreeCacheEntry<TSnapshot>>,
+	cwd: string,
+	sharedRoot = DEFAULT_WORKTREE_ROOT,
+): TSnapshot | null {
+	return cache.get(getRepoWorktreeCacheKey(cwd, sharedRoot))?.snapshot ?? null;
+}
+
+export function getCachedRepoWorktreeContext(
+	cwd: string,
+	sharedRoot = DEFAULT_WORKTREE_ROOT,
+): RepoWorktreeContext | null {
+	return getCachedRepoWorktreeCacheEntry(repoWorktreeContextCache, cwd, sharedRoot);
+}
+
+export function getCachedRepoWorktreeSnapshot(
+	cwd: string,
+	sharedRoot = DEFAULT_WORKTREE_ROOT,
+): RepoWorktreeSnapshot | null {
+	return getCachedRepoWorktreeCacheEntry(repoWorktreeSnapshotCache, cwd, sharedRoot);
 }
 
 function sanitizeSegment(value: string): string {
@@ -251,6 +329,7 @@ export function saveWorktreeRegistry(registry: WorktreeRegistry, sharedRoot = DE
 		),
 		"utf-8",
 	);
+	clearRepoWorktreeSnapshotCache();
 }
 
 function upsertManagedWorktreeMetadata(
@@ -281,6 +360,12 @@ export function touchManagedWorktreeSeen(
 	if (!entry) {
 		return false;
 	}
+
+	const lastSeenAtMs = entry.lastSeenAt ? Date.parse(entry.lastSeenAt) : Number.NaN;
+	if (Number.isFinite(lastSeenAtMs) && Date.now() - lastSeenAtMs < MANAGED_WORKTREE_TOUCH_INTERVAL_MS) {
+		return true;
+	}
+
 	entry.lastSeenAt = nowIso();
 	saveWorktreeRegistry(registry, sharedRoot);
 	return true;
@@ -376,58 +461,265 @@ function parseWorktreeListPorcelain(output: string): Array<{
 	return entries;
 }
 
-export function getRepoWorktreeSnapshot(cwd: string, sharedRoot = DEFAULT_WORKTREE_ROOT): RepoWorktreeSnapshot | null {
-	const normalizedCwd = normalizePath(cwd);
-	try {
-		if (git(normalizedCwd, ["rev-parse", "--is-inside-work-tree"]) !== "true") {
-			return null;
+function isWithinWorktree(cwd: string, worktreePath: string): boolean {
+	return cwd === worktreePath || cwd.startsWith(`${worktreePath}${path.sep}`);
+}
+
+function findCurrentWorktreePath(normalizedCwd: string, parsedEntries: Array<{ path: string }>): string | null {
+	let match: string | null = null;
+	for (const entry of parsedEntries) {
+		if (!isWithinWorktree(normalizedCwd, entry.path)) {
+			continue;
 		}
 
-		const currentWorktreeRoot = resolveGitPath(normalizedCwd, git(normalizedCwd, ["rev-parse", "--show-toplevel"]));
-		const commonDir = resolveGitPath(currentWorktreeRoot, git(currentWorktreeRoot, ["rev-parse", "--git-common-dir"]));
-		const gitDir = resolveGitPath(currentWorktreeRoot, git(currentWorktreeRoot, ["rev-parse", "--absolute-git-dir"]));
-		const currentBranchRaw = git(currentWorktreeRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
-		const currentBranch = currentBranchRaw === "HEAD" ? null : currentBranchRaw;
-		const parsedEntries = parseWorktreeListPorcelain(git(currentWorktreeRoot, ["worktree", "list", "--porcelain"]));
-		const fallbackMainRoot =
-			path.basename(commonDir) === ".git" ? normalizePath(path.dirname(commonDir)) : currentWorktreeRoot;
-		const mainWorktreeRoot = parsedEntries[0]?.path ?? fallbackMainRoot;
-		const repoRoot = normalizePath(mainWorktreeRoot);
-		const registry = loadWorktreeRegistry(repoRoot, sharedRoot);
-		const metadataByPath = new Map(
-			registry.managedWorktrees.map((entry) => [normalizePath(entry.worktreePath), entry]),
-		);
-		const worktrees = parsedEntries.map((entry) => {
-			const metadata = metadataByPath.get(entry.path) ?? null;
-			return {
-				...entry,
-				isMain: entry.path === repoRoot,
-				isCurrent: entry.path === currentWorktreeRoot,
-				isManaged: !!metadata,
-				metadata,
-			};
-		});
-		const knownPaths = new Set(worktrees.map((entry) => entry.path));
-		const staleManagedWorktrees = registry.managedWorktrees.filter((entry) => !knownPaths.has(entry.worktreePath));
-		const current = worktrees.find((entry) => entry.isCurrent) ?? null;
+		if (!match || entry.path.length > match.length) {
+			match = entry.path;
+		}
+	}
 
-		return {
-			cwd: normalizedCwd,
-			repoRoot,
-			currentWorktreeRoot,
-			mainWorktreeRoot: repoRoot,
-			commonDir,
-			gitDir,
-			currentBranch,
-			isLinkedWorktree: currentWorktreeRoot !== repoRoot,
-			current,
-			worktrees,
-			registry,
-			staleManagedWorktrees,
-		};
-	} catch {
+	return match;
+}
+
+function readGitDirectoryInfo(worktreeRoot: string): { commonDir: string; gitDir: string } {
+	const dotGitPath = path.join(worktreeRoot, ".git");
+	const stat = fs.statSync(dotGitPath);
+	if (stat.isDirectory()) {
+		const gitDir = normalizePath(dotGitPath);
+		return { commonDir: gitDir, gitDir };
+	}
+
+	const dotGitContents = fs.readFileSync(dotGitPath, "utf-8");
+	const gitDirLine = dotGitContents.split(/\r?\n/).find((line) => line.trim().toLowerCase().startsWith("gitdir:"));
+	if (!gitDirLine) {
+		throw new Error(`Failed to resolve gitdir for worktree ${worktreeRoot}.`);
+	}
+
+	const gitDir = normalizePath(path.resolve(worktreeRoot, gitDirLine.slice("gitdir:".length).trim()));
+	const commonDirPath = path.join(gitDir, "commondir");
+	if (!fs.existsSync(commonDirPath)) {
+		return { commonDir: gitDir, gitDir };
+	}
+
+	const commonDirRelative = fs.readFileSync(commonDirPath, "utf-8").trim();
+	const commonDir = normalizePath(path.resolve(gitDir, commonDirRelative));
+	return { commonDir, gitDir };
+}
+
+function buildRepoWorktreeContextProbe(normalizedCwd: string, revParseOutput: string): RepoWorktreeContextProbe | null {
+	const [topLevelPath, branchRef] = revParseOutput.split(/\r?\n/);
+	if (!(topLevelPath && branchRef)) {
 		return null;
 	}
+
+	const currentWorktreeRoot = normalizePath(topLevelPath);
+	const { commonDir, gitDir } = readGitDirectoryInfo(currentWorktreeRoot);
+
+	return {
+		normalizedCwd,
+		currentWorktreeRoot,
+		commonDir,
+		gitDir,
+		currentBranch: branchRef === "HEAD" ? null : branchRef,
+	};
+}
+
+function buildRepoWorktreeProbe(normalizedCwd: string, worktreeListOutput: string): RepoWorktreeProbe | null {
+	const parsedEntries = parseWorktreeListPorcelain(worktreeListOutput);
+	if (parsedEntries.length === 0) {
+		return null;
+	}
+
+	const currentWorktreeRoot = findCurrentWorktreePath(normalizedCwd, parsedEntries);
+	if (!currentWorktreeRoot) {
+		return null;
+	}
+
+	const currentEntry = parsedEntries.find((entry) => entry.path === currentWorktreeRoot) ?? null;
+	const { commonDir, gitDir } = readGitDirectoryInfo(currentWorktreeRoot);
+
+	return {
+		normalizedCwd,
+		currentWorktreeRoot,
+		commonDir,
+		gitDir,
+		currentBranch: currentEntry?.branch ?? null,
+		worktreeListOutput,
+	};
+}
+
+function inferRepoRootFromCommonDir(commonDir: string, currentWorktreeRoot: string): string {
+	return path.basename(commonDir) === ".git" ? normalizePath(path.dirname(commonDir)) : currentWorktreeRoot;
+}
+
+function buildRepoWorktreeContext(
+	probe: RepoWorktreeContextProbe,
+	sharedRoot = DEFAULT_WORKTREE_ROOT,
+): RepoWorktreeContext {
+	const repoRoot = inferRepoRootFromCommonDir(probe.commonDir, probe.currentWorktreeRoot);
+	const registry = loadWorktreeRegistry(repoRoot, sharedRoot);
+	const metadata =
+		registry.managedWorktrees.find((entry) => normalizePath(entry.worktreePath) === probe.currentWorktreeRoot) ?? null;
+
+	return {
+		cwd: probe.normalizedCwd,
+		repoRoot,
+		currentWorktreeRoot: probe.currentWorktreeRoot,
+		mainWorktreeRoot: repoRoot,
+		commonDir: probe.commonDir,
+		gitDir: probe.gitDir,
+		currentBranch: probe.currentBranch,
+		isLinkedWorktree: probe.currentWorktreeRoot !== repoRoot,
+		current: {
+			path: probe.currentWorktreeRoot,
+			branch: probe.currentBranch,
+			isMain: probe.currentWorktreeRoot === repoRoot,
+			isManaged: !!metadata,
+			metadata,
+		},
+	};
+}
+
+function buildRepoWorktreeSnapshot(probe: RepoWorktreeProbe, sharedRoot = DEFAULT_WORKTREE_ROOT): RepoWorktreeSnapshot {
+	const parsedEntries = parseWorktreeListPorcelain(probe.worktreeListOutput);
+	const repoRoot = parsedEntries[0]?.path ?? probe.currentWorktreeRoot;
+	const registry = loadWorktreeRegistry(repoRoot, sharedRoot);
+	const metadataByPath = new Map(registry.managedWorktrees.map((entry) => [normalizePath(entry.worktreePath), entry]));
+	const worktrees = parsedEntries.map((entry) => {
+		const metadata = metadataByPath.get(entry.path) ?? null;
+		return {
+			...entry,
+			isMain: entry.path === repoRoot,
+			isCurrent: entry.path === probe.currentWorktreeRoot,
+			isManaged: !!metadata,
+			metadata,
+		};
+	});
+	const knownPaths = new Set(worktrees.map((entry) => entry.path));
+	const staleManagedWorktrees = registry.managedWorktrees.filter((entry) => !knownPaths.has(entry.worktreePath));
+	const current = worktrees.find((entry) => entry.isCurrent) ?? null;
+	const baseContext = buildRepoWorktreeContext(probe, sharedRoot);
+
+	return {
+		...baseContext,
+		current,
+		worktrees,
+		registry,
+		staleManagedWorktrees,
+	};
+}
+
+function readRepoWorktreeContextProbe(cwd: string): RepoWorktreeContextProbe | null {
+	const normalizedCwd = normalizePath(cwd);
+	const revParseOutput = git(normalizedCwd, ["rev-parse", "--show-toplevel", "--abbrev-ref", "HEAD"]);
+	return buildRepoWorktreeContextProbe(normalizedCwd, revParseOutput);
+}
+
+async function readRepoWorktreeContextProbeAsync(cwd: string): Promise<RepoWorktreeContextProbe | null> {
+	const normalizedCwd = normalizePath(cwd);
+	const revParseOutput = await gitAsync(normalizedCwd, ["rev-parse", "--show-toplevel", "--abbrev-ref", "HEAD"]);
+	return buildRepoWorktreeContextProbe(normalizedCwd, revParseOutput);
+}
+
+function readRepoWorktreeProbe(cwd: string): RepoWorktreeProbe | null {
+	const normalizedCwd = normalizePath(cwd);
+	const worktreeListOutput = git(normalizedCwd, ["worktree", "list", "--porcelain"]);
+	return buildRepoWorktreeProbe(normalizedCwd, worktreeListOutput);
+}
+
+async function readRepoWorktreeProbeAsync(cwd: string): Promise<RepoWorktreeProbe | null> {
+	const normalizedCwd = normalizePath(cwd);
+	const worktreeListOutput = await gitAsync(normalizedCwd, ["worktree", "list", "--porcelain"]);
+	return buildRepoWorktreeProbe(normalizedCwd, worktreeListOutput);
+}
+
+export function getRepoWorktreeContext(cwd: string, sharedRoot = DEFAULT_WORKTREE_ROOT): RepoWorktreeContext | null {
+	try {
+		const probe = readRepoWorktreeContextProbe(cwd);
+		return storeRepoWorktreeCacheEntry(
+			repoWorktreeContextCache,
+			cwd,
+			sharedRoot,
+			probe ? buildRepoWorktreeContext(probe, sharedRoot) : null,
+		);
+	} catch {
+		return storeRepoWorktreeCacheEntry(repoWorktreeContextCache, cwd, sharedRoot, null);
+	}
+}
+
+export async function refreshRepoWorktreeContext(
+	cwd: string,
+	sharedRoot = DEFAULT_WORKTREE_ROOT,
+): Promise<RepoWorktreeContext | null> {
+	const cacheKey = getRepoWorktreeCacheKey(cwd, sharedRoot);
+	const cachedEntry = repoWorktreeContextCache.get(cacheKey);
+	if (cachedEntry?.inFlight) {
+		return cachedEntry.inFlight;
+	}
+
+	const refreshPromise = (async () => {
+		try {
+			const probe = await readRepoWorktreeContextProbeAsync(cwd);
+			return storeRepoWorktreeCacheEntry(
+				repoWorktreeContextCache,
+				cwd,
+				sharedRoot,
+				probe ? buildRepoWorktreeContext(probe, sharedRoot) : null,
+			);
+		} catch {
+			return storeRepoWorktreeCacheEntry(repoWorktreeContextCache, cwd, sharedRoot, null);
+		}
+	})();
+
+	storeRepoWorktreeCacheEntry(repoWorktreeContextCache, cwd, sharedRoot, cachedEntry?.snapshot ?? null, refreshPromise);
+	return refreshPromise;
+}
+
+export function getRepoWorktreeSnapshot(cwd: string, sharedRoot = DEFAULT_WORKTREE_ROOT): RepoWorktreeSnapshot | null {
+	try {
+		const probe = readRepoWorktreeProbe(cwd);
+		return storeRepoWorktreeCacheEntry(
+			repoWorktreeSnapshotCache,
+			cwd,
+			sharedRoot,
+			probe ? buildRepoWorktreeSnapshot(probe, sharedRoot) : null,
+		);
+	} catch {
+		return storeRepoWorktreeCacheEntry(repoWorktreeSnapshotCache, cwd, sharedRoot, null);
+	}
+}
+
+export async function refreshRepoWorktreeSnapshot(
+	cwd: string,
+	sharedRoot = DEFAULT_WORKTREE_ROOT,
+): Promise<RepoWorktreeSnapshot | null> {
+	const cacheKey = getRepoWorktreeCacheKey(cwd, sharedRoot);
+	const cachedEntry = repoWorktreeSnapshotCache.get(cacheKey);
+	if (cachedEntry?.inFlight) {
+		return cachedEntry.inFlight;
+	}
+
+	const refreshPromise = (async () => {
+		try {
+			const probe = await readRepoWorktreeProbeAsync(cwd);
+			return storeRepoWorktreeCacheEntry(
+				repoWorktreeSnapshotCache,
+				cwd,
+				sharedRoot,
+				probe ? buildRepoWorktreeSnapshot(probe, sharedRoot) : null,
+			);
+		} catch {
+			return storeRepoWorktreeCacheEntry(repoWorktreeSnapshotCache, cwd, sharedRoot, null);
+		}
+	})();
+
+	storeRepoWorktreeCacheEntry(
+		repoWorktreeSnapshotCache,
+		cwd,
+		sharedRoot,
+		cachedEntry?.snapshot ?? null,
+		refreshPromise,
+	);
+	return refreshPromise;
 }
 
 function branchExists(repoRoot: string, branch: string): boolean {

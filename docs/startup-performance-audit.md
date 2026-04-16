@@ -25,8 +25,9 @@ The benchmark suite currently covers:
 3. scheduler persisted-store loading
 4. custom-footer large-history usage scans
 5. usage-tracker startup hydration
-6. worktree snapshot git probes
-7. first footer render cost
+6. lightweight worktree current-context probes
+7. full worktree snapshot git probes
+8. first footer render cost
 
 ## Ranked hotspot summary
 
@@ -47,7 +48,17 @@ That work blocks the Node event loop completely.
 
 **Current benchmark coverage**
 
+- `worktree current context (single temp repo)`
 - `worktree snapshot (single temp repo)`
+
+**Latest optimization pass**
+
+The footer and worktree status paths now use a lighter current-context probe instead of the full worktree inventory path. That splits the hot path in two:
+
+- lightweight current-context refresh for footer/status updates
+- full snapshot refresh for explicit `/worktree` reports and `/status` overlay details
+
+That change also removed the footer's 30-second timer from re-triggering worktree git probes, which was the strongest match for the reported periodic typing stalls.
 
 **Why it is the top suspect**
 

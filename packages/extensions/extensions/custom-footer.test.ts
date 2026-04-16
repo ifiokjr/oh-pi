@@ -181,7 +181,12 @@ describe("custom-footer extension", () => {
 
 	it("defers worktree snapshot refresh until after startup", async () => {
 		vi.useFakeTimers();
-		const getRepoWorktreeSnapshot = vi.spyOn(worktreeShared, "getRepoWorktreeSnapshot").mockReturnValue(null as never);
+		const getCachedRepoWorktreeContext = vi
+			.spyOn(worktreeShared, "getCachedRepoWorktreeContext")
+			.mockReturnValue(null as never);
+		const refreshRepoWorktreeContext = vi
+			.spyOn(worktreeShared, "refreshRepoWorktreeContext")
+			.mockResolvedValue(null as never);
 		try {
 			const pi = createMockPi();
 			customFooter(pi as any);
@@ -200,19 +205,64 @@ describe("custom-footer extension", () => {
 			};
 
 			await pi._emit("session_start", {}, ctx);
-			expect(getRepoWorktreeSnapshot).not.toHaveBeenCalled();
+			expect(refreshRepoWorktreeContext).not.toHaveBeenCalled();
 
 			footerFactory(
 				{ requestRender: vi.fn() },
 				{ fg: (_color: string, text: string) => text },
 				{ onBranchChange: () => () => undefined, getGitBranch: () => "main" },
 			);
-			expect(getRepoWorktreeSnapshot).not.toHaveBeenCalled();
+			expect(refreshRepoWorktreeContext).not.toHaveBeenCalled();
 
 			await vi.advanceTimersByTimeAsync(500);
-			expect(getRepoWorktreeSnapshot).toHaveBeenCalled();
+			expect(refreshRepoWorktreeContext).toHaveBeenCalledTimes(1);
 		} finally {
-			getRepoWorktreeSnapshot.mockRestore();
+			getCachedRepoWorktreeContext.mockRestore();
+			refreshRepoWorktreeContext.mockRestore();
+			vi.useRealTimers();
+		}
+	});
+
+	it("does not refresh worktree snapshots on the 30-second PR poll timer", async () => {
+		vi.useFakeTimers();
+		const getCachedRepoWorktreeContext = vi
+			.spyOn(worktreeShared, "getCachedRepoWorktreeContext")
+			.mockReturnValue(null as never);
+		const refreshRepoWorktreeContext = vi
+			.spyOn(worktreeShared, "refreshRepoWorktreeContext")
+			.mockResolvedValue(null as never);
+		try {
+			const pi = createMockPi();
+			customFooter(pi as any);
+
+			let footerFactory: any;
+			const ctx = {
+				cwd: "/tmp/project",
+				model: { id: "claude-sonnet", provider: "anthropic" },
+				getContextUsage: () => ({ percent: 12 }),
+				sessionManager: { getBranch: () => [] },
+				ui: {
+					setFooter(factory: any) {
+						footerFactory = factory;
+					},
+				},
+			};
+
+			await pi._emit("session_start", {}, ctx);
+			footerFactory(
+				{ requestRender: vi.fn() },
+				{ fg: (_color: string, text: string) => text },
+				{ onBranchChange: () => () => undefined, getGitBranch: () => "main" },
+			);
+
+			await vi.advanceTimersByTimeAsync(500);
+			expect(refreshRepoWorktreeContext).toHaveBeenCalledTimes(1);
+
+			await vi.advanceTimersByTimeAsync(30_000);
+			expect(refreshRepoWorktreeContext).toHaveBeenCalledTimes(1);
+		} finally {
+			getCachedRepoWorktreeContext.mockRestore();
+			refreshRepoWorktreeContext.mockRestore();
 			vi.useRealTimers();
 		}
 	});

@@ -1,6 +1,7 @@
 import path from "node:path";
 import process from "node:process";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { recordRuntimeSample } from "./watchdog-runtime-diagnostics";
 import {
 	buildPaiInstanceId,
 	createManagedWorktree,
@@ -8,8 +9,10 @@ import {
 	formatOwnerLabel,
 	formatWorktreeKind,
 	type GitWorktreeEntry,
+	getRepoWorktreeContext,
 	getRepoWorktreeSnapshot,
 	type ManagedWorktreeMetadata,
+	type RepoWorktreeContext,
 	type RepoWorktreeSnapshot,
 	removeManagedWorktree,
 	touchManagedWorktreeSeen,
@@ -242,7 +245,7 @@ async function chooseWorktreeTarget(
 	return selected ? findWorktreeEntry(snapshot, selected) : null;
 }
 
-function currentStatusText(snapshot: RepoWorktreeSnapshot | null): string | undefined {
+function currentStatusText(snapshot: RepoWorktreeContext | null): string | undefined {
 	if (!snapshot) {
 		return undefined;
 	}
@@ -258,12 +261,14 @@ function currentStatusText(snapshot: RepoWorktreeSnapshot | null): string | unde
 	return `${repo} · external wt ${branch}`;
 }
 
-function refreshStatus(ctx: ExtensionContext): RepoWorktreeSnapshot | null {
-	const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
+function refreshStatus(ctx: ExtensionContext): RepoWorktreeContext | null {
+	const startedAt = Date.now();
+	const snapshot = getRepoWorktreeContext(ctx.cwd);
 	if (snapshot?.current?.isManaged) {
 		touchManagedWorktreeSeen(snapshot.repoRoot, snapshot.current.path);
 	}
 	ctx.ui.setStatus("pi-worktree", currentStatusText(snapshot));
+	recordRuntimeSample("worktree", "event", "status_refresh", Date.now() - startedAt, "worktree");
 	return snapshot;
 }
 
@@ -286,7 +291,8 @@ async function openPath(pi: ExtensionAPI, targetPath: string): Promise<boolean> 
 }
 
 async function handleStatus(pi: ExtensionAPI, ctx: ExtensionContext): Promise<void> {
-	const snapshot = refreshStatus(ctx);
+	refreshStatus(ctx);
+	const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
 	if (!snapshot) {
 		ctx.ui.notify("Not inside a git repository.", "warning");
 		return;
@@ -295,7 +301,8 @@ async function handleStatus(pi: ExtensionAPI, ctx: ExtensionContext): Promise<vo
 }
 
 async function handleList(pi: ExtensionAPI, ctx: ExtensionContext): Promise<void> {
-	const snapshot = refreshStatus(ctx);
+	refreshStatus(ctx);
+	const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
 	if (!snapshot) {
 		ctx.ui.notify("Not inside a git repository.", "warning");
 		return;
@@ -361,7 +368,8 @@ async function handleCreate(pi: ExtensionAPI, args: string, ctx: ExtensionContex
 }
 
 async function handleOpen(pi: ExtensionAPI, args: string, ctx: ExtensionContext): Promise<void> {
-	const snapshot = refreshStatus(ctx);
+	refreshStatus(ctx);
+	const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
 	if (!snapshot) {
 		ctx.ui.notify("Not inside a git repository.", "warning");
 		return;
@@ -393,7 +401,8 @@ async function handleOpen(pi: ExtensionAPI, args: string, ctx: ExtensionContext)
 }
 
 async function handleCleanup(pi: ExtensionAPI, args: string, ctx: ExtensionContext): Promise<void> {
-	const snapshot = refreshStatus(ctx);
+	refreshStatus(ctx);
+	const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
 	if (!snapshot) {
 		ctx.ui.notify("Not inside a git repository.", "warning");
 		return;

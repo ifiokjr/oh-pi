@@ -4,10 +4,16 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+	clearRepoWorktreeSnapshotCache,
 	createManagedWorktree,
 	createOwnerMetadata,
+	getCachedRepoWorktreeContext,
+	getCachedRepoWorktreeSnapshot,
+	getRepoWorktreeContext,
 	getRepoWorktreeSnapshot,
 	loadWorktreeRegistry,
+	refreshRepoWorktreeContext,
+	refreshRepoWorktreeSnapshot,
 	removeManagedWorktree,
 	touchManagedWorktreeSeen,
 } from "./worktree-shared";
@@ -46,6 +52,8 @@ function real(value: string): string {
 }
 
 afterEach(() => {
+	clearRepoWorktreeSnapshotCache();
+
 	for (const dir of tempDirs.splice(0)) {
 		try {
 			fs.rmSync(dir, { recursive: true, force: true });
@@ -85,10 +93,37 @@ describe("worktree-shared", () => {
 		expect(snapshot?.current?.metadata?.owner.instanceId).toBe("pai-test-instance");
 		expect(snapshot?.current?.metadata?.owner.sessionName).toBe("Worktree footer session");
 
+		const context = getRepoWorktreeContext(result.worktreePath, sharedRoot);
+		expect(context?.repoRoot).toBe(real(repo));
+		expect(context?.current?.isManaged).toBe(true);
+		expect(context?.current?.metadata?.purpose).toBe("Implement worktree-aware footer context");
+
 		expect(touchManagedWorktreeSeen(repo, result.worktreePath, sharedRoot)).toBe(true);
-		const registry = loadWorktreeRegistry(repo, sharedRoot);
-		expect(registry.managedWorktrees).toHaveLength(1);
-		expect(registry.managedWorktrees[0]?.lastSeenAt).toBeTruthy();
+		const firstRegistry = loadWorktreeRegistry(repo, sharedRoot);
+		const firstSeenAt = firstRegistry.managedWorktrees[0]?.lastSeenAt ?? null;
+		expect(firstRegistry.managedWorktrees).toHaveLength(1);
+		expect(firstSeenAt).toBeTruthy();
+
+		expect(touchManagedWorktreeSeen(repo, result.worktreePath, sharedRoot)).toBe(true);
+		const secondRegistry = loadWorktreeRegistry(repo, sharedRoot);
+		expect(secondRegistry.managedWorktrees[0]?.lastSeenAt ?? null).toBe(firstSeenAt);
+	}, 30_000);
+
+	it("warms async worktree context and snapshot caches without blocking callers", async () => {
+		const repo = mkTempDir("pi-worktree-cache-repo-");
+		const sharedRoot = mkTempDir("pi-worktree-cache-store-");
+		initRepo(repo);
+
+		expect(getCachedRepoWorktreeContext(repo, sharedRoot)).toBeNull();
+		expect(getCachedRepoWorktreeSnapshot(repo, sharedRoot)).toBeNull();
+
+		const context = await refreshRepoWorktreeContext(repo, sharedRoot);
+		expect(context?.repoRoot).toBe(real(repo));
+		expect(getCachedRepoWorktreeContext(repo, sharedRoot)?.repoRoot).toBe(real(repo));
+
+		const snapshot = await refreshRepoWorktreeSnapshot(repo, sharedRoot);
+		expect(snapshot?.repoRoot).toBe(real(repo));
+		expect(getCachedRepoWorktreeSnapshot(repo, sharedRoot)?.repoRoot).toBe(real(repo));
 	}, 30_000);
 
 	it("removes only the targeted Pai-owned worktree and leaves external ones alone", () => {

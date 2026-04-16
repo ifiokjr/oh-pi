@@ -17,7 +17,15 @@ import type { AssistantMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext, ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth } from "@mariozechner/pi-tui";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode";
-import { formatOwnerLabel, getRepoWorktreeSnapshot, type RepoWorktreeSnapshot } from "./worktree-shared";
+import { recordRuntimeSample } from "./watchdog-runtime-diagnostics";
+import {
+	formatOwnerLabel,
+	getCachedRepoWorktreeContext,
+	getRepoWorktreeSnapshot,
+	type RepoWorktreeContext,
+	type RepoWorktreeSnapshot,
+	refreshRepoWorktreeContext,
+} from "./worktree-shared";
 
 /** OSC 8 hyperlink: renders `text` as a clickable terminal link to `url`. */
 export function hyperlink(url: string, text: string): string {
@@ -33,7 +41,6 @@ export type PrInfo = {
 const PR_PROBE_COOLDOWN_MS = 60_000;
 const FOOTER_STARTUP_REFRESH_DELAY_MS = 250;
 const FOOTER_STARTUP_DEFER_ENTRY_THRESHOLD = 250;
-const WORKTREE_REFRESH_COOLDOWN_MS = 30_000;
 
 export type FooterUsageTotals = {
 	input: number;
@@ -96,10 +103,10 @@ export default function (pi: ExtensionAPI) {
 	let activeFooterData: ReadonlyFooterDataProvider | null = null;
 	let activeCtx: ExtensionContext | null = null;
 	let cachedPrs: PrInfo[] = [];
-	let cachedWorktreeSnapshot: RepoWorktreeSnapshot | null = null;
-	let lastWorktreeRefreshAt = 0;
+	let cachedWorktreeContext: RepoWorktreeContext | null = null;
 	let startupRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let worktreeRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+	let worktreeRefreshInFlight = false;
 	let requestFooterRender: (() => void) | null = null;
 	/** Branch name when the PR was last probed. */
 	let prProbedForBranch: string | null = null;
@@ -139,10 +146,26 @@ export default function (pi: ExtensionAPI) {
 		}, FOOTER_STARTUP_REFRESH_DELAY_MS);
 	};
 
-	const syncWorktreeSnapshot = (cwd = process.cwd()) => {
-		cachedWorktreeSnapshot = getRepoWorktreeSnapshot(cwd);
-		lastWorktreeRefreshAt = Date.now();
-		requestFooterRender?.();
+	const refreshWorktreeContext = async (cwd = process.cwd()) => {
+		if (worktreeRefreshInFlight) {
+			return;
+		}
+
+		const startedAt = Date.now();
+		worktreeRefreshInFlight = true;
+		try {
+			cachedWorktreeContext = await refreshRepoWorktreeContext(cwd);
+		} finally {
+			worktreeRefreshInFlight = false;
+			recordRuntimeSample(
+				"custom-footer",
+				"event",
+				"worktree_context_refresh",
+				Date.now() - startedAt,
+				"custom-footer",
+			);
+			requestFooterRender?.();
+		}
 	};
 
 	const clearWorktreeRefreshTimer = () => {
@@ -153,12 +176,9 @@ export default function (pi: ExtensionAPI) {
 		worktreeRefreshTimer = null;
 	};
 
-	const scheduleWorktreeSnapshotRefresh = (
-		cwd = process.cwd(),
-		options: { delayMs?: number; force?: boolean } = {},
-	) => {
+	const scheduleWorktreeContextRefresh = (cwd = process.cwd(), options: { delayMs?: number; force?: boolean } = {}) => {
 		const delayMs = Math.max(0, options.delayMs ?? 0);
-		if (!options.force && Date.now() - lastWorktreeRefreshAt < WORKTREE_REFRESH_COOLDOWN_MS) {
+		if (!options.force && (cachedWorktreeContext || worktreeRefreshTimer || worktreeRefreshInFlight)) {
 			return;
 		}
 		if (worktreeRefreshTimer) {
@@ -167,15 +187,18 @@ export default function (pi: ExtensionAPI) {
 
 		worktreeRefreshTimer = setTimeout(() => {
 			worktreeRefreshTimer = null;
-			syncWorktreeSnapshot(cwd);
+			refreshWorktreeContext(cwd).catch(() => undefined);
 		}, delayMs);
 	};
 
-	const getWorktreeSnapshot = () => {
-		if (Date.now() - lastWorktreeRefreshAt > WORKTREE_REFRESH_COOLDOWN_MS) {
-			scheduleWorktreeSnapshotRefresh(activeCtx?.cwd ?? process.cwd());
+	const getWorktreeContext = () => {
+		if (!cachedWorktreeContext) {
+			cachedWorktreeContext = getCachedRepoWorktreeContext(activeCtx?.cwd ?? process.cwd());
 		}
-		return cachedWorktreeSnapshot;
+		if (!cachedWorktreeContext) {
+			scheduleWorktreeContextRefresh(activeCtx?.cwd ?? process.cwd());
+		}
+		return cachedWorktreeContext;
 	};
 
 	const probePrs = (branch: string | null) => {
@@ -216,28 +239,31 @@ export default function (pi: ExtensionAPI) {
 	};
 
 	pi.on("session_start", async (_event, ctx) => {
+		const worktreeCwd = ctx.cwd ?? process.cwd();
 		sessionStart = Date.now();
 		activeCtx = ctx;
 		scheduleUsageTotalsRefresh(ctx);
-		scheduleWorktreeSnapshotRefresh(ctx.cwd, { delayMs: FOOTER_STARTUP_REFRESH_DELAY_MS, force: true });
+		scheduleWorktreeContextRefresh(worktreeCwd, { delayMs: FOOTER_STARTUP_REFRESH_DELAY_MS, force: true });
 
 		ctx.ui.setFooter((tui, theme, footerData) => {
 			activeFooterData = footerData;
 			requestFooterRender = () => tui.requestRender();
-			const probeActivePrs = (force = false) => {
-				scheduleWorktreeSnapshotRefresh(ctx.cwd, { force });
-				probePrs(cachedWorktreeSnapshot?.current?.branch ?? footerData.getGitBranch());
+			const probeActivePrs = () => {
+				probePrs(footerData.getGitBranch() || cachedWorktreeContext?.current?.branch || null);
 			};
 			const unsub = footerData.onBranchChange(() => {
-				probeActivePrs(true);
+				scheduleWorktreeContextRefresh(worktreeCwd, { force: true });
+				probeActivePrs();
 				tui.requestRender();
 			});
+			cachedWorktreeContext = getCachedRepoWorktreeContext(worktreeCwd);
+			scheduleWorktreeContextRefresh(worktreeCwd, { delayMs: FOOTER_STARTUP_REFRESH_DELAY_MS, force: true });
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
 			const timer = setInterval(() => {
 				probeActivePrs();
 				tui.requestRender();
 			}, 30000);
-			probeActivePrs(true);
+			probeActivePrs();
 
 			return {
 				dispose() {
@@ -269,16 +295,16 @@ export default function (pi: ExtensionAPI) {
 					const parts = process.cwd().split("/");
 					const short = parts.length > 2 ? parts.slice(-2).join("/") : process.cwd();
 					const cwdStr = theme.fg("muted", `⌂ ${short}`);
-					const worktreeSnapshot = getWorktreeSnapshot();
-					const repoStr = worktreeSnapshot ? theme.fg("muted", `repo ${path.basename(worktreeSnapshot.repoRoot)}`) : "";
-					const worktreeStr = worktreeSnapshot?.isLinkedWorktree
+					const worktreeContext = getWorktreeContext();
+					const repoStr = worktreeContext ? theme.fg("muted", `repo ${path.basename(worktreeContext.repoRoot)}`) : "";
+					const worktreeStr = worktreeContext?.isLinkedWorktree
 						? theme.fg(
-								worktreeSnapshot.current?.isManaged ? "warning" : "muted",
-								`wt ${worktreeSnapshot.current?.branch ?? path.basename(worktreeSnapshot.currentWorktreeRoot)}${worktreeSnapshot.current?.isManaged ? " pi" : ""}`,
+								worktreeContext.current?.isManaged ? "warning" : "muted",
+								`wt ${worktreeContext.current?.branch ?? path.basename(worktreeContext.currentWorktreeRoot)}${worktreeContext.current?.isManaged ? " pi" : ""}`,
 							)
 						: "";
 
-					const branch = worktreeSnapshot?.current?.branch ?? footerData.getGitBranch();
+					const branch = worktreeContext?.current?.branch ?? footerData.getGitBranch();
 					let branchStr = branch ? theme.fg("accent", `⎇ ${branch}`) : "";
 					if (cachedPrs.length > 0) {
 						const prLinks = cachedPrs.map((pr) => hyperlink(pr.url, theme.fg("success", `PR #${pr.number}`))).join(" ");
@@ -314,7 +340,10 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_switch", (event, ctx) => {
 		activeCtx = ctx;
 		scheduleUsageTotalsRefresh(ctx);
-		scheduleWorktreeSnapshotRefresh(ctx.cwd, { delayMs: FOOTER_STARTUP_REFRESH_DELAY_MS, force: true });
+		scheduleWorktreeContextRefresh(ctx.cwd ?? process.cwd(), {
+			delayMs: FOOTER_STARTUP_REFRESH_DELAY_MS,
+			force: true,
+		});
 		if (event.reason === "new") {
 			sessionStart = Date.now();
 		}
@@ -339,13 +368,17 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_shutdown", () => {
 		clearStartupRefreshTimer();
 		clearWorktreeRefreshTimer();
+		cachedWorktreeContext = null;
 		requestFooterRender = null;
 	});
 
 	// ─── /status overlay ─────────────────────────────────────────────────
 
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Status overlay assembles many optional sections.
-	function buildStatusLines(theme: { fg: (color: string, text: string) => string }): string[] {
+	function buildStatusLines(
+		theme: { fg: (color: string, text: string) => string },
+		worktreeSnapshot: RepoWorktreeSnapshot | null,
+	): string[] {
 		const lines: string[] = [];
 		const sep = theme.fg("dim", " │ ");
 		const divider = theme.fg("dim", "─".repeat(60));
@@ -389,25 +422,27 @@ export default function (pi: ExtensionAPI) {
 		lines.push(`  ${divider}`);
 		lines.push(`  ${theme.fg("accent", "Directory")}${sep}${process.cwd()}`);
 
-		const worktreeSnapshot = getWorktreeSnapshot();
-		if (worktreeSnapshot) {
-			lines.push(`  ${theme.fg("accent", "Repo Root")}${sep}${worktreeSnapshot.repoRoot}`);
-			lines.push(`  ${theme.fg("accent", "Worktree Root")}${sep}${worktreeSnapshot.currentWorktreeRoot}`);
+		const worktreeContext = getWorktreeContext();
+		if (worktreeContext) {
+			lines.push(`  ${theme.fg("accent", "Repo Root")}${sep}${worktreeContext.repoRoot}`);
+			lines.push(`  ${theme.fg("accent", "Worktree Root")}${sep}${worktreeContext.currentWorktreeRoot}`);
 			lines.push(
-				`  ${theme.fg("accent", "Worktree Kind")}${sep}${worktreeSnapshot.isLinkedWorktree ? (worktreeSnapshot.current?.isManaged ? "pi-owned linked worktree" : "external linked worktree") : "main checkout"}`,
+				`  ${theme.fg("accent", "Worktree Kind")}${sep}${worktreeContext.isLinkedWorktree ? (worktreeContext.current?.isManaged ? "pi-owned linked worktree" : "external linked worktree") : "main checkout"}`,
 			);
-			if (worktreeSnapshot.current?.metadata) {
-				lines.push(`  ${theme.fg("accent", "Purpose")}${sep}${worktreeSnapshot.current.metadata.purpose}`);
-				lines.push(
-					`  ${theme.fg("accent", "Owner")}${sep}${formatOwnerLabel(worktreeSnapshot.current.metadata.owner)}`,
-				);
+			if (worktreeContext.current?.metadata) {
+				lines.push(`  ${theme.fg("accent", "Purpose")}${sep}${worktreeContext.current.metadata.purpose}`);
+				lines.push(`  ${theme.fg("accent", "Owner")}${sep}${formatOwnerLabel(worktreeContext.current.metadata.owner)}`);
 			}
+		}
+
+		if (worktreeSnapshot) {
 			lines.push(
 				`  ${theme.fg("accent", "Worktrees")}${sep}${worktreeSnapshot.worktrees.length} total${worktreeSnapshot.staleManagedWorktrees.length > 0 ? `${sep}${worktreeSnapshot.staleManagedWorktrees.length} stale pi record(s)` : ""}`,
 			);
 		}
 
-		const branch = worktreeSnapshot?.current?.branch ?? activeFooterData?.getGitBranch?.();
+		const branch =
+			worktreeContext?.current?.branch ?? worktreeSnapshot?.current?.branch ?? activeFooterData?.getGitBranch?.();
 		if (branch) {
 			lines.push(`  ${theme.fg("accent", "Branch")}${sep}${theme.fg("accent", branch)}`);
 		}
@@ -455,11 +490,13 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("status", {
 		description: "Show a full status overview: model, session, context, workspace, PR, and extension statuses",
 		async handler(_args, ctx) {
+			const worktreeCwd = ctx.cwd ?? process.cwd();
 			activeCtx = ctx;
-			syncWorktreeSnapshot(ctx.cwd);
+			await refreshWorktreeContext(worktreeCwd);
+			const worktreeSnapshot = getRepoWorktreeSnapshot(worktreeCwd);
 			await ctx.ui.custom(
 				(_tui, theme, _keybindings, done) => {
-					const lines = buildStatusLines(theme);
+					const lines = buildStatusLines(theme, worktreeSnapshot);
 					return {
 						render(width: number) {
 							return lines.map((line) => truncateToWidth(line, width));

@@ -284,13 +284,25 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 			},
 		},
 		{
+			id: "worktree-context-temp-repo",
+			label: "worktree current context (single temp repo)",
+			group: "focused hotspot",
+			iterations: 20,
+			warmupIterations: 2,
+			budget: { medianMs: 120, p95Ms: 200 },
+			note: "Measures the lightweight current-worktree probe used by footer and status refreshes.",
+			run() {
+				worktreeModule.getRepoWorktreeContext(repoDir);
+			},
+		},
+		{
 			id: "worktree-snapshot-temp-repo",
 			label: "worktree snapshot (single temp repo)",
 			group: "focused hotspot",
 			iterations: 20,
 			warmupIterations: 1,
 			budget: { medianMs: 700 },
-			note: "Measures the synchronous git worktree snapshot path used by worktree and footer startup refreshes.",
+			note: "Measures the synchronous full worktree inventory path used by /worktree reporting and explicit status overlays.",
 			run() {
 				worktreeModule.getRepoWorktreeSnapshot(repoDir);
 			},

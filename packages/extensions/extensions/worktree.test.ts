@@ -15,6 +15,7 @@ const worktreeShared = vi.hoisted(() => ({
 	})),
 	formatOwnerLabel: vi.fn((owner) => owner.instanceId),
 	formatWorktreeKind: vi.fn((entry) => (entry.isMain ? "main" : entry.isManaged ? "pi-owned" : "external")),
+	getRepoWorktreeContext: vi.fn(),
 	getRepoWorktreeSnapshot: vi.fn(),
 	removeManagedWorktree: vi.fn(),
 	touchManagedWorktreeSeen: vi.fn(),
@@ -69,14 +70,14 @@ describe("worktree extension", () => {
 		try {
 			const harness = createExtensionHarness();
 			harness.ctx.cwd = "/repo";
-			worktreeShared.getRepoWorktreeSnapshot.mockReturnValue(makeSnapshot());
+			worktreeShared.getRepoWorktreeContext.mockReturnValue(makeSnapshot());
 
 			worktreeExtension(harness.pi as never);
 			harness.emit("session_start", {}, harness.ctx);
-			expect(worktreeShared.getRepoWorktreeSnapshot).not.toHaveBeenCalled();
+			expect(worktreeShared.getRepoWorktreeContext).not.toHaveBeenCalled();
 
 			await vi.advanceTimersByTimeAsync(500);
-			expect(worktreeShared.getRepoWorktreeSnapshot).toHaveBeenCalledWith("/repo");
+			expect(worktreeShared.getRepoWorktreeContext).toHaveBeenCalledWith("/repo");
 			expect(harness.statusMap.get("pi-worktree")).toContain("main checkout");
 		} finally {
 			vi.useRealTimers();
@@ -87,6 +88,7 @@ describe("worktree extension", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.cwd = "/repo";
 		harness.ctx.ui.input = vi.fn(async () => "Implement footer context");
+		worktreeShared.getRepoWorktreeContext.mockReturnValue(null);
 		worktreeShared.getRepoWorktreeSnapshot.mockReturnValue(null);
 		worktreeShared.createManagedWorktree.mockReturnValue({
 			repoRoot: "/repo",
@@ -117,6 +119,26 @@ describe("worktree extension", () => {
 	it("opens a matching worktree through the system opener helper", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.cwd = "/repo";
+		worktreeShared.getRepoWorktreeContext.mockReturnValue(
+			makeSnapshot({
+				isLinkedWorktree: true,
+				currentWorktreeRoot: "/tmp/pi/feat-footer",
+				currentBranch: "feat/footer-context",
+				current: {
+					path: "/tmp/pi/feat-footer",
+					branch: "feat/footer-context",
+					head: "abc",
+					bare: false,
+					detached: false,
+					lockedReason: null,
+					prunableReason: null,
+					isMain: false,
+					isCurrent: true,
+					isManaged: true,
+					metadata: { purpose: "Build worktree UX", owner: { instanceId: "pi-test-instance" } },
+				},
+			}),
+		);
 		worktreeShared.getRepoWorktreeSnapshot.mockReturnValue(
 			makeSnapshot({
 				isLinkedWorktree: true,
@@ -178,6 +200,7 @@ describe("worktree extension", () => {
 	it("refuses to clean external worktrees by default", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.cwd = "/repo";
+		worktreeShared.getRepoWorktreeContext.mockReturnValue(makeSnapshot());
 		worktreeShared.getRepoWorktreeSnapshot.mockReturnValue(
 			makeSnapshot({
 				worktrees: [
