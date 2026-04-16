@@ -50,6 +50,11 @@ The benchmark suite currently covers:
 
 That work blocks the Node event loop completely.
 
+**Latest mitigation**
+
+- worktree startup no longer schedules a status-bar refresh during idle session boot
+- explicit `/worktree` commands still refresh the current worktree context and can surface a status badge when the user actually interacts with the worktree extension
+
 **Current benchmark coverage**
 
 - `worktree current context (single temp repo)`

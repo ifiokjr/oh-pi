@@ -20,7 +20,6 @@ import {
 
 const COMMAND = "worktree";
 const COMMAND_ALIASES = [COMMAND, "Worktree", "wt"] as const;
-const WORKTREE_STATUS_REFRESH_DELAY_MS = 250;
 const instanceId = buildPaiInstanceId();
 
 function relativeDisplayPath(root: string, target: string): string {
@@ -253,7 +252,7 @@ function currentStatusText(snapshot: RepoWorktreeContext | null): string | undef
 	const repo = path.basename(snapshot.repoRoot);
 	const branch = snapshot.current?.branch ?? snapshot.currentBranch ?? "detached";
 	if (!snapshot.isLinkedWorktree) {
-		return `${repo} main checkout`;
+		return undefined;
 	}
 	if (snapshot.current?.isManaged && snapshot.current.metadata) {
 		return `${repo} · pi wt ${branch} · ${snapshot.current.metadata.purpose}`;
@@ -524,42 +523,6 @@ function buildCommandSpec(pi: ExtensionAPI) {
 }
 
 export default function worktreeExtension(pi: ExtensionAPI) {
-	let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-
-	const scheduleStatusRefresh = (ctx: ExtensionContext, delayMs = WORKTREE_STATUS_REFRESH_DELAY_MS) => {
-		if (refreshTimer) {
-			clearTimeout(refreshTimer);
-		}
-
-		refreshTimer = setTimeout(
-			() => {
-				refreshTimer = null;
-				refreshStatus(ctx);
-			},
-			Math.max(0, delayMs),
-		);
-	};
-
-	const clearStatusRefresh = () => {
-		if (!refreshTimer) {
-			return;
-		}
-		clearTimeout(refreshTimer);
-		refreshTimer = null;
-	};
-
-	pi.on("session_start", (_event, ctx) => {
-		scheduleStatusRefresh(ctx);
-	});
-
-	pi.on("session_switch", (_event, ctx) => {
-		scheduleStatusRefresh(ctx);
-	});
-
-	pi.on("session_shutdown", () => {
-		clearStatusRefresh();
-	});
-
 	const spec = buildCommandSpec(pi);
 	for (const name of COMMAND_ALIASES) {
 		pi.registerCommand(name, spec);
