@@ -1,10 +1,12 @@
 import * as p from "@clack/prompts";
 import type { ProviderConfig } from "@ifi/oh-pi-core";
 import type { AdaptiveRoutingModeConfig, AdaptiveRoutingSetupConfig } from "../types.js";
+import type { WritablePiPackageInstallScope } from "../utils/pi-packages.js";
 import { installPiPackages } from "../utils/pi-packages.js";
 import {
 	buildRoutingDashboard,
 	detectOptionalRoutingPackages,
+	type PendingOptionalRoutingPackageSelection,
 	ROUTING_CATEGORIES,
 	suggestOptionalRoutingPackages,
 } from "./routing-dashboard.js";
@@ -86,11 +88,36 @@ async function maybeInstallOptionalPackages(
 		return;
 	}
 
+	const installScope = exitOnCancel(
+		await p.select<WritablePiPackageInstallScope>({
+			message: "Install selected optional packages for which scope?",
+			options: [
+				{ value: "user", label: "User", hint: "Install into your user pi settings for all repos" },
+				{ value: "project", label: "Project", hint: "Install into .pi/settings.json for this repo only" },
+			],
+			initialValue: "user",
+		}),
+	);
+	const pendingSelections: PendingOptionalRoutingPackageSelection[] = selectedPackages.map((packageName) => ({
+		packageName,
+		scope: installScope,
+	}));
+	p.note(
+		buildRoutingDashboard({
+			providers,
+			config,
+			packageStates: detectOptionalRoutingPackages(undefined, pendingSelections),
+		}),
+		"Provider & Routing Dashboard",
+	);
+
 	const spinner = p.spinner();
-	spinner.start("Installing optional routing packages");
+	spinner.start(`Installing optional routing packages (${installScope})`);
 	try {
-		installPiPackages(selectedPackages);
-		spinner.stop(`Installed ${selectedPackages.length} optional package(s). Restart pi after setup to load them.`);
+		installPiPackages(selectedPackages, installScope);
+		spinner.stop(
+			`Installed ${selectedPackages.length} optional package(s) in ${installScope} scope. Restart pi after setup to load them.`,
+		);
 	} catch (error) {
 		spinner.stop("Optional package install failed.");
 		p.log.warn(String(error));

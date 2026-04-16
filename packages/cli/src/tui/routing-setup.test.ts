@@ -99,16 +99,17 @@ describe("setupAdaptiveRouting", () => {
 		expect(dashboardMocks.buildRoutingDashboard).not.toHaveBeenCalled();
 	});
 
-	it("installs missing packages, configures routing, and re-renders the dashboard", async () => {
+	it("installs missing packages with an explicit scope, configures routing, and re-renders the dashboard", async () => {
 		dashboardMocks.detectOptionalRoutingPackages
 			.mockReturnValueOnce([missingPackage("@ifi/pi-provider-ollama", "Ollama provider package")])
+			.mockReturnValueOnce([])
 			.mockReturnValueOnce([]);
 		dashboardMocks.suggestOptionalRoutingPackages
 			.mockReturnValueOnce(["@ifi/pi-provider-ollama"])
 			.mockReturnValueOnce([]);
 		promptState.confirm.push(true, true);
 		promptState.multiselect.push(["@ifi/pi-provider-ollama"]);
-		promptState.select.push("shadow", "groq", "openai");
+		promptState.select.push("project", "shadow", "groq", "openai");
 
 		const result = await setupAdaptiveRouting(makeProviders(), undefined, { piInstalled: true });
 
@@ -119,10 +120,14 @@ describe("setupAdaptiveRouting", () => {
 				"implementation-default": ["openai", "groq"],
 			},
 		});
-		expect(packageMocks.installPiPackages).toHaveBeenCalledWith(["@ifi/pi-provider-ollama"]);
-		expect(promptState.spinnerStarts).toEqual(["Installing optional routing packages"]);
-		expect(promptState.spinnerStops[0]).toContain("Installed 1 optional package");
+		expect(packageMocks.installPiPackages).toHaveBeenCalledWith(["@ifi/pi-provider-ollama"], "project");
+		expect(promptState.spinnerStarts).toEqual(["Installing optional routing packages (project)"]);
+		expect(promptState.spinnerStops[0]).toContain("Installed 1 optional package(s) in project scope");
+		expect(dashboardMocks.detectOptionalRoutingPackages).toHaveBeenNthCalledWith(2, undefined, [
+			{ packageName: "@ifi/pi-provider-ollama", scope: "project" },
+		]);
 		expect(promptState.notes.map((entry) => entry.message)).toEqual([
+			"dashboard:unset",
 			"dashboard:unset",
 			"dashboard:unset",
 			"dashboard:shadow",
@@ -161,6 +166,7 @@ describe("setupAdaptiveRouting", () => {
 		});
 		promptState.confirm.push(true, false, false);
 		promptState.multiselect.push(["@ifi/pi-provider-ollama"]);
+		promptState.select.push("user");
 
 		const result = await setupAdaptiveRouting(makeProviders(), undefined, { piInstalled: true });
 
@@ -201,6 +207,24 @@ describe("setupAdaptiveRouting", () => {
 		dashboardMocks.detectOptionalRoutingPackages.mockReturnValue([missingPackage("@ifi/pi-provider-ollama")]);
 		dashboardMocks.suggestOptionalRoutingPackages.mockReturnValue(["@ifi/pi-provider-ollama"]);
 		promptState.confirm.push("__CANCEL__");
+		const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+			throw new Error("process.exit");
+		}) as never);
+
+		await expect(setupAdaptiveRouting(makeProviders(), undefined, { piInstalled: true })).rejects.toThrow(
+			"process.exit",
+		);
+
+		expect(promptState.cancels).toEqual(["Cancelled."]);
+		expect(exit).toHaveBeenCalledWith(0);
+	});
+
+	it("cancels when choosing the install scope", async () => {
+		dashboardMocks.detectOptionalRoutingPackages.mockReturnValue([missingPackage("@ifi/pi-provider-ollama")]);
+		dashboardMocks.suggestOptionalRoutingPackages.mockReturnValue(["@ifi/pi-provider-ollama"]);
+		promptState.confirm.push(true);
+		promptState.multiselect.push(["@ifi/pi-provider-ollama"]);
+		promptState.select.push("__CANCEL__");
 		const exit = vi.spyOn(process, "exit").mockImplementation((() => {
 			throw new Error("process.exit");
 		}) as never);

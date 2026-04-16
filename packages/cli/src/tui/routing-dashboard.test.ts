@@ -59,7 +59,7 @@ describe("detectOptionalRoutingPackages", () => {
 								? "project"
 								: "none",
 				})),
-			["@ifi/pi-extension-adaptive-routing"],
+			[{ packageName: "@ifi/pi-extension-adaptive-routing", scope: "project" }],
 		);
 
 		expect(packages.find((pkg) => pkg.packageName === "@ifi/pi-provider-ollama")).toMatchObject({
@@ -74,6 +74,7 @@ describe("detectOptionalRoutingPackages", () => {
 		expect(packages.find((pkg) => pkg.packageName === "@ifi/pi-extension-adaptive-routing")).toMatchObject({
 			installed: false,
 			selected: true,
+			selectedScope: "project",
 		});
 	});
 });
@@ -106,6 +107,7 @@ describe("buildRoutingDashboard", () => {
 					scope: "none",
 					installed: false,
 					selected: true,
+					selectedScope: "project",
 				},
 				{
 					packageName: "@ifi/pi-provider-ollama",
@@ -138,7 +140,7 @@ describe("buildRoutingDashboard", () => {
 			},
 		});
 
-		expect(dashboard).toContain("Adaptive routing package: selected for install");
+		expect(dashboard).toContain("Adaptive routing package: selected for install (project)");
 		expect(dashboard).toContain("Ollama provider package: installed (user)");
 		expect(dashboard).toContain("Cursor provider package: not installed");
 		expect(dashboard).toContain("install with pi install npm:@ifi/pi-provider-cursor");

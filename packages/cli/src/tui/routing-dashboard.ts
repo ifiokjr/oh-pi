@@ -1,6 +1,10 @@
 import type { ProviderConfig } from "@ifi/oh-pi-core";
 import type { AdaptiveRoutingSetupConfig } from "../types.js";
-import type { PiPackageInstallScope, PiPackageInstallState } from "../utils/pi-packages.js";
+import type {
+	PiPackageInstallScope,
+	PiPackageInstallState,
+	WritablePiPackageInstallScope,
+} from "../utils/pi-packages.js";
 import { detectPiPackageInstallScopes } from "../utils/pi-packages.js";
 
 export const ROUTING_CATEGORIES = [
@@ -85,6 +89,12 @@ export interface OptionalRoutingPackageState {
 	scope: PiPackageInstallScope;
 	installed: boolean;
 	selected: boolean;
+	selectedScope?: WritablePiPackageInstallScope;
+}
+
+export interface PendingOptionalRoutingPackageSelection {
+	packageName: string;
+	scope: WritablePiPackageInstallScope;
 }
 
 interface RoutingDashboardOptions {
@@ -95,20 +105,22 @@ interface RoutingDashboardOptions {
 
 export function detectOptionalRoutingPackages(
 	detectStates: (packageNames: string[]) => PiPackageInstallState[] = detectPiPackageInstallScopes,
-	selectedPackages: string[] = [],
+	selectedPackages: PendingOptionalRoutingPackageSelection[] = [],
 ): OptionalRoutingPackageState[] {
-	const selected = new Set(selectedPackages);
+	const selected = new Map(selectedPackages.map((pkg) => [pkg.packageName, pkg.scope]));
 	const states = new Map(
 		detectStates(OPTIONAL_ROUTING_PACKAGES.map((pkg) => pkg.packageName)).map((pkg) => [pkg.packageName, pkg]),
 	);
 	return OPTIONAL_ROUTING_PACKAGES.map((pkg) => {
 		const state = states.get(pkg.packageName);
 		const scope = state?.scope ?? "none";
+		const selectedScope = selected.get(pkg.packageName);
 		return {
 			...pkg,
 			scope,
 			installed: scope !== "none",
-			selected: selected.has(pkg.packageName),
+			selected: selectedScope !== undefined,
+			selectedScope,
 		};
 	});
 }
@@ -177,8 +189,8 @@ function formatPackageState(pkg: OptionalRoutingPackageState): string {
 	if (pkg.installed) {
 		return `installed (${pkg.scope})`;
 	}
-	if (pkg.selected) {
-		return "selected for install";
+	if (pkg.selectedScope) {
+		return `selected for install (${pkg.selectedScope})`;
 	}
 	return "not installed";
 }

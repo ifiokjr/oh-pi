@@ -23,6 +23,7 @@ type ExecFileRunner = (
 ) => unknown;
 
 export type PiPackageInstallScope = "none" | "user" | "project" | "both";
+export type WritablePiPackageInstallScope = Exclude<PiPackageInstallScope, "none" | "both">;
 
 export interface PiPackageInstallState {
 	packageName: string;
@@ -156,7 +157,7 @@ function readStderr(error: unknown): string {
 
 export function installPiPackages(
 	packageNames: string[],
-	scope: "user" | "project" = "user",
+	scope: WritablePiPackageInstallScope = "user",
 	run: ExecFileRunner = execFileSync,
 ): void {
 	if (packageNames.length === 0) {
