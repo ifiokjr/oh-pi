@@ -1,4 +1,4 @@
-/* v8 ignore file */
+/* c8 ignore file */
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { classifyPrompt } from "./classifier.js";
 import { inspectDelegatedSelection } from "./delegated-runtime.js";
@@ -783,7 +783,7 @@ export function resolveDelegatedAssignmentModel(params: {
 			return match.fullId;
 		}
 	}
-	/* v8 ignore next 5 */
+	/* c8 ignore next 5 */
 	let cheapFallback: { provider: string; id: string; fullId: string; name: string } | undefined;
 	if (category === "quick-discovery") {
 		cheapFallback = unblockedModels.find((model) => model.provider === "groq");
