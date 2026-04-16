@@ -366,17 +366,41 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 			WIDGET_KEY,
 			(tui, theme) => {
 				requestWidgetRender = () => tui.requestRender();
-				const timer = setInterval(() => tui.requestRender(), WIDGET_REFRESH_MS);
+				let timer: ReturnType<typeof setInterval> | null = null;
+
+				const stopTimer = () => {
+					if (!timer) {
+						return;
+					}
+					clearInterval(timer);
+					timer = null;
+				};
+
+				const syncTimer = () => {
+					if (!currentPrompt) {
+						stopTimer();
+						return;
+					}
+
+					if (timer) {
+						return;
+					}
+
+					timer = setInterval(() => tui.requestRender(), WIDGET_REFRESH_MS);
+					timer.unref?.();
+				};
+
 				return {
 					dispose() {
 						if (requestWidgetRender) {
 							requestWidgetRender = null;
 						}
-						clearInterval(timer);
+						stopTimer();
 					},
 					// biome-ignore lint/suspicious/noEmptyBlockStatements: Required by the widget component interface.
 					invalidate() {},
 					render(width: number) {
+						syncTimer();
 						return renderWidgetLines(theme).map((line) => truncateToWidth(line, width));
 					},
 				};

@@ -154,9 +154,11 @@ The diagnostics package mounts an always-on widget and currently drives it with 
 
 The new runtime suite mounts widgets/footers and advances an idle 65-second window, so diagnostics now shows up directly in the isolated extension ranking instead of only as an anecdotal suspect.
 
-**What to watch**
+**Latest mitigation**
 
-If diagnostics stays near the top of the isolated runtime churn report, it is a strong candidate for the first follow-up fix because it is both always-on and instance-multiplying.
+- the diagnostics widget now refreshes its elapsed-time timer only while a prompt is actively running
+- idle and completed diagnostics states no longer keep a fixed one-second redraw timer alive
+- this should remove the largest isolated always-on widget redraw source from the runtime churn report and reduce multi-instance watchdog noise
 
 ### 7. `packages/subagents/*`
 

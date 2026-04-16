@@ -254,6 +254,9 @@ describe("diagnostics extension", () => {
 		const widget = widgetFactory?.({ requestRender }, theme);
 		expect(widget?.render(200).join("\n")).toContain("waiting for next prompt");
 
+		await vi.advanceTimersByTimeAsync(1_000);
+		expect(requestRender).not.toHaveBeenCalled();
+
 		harness.emit(
 			"before_agent_start",
 			{ type: "before_agent_start", prompt: "Investigate the flaky test timeout in CI.", images: [] },
@@ -322,10 +325,14 @@ describe("diagnostics extension", () => {
 		expect(message.details.durationMs).toBe(7_250);
 		expect(message.details.turnCount).toBe(2);
 		expect(message.details.toolCount).toBe(1);
-		expect(message.details.turns[0]?.completedAtLabel).toMatch(/2026-04-16 \d{2}:00:01/);
+		expect(message.details.turns[0]?.completedAtLabel).toMatch(/2026-04-16 \d{2}:00:0[12]/);
 		expect(message.details.turns[0]?.toolCount).toBe(1);
 		expect(message.details.turns[1]?.responsePreview).toContain("Done.");
 		expect(widget?.render(200).join("\n")).toContain("completed");
+
+		requestRender.mockClear();
+		await vi.advanceTimersByTimeAsync(1_000);
+		expect(requestRender).not.toHaveBeenCalled();
 
 		widget?.dispose();
 		expect(appendEntry).not.toHaveBeenCalled();
