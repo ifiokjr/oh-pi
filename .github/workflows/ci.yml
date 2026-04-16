@@ -380,9 +380,10 @@ jobs:
           echo "OH_PI_BENCH_EXTENSION_FILTER=$TARGETS" >> "$GITHUB_ENV"
           echo "OH_PI_BENCH_FOCUSED_FILTER=$FOCUSED" >> "$GITHUB_ENV"
 
-      - name: Run startup and microbench suites
+      - name: Run startup and runtime benchmark suites
         run: |
           pnpm bench:startup
+          pnpm bench:runtime
           pnpm bench:extensions-render | tee coverage/benchmarks/extensions-render.txt
           pnpm bench:live-runtime | tee coverage/benchmarks/live-runtime.txt
 
@@ -394,6 +395,8 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           cat coverage/benchmarks/startup/startup-benchmarks.md >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          cat coverage/benchmarks/runtime/runtime-churn.md >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "## Extensions render microbench" >> "$GITHUB_STEP_SUMMARY"
           echo '```text' >> "$GITHUB_STEP_SUMMARY"

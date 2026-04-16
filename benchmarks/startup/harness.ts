@@ -27,7 +27,16 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 	const providers = new Map<string, any>();
 	const widgets = new Map<string, any>();
 	const statusMap = new Map<string, any>();
+	const statusCalls: Array<{ key: string; value: unknown }> = [];
 	const notifications: Array<{ msg: string; type: string }> = [];
+	const footerBranchListeners = new Set<() => void>();
+	const mountedDisposers: Array<() => void> = [];
+	const requestRenderCounts = {
+		widget: 0,
+		footer: 0,
+		header: 0,
+		editor: 0,
+	};
 	const eventBus = new EventEmitter();
 	const authStorage = new Map<string, unknown>();
 	const branch = options.branch ?? options.entries ?? [];
@@ -38,6 +47,11 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 	let footerFactory: any;
 	let editorText = "";
 	let editorFactory: any;
+	const theme = {
+		bg: (_color: string, text: string) => text,
+		fg: (_color: string, text: string) => text,
+		bold: (text: string) => text,
+	};
 
 	const ctx = {
 		cwd: options.cwd ?? process.cwd(),
@@ -80,6 +94,7 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 				notifications.push({ msg, type });
 			},
 			setStatus(key: string, value: any) {
+				statusCalls.push({ key, value });
 				if (value === undefined) {
 					statusMap.delete(key);
 					return;
@@ -190,6 +205,56 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 		},
 	};
 
+	const mountWidgets = (width = 120) => {
+		for (const factory of widgets.values()) {
+			if (typeof factory !== "function") {
+				continue;
+			}
+
+			const component = factory(
+				{
+					requestRender() {
+						requestRenderCounts.widget += 1;
+					},
+				},
+				theme,
+			);
+			component?.render?.(width);
+			mountedDisposers.push(() => component?.dispose?.());
+		}
+	};
+
+	const mountFooter = (width = 120) => {
+		if (typeof footerFactory !== "function") {
+			return;
+		}
+
+		const component = footerFactory(
+			{
+				requestRender() {
+					requestRenderCounts.footer += 1;
+				},
+			},
+			theme,
+			{
+				onBranchChange(listener: () => void) {
+					footerBranchListeners.add(listener);
+					return () => footerBranchListeners.delete(listener);
+				},
+				getGitBranch: () => "main",
+			},
+		);
+		component?.render?.(width);
+		mountedDisposers.push(() => component?.dispose?.());
+	};
+
+	const disposeMounted = () => {
+		for (const dispose of mountedDisposers.splice(0)) {
+			dispose();
+		}
+		footerBranchListeners.clear();
+	};
+
 	return {
 		pi,
 		ctx,
@@ -201,7 +266,13 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 		messageRenderers,
 		widgets,
 		statusMap,
+		statusCalls,
 		notifications,
+		requestRenderCounts,
+		theme,
+		mountWidgets,
+		mountFooter,
+		disposeMounted,
 		get headerFactory() {
 			return headerFactory;
 		},

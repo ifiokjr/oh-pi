@@ -4,13 +4,14 @@ This audit summarizes the current first-load and early-interaction hotspots that
 
 ## What now runs on every PR
 
-The new TypeScript startup benchmark suite runs on every pull request and push:
+The new TypeScript startup and runtime benchmark suites run on every pull request and push:
 
 - `pnpm bench:startup`
+- `pnpm bench:runtime`
 - GitHub Actions job: `Benchmarks (TypeScript)`
-- Reports written to `coverage/benchmarks/startup/`
-- Markdown summary appended to the workflow step summary
-- PR-specific extension selection driven by changed-file analysis
+- Reports written to `coverage/benchmarks/startup/` and `coverage/benchmarks/runtime/`
+- Markdown summaries appended to the workflow step summary
+- PR-specific extension selection driven by changed-file analysis for isolated extension cases
 
 For local debugging, you can isolate extension startup cases with:
 
@@ -28,6 +29,9 @@ The benchmark suite currently covers:
 6. lightweight worktree current-context probes
 7. full worktree snapshot git probes
 8. first footer render cost
+9. full-stack mounted idle UI churn over a 65-second window
+10. four-instance mounted idle UI churn scaling
+11. isolated extension mounted idle UI churn one extension at a time
 
 ## Ranked hotspot summary
 
@@ -140,7 +144,21 @@ The new PR-gated suite covers the default extension stack at startup, but colony
 - nest lock contention now sleeps with `Atomics.wait(...)` instead of burning CPU in a tight busy loop while another process holds the lock
 - pre-review typecheck now runs only when completed worker tasks touched TypeScript files under a detectable TS project, and it prefers the local `node_modules/.bin/tsc` binary over `npx`
 
-### 6. `packages/subagents/*`
+### 6. `packages/diagnostics/*`
+
+**Why it matters**
+
+The diagnostics package mounts an always-on widget and currently drives it with a fixed one-second redraw timer while enabled. That kind of steady-state UI churn will not dominate startup wall-clock time, but it can still contribute to watchdog `event-loop max ...` alerts later, especially if several pi instances are open at once.
+
+**Benchmark status**
+
+The new runtime suite mounts widgets/footers and advances an idle 65-second window, so diagnostics now shows up directly in the isolated extension ranking instead of only as an anecdotal suspect.
+
+**What to watch**
+
+If diagnostics stays near the top of the isolated runtime churn report, it is a strong candidate for the first follow-up fix because it is both always-on and instance-multiplying.
+
+### 7. `packages/subagents/*`
 
 **Why it matters**
 
@@ -154,7 +172,7 @@ Subagents mostly offload heavy work to subprocesses, but the main process still 
 
 Covered indirectly by the full-stack startup cases. A follow-up focused suite would help quantify watcher/poller overhead under many active jobs.
 
-### 7. `packages/providers/*`
+### 8. `packages/providers/*`
 
 **Why it matters**
 
@@ -177,6 +195,8 @@ That surfaces the latest per-extension `session_start` timings recorded during t
 ## Interpreting the new benchmark reports
 
 The startup report is budget-based rather than branch-diff-based.
+
+The runtime churn report is ranking-based. It shows which mounted widgets/footers request redraws or status writes most often during a simulated idle window, which is the class of behavior most likely to explain watchdog warnings that appear after startup rather than during it.
 
 That means each benchmark has committed median and p95 thresholds:
 
@@ -202,7 +222,8 @@ Good options to explore next:
 
 1. reduce synchronous scheduler disk touches on `session_start`
 2. reduce or eliminate eager `getBranch()` / history reconstruction on startup-sensitive paths
-3. add focused benchmark suites for ant-colony runtime responsiveness and subagent monitor load
+3. remove fixed idle redraw timers where event-driven updates are sufficient
+4. add focused benchmark suites for ant-colony runtime responsiveness and subagent monitor load
 
 ## Practical takeaway
 
