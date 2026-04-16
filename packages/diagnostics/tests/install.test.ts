@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
+// @ts-ignore missing declaration file for runtime installer script
 import { PACKAGE_NAME, findPi, main, parseArgs, printHelp, run } from "../install.mjs";
 
 describe("diagnostics installer", () => {
@@ -131,6 +132,7 @@ describe("diagnostics installer", () => {
 
 		process.argv = ["node", scriptPath, "--help"];
 		process.exitCode = undefined;
+		// @ts-ignore missing declaration file for runtime installer script
 		await import("../install.mjs");
 
 		expect(process.exitCode).toBe(0);

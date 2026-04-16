@@ -2,11 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import diagnosticsExtension, { diagnosticsInternals, type PromptCompletionDiagnostics } from "../index.js";
 
-const theme = {
+type ThemeStub = {
+	bg: (_color: string, text: string) => string;
+	fg: (_color: string, text: string) => string;
+	bold: (text: string) => string;
+};
+
+const theme: ThemeStub = {
 	bg: (_color: string, text: string) => text,
 	fg: (_color: string, text: string) => text,
 	bold: (text: string) => text,
-} as const;
+};
+
+function renderText(component: { render: (width: number) => string[] }, width = 200): string {
+	return component.render(width).join("\n");
+}
 
 function makeCompletion(overrides: Partial<PromptCompletionDiagnostics> = {}): PromptCompletionDiagnostics {
 	return {
@@ -182,30 +192,31 @@ describe("diagnostics extension", () => {
 
 		it("renders fallback, collapsed, and expanded completion messages", () => {
 			const fallback = diagnosticsInternals.renderPromptCompletionMessage({ content: "Prompt diagnostics" }, false, theme as never);
-			expect(fallback.text).toContain("Prompt diagnostics");
+			expect(renderText(fallback)).toContain("Prompt diagnostics");
 
 			const collapsed = diagnosticsInternals.renderPromptCompletionMessage(
 				{ details: makeCompletion() },
 				false,
 				theme as never,
 			);
-			expect(collapsed.text).toContain("Expand to inspect per-turn completion timestamps.");
+			expect(renderText(collapsed)).toContain("Expand to inspect per-turn completion timestamps.");
 
 			const expandedWithNoTurns = diagnosticsInternals.renderPromptCompletionMessage(
 				{ details: makeCompletion({ turnCount: 0, toolCount: 0, turns: [] }) },
 				true,
 				theme as never,
 			);
-			expect(expandedWithNoTurns.text).toContain("No assistant turns were recorded for this prompt.");
+			expect(renderText(expandedWithNoTurns)).toContain("No assistant turns were recorded for this prompt.");
 
 			const expanded = diagnosticsInternals.renderPromptCompletionMessage(
 				{ details: makeCompletion() },
 				true,
 				theme as never,
 			);
-			expect(expanded.text).toContain("Turn completions");
-			expect(expanded.text).toContain("#1");
-			expect(expanded.text).toContain("toolUse");
+			const rendered = renderText(expanded);
+			expect(rendered).toContain("Turn completions");
+			expect(rendered).toContain("#1");
+			expect(rendered).toContain("toolUse");
 		});
 	});
 
@@ -219,7 +230,7 @@ describe("diagnostics extension", () => {
 		const rendered = harness.messageRenderers
 			.get("pi-diagnostics:prompt")
 			?.({ details: makeCompletion() }, { expanded: false }, theme);
-		expect(rendered?.text).toContain("Prompt");
+		expect(rendered ? renderText(rendered) : "").toContain("Prompt");
 	});
 
 	it("logs prompt completion timing with per-turn timestamps and updates the widget", async () => {
@@ -234,7 +245,7 @@ describe("diagnostics extension", () => {
 		const widgetFactory = setWidget.mock.calls.at(-1)?.[1] as
 			| ((
 					tui: { requestRender: () => void },
-					theme: typeof theme,
+					theme: ThemeStub,
 			  ) => { dispose: () => void; render: (width: number) => string[] })
 			| undefined;
 		expect(widgetFactory).toBeTypeOf("function");
@@ -324,10 +335,11 @@ describe("diagnostics extension", () => {
 		const harness = createExtensionHarness();
 		const setWidget = vi.fn();
 		harness.ctx.ui.setWidget = setWidget;
-		harness.ctx.sessionManager.getBranch = () => [
-			{ type: "custom", customType: "pi-diagnostics:state", data: { enabled: true } },
-			{ type: "custom_message", customType: "pi-diagnostics:prompt", details: makeCompletion() },
-		];
+		harness.ctx.sessionManager.getBranch = () =>
+			([
+				{ type: "custom", customType: "pi-diagnostics:state", data: { enabled: true } },
+				{ type: "custom_message", customType: "pi-diagnostics:prompt", details: makeCompletion() },
+			] as any);
 		harness.pi.appendEntry = vi.fn();
 		diagnosticsExtension(harness.pi as never);
 
