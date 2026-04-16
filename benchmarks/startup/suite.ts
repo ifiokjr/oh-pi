@@ -27,6 +27,7 @@ type WorktreeExports = typeof import("../../packages/extensions/extensions/workt
 type CustomFooterExports = typeof import("../../packages/extensions/extensions/custom-footer.js");
 
 const ROOT_PACKAGE_PATH = path.resolve(process.cwd(), "package.json");
+const TEMP_ROOT_CLEANUP_RETRY_DELAYS_MS = [0, 25, 50, 100] as const;
 
 function createAssistantEntry(index: number) {
 	return {
@@ -112,18 +113,48 @@ function extensionIdFromPath(extensionPath: string): string {
 	return fileName.replace(/\.ts$/, "");
 }
 
-function parseExtensionFilter(): Set<string> | null {
-	const rawFilter = process.env.OH_PI_BENCH_EXTENSION_FILTER?.trim();
-	if (!rawFilter || rawFilter === "all") {
+function parseEnvList(name: string): Set<string> | null {
+	const rawValue = process.env[name]?.trim();
+	if (!rawValue || rawValue === "all") {
 		return null;
 	}
 
 	return new Set(
-		rawFilter
+		rawValue
 			.split(",")
 			.map((value) => value.trim())
 			.filter(Boolean),
 	);
+}
+
+function parseExtensionFilter(): Set<string> | null {
+	return parseEnvList("OH_PI_BENCH_EXTENSION_FILTER");
+}
+
+function parseFocusedBenchmarkFilter(): Set<string> | null {
+	return parseEnvList("OH_PI_BENCH_FOCUSED_FILTER");
+}
+
+async function sleep(ms: number): Promise<void> {
+	await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function removeDirectoryWithRetry(targetPath: string): Promise<void> {
+	let lastError: unknown;
+	for (const delayMs of TEMP_ROOT_CLEANUP_RETRY_DELAYS_MS) {
+		if (delayMs > 0) {
+			await sleep(delayMs);
+		}
+
+		try {
+			await fs.rm(targetPath, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 });
+			return;
+		} catch (error) {
+			lastError = error;
+		}
+	}
+
+	throw lastError;
 }
 
 async function loadManifestExtensionEntries(): Promise<ManifestExtensionEntry[]> {
@@ -158,6 +189,7 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 	await fs.mkdir(schedulerWorkspace, { recursive: true });
 
 	const extensionFilter = parseExtensionFilter();
+	const focusedBenchmarkFilter = parseFocusedBenchmarkFilter();
 	const manifestEntries = await loadManifestExtensionEntries();
 	const filteredManifestEntries = extensionFilter
 		? manifestEntries.filter((entry) => extensionFilter.has(entry.id))
@@ -186,13 +218,14 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 		fg: (_color: string, text: string) => text,
 	};
 
-	const definitions: BenchmarkDefinition[] = [
+	const baselineDefinitions: BenchmarkDefinition[] = [
 		{
 			id: "full-stack-register-start-empty",
 			label: "full stack register + session_start (empty history)",
 			group: "startup",
 			iterations: 5,
 			warmupIterations: 1,
+			minSampleTimeMs: 50,
 			budget: { medianMs: 900, p95Ms: 1_400 },
 			note: "Loads every default oh-pi extension from package.json and fires the first session_start.",
 			async run() {
@@ -211,6 +244,7 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 			group: "startup",
 			iterations: 5,
 			warmupIterations: 1,
+			minSampleTimeMs: 50,
 			budget: { medianMs: 1_200, p95Ms: 1_800 },
 			note: "Exercises eager history scans that still happen below the 250-entry defer thresholds.",
 			async run() {
@@ -227,12 +261,16 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
 			},
 		},
+	];
+
+	const targetedDefinitions: BenchmarkDefinition[] = [
 		{
 			id: "scheduler-runtime-context-with-store",
 			label: "scheduler persisted store load (50 tasks)",
 			group: "focused hotspot",
 			iterations: 25,
 			warmupIterations: 1,
+			minSampleTimeMs: 20,
 			budget: { medianMs: 40, p95Ms: 80 },
 			note: "Measures the synchronous loadTasksFromDisk path behind scheduler session_start wiring.",
 			run() {
@@ -254,6 +292,7 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 			group: "focused hotspot",
 			iterations: 20,
 			warmupIterations: 1,
+			minSampleTimeMs: 20,
 			budget: { medianMs: 90, p95Ms: 130 },
 			note: "Tracks the O(n) footer usage aggregation path that can surface during startup and redraws.",
 			run() {
@@ -270,6 +309,7 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 			group: "focused hotspot",
 			iterations: 20,
 			warmupIterations: 1,
+			minSampleTimeMs: 20,
 			budget: { medianMs: 120, p95Ms: 200 },
 			note: "Covers session hydration plus widget setup before the defer threshold kicks in.",
 			async run() {
@@ -313,6 +353,7 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 			group: "render",
 			iterations: 20,
 			warmupIterations: 1,
+			minSampleTimeMs: 20,
 			budget: { medianMs: 30, p95Ms: 50 },
 			note: "Simulates the first footer mount after startup so UI formatting regressions show up in CI.",
 			async run() {
@@ -339,7 +380,9 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
 			},
 		},
-	];
+	].filter((definition) => !focusedBenchmarkFilter || focusedBenchmarkFilter.has(definition.id));
+
+	const definitions: BenchmarkDefinition[] = [...baselineDefinitions, ...targetedDefinitions];
 
 	for (const entry of filteredManifestEntries) {
 		definitions.push({
@@ -348,6 +391,7 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 			group: "extension startup",
 			iterations: 10,
 			warmupIterations: 1,
+			minSampleTimeMs: 20,
 			budget: { medianMs: 800, p95Ms: 1_000 },
 			note: `Loads only ${entry.id} (${entry.path}) and fires session_start/session_shutdown for focused regression tracking.`,
 			async run() {
@@ -379,7 +423,7 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				process.env.USERPROFILE = previousUserProfile;
 			}
 
-			await fs.rm(tempRoot, { recursive: true, force: true });
+			await removeDirectoryWithRetry(tempRoot);
 		},
 	};
 }

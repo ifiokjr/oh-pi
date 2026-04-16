@@ -376,7 +376,9 @@ jobs:
             ./benchmarks/startup/select-targets.ts coverage/benchmarks/changed-files.txt \
             > coverage/benchmarks/startup-targets.json
           TARGETS=$(node --input-type=module -e "import fs from 'node:fs'; const report = JSON.parse(fs.readFileSync('coverage/benchmarks/startup-targets.json', 'utf8')); console.log(report.mode === 'all' ? 'all' : report.selectedExtensions.join(','));")
+          FOCUSED=$(node --input-type=module -e "import fs from 'node:fs'; const report = JSON.parse(fs.readFileSync('coverage/benchmarks/startup-targets.json', 'utf8')); console.log(report.mode === 'all' ? 'all' : report.selectedFocusedBenchmarkIds.join(','));")
           echo "OH_PI_BENCH_EXTENSION_FILTER=$TARGETS" >> "$GITHUB_ENV"
+          echo "OH_PI_BENCH_FOCUSED_FILTER=$FOCUSED" >> "$GITHUB_ENV"
 
       - name: Run startup and microbench suites
         run: |
