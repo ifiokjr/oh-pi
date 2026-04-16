@@ -65,23 +65,16 @@ describe("worktree extension", () => {
 		expect(harness.commands.has("wt")).toBe(true);
 	});
 
-	it("defers status refresh on session start so startup avoids immediate git work", async () => {
-		vi.useFakeTimers();
-		try {
-			const harness = createExtensionHarness();
-			harness.ctx.cwd = "/repo";
-			worktreeShared.getRepoWorktreeContext.mockReturnValue(makeSnapshot());
+	it("does not probe or write worktree status on session start", () => {
+		const harness = createExtensionHarness();
+		harness.ctx.cwd = "/repo";
+		worktreeShared.getRepoWorktreeContext.mockReturnValue(makeSnapshot());
 
-			worktreeExtension(harness.pi as never);
-			harness.emit("session_start", {}, harness.ctx);
-			expect(worktreeShared.getRepoWorktreeContext).not.toHaveBeenCalled();
+		worktreeExtension(harness.pi as never);
+		harness.emit("session_start", {}, harness.ctx);
 
-			await vi.advanceTimersByTimeAsync(500);
-			expect(worktreeShared.getRepoWorktreeContext).toHaveBeenCalledWith("/repo");
-			expect(harness.statusMap.get("pi-worktree")).toContain("main checkout");
-		} finally {
-			vi.useRealTimers();
-		}
+		expect(worktreeShared.getRepoWorktreeContext).not.toHaveBeenCalled();
+		expect(harness.statusMap.has("pi-worktree")).toBe(false);
 	});
 
 	it("creates a pi-owned worktree and reports owner + purpose metadata", async () => {
@@ -114,6 +107,56 @@ describe("worktree extension", () => {
 		expect(harness.notifications.at(-1)?.msg).toContain("Created pi-owned worktree feat/footer-context");
 		expect(String(harness.messages.at(-1)?.content)).toContain("Owner instance: pi-test-instance");
 		expect(String(harness.messages.at(-1)?.content)).toContain("Purpose: Implement footer context");
+	});
+
+	it("shows a status badge for linked worktrees during explicit worktree commands", async () => {
+		const harness = createExtensionHarness();
+		harness.ctx.cwd = "/repo";
+		worktreeShared.getRepoWorktreeContext.mockReturnValue(
+			makeSnapshot({
+				isLinkedWorktree: true,
+				currentWorktreeRoot: "/tmp/pi/feat-footer",
+				currentBranch: "feat/footer-context",
+				current: {
+					path: "/tmp/pi/feat-footer",
+					branch: "feat/footer-context",
+					head: "abc",
+					bare: false,
+					detached: false,
+					lockedReason: null,
+					prunableReason: null,
+					isMain: false,
+					isCurrent: true,
+					isManaged: true,
+					metadata: { purpose: "Build worktree UX", owner: { instanceId: "pi-test-instance" } },
+				},
+			}),
+		);
+		worktreeShared.getRepoWorktreeSnapshot.mockReturnValue(
+			makeSnapshot({
+				isLinkedWorktree: true,
+				currentWorktreeRoot: "/tmp/pi/feat-footer",
+				currentBranch: "feat/footer-context",
+				current: {
+					path: "/tmp/pi/feat-footer",
+					branch: "feat/footer-context",
+					head: "abc",
+					bare: false,
+					detached: false,
+					lockedReason: null,
+					prunableReason: null,
+					isMain: false,
+					isCurrent: true,
+					isManaged: true,
+					metadata: { purpose: "Build worktree UX", owner: { instanceId: "pi-test-instance" } },
+				},
+			}),
+		);
+
+		worktreeExtension(harness.pi as never);
+		await harness.commands.get("worktree").handler("status", harness.ctx);
+
+		expect(harness.statusMap.get("pi-worktree")).toContain("pi wt feat/footer-context");
 	});
 
 	it("opens a matching worktree through the system opener helper", async () => {
