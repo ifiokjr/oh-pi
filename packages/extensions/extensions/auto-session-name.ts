@@ -1,4 +1,3 @@
-import * as path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 const MAX_NAME_LEN = 72;
@@ -52,19 +51,13 @@ function overlapRatio(a: string, b: string): number {
 	return shared / Math.max(left.size, right.size);
 }
 
-function deriveSessionId(sessionFile: string | undefined): string | undefined {
-	if (!sessionFile) {
-		return undefined;
-	}
-	return path.basename(sessionFile).replace(/\.jsonl$/i, "") || undefined;
+function normalizeSessionId(sessionId: string | undefined): string | undefined {
+	const normalized = sessionId?.trim();
+	return normalized || undefined;
 }
 
 function buildResumeCommandHint(sessionId: string): string {
-	return [
-		`Session id: ${sessionId}`,
-		`Resume now: pi --session ${sessionId}`,
-		`Alias path (if your shell forwards it): pi resume ${sessionId}`,
-	].join("\n");
+	return [`Session id: ${sessionId}`, `Resume now: pi --session ${sessionId}`].join("\n");
 }
 
 function isFocusShift(firstUserText: string, latestUserText: string): boolean {
@@ -110,16 +103,16 @@ export default function autoSessionNameExtension(pi: ExtensionAPI) {
 	let lastAutoName = "";
 	let compactContinuationQueued = false;
 
-	const emitResumeHint = (reason: "shutdown" | "switch", sessionFile: string | undefined) => {
-		const sessionId = deriveSessionId(sessionFile);
-		if (!sessionId) {
+	const emitResumeHint = (reason: "shutdown" | "switch", sessionId: string | undefined) => {
+		const normalizedSessionId = normalizeSessionId(sessionId);
+		if (!normalizedSessionId) {
 			return;
 		}
 
 		const prefix = reason === "shutdown" ? "Session saved." : "Session switched.";
 		pi.sendMessage({
 			customType: "session-resume-hint",
-			content: `${prefix}\n${buildResumeCommandHint(sessionId)}`,
+			content: `${prefix}\n${buildResumeCommandHint(normalizedSessionId)}`,
 			display: true,
 		});
 	};
@@ -160,10 +153,10 @@ export default function autoSessionNameExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("session_switch", (_event, ctx) => {
-		emitResumeHint("switch", ctx.sessionManager?.getSessionFile?.());
+		emitResumeHint("switch", ctx.sessionManager?.getSessionId?.());
 	});
 
 	pi.on("session_shutdown", (_event, ctx) => {
-		emitResumeHint("shutdown", ctx.sessionManager?.getSessionFile?.());
+		emitResumeHint("shutdown", ctx.sessionManager?.getSessionId?.());
 	});
 }
