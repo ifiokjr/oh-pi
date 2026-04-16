@@ -106,5 +106,4 @@ describe("extensions runtime smoke tests", () => {
 		worktreeExtension(harness.pi as never);
 		expect(harness.commands.has("worktree")).toBe(true);
 	});
-
 });

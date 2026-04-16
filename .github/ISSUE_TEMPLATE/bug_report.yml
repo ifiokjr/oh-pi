@@ -1,22 +1,22 @@
-name: 🐛 Bug 报告 | Bug Report
-description: 报告一个 bug | Report a bug
+name: 🐛 Bug Report
+description: Report a bug
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
-      value: 感谢你提交 bug 报告！请尽量填写以下信息。
+      value: Thanks for filing a bug report. Please share as much detail as you can.
   - type: textarea
     id: description
     attributes:
-      label: 问题描述 | Description
-      description: 清晰描述遇到的问题
+      label: Description
+      description: Clearly describe the problem you ran into.
     validations:
       required: true
   - type: textarea
     id: reproduce
     attributes:
-      label: 复现步骤 | Steps to Reproduce
-      description: 如何复现这个问题
+      label: Steps to Reproduce
+      description: Explain how to reproduce the issue.
       value: |
         1.
         2.
@@ -26,19 +26,19 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: 预期行为 | Expected Behavior
+      label: Expected Behavior
     validations:
       required: true
   - type: textarea
     id: actual
     attributes:
-      label: 实际行为 | Actual Behavior
+      label: Actual Behavior
     validations:
       required: true
   - type: textarea
     id: environment
     attributes:
-      label: 环境信息 | Environment
+      label: Environment
       value: |
         - OS:
         - Node.js:
@@ -49,5 +49,5 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: 日志 / 截图 | Logs / Screenshots
-      description: 如有相关日志或截图请粘贴
+      label: Logs / Screenshots
+      description: Paste any relevant logs or screenshots.
