@@ -11,9 +11,6 @@ vi.mock("@mariozechner/pi-coding-agent", () => ({ getAgentDir }));
 vi.mock("@ifi/oh-pi-core", async () => {
 	return await import("../../core/src/model-intelligence.ts");
 });
-vi.mock("@ifi/pi-extension-adaptive-routing/delegated-runtime.ts", async () => {
-	return await import("../../adaptive-routing/delegated-runtime.ts");
-});
 
 import { resolveSubagentModelResolution, toAvailableModelRefs } from "../model-routing.js";
 
