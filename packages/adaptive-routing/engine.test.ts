@@ -91,7 +91,9 @@ describe("adaptive routing engine", () => {
 				providerReserves: {
 					...DEFAULT_ADAPTIVE_ROUTING_CONFIG.providerReserves,
 					openai: {
-						...DEFAULT_ADAPTIVE_ROUTING_CONFIG.providerReserves.openai,
+						minRemainingPct: DEFAULT_ADAPTIVE_ROUTING_CONFIG.providerReserves.openai?.minRemainingPct ?? 15,
+						applyToTiers: DEFAULT_ADAPTIVE_ROUTING_CONFIG.providerReserves.openai?.applyToTiers,
+						confidence: DEFAULT_ADAPTIVE_ROUTING_CONFIG.providerReserves.openai?.confidence,
 						allowOverrideForPeak: false,
 					},
 				},

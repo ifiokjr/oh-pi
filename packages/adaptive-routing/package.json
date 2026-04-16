@@ -34,7 +34,7 @@
   "scripts": {
     "build": "pnpm run typecheck && pnpm run test:worktree",
     "typecheck": "tsgo --project ./tsconfig.json --noEmit",
-    "test:worktree": "vitest run ./*.test.ts"
+    "test:worktree": "vitest run --config ./vitest.worktree.config.ts"
   },
   "peerDependencies": {
     "@mariozechner/pi-agent-core": ">=0.56.1",

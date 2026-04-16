@@ -1,9 +1,4 @@
-import type {
-	ExtensionAPI,
-	ExtensionCommandContext,
-	ExtensionContext,
-	ModelSelectEvent,
-} from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { classifyPrompt } from "./classifier.js";
 import { readAdaptiveRoutingConfig } from "./config.js";
 import { decideRoute } from "./engine.js";
@@ -80,13 +75,17 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 	}
 
 	function refreshUsageSnapshot(): void {
-		pi.events.emit("usage:query");
+		pi.events.emit("usage:query", undefined);
 	}
 
-	pi.events.on("usage:limits", (payload) => {
+	pi.events.on("usage:limits", (payload: unknown) => {
+		const providerPayload =
+			payload && typeof payload === "object" && "providers" in payload
+				? ((payload as { providers?: unknown }).providers as Record<string, unknown> | undefined)
+				: undefined;
 		const providers: ProviderUsageState["providers"] = {};
-		if (payload && typeof payload === "object" && payload.providers && typeof payload.providers === "object") {
-			for (const [provider, value] of Object.entries(payload.providers as Record<string, unknown>)) {
+		if (providerPayload && typeof providerPayload === "object") {
+			for (const [provider, value] of Object.entries(providerPayload)) {
 				providers[provider] = {
 					confidence: extractQuotaConfidence(value),
 					remainingPct: extractRemainingPct(value),
@@ -95,10 +94,24 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 		}
 		runtime.usage = {
 			providers,
-			sessionCost: typeof payload?.sessionCost === "number" ? payload.sessionCost : undefined,
-			rolling30dCost: typeof payload?.rolling30dCost === "number" ? payload.rolling30dCost : undefined,
-			perModel: typeof payload?.perModel === "object" ? payload.perModel : undefined,
-			perSource: typeof payload?.perSource === "object" ? payload.perSource : undefined,
+			sessionCost:
+				payload && typeof payload === "object" && typeof (payload as { sessionCost?: unknown }).sessionCost === "number"
+					? ((payload as { sessionCost: number }).sessionCost ?? undefined)
+					: undefined,
+			rolling30dCost:
+				payload &&
+				typeof payload === "object" &&
+				typeof (payload as { rolling30dCost?: unknown }).rolling30dCost === "number"
+					? ((payload as { rolling30dCost: number }).rolling30dCost ?? undefined)
+					: undefined,
+			perModel:
+				payload && typeof payload === "object" && typeof (payload as { perModel?: unknown }).perModel === "object"
+					? ((payload as { perModel: Record<string, unknown> }).perModel ?? undefined)
+					: undefined,
+			perSource:
+				payload && typeof payload === "object" && typeof (payload as { perSource?: unknown }).perSource === "object"
+					? ((payload as { perSource: Record<string, unknown> }).perSource ?? undefined)
+					: undefined,
 			updatedAt: Date.now(),
 		};
 	});
@@ -385,7 +398,10 @@ async function applyDecision(
 	}
 }
 
-function shouldRecordOverride(event: ModelSelectEvent, lastDecision: RouteDecision | undefined): boolean {
+function shouldRecordOverride(
+	event: { model?: { provider: string; id: string } },
+	lastDecision: RouteDecision | undefined,
+): boolean {
 	if (!(lastDecision && event.model)) {
 		return false;
 	}
@@ -396,21 +412,26 @@ function extractQuotaConfidence(value: unknown): ProviderUsageState["providers"]
 	if (!value || typeof value !== "object") {
 		return "unknown";
 	}
-	if (Array.isArray(value.windows) && value.windows.length > 0) {
+	const typedValue = value as { windows?: unknown[]; stale?: boolean };
+	if (Array.isArray(typedValue.windows) && typedValue.windows.length > 0) {
 		return "authoritative";
 	}
-	if (value.stale) {
+	if (typedValue.stale) {
 		return "estimated";
 	}
 	return "unknown";
 }
 
 function extractRemainingPct(value: unknown): number | undefined {
-	if (!value || typeof value !== "object" || !Array.isArray(value.windows)) {
+	if (!value || typeof value !== "object") {
 		return undefined;
 	}
-	const percentages = value.windows
-		.map((window) =>
+	const typedValue = value as { windows?: unknown[] };
+	if (!Array.isArray(typedValue.windows)) {
+		return undefined;
+	}
+	const percentages = typedValue.windows
+		.map((window: unknown) =>
 			window && typeof window === "object" ? Number((window as { remainingPct?: unknown }).remainingPct) : Number.NaN,
 		)
 		.filter((pct: number) => Number.isFinite(pct));
@@ -552,13 +573,17 @@ function resolveDelegatedAssignmentModel(
 			return match.fullId;
 		}
 	}
-	const cheapFallback = category === "quick-discovery" ? availableModels.find((model) => model.provider === "google") : undefined;
+	const cheapFallback =
+		category === "quick-discovery" ? availableModels.find((model) => model.provider === "groq") : undefined;
 	return cheapFallback?.fullId;
 }
 
 async function openOverlay(ctx: ExtensionCommandContext, lines: string[]): Promise<void> {
 	await ctx.ui.custom(
 		(tui, _theme, _keybindings, done) => ({
+			invalidate() {
+				// No-op overlay invalidation.
+			},
 			render(width: number) {
 				return lines.map((line) => line.slice(0, width));
 			},

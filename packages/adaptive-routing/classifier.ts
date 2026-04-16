@@ -75,7 +75,7 @@ export function classifyPromptHeuristically(prompt: string): PromptRouteClassifi
 	const intent = detectIntent(text);
 	const complexity = detectComplexity(text, intent);
 	const recommendedTier = detectTier(intent, complexity);
-	const recommendedThinking = detectThinking(recommendedTier, intent);
+	const recommendedThinking = detectThinking(recommendedTier);
 
 	return {
 		intent,

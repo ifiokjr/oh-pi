@@ -44,7 +44,7 @@ describe("adaptive routing config", () => {
 			taskClasses: {
 				quick: { defaultThinking: "bad", candidates: ["google/gemini-2.5-flash"] },
 			},
-		}) as never;
+		});
 
 		expect(config.mode).toBe(DEFAULT_ADAPTIVE_ROUTING_CONFIG.mode);
 		expect(config.stickyTurns).toBe(20);
