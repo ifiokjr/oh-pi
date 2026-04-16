@@ -12,8 +12,6 @@ Like oh-my-zsh for pi — but with an autonomous ant colony.
 [![license](https://img.shields.io/github/license/ifiokjr/oh-pi)](./LICENSE)
 [![node](https://img.shields.io/node/v/@ifi/oh-pi)](https://nodejs.org)
 
-[English](./README.md) | [Français](./README.fr.md)
-
 ```bash
 npx @ifi/oh-pi
 ```
