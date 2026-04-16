@@ -15,7 +15,11 @@ vi.mock("@ifi/pi-extension-adaptive-routing/delegated-runtime.ts", async () => {
 	return await import("../../adaptive-routing/delegated-runtime.ts");
 });
 
-import { DEFAULT_COLONY_CATEGORIES, resolveColonyCategoryModel, toAvailableModelRefs } from "../extensions/ant-colony/routing-config.js";
+import {
+	DEFAULT_COLONY_CATEGORIES,
+	resolveColonyCategoryModel,
+	toAvailableModelRefs,
+} from "../extensions/ant-colony/routing-config.js";
 
 afterEach(() => {
 	vi.clearAllMocks();

@@ -1,8 +1,8 @@
-import {
-	inspectDelegatedSelection,
-	type DelegatedAvailableModelRef,
-} from "@ifi/pi-extension-adaptive-routing/delegated-runtime.ts";
 import type { DelegatedAvailableModel, DelegatedSelectionUsageSnapshot, ModelTaskProfile } from "@ifi/oh-pi-core";
+import {
+	type DelegatedAvailableModelRef,
+	inspectDelegatedSelection,
+} from "@ifi/pi-extension-adaptive-routing/delegated-runtime.ts";
 import type { AntCaste, WorkerClass } from "./types.js";
 
 export type AvailableModelRef = DelegatedAvailableModelRef;

@@ -15,8 +15,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
-import type { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import type { DelegatedSelectionUsageSnapshot } from "@ifi/oh-pi-core";
+import type { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import {
 	applyConcurrencyCap,
 	type BudgetPlan,
@@ -155,7 +155,8 @@ function toDelegatedUsageSnapshot(
 		return undefined;
 	}
 
-	const providers = usageLimits.providers instanceof Map ? usageLimits.providers.entries() : Object.entries(usageLimits.providers);
+	const providers =
+		usageLimits.providers instanceof Map ? usageLimits.providers.entries() : Object.entries(usageLimits.providers);
 	const snapshot: Record<string, DelegatedSelectionUsageSnapshot> = {};
 	for (const [provider, limits] of providers) {
 		const percentages = limits.windows
@@ -624,7 +625,7 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 					maxTokens: model.maxTokens,
 					cost: { ...model.cost },
 				})),
-		  )
+			)
 		: [];
 	const casteCategory = DEFAULT_COLONY_CATEGORIES[caste];
 	const casteDelegatedModel = resolveColonyCategoryModel(casteCategory, availableModels, {

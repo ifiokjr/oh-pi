@@ -147,7 +147,9 @@ export function mergeDelegatedSelectionPolicies(
 	return {
 		candidateModels: mergeStringLists(base?.candidateModels, override?.candidateModels, { overrideFirst: true }),
 		preferredModels: mergeStringLists(base?.preferredModels, override?.preferredModels, { overrideFirst: true }),
-		preferredProviders: mergeStringLists(base?.preferredProviders, override?.preferredProviders, { overrideFirst: true }),
+		preferredProviders: mergeStringLists(base?.preferredProviders, override?.preferredProviders, {
+			overrideFirst: true,
+		}),
 		blockedModels: mergeStringLists(base?.blockedModels, override?.blockedModels),
 		blockedProviders: mergeStringLists(base?.blockedProviders, override?.blockedProviders),
 		taskProfile: override?.taskProfile ?? base?.taskProfile,
@@ -157,8 +159,7 @@ export function mergeDelegatedSelectionPolicies(
 		requireReasoning: override?.requireReasoning ?? base?.requireReasoning,
 		requireMultimodal: override?.requireMultimodal ?? base?.requireMultimodal,
 		minContextWindow: override?.minContextWindow ?? base?.minContextWindow,
-		allowSmallContextForSmallTasks:
-			override?.allowSmallContextForSmallTasks ?? base?.allowSmallContextForSmallTasks,
+		allowSmallContextForSmallTasks: override?.allowSmallContextForSmallTasks ?? base?.allowSmallContextForSmallTasks,
 	};
 }
 
@@ -222,15 +223,17 @@ export function selectDelegatedModel(params: {
 	}
 
 	const ranked = candidates
-		.map((candidate) => rankCandidate(candidate, {
-			currentModel: params.currentModel,
-			policy,
-			taskProfile,
-			taskSize,
-			minimumContextWindow,
-			usage: params.usage,
-			latency: params.latency,
-		}))
+		.map((candidate) =>
+			rankCandidate(candidate, {
+				currentModel: params.currentModel,
+				policy,
+				taskProfile,
+				taskSize,
+				minimumContextWindow,
+				usage: params.usage,
+				latency: params.latency,
+			}),
+		)
 		.sort((left, right) => right.score - left.score || left.model.localeCompare(right.model));
 
 	return {
@@ -266,13 +269,15 @@ function rankCandidate(
 		reasons.push(`candidate:${candidateIndex + 1}`);
 	}
 
-	const preferredModelIndex = (policy.preferredModels ?? []).findIndex((reference) => matchesModelReference(reference, candidate));
+	const preferredModelIndex = (policy.preferredModels ?? []).findIndex((reference) =>
+		matchesModelReference(reference, candidate),
+	);
 	if (preferredModelIndex >= 0) {
 		score += Math.max(48 - preferredModelIndex * 6, 20);
 		reasons.push(`preferred-model:${preferredModelIndex + 1}`);
 	}
 
-	const preferredProviderIndex = (policy.preferredProviders ?? []).findIndex((provider) => provider === candidate.model.provider);
+	const preferredProviderIndex = (policy.preferredProviders ?? []).indexOf(candidate.model.provider);
 	if (preferredProviderIndex >= 0) {
 		score += Math.max(18 - preferredProviderIndex * 3, 6);
 		reasons.push(`preferred-provider:${preferredProviderIndex + 1}`);
@@ -542,12 +547,17 @@ function mergeStringLists(
 	override: string[] | undefined,
 	options: { overrideFirst?: boolean } = {},
 ): string[] | undefined {
-	const values = options.overrideFirst ? [...(override ?? []), ...(base ?? [])] : [...(base ?? []), ...(override ?? [])];
+	const values = options.overrideFirst
+		? [...(override ?? []), ...(base ?? [])]
+		: [...(base ?? []), ...(override ?? [])];
 	const unique = Array.from(new Set(values.filter((value) => typeof value === "string" && value.trim().length > 0)));
 	return unique.length > 0 ? unique : undefined;
 }
 
-function matchesModelReference(reference: string, candidate: Pick<DelegatedSelectionCandidate, "fullId" | "model">): boolean {
+function matchesModelReference(
+	reference: string,
+	candidate: Pick<DelegatedSelectionCandidate, "fullId" | "model">,
+): boolean {
 	if (reference.endsWith("/<best-available>")) {
 		const provider = reference.slice(0, reference.indexOf("/"));
 		return candidate.model.provider === provider;
