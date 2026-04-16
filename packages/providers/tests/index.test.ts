@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
+
+vi.mock("@ifi/pi-shared-qna", async () => {
+	return await import("../../shared-qna/index.js");
+});
+
 import { clearModelsDevCatalogCache } from "../catalog.js";
 import { getSupportedProvider } from "../config.js";
 import providerCatalogExtension, { resetProviderCatalogRuntimeStateForTests, SUPPORTED_PROVIDERS } from "../index.js";

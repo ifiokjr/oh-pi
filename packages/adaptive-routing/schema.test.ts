@@ -44,6 +44,26 @@ describe("adaptive routing config", () => {
 			taskClasses: {
 				quick: { defaultThinking: "bad", candidates: ["google/gemini-2.5-flash"] },
 			},
+			delegatedRouting: {
+				categories: {
+					"quick-discovery": {
+						taskProfile: "bogus",
+						minContextWindow: 12,
+						requireReasoning: "yes",
+					},
+				},
+			},
+			delegatedModelSelection: {
+				disabledProviders: ["openai", 7],
+				allowSmallContextForSmallTasks: "true",
+				roleOverrides: {
+					"subagent:planner": {
+						taskProfile: "wrong",
+						minContextWindow: "nan",
+						preferredModels: ["google/gemini-3.1-pro", 2],
+					},
+				},
+			},
 		});
 
 		expect(config.mode).toBe(DEFAULT_ADAPTIVE_ROUTING_CONFIG.mode);
@@ -55,6 +75,18 @@ describe("adaptive routing config", () => {
 		expect(config.taskClasses.quick?.defaultThinking).toBe(
 			DEFAULT_ADAPTIVE_ROUTING_CONFIG.taskClasses.quick?.defaultThinking,
 		);
+		expect(config.delegatedRouting.categories["quick-discovery"]?.taskProfile).toBe(
+			DEFAULT_ADAPTIVE_ROUTING_CONFIG.delegatedRouting.categories["quick-discovery"]?.taskProfile,
+		);
+		expect(config.delegatedRouting.categories["quick-discovery"]?.minContextWindow).toBe(1024);
+		expect(config.delegatedModelSelection.disabledProviders).toEqual(["openai"]);
+		expect(config.delegatedModelSelection.allowSmallContextForSmallTasks).toBe(
+			DEFAULT_ADAPTIVE_ROUTING_CONFIG.delegatedModelSelection.allowSmallContextForSmallTasks,
+		);
+		expect(config.delegatedModelSelection.roleOverrides["subagent:planner"]?.preferredModels).toEqual([
+			"google/gemini-3.1-pro",
+		]);
+		expect(config.delegatedModelSelection.roleOverrides["subagent:planner"]?.taskProfile).toBeUndefined();
 	});
 
 	it("warns once and falls back when config JSON is invalid", () => {
@@ -89,6 +121,7 @@ describe("adaptive routing config", () => {
 			const config = readAdaptiveRoutingConfig();
 			expect(config.mode).toBe("auto");
 			expect(config.models.ranked).toEqual(["anthropic/claude-opus-4.6"]);
+			expect(config.delegatedModelSelection.preferLowerUsage).toBe(true);
 		} finally {
 			rmSync(tempAgentDir, { recursive: true, force: true });
 		}

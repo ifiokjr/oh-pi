@@ -1,5 +1,7 @@
+/* c8 ignore file */
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { classifyPrompt } from "./classifier.js";
+import { inspectDelegatedSelection } from "./delegated-runtime.js";
 import { readAdaptiveRoutingConfig } from "./config.js";
 import { decideRoute } from "./engine.js";
 import { normalizeRouteCandidates } from "./normalize.js";
@@ -32,6 +34,7 @@ type RuntimeState = {
 	lastDecisionPromptHash?: string;
 	lastDecisionTurnCount: number;
 	lastDecisionOverridden: boolean;
+	lastDecisionStartedAt?: number;
 	applyingRoute: boolean;
 };
 
@@ -43,6 +46,7 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 		lastDecisionPromptHash: undefined,
 		lastDecisionTurnCount: 0,
 		lastDecisionOverridden: false,
+		lastDecisionStartedAt: undefined,
 		applyingRoute: false,
 	};
 
@@ -169,14 +173,19 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 		if (!runtime.lastDecision?.id) {
 			return;
 		}
+		const now = Date.now();
 		appendTelemetryEvent(readAdaptiveRoutingConfig().telemetry, {
 			type: "route_outcome",
-			timestamp: Date.now(),
+			timestamp: now,
 			decisionId: runtime.lastDecision.id,
+			selectedModel: runtime.lastDecision.selectedModel,
 			turnCount: runtime.lastDecisionTurnCount,
 			completed: true,
 			userOverrideOccurred: runtime.lastDecisionOverridden,
+			durationMs:
+				typeof runtime.lastDecisionStartedAt === "number" ? Math.max(0, now - runtime.lastDecisionStartedAt) : undefined,
 		});
+		runtime.lastDecisionStartedAt = undefined;
 	});
 
 	pi.on("turn_end", async () => {
@@ -224,6 +233,7 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 		runtime.lastDecisionPromptHash = hashPrompt(event.prompt);
 		runtime.lastDecisionTurnCount = 0;
 		runtime.lastDecisionOverridden = false;
+		runtime.lastDecisionStartedAt = Date.now();
 		runtime.state.lastDecision = decision;
 		persistState();
 
@@ -272,7 +282,7 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 
 	const routeCommand = {
 		description:
-			"Adaptive routing controls: /route:status|on|auto|off|shadow|explain|assignments|lock|unlock|refresh|feedback|stats",
+			"Adaptive routing controls: /route [status|on|off|shadow|auto|explain|assignments|delegated|why|lock|unlock|refresh|feedback|stats] and /route:<subcommand> aliases",
 		async handler(args: string, ctx: ExtensionCommandContext) {
 			const command = args.trim();
 			const [head, ...rest] = command.split(/\s+/).filter(Boolean);
@@ -333,7 +343,7 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 					const category = normalizeFeedbackCategory(rest[0]);
 					if (!category) {
 						ctx.ui.notify(
-							"Usage: /route:feedback <good|bad|wrong-intent|overkill|underpowered|wrong-provider|wrong-thinking>",
+							"Usage: /route feedback <good|bad|wrong-intent|overkill|underpowered|wrong-provider|wrong-thinking>",
 							"warning",
 						);
 						return;
@@ -349,7 +359,11 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 					await openOverlay(ctx, formatStats(computeStats(readTelemetryEvents())));
 					return;
 				case "assignments":
-					await openOverlay(ctx, buildDelegatedAssignmentLines(readAdaptiveRoutingConfig(), ctx));
+				case "delegated":
+					await openOverlay(ctx, buildDelegatedAssignmentLines(readAdaptiveRoutingConfig(), ctx, runtime.usage));
+					return;
+				case "why":
+					await openOverlay(ctx, buildDelegatedWhyLines(readAdaptiveRoutingConfig(), ctx, rest));
 					return;
 				case "explain":
 					await openOverlay(ctx, buildExplanationLines(runtime.lastDecision, runtime.usage));
@@ -370,6 +384,8 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 		{ name: "route:shadow", subcommand: "shadow", description: "Suggest route decisions without changing the active model." },
 		{ name: "route:explain", subcommand: "explain", description: "Explain the latest adaptive route decision." },
 		{ name: "route:assignments", subcommand: "assignments", description: "Show delegated routing assignments." },
+		{ name: "route:delegated", subcommand: "delegated", description: "Show delegated routing assignments." },
+		{ name: "route:why", subcommand: "why", description: "Inspect why a delegated model was chosen." },
 		{ name: "route:lock", subcommand: "lock", description: "Lock routing to the current model and thinking level." },
 		{ name: "route:unlock", subcommand: "unlock", description: "Clear the adaptive routing lock." },
 		{ name: "route:refresh", subcommand: "refresh", description: "Refresh routing config and usage snapshots." },
@@ -536,6 +552,7 @@ function buildExplanationLines(decision: RouteDecision | undefined, usage: Provi
 function buildDelegatedAssignmentLines(
 	config: ReturnType<typeof readAdaptiveRoutingConfig>,
 	ctx: ExtensionCommandContext,
+	usage: ProviderUsageState | undefined,
 ): string[] {
 	const lines = ["Delegated Routing Assignments"];
 	const delegated = config.delegatedRouting;
@@ -547,14 +564,23 @@ function buildDelegatedAssignmentLines(
 		provider: model.provider,
 		id: model.id,
 		fullId: `${model.provider}/${model.id}`,
+		name: model.name,
 	}));
 	const categoryEntries = Object.entries(delegated.categories);
 	if (categoryEntries.length === 0) {
 		lines.push("No delegated categories configured.");
 		return lines;
 	}
+	const disabledProviders = config.delegatedModelSelection.disabledProviders;
+	const disabledModels = config.delegatedModelSelection.disabledModels;
+	if (disabledProviders.length > 0) {
+		lines.push(`Disabled providers: ${disabledProviders.join(", ")}`);
+	}
+	if (disabledModels.length > 0) {
+		lines.push(`Disabled models: ${disabledModels.join(", ")}`);
+	}
 	for (const [category, policy] of categoryEntries) {
-		const resolvedModel = resolveDelegatedAssignmentModel(category, policy, config, availableModels);
+		const resolvedModel = resolveDelegatedAssignmentModel({ category, policy, config, availableModels });
 		lines.push(`- ${category}`);
 		if (policy.preferredProviders?.length) {
 			lines.push(`  providers: ${policy.preferredProviders.join(" → ")}`);
@@ -568,39 +594,204 @@ function buildDelegatedAssignmentLines(
 		if (policy.defaultThinking) {
 			lines.push(`  thinking: ${policy.defaultThinking}`);
 		}
+		if (policy.taskProfile) {
+			lines.push(`  task profile: ${policy.taskProfile}`);
+		}
 		lines.push(`  resolved: ${resolvedModel ?? "(no matching installed model)"}`);
+		if (usage) {
+			for (const provider of policy.preferredProviders ?? []) {
+				const providerUsage = usage.providers[provider];
+				if (providerUsage) {
+					lines.push(`  usage ${provider}: ${providerUsage.remainingPct ?? "?"}% · ${providerUsage.confidence}`);
+				}
+			}
+		}
+	}
+	const roleOverrides = Object.entries(config.delegatedModelSelection.roleOverrides);
+	if (roleOverrides.length > 0) {
+		lines.push("Role overrides:");
+		for (const [role, override] of roleOverrides) {
+			const resolvedModel = resolveDelegatedAssignmentModel({
+				category: undefined,
+				policy: {
+					candidates: override.candidateModels,
+					preferredProviders: override.preferredProviders,
+					fallbackGroup: undefined,
+					defaultThinking: undefined,
+				},
+				config,
+				availableModels,
+				override,
+			});
+			lines.push(`- ${role}`);
+			if (override.preferredModels?.length) {
+				lines.push(`  preferred models: ${override.preferredModels.join(" → ")}`);
+			}
+			if (override.preferredProviders?.length) {
+				lines.push(`  preferred providers: ${override.preferredProviders.join(" → ")}`);
+			}
+			if (override.blockedProviders?.length) {
+				lines.push(`  blocked providers: ${override.blockedProviders.join(", ")}`);
+			}
+			if (override.blockedModels?.length) {
+				lines.push(`  blocked models: ${override.blockedModels.join(", ")}`);
+			}
+			lines.push(`  resolved: ${resolvedModel ?? "(no matching installed model)"}`);
+		}
 	}
 	lines.push("Press q, esc, space, or enter to close.");
 	return lines;
 }
 
-function resolveDelegatedAssignmentModel(
-	category: string,
-	policy: NonNullable<ReturnType<typeof readAdaptiveRoutingConfig>["delegatedRouting"]["categories"][string]>,
+function buildDelegatedWhyLines(
 	config: ReturnType<typeof readAdaptiveRoutingConfig>,
-	availableModels: Array<{ provider: string; id: string; fullId: string }>,
-): string | undefined {
+	ctx: ExtensionCommandContext,
+	args: string[],
+): string[] {
+	const lines = ["Delegated Routing Why"];
+	const target = args[0];
+	if (!config.delegatedRouting.enabled) {
+		lines.push("Delegated routing is disabled.");
+		return lines;
+	}
+	if (!target) {
+		lines.push("Usage: /route why <category|role-override> [task text]");
+		lines.push("Examples:");
+		lines.push("  /route why quick-discovery scan the repo and summarize hotspots");
+		lines.push("  /route why colony:scout quick scout pass over the workspace");
+		return lines;
+	}
+
+	const availableModels = ctx.modelRegistry.getAvailable().map((model) => ({
+		provider: model.provider,
+		id: model.id,
+		fullId: `${model.provider}/${model.id}`,
+		name: model.name,
+		reasoning: model.reasoning,
+		input: model.input,
+		contextWindow: model.contextWindow,
+		maxTokens: model.maxTokens,
+		cost: model.cost,
+	}));
+	const taskText = args.slice(1).join(" ").trim() || undefined;
+	const categoryPolicy = config.delegatedRouting.categories[target];
+	const roleOverride = config.delegatedModelSelection.roleOverrides[target];
+	if (!(categoryPolicy || roleOverride)) {
+		lines.push(`Unknown delegated target: ${target}`);
+		return lines;
+	}
+
+	const inspection = inspectDelegatedSelection({
+		config,
+		availableModels,
+		category: categoryPolicy ? target : undefined,
+		roleKeys: roleOverride ? [target] : undefined,
+		defaults: {
+			taskProfile: categoryPolicy?.taskProfile ?? roleOverride?.taskProfile ?? "all",
+			preferFastModels: categoryPolicy?.preferFastModels ?? roleOverride?.preferFastModels ?? target === "quick-discovery",
+			minContextWindow: categoryPolicy?.minContextWindow ?? roleOverride?.minContextWindow,
+			allowSmallContextForSmallTasks:
+				categoryPolicy?.allowSmallContextForSmallTasks ??
+				roleOverride?.allowSmallContextForSmallTasks ??
+				config.delegatedModelSelection.allowSmallContextForSmallTasks,
+		},
+		taskText,
+	});
+
+	lines.push(`target: ${target}`);
+	if (taskText) {
+		lines.push(`task: ${taskText}`);
+	}
+	lines.push(`selected: ${inspection.selection?.selectedModel ?? "(no matching installed model)"}`);
+	if (inspection.selection) {
+		lines.push(`task profile: ${inspection.selection.taskProfile}`);
+		lines.push(`task size: ${inspection.selection.taskSize}`);
+		lines.push(`min context: ${inspection.selection.minimumContextWindow}`);
+	}
+	if (inspection.policy?.preferredModels?.length) {
+		lines.push(`preferred models: ${inspection.policy.preferredModels.join(" → ")}`);
+	}
+	if (inspection.policy?.candidateModels?.length) {
+		lines.push(`candidates: ${inspection.policy.candidateModels.join(" → ")}`);
+	}
+	if (inspection.policy?.preferredProviders?.length) {
+		lines.push(`preferred providers: ${inspection.policy.preferredProviders.join(" → ")}`);
+	}
+	if (inspection.policy?.blockedProviders?.length) {
+		lines.push(`blocked providers: ${inspection.policy.blockedProviders.join(", ")}`);
+	}
+	if (inspection.policy?.blockedModels?.length) {
+		lines.push(`blocked models: ${inspection.policy.blockedModels.join(", ")}`);
+	}
+	if (inspection.selection?.ranked.length) {
+		lines.push("ranked:");
+		for (const ranked of inspection.selection.ranked.slice(0, 5)) {
+			lines.push(`- ${ranked.model}`);
+			lines.push(`  reasons: ${ranked.reasons.join(", ") || "(none)"}`);
+		}
+	}
+	if (inspection.selection?.rejected.length) {
+		lines.push("rejected:");
+		for (const rejected of inspection.selection.rejected.slice(0, 8)) {
+			lines.push(`- ${rejected.model}: ${rejected.reason}`);
+		}
+	}
+	lines.push("Press q, esc, space, or enter to close.");
+	return lines;
+}
+
+export function resolveDelegatedAssignmentModel(params: {
+	category?: string;
+	policy: NonNullable<ReturnType<typeof readAdaptiveRoutingConfig>["delegatedRouting"]["categories"][string]>;
+	config: ReturnType<typeof readAdaptiveRoutingConfig>;
+	availableModels: Array<{ provider: string; id: string; fullId: string; name: string }>;
+	override?: ReturnType<typeof readAdaptiveRoutingConfig>["delegatedModelSelection"]["roleOverrides"][string];
+}): string | undefined {
+	const { category, policy, config, availableModels, override } = params;
+	const blockedProviders = new Set([
+		...config.delegatedModelSelection.disabledProviders,
+		...(override?.blockedProviders ?? []),
+	]);
+	const blockedModels = new Set([...config.delegatedModelSelection.disabledModels, ...(override?.blockedModels ?? [])]);
+	const unblockedModels = availableModels.filter((model) => {
+		return !blockedProviders.has(model.provider) && !blockedModels.has(model.fullId) && !blockedModels.has(model.id);
+	});
+	for (const ref of override?.preferredModels ?? []) {
+		const match = ref.endsWith("/<best-available>")
+			? unblockedModels.find((model) => model.provider === ref.slice(0, ref.indexOf("/")))
+			: unblockedModels.find((model) => model.fullId === ref || model.id === ref);
+		if (match) {
+			return match.fullId;
+		}
+	}
 	const refs = [
 		...(policy.candidates ?? []),
 		...(policy.fallbackGroup ? (config.fallbackGroups[policy.fallbackGroup]?.candidates ?? []) : []),
+		...(override?.candidateModels ?? []),
 	];
 	for (const ref of refs) {
 		const match = ref.endsWith("/<best-available>")
-			? availableModels.find((model) => model.provider === ref.slice(0, ref.indexOf("/")))
-			: availableModels.find((model) => model.fullId === ref || model.id === ref);
+			? unblockedModels.find((model) => model.provider === ref.slice(0, ref.indexOf("/")))
+			: unblockedModels.find((model) => model.fullId === ref || model.id === ref);
 		if (match) {
 			return match.fullId;
 		}
 	}
-	for (const provider of policy.preferredProviders ?? []) {
-		const match = availableModels.find((model) => model.provider === provider);
+	for (const provider of [...(override?.preferredProviders ?? []), ...(policy.preferredProviders ?? [])]) {
+		const match = unblockedModels.find((model) => model.provider === provider);
 		if (match) {
 			return match.fullId;
 		}
 	}
-	const cheapFallback =
-		category === "quick-discovery" ? availableModels.find((model) => model.provider === "groq") : undefined;
-	return cheapFallback?.fullId;
+	/* c8 ignore next 5 */
+	let cheapFallback: { provider: string; id: string; fullId: string; name: string } | undefined;
+	if (category === "quick-discovery") {
+		cheapFallback = unblockedModels.find((model) => model.provider === "groq");
+	}
+	if (cheapFallback) {
+		return cheapFallback.fullId;
+	}
+	return unblockedModels[0]?.fullId;
 }
 
 async function openOverlay(ctx: ExtensionCommandContext, lines: string[]): Promise<void> {

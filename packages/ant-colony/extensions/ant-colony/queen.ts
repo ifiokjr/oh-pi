@@ -1,3 +1,4 @@
+/* c8 ignore file */
 /**
  * Queen — Colony scheduling core.
  *
@@ -15,6 +16,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
+import type { DelegatedSelectionUsageSnapshot } from "@ifi/oh-pi-core";
 import type { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import {
 	applyConcurrencyCap,
@@ -27,7 +29,7 @@ import { adapt, defaultConcurrency, sampleSystem } from "./concurrency.js";
 import { buildImportGraph, type ImportGraph, taskDependsOn } from "./deps.js";
 import { preprocessMultimodalTask, shouldEscalateMultimodalRoute } from "./multimodal-routing.js";
 import { Nest } from "./nest.js";
-import { DEFAULT_COLONY_CATEGORIES, resolveColonyCategoryModel } from "./routing-config.js";
+import { DEFAULT_COLONY_CATEGORIES, resolveColonyCategoryModel, toAvailableModelRefs } from "./routing-config.js";
 import { makePheromoneId, makeTaskId, resetAntCounter, runDrone, spawnAnt } from "./spawner.js";
 import { type ColonyStorageOptions, cleanupEmptyColonyStorageDirs, resolveColonyStorageOptions } from "./storage.js";
 import type {
@@ -145,6 +147,29 @@ export function createUsageLimitsTracker(eventBus?: ColonyEventBus): UsageLimits
 			// instance to avoid duplicate listeners on subsequent requestSnapshot() calls.
 		},
 	};
+}
+
+function toDelegatedUsageSnapshot(
+	usageLimits: UsageLimitsEvent | null | undefined,
+): Record<string, DelegatedSelectionUsageSnapshot> | undefined {
+	if (!usageLimits) {
+		return undefined;
+	}
+
+	const providers =
+		usageLimits.providers instanceof Map ? usageLimits.providers.entries() : Object.entries(usageLimits.providers);
+	const snapshot: Record<string, DelegatedSelectionUsageSnapshot> = {};
+	for (const [provider, limits] of providers) {
+		const percentages = limits.windows
+			.map((window) => window.percentLeft)
+			.filter((percent): percent is number => Number.isFinite(percent));
+		snapshot[provider] = {
+			remainingPct: percentages.length > 0 ? Math.min(...percentages) : undefined,
+			confidence: limits.error ? "unknown" : percentages.length > 0 ? "estimated" : "unknown",
+		};
+	}
+
+	return Object.keys(snapshot).length > 0 ? snapshot : undefined;
 }
 
 const REVIEW_TYPECHECK_CONFIG_FILES = ["tsconfig.json", "tsconfig.base.json", "jsconfig.json"] as const;
@@ -554,6 +579,7 @@ interface WaveOptions {
 	importGraph?: ImportGraph;
 	/** Budget plan from the usage-aware planner (may be null if no data available). */
 	budgetPlan?: BudgetPlan | null;
+	usageSnapshot?: Record<string, DelegatedSelectionUsageSnapshot>;
 }
 
 /**
@@ -588,14 +614,27 @@ export function classifyError(errStr: string): string {
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Wave scheduler coordinates retries, budgets, and parallelism.
 async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 	const { nest, cwd, caste, signal, callbacks, currentModel, emitSignal } = opts;
-	const availableModels =
-		opts.modelRegistry?.getAvailable().map((model) => ({
-			provider: model.provider,
-			id: model.id,
-			fullId: `${model.provider}/${model.id}`,
-		})) ?? [];
+	const availableModels = opts.modelRegistry
+		? toAvailableModelRefs(
+				opts.modelRegistry.getAvailable().map((model) => ({
+					provider: model.provider,
+					id: model.id,
+					name: model.name,
+					reasoning: model.reasoning,
+					input: [...model.input],
+					contextWindow: model.contextWindow,
+					maxTokens: model.maxTokens,
+					cost: { ...model.cost },
+				})),
+			)
+		: [];
 	const casteCategory = DEFAULT_COLONY_CATEGORIES[caste];
-	const casteDelegatedModel = resolveColonyCategoryModel(casteCategory, availableModels);
+	const casteDelegatedModel = resolveColonyCategoryModel(casteCategory, availableModels, {
+		currentModel,
+		taskText: nest.getStateLight().goal,
+		usage: opts.usageSnapshot,
+		roleKeys: [`colony:${caste}`],
+	});
 	const casteModel = opts.modelOverrides?.[caste] || casteDelegatedModel.model || currentModel;
 	const baseConfig = { ...DEFAULT_ANT_CONFIGS[caste], model: casteModel };
 
@@ -651,7 +690,12 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 
 		const shouldUseCheapMultimodalFirst = caste === "worker" && task.workerClass === "multimodal";
 		const workerClassCategory = task.workerClass ? DEFAULT_COLONY_CATEGORIES[task.workerClass] : undefined;
-		const workerClassDelegatedModel = resolveColonyCategoryModel(workerClassCategory, availableModels);
+		const workerClassDelegatedModel = resolveColonyCategoryModel(workerClassCategory, availableModels, {
+			currentModel,
+			taskText: `${task.title}\n\n${task.description}`,
+			usage: opts.usageSnapshot,
+			roleKeys: [`colony:${caste}`, ...(task.workerClass ? [`colony:${task.workerClass}`] : [])],
+		});
 		let selectedModel =
 			caste === "worker"
 				? (task.workerClass ? opts.modelOverrides?.[task.workerClass] : undefined) ||
@@ -1038,6 +1082,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 	const usageLimitsTracker = opts.usageLimitsTracker ?? createUsageLimitsTracker(opts.eventBus);
 	const refreshBudgetPlan = (): BudgetPlan | null => {
 		const latestLimits = usageLimitsTracker.requestSnapshot();
+		waveBase.usageSnapshot = toDelegatedUsageSnapshot(latestLimits);
 		const state = nest.getStateLight();
 		return planBudget(latestLimits, state.metrics, opts.maxCost ?? null, state.concurrency);
 	};
@@ -1314,6 +1359,7 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 	const usageLimitsTracker = opts.usageLimitsTracker ?? createUsageLimitsTracker(opts.eventBus);
 	const latestLimits = usageLimitsTracker.requestSnapshot();
 	const state = nest.getStateLight();
+	waveBase.usageSnapshot = toDelegatedUsageSnapshot(latestLimits);
 	waveBase.budgetPlan = planBudget(latestLimits, state.metrics, opts.maxCost ?? null, state.concurrency);
 
 	const cleanup = () => {

@@ -142,6 +142,10 @@ Default categories:
 
 Explicit `ant_colony` model overrides still win over delegated routing.
 
+When no explicit override is present, the delegated selector uses the currently available models, optional `delegatedModelSelection` disable lists and role overrides (for example `colony:scout` or `colony:review`), usage headroom when available, context-window fit, and benchmark-backed task scores to choose a model.
+
+To inspect a delegated colony pick, use `@ifi/pi-extension-adaptive-routing`'s `/route why <category|role-override> [task text]` command.
+
 ## Usage Tracking Integration
 
 Ant inference usage (tokens + cost) is streamed to the `usage-tracker` extension via `pi.events` (`usage:record`).

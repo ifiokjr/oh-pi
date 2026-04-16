@@ -69,16 +69,49 @@ export interface FallbackGroupPolicy {
 	description?: string;
 }
 
+export type DelegatedTaskProfile = "design" | "planning" | "writing" | "coding" | "all";
+
+export interface DelegatedSelectionOverride {
+	candidateModels?: string[];
+	preferredModels?: string[];
+	preferredProviders?: string[];
+	blockedModels?: string[];
+	blockedProviders?: string[];
+	taskProfile?: DelegatedTaskProfile;
+	preferFastModels?: boolean;
+	preferLowCost?: boolean;
+	preferLowerUsage?: boolean;
+	requireReasoning?: boolean;
+	requireMultimodal?: boolean;
+	minContextWindow?: number;
+	allowSmallContextForSmallTasks?: boolean;
+}
+
 export interface DelegatedCategoryPolicy {
 	candidates?: string[];
 	preferredProviders?: string[];
 	fallbackGroup?: string;
 	defaultThinking?: RouteThinkingLevel;
+	taskProfile?: DelegatedTaskProfile;
+	preferFastModels?: boolean;
+	preferLowCost?: boolean;
+	requireReasoning?: boolean;
+	requireMultimodal?: boolean;
+	minContextWindow?: number;
+	allowSmallContextForSmallTasks?: boolean;
 }
 
 export interface DelegatedRoutingConfig {
 	enabled: boolean;
 	categories: Record<string, DelegatedCategoryPolicy>;
+}
+
+export interface DelegatedModelSelectionConfig {
+	disabledProviders: string[];
+	disabledModels: string[];
+	preferLowerUsage: boolean;
+	allowSmallContextForSmallTasks: boolean;
+	roleOverrides: Record<string, DelegatedSelectionOverride>;
 }
 
 export interface AdaptiveRoutingConfig {
@@ -92,6 +125,7 @@ export interface AdaptiveRoutingConfig {
 	providerReserves: Partial<Record<string, ProviderReservePolicy>>;
 	fallbackGroups: Record<string, FallbackGroupPolicy>;
 	delegatedRouting: DelegatedRoutingConfig;
+	delegatedModelSelection: DelegatedModelSelectionConfig;
 }
 
 export interface PromptRouteClassification {
@@ -243,9 +277,11 @@ export interface RouteFeedbackTelemetryEvent extends TelemetryEventBase {
 
 export interface RouteOutcomeTelemetryEvent extends TelemetryEventBase {
 	type: "route_outcome";
+	selectedModel?: string;
 	turnCount: number;
 	completed: boolean;
 	userOverrideOccurred: boolean;
+	durationMs?: number;
 }
 
 export interface RouteShadowDisagreementTelemetryEvent extends TelemetryEventBase {
@@ -273,4 +309,7 @@ export interface AdaptiveRoutingStats {
 	overrides: number;
 	shadowDisagreements: number;
 	lastDecisionAt?: number;
+	outcomes: number;
+	avgDurationMs?: number;
+	perModelLatencyMs: Record<string, { count: number; avgMs: number }>;
 }

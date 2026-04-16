@@ -86,6 +86,12 @@ vi.mock("../run-history.js", () => ({
 }));
 vi.mock("../model-routing.js", () => ({
 	resolveSubagentModelResolution: chainMocks.resolveSubagentModelResolution,
+	toAvailableModelRefs: (models: any[]) =>
+		models.map((model) => ({
+			...model,
+			fullId: model.fullId ?? `${model.provider}/${model.id}`,
+			input: model.input ?? ["text"],
+		})),
 }));
 vi.mock("../types.js", () => ({
 	MAX_CONCURRENCY: 4,

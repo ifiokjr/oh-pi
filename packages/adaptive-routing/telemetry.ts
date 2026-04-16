@@ -75,7 +75,11 @@ export function computeStats(events: AdaptiveRoutingTelemetryEvent[]): AdaptiveR
 		feedback: {},
 		overrides: 0,
 		shadowDisagreements: 0,
+		outcomes: 0,
+		perModelLatencyMs: {},
 	};
+	let totalDurationMs = 0;
+	let durationCount = 0;
 
 	for (const event of events) {
 		if (event.type === "route_decision") {
@@ -87,7 +91,25 @@ export function computeStats(events: AdaptiveRoutingTelemetryEvent[]): AdaptiveR
 			stats.shadowDisagreements += 1;
 		} else if (event.type === "route_feedback") {
 			stats.feedback[event.category] = (stats.feedback[event.category] ?? 0) + 1;
+		} else if (event.type === "route_outcome") {
+			stats.outcomes += 1;
+			if (typeof event.durationMs === "number" && Number.isFinite(event.durationMs)) {
+				totalDurationMs += event.durationMs;
+				durationCount += 1;
+				if (event.selectedModel) {
+					const existing = stats.perModelLatencyMs[event.selectedModel] ?? { count: 0, avgMs: 0 };
+					const count = existing.count + 1;
+					stats.perModelLatencyMs[event.selectedModel] = {
+						count,
+						avgMs: Math.round(((existing.avgMs * existing.count + event.durationMs) / count) * 10) / 10,
+					};
+				}
+			}
 		}
+	}
+
+	if (durationCount > 0) {
+		stats.avgDurationMs = Math.round((totalDurationMs / durationCount) * 10) / 10;
 	}
 
 	return stats;
@@ -97,14 +119,25 @@ export function formatStats(stats: AdaptiveRoutingStats): string[] {
 	const lines = [
 		"Adaptive Routing Stats",
 		`Decisions: ${stats.decisions}`,
+		`Outcomes: ${stats.outcomes}`,
 		`Overrides: ${stats.overrides}`,
 		`Shadow disagreements: ${stats.shadowDisagreements}`,
 	];
+	if (typeof stats.avgDurationMs === "number") {
+		lines.push(`Avg duration: ${Math.round(stats.avgDurationMs)}ms`);
+	}
 	const feedbackEntries = Object.entries(stats.feedback).sort((a, b) => a[0].localeCompare(b[0]));
 	if (feedbackEntries.length > 0) {
 		lines.push("Feedback:");
 		for (const [category, count] of feedbackEntries) {
 			lines.push(`  - ${category}: ${count}`);
+		}
+	}
+	const latencyEntries = Object.entries(stats.perModelLatencyMs).sort((left, right) => left[0].localeCompare(right[0]));
+	if (latencyEntries.length > 0) {
+		lines.push("Measured latency:");
+		for (const [model, value] of latencyEntries) {
+			lines.push(`  - ${model}: ${Math.round(value.avgMs)}ms avg over ${value.count} run${value.count === 1 ? "" : "s"}`);
 		}
 	}
 	if (stats.lastDecisionAt) {

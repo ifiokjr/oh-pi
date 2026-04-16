@@ -34,27 +34,65 @@ In addition to prompt routing, the config can declare delegated categories for s
     "categories": {
       "quick-discovery": {
         "preferredProviders": ["google", "openai"],
-        "fallbackGroup": "cheap-router"
+        "fallbackGroup": "cheap-router",
+        "taskProfile": "planning",
+        "preferFastModels": true
       },
       "implementation-default": {
-        "preferredProviders": ["openai", "google"]
+        "preferredProviders": ["openai", "google"],
+        "taskProfile": "coding",
+        "minContextWindow": 64000
       },
       "review-critical": {
         "preferredProviders": ["openai", "google"],
-        "fallbackGroup": "peak-reasoning"
+        "fallbackGroup": "peak-reasoning",
+        "taskProfile": "planning",
+        "minContextWindow": 128000,
+        "requireReasoning": true
       },
       "visual-engineering": {
         "preferredProviders": ["google", "openai"],
-        "fallbackGroup": "design-premium"
+        "fallbackGroup": "design-premium",
+        "taskProfile": "design",
+        "minContextWindow": 128000
+      }
+    }
+  },
+  "delegatedModelSelection": {
+    "disabledProviders": ["cursor"],
+    "preferLowerUsage": true,
+    "allowSmallContextForSmallTasks": true,
+    "roleOverrides": {
+      "subagent:planner": {
+        "preferredModels": ["google/gemini-3.1-pro", "openai/gpt-5.4"]
+      },
+      "colony:scout": {
+        "preferredModels": ["openai/gpt-5-mini"],
+        "preferFastModels": true
       }
     }
   }
 }
 ```
 
-Subagents and ant-colony use these categories only when they do not already have an explicit runtime or per-role model override.
+Subagents and ant-colony use these categories only when they do not already have an explicit runtime or per-role model override. The delegated selector is runtime-aware: it filters down to currently available models, applies provider/model disable lists, prefers higher-headroom providers when usage data is available, and uses context-fit plus public benchmark metadata to rank candidates.
+
+Use `/route why ...` to inspect a delegated pick for a specific category or role override and see the ranked reasons plus rejected candidates.
 
 ## Commands
+
+Primary commands:
+
+- `/route status`
+- `/route shadow`
+- `/route auto`
+- `/route off`
+- `/route explain`
+- `/route assignments`
+- `/route why <category|role-override> [task text]`
+- `/route stats`
+
+Alias commands are also registered in `route:<subcommand>` form, for example:
 
 - `/route:status`
 - `/route:shadow`
@@ -62,4 +100,5 @@ Subagents and ant-colony use these categories only when they do not already have
 - `/route:off`
 - `/route:explain`
 - `/route:assignments`
+- `/route:why quick-discovery scan the repo`
 - `/route:stats`

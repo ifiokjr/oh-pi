@@ -88,6 +88,10 @@ The `thinking` field sets a default extended thinking level for the agent. At ru
 
 The optional `category` field lets agents participate in delegated startup routing. When a runtime override or explicit `model` is not present, subagents can resolve a concrete model from `~/.pi/agent/extensions/adaptive-routing/config.json`.
 
+Delegated selection is dynamic rather than provider-hardcoded: it considers the models currently available in the session, optional provider disable lists, role overrides such as `subagent:<agent-name>`, best-effort usage headroom from `usage-tracker`, context-window fit, and benchmark-backed task scores.
+
+To inspect why a delegated startup pick resolved the way it did, use `@ifi/pi-extension-adaptive-routing`'s `/route why <category|role-override> [task text]` command.
+
 **Extension sandboxing**
 
 Use `extensions` in frontmatter to control which extensions a subagent can access:

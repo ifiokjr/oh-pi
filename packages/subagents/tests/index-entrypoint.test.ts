@@ -166,6 +166,12 @@ vi.mock("../runtime-monitor.js", () => ({
 }));
 vi.mock("../model-routing.js", () => ({
 	resolveSubagentModelResolution: mocks.resolveSubagentModelResolution,
+	toAvailableModelRefs: (models: any[]) =>
+		models.map((model) => ({
+			...model,
+			fullId: model.fullId ?? `${model.provider}/${model.id}`,
+			input: model.input ?? ["text"],
+		})),
 }));
 
 import registerSubagentExtension from "../index.js";

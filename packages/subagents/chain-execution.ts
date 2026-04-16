@@ -34,7 +34,7 @@ import { runSync } from "./execution.js";
 import { buildChainSummary } from "./formatters.js";
 import { getFinalOutput, mapConcurrent } from "./utils.js";
 import { recordRun } from "./run-history.js";
-import { resolveSubagentModelResolution } from "./model-routing.js";
+import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
 import {
 	type AgentProgress,
 	type ArtifactConfig,
@@ -149,11 +149,18 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 	let tuiBehaviorOverrides: (BehaviorOverride | undefined)[] | undefined;
 
 	// Get available models for model resolution (used in TUI and execution)
-	const availableModels: ModelInfo[] = ctx.modelRegistry.getAvailable().map((m) => ({
-		provider: m.provider,
-		id: m.id,
-		fullId: `${m.provider}/${m.id}`,
-	}));
+	const availableModels: ModelInfo[] = toAvailableModelRefs(
+		ctx.modelRegistry.getAvailable().map((model) => ({
+			provider: model.provider,
+			id: model.id,
+			name: model.name,
+			reasoning: model.reasoning,
+			input: model.input ? [...model.input] : ["text"],
+			contextWindow: model.contextWindow,
+			maxTokens: model.maxTokens,
+			cost: model.cost ? { ...model.cost } : { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+		})),
+	);
 	const availableSkills = discoverAvailableSkills(ctx.cwd);
 
 	if (shouldClarify) {
@@ -329,7 +336,10 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
 				const explicitModel = task.model ? resolveModelFullId(task.model, availableModels) : undefined;
 				let modelResolution = taskAgentConfig
-					? resolveSubagentModelResolution(taskAgentConfig, availableModels, explicitModel)
+					? resolveSubagentModelResolution(taskAgentConfig, availableModels, explicitModel, {
+						currentModel: inheritedModel,
+						taskText: taskStr,
+					})
 					: { model: explicitModel, source: explicitModel ? ("runtime-override" as const) : ("session-default" as const) };
 				if (!modelResolution.model && inheritedModel) {
 					modelResolution = {
@@ -491,7 +501,10 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 
 			const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
 			const explicitModel = tuiOverride?.model ?? (seqStep.model ? resolveModelFullId(seqStep.model, availableModels) : undefined);
-			let modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, explicitModel);
+			let modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, explicitModel, {
+				currentModel: inheritedModel,
+				taskText: stepTask,
+			});
 			if (!modelResolution.model && inheritedModel) {
 				modelResolution = {
 					...modelResolution,

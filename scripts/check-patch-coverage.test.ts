@@ -17,6 +17,7 @@ import {
 	getGitDiff,
 	main,
 	normalizeCoveragePath,
+	shouldIgnoreFileForPatchCoverage,
 	parseChangedLinesFromDiff,
 	parseLcovByFile,
 	parsePatchCoverageArgs,
@@ -166,6 +167,18 @@ describe("check-patch-coverage", () => {
 		expect(passingReport).not.toContain("Uncovered changed lines:");
 	});
 
+	it("detects file-level coverage ignore directives", () => {
+		const dir = createTempDir();
+		const ignored = path.join(dir, "ignored.ts");
+		const included = path.join(dir, "included.ts");
+		fs.writeFileSync(ignored, "/* c8 ignore file */\nexport const ignored = true;\n", "utf8");
+		fs.writeFileSync(included, "export const included = true;\n", "utf8");
+
+		expect(shouldIgnoreFileForPatchCoverage(ignored)).toBe(true);
+		expect(shouldIgnoreFileForPatchCoverage(included)).toBe(false);
+		expect(shouldIgnoreFileForPatchCoverage(path.join(dir, "missing.ts"))).toBe(false);
+	});
+
 	it("normalizes coverage paths and delegates git diff lookup", () => {
 		expect(normalizeCoveragePath(`./packages${path.sep}demo.ts`)).toBe("packages/demo.ts");
 
@@ -189,6 +202,27 @@ describe("check-patch-coverage", () => {
 			perFile: [],
 		});
 		expect(logSpy).toHaveBeenCalledWith("Skipping patch coverage check because BASE_SHA or HEAD_SHA is missing.");
+	});
+
+	it("skips files marked with file-level ignore directives when computing patch coverage", () => {
+		const dir = createTempDir();
+		const lcovPath = path.join(dir, "lcov.info");
+		const ignoredFile = path.join(dir, "ignored.ts");
+		fs.writeFileSync(ignoredFile, "/* c8 ignore file */\nexport const ignored = true;\n", "utf8");
+		fs.writeFileSync(
+			lcovPath,
+			`TN:\nSF:${normalizeCoveragePath(ignoredFile)}\nDA:2,0\nend_of_record\n`,
+			"utf8",
+		);
+		childProcessMocks.execFileSync.mockReturnValueOnce(
+			`diff --git a/${normalizeCoveragePath(ignoredFile)} b/${normalizeCoveragePath(ignoredFile)}\n+++ b/${normalizeCoveragePath(ignoredFile)}\n@@ -1,0 +1,2 @@\n+/* c8 ignore file */\n+export const ignored = true;\n`,
+		);
+		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+		const summary = runPatchCoverageCheck({ base: "base", head: "head", lcovPath, threshold: 100 });
+
+		expect(summary).toMatchObject({ covered: 0, total: 0, pct: 100 });
+		expect(logSpy).toHaveBeenCalledWith("Patch coverage: 100.00% (no changed executable lines found)");
 	});
 
 	it("reports 100% when no changed executable lines are found", () => {

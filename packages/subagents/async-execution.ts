@@ -24,7 +24,7 @@ import type { RunnerStep } from "./parallel-utils.js";
 import { resolvePiPackageRoot } from "./pi-spawn.js";
 import { buildSkillInjection, normalizeSkillInput, resolveSkills } from "./skills.js";
 import { type ArtifactConfig, type Details, type MaxOutputConfig, ASYNC_DIR, RESULTS_DIR } from "./types.js";
-import { resolveSubagentModelResolution } from "./model-routing.js";
+import { resolveSubagentModelResolution, type AvailableModelRef } from "./model-routing.js";
 
 const require = createRequire(import.meta.url);
 const piPackageRoot = resolvePiPackageRoot();
@@ -52,7 +52,7 @@ export interface AsyncExecutionContext {
 	cwd: string;
 	currentSessionId: string;
 	currentModel?: string;
-	availableModels?: Array<{ provider: string; id: string; fullId: string }>;
+	availableModels?: AvailableModelRef[];
 }
 
 export interface AsyncChainParams {
@@ -163,7 +163,10 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 		const outputPath = resolveSingleOutputPath(s.output, ctx.cwd, s.cwd ?? cwd);
 		const task = injectSingleOutputInstruction(s.task ?? "{previous}", outputPath);
 
-		let modelResolution = resolveSubagentModelResolution(a, ctx.availableModels ?? [], s.model);
+		let modelResolution = resolveSubagentModelResolution(a, ctx.availableModels ?? [], s.model, {
+			currentModel: ctx.currentModel,
+			taskText: s.task,
+		});
 		if (!modelResolution.model && ctx.currentModel) {
 			modelResolution = { ...modelResolution, model: ctx.currentModel, source: "session-default" };
 		}
@@ -278,7 +281,10 @@ export function executeAsyncSingle(id: string, params: AsyncSingleParams): Async
 	const runnerCwd = cwd ?? ctx.cwd;
 	const outputPath = resolveSingleOutputPath(params.output, ctx.cwd, cwd);
 	const taskWithOutputInstruction = injectSingleOutputInstruction(task, outputPath);
-	let modelResolution = resolveSubagentModelResolution(agentConfig, ctx.availableModels ?? [], undefined);
+	let modelResolution = resolveSubagentModelResolution(agentConfig, ctx.availableModels ?? [], undefined, {
+		currentModel: ctx.currentModel,
+		taskText: params.task,
+	});
 	if (!modelResolution.model && ctx.currentModel) {
 		modelResolution = { ...modelResolution, model: ctx.currentModel, source: "session-default" };
 	}
