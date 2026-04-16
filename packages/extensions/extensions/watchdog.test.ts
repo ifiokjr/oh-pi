@@ -325,6 +325,7 @@ describe("watchdog extension", () => {
 		const ctx = createMockCtx();
 		watchdogExtension(pi as any);
 
+		expect(pi._commands.has("watchdog:status")).toBe(true);
 		const command = pi._commands.get("safe-mode");
 		expect(command).toBeDefined();
 

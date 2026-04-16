@@ -8,6 +8,7 @@ describe("spec runtime smoke tests", () => {
 		specExtension(harness.pi as never);
 
 		expect(harness.commands.has("spec")).toBe(true);
+		expect(harness.commands.has("spec:status")).toBe(true);
 		expect(harness.messageRenderers.has("pi-spec-report")).toBe(true);
 	});
 });

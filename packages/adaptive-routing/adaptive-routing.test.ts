@@ -173,6 +173,7 @@ describe("adaptive routing extension", () => {
 
 		adaptiveRoutingExtension(harness.pi as never);
 		expect(harness.commands.has("route")).toBe(true);
+		expect(harness.commands.has("route:status")).toBe(true);
 
 		await harness.emitAsync(
 			"before_agent_start",

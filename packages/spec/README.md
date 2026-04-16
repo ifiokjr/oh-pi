@@ -38,7 +38,7 @@ In practice that means:
 1. **Requirements come first**
    - You write or refine a spec before planning and implementation.
 2. **The workflow is explicit**
-   - `/spec specify`, `/spec plan`, `/spec tasks`, `/spec implement` are separate steps with clear outputs.
+   - `/spec:specify`, `/spec:plan`, `/spec:tasks`, `/spec:implement` are separate steps with clear outputs.
 3. **The repository owns the workflow state**
    - Important artifacts live in normal files in your repo, not in hidden runtime state.
 4. **Pi stays in control of the work**
@@ -54,7 +54,7 @@ The design goals for `@ifi/pi-spec` are:
 - **Spec-kit compatibility of concepts** — keep the same major phases and familiar artifact layout
 - **Type-safe implementation** — perform repo detection, path calculation, and branch generation in TypeScript
 - **Idempotent scaffolding** — create missing files without constantly overwriting local customizations
-- **Low surprise** — make state visible through files and `/spec status`
+- **Low surprise** — make state visible through files and `/spec:status`
 - **Good defaults, flexible templates** — ship usable templates while letting projects evolve them
 
 ## Non-goals
@@ -120,7 +120,7 @@ I chose **one command with subcommands** instead of many top-level commands like
    - `/spec ...` keeps the command surface organized.
 
 3. **It is easier to discover**
-   - `/spec help`, `/spec status`, and `/spec next` make the system self-explanatory.
+   - `/spec:help`, `/spec:status`, and `/spec:next` make the system self-explanatory.
    - Users only need to remember one root command.
 
 4. **It preserves upstream familiarity without copying the shell UX**
@@ -156,19 +156,19 @@ Below is the practical contract for each subcommand.
 
 | Command | Purpose | Model handoff | Filesystem side effects |
 | --- | --- | --- | --- |
-| `/spec` or `/spec status` | Show current workflow state | No | None |
-| `/spec help` | Show available commands and guidance | No | None |
-| `/spec init` | Create the base workflow scaffold | No | Creates missing `.specify/` files |
-| `/spec constitution [principles]` | Create or revise the project constitution | Yes | Ensures base scaffold exists |
-| `/spec specify <feature description>` | Create the next numbered feature workspace | Yes | Ensures scaffold, creates `specs/###-.../`, may create/switch git branch |
-| `/spec clarify [focus]` | Ask and resolve high-impact ambiguities in the active spec | Yes | Ensures scaffold exists |
-| `/spec checklist [domain]` | Generate or refine requirement-quality checklists | Yes | Ensures scaffold exists |
-| `/spec plan [technical context]` | Build the implementation plan and design artifacts | Yes | Ensures scaffold, creates `plan.md` if missing |
-| `/spec tasks [context]` | Generate an executable `tasks.md` | Yes | Ensures scaffold exists |
-| `/spec analyze [focus]` | Run a read-only consistency review | Yes | Ensures scaffold exists |
-| `/spec implement [focus]` | Execute tasks and update completion state | Yes | Ensures scaffold exists; prompts if checklists are incomplete |
-| `/spec list` | List known feature directories | No | None |
-| `/spec next` | Show the next recommended step | No | None |
+| `/spec` or `/spec:status` | Show current workflow state | No | None |
+| `/spec:help` | Show available commands and guidance | No | None |
+| `/spec:init` | Create the base workflow scaffold | No | Creates missing `.specify/` files |
+| `/spec:constitution [principles]` | Create or revise the project constitution | Yes | Ensures base scaffold exists |
+| `/spec:specify <feature description>` | Create the next numbered feature workspace | Yes | Ensures scaffold, creates `specs/###-.../`, may create/switch git branch |
+| `/spec:clarify [focus]` | Ask and resolve high-impact ambiguities in the active spec | Yes | Ensures scaffold exists |
+| `/spec:checklist [domain]` | Generate or refine requirement-quality checklists | Yes | Ensures scaffold exists |
+| `/spec:plan [technical context]` | Build the implementation plan and design artifacts | Yes | Ensures scaffold, creates `plan.md` if missing |
+| `/spec:tasks [context]` | Generate an executable `tasks.md` | Yes | Ensures scaffold exists |
+| `/spec:analyze [focus]` | Run a read-only consistency review | Yes | Ensures scaffold exists |
+| `/spec:implement [focus]` | Execute tasks and update completion state | Yes | Ensures scaffold exists; prompts if checklists are incomplete |
+| `/spec:list` | List known feature directories | No | None |
+| `/spec:next` | Show the next recommended step | No | None |
 
 ### Input rules
 
@@ -177,16 +177,16 @@ The command accepts **freeform text** after the subcommand.
 Examples:
 
 ```bash
-/spec constitution Security-first, testable, low-complexity defaults
-/spec specify Add usage-based billing alerts for workspace admins
-/spec plan Use TypeScript, Vitest, and direct pi tool access
-/spec analyze Focus on contradictions between spec.md and tasks.md
-/spec implement Start with the MVP story and update tasks as you go
+/spec:constitution Security-first, testable, low-complexity defaults
+/spec:specify Add usage-based billing alerts for workspace admins
+/spec:plan Use TypeScript, Vitest, and direct pi tool access
+/spec:analyze Focus on contradictions between spec.md and tasks.md
+/spec:implement Start with the MVP story and update tasks as you go
 ```
 
 Notes:
 
-- `/spec specify` effectively requires a real feature description.
+- `/spec:specify` effectively requires a real feature description.
 - Other workflow steps accept freeform guidance and can also run with minimal or no extra guidance.
 - When pi has UI input capabilities available, the extension can prompt for missing input instead of failing immediately.
 
@@ -208,7 +208,7 @@ This keeps the common path simple while still working in multi-feature repos.
 
 ### Base workflow scaffold
 
-`/spec init` creates the base workflow scaffold if it is missing.
+`/spec:init` creates the base workflow scaffold if it is missing.
 
 ```text
 .specify/
@@ -245,7 +245,7 @@ What these are for:
 
 ### Per-feature workspace
 
-`/spec specify <description>` creates a numbered feature workspace:
+`/spec:specify <description>` creates a numbered feature workspace:
 
 ```text
 specs/
@@ -264,8 +264,8 @@ Not every file exists immediately.
 
 Current behavior:
 
-- `spec.md` is scaffolded during `/spec specify`
-- `plan.md` is scaffolded during `/spec plan` if it is missing
+- `spec.md` is scaffolded during `/spec:specify`
+- `plan.md` is scaffolded during `/spec:plan` if it is missing
 - other files are referenced by the workflow and created as the step needs them
 
 ### Idempotency rules
@@ -285,7 +285,7 @@ That is important because the package should seed a workflow, not keep fighting 
 ### 1) Initialize the workflow
 
 ```bash
-/spec init
+/spec:init
 ```
 
 Use this when introducing the workflow to a repo for the first time.
@@ -300,7 +300,7 @@ What happens:
 ### 2) Define the project's constitution
 
 ```bash
-/spec constitution Security-first, testable, backwards-compatible changes by default
+/spec:constitution Security-first, testable, backwards-compatible changes by default
 ```
 
 Use this to establish the rules the workflow should follow.
@@ -314,7 +314,7 @@ Typical outcomes:
 ### 3) Create a feature spec
 
 ```bash
-/spec specify Add SSO login for enterprise tenants
+/spec:specify Add SSO login for enterprise tenants
 ```
 
 What happens:
@@ -331,13 +331,13 @@ This is the key step that turns a vague idea into a concrete feature workspace.
 ### 4) Clarify open questions
 
 ```bash
-/spec clarify
+/spec:clarify
 ```
 
 or
 
 ```bash
-/spec clarify Focus on tenant boundaries, auth edge cases, and failure states
+/spec:clarify Focus on tenant boundaries, auth edge cases, and failure states
 ```
 
 This step is meant to remove the highest-impact ambiguities before planning.
@@ -345,7 +345,7 @@ This step is meant to remove the highest-impact ambiguities before planning.
 ### 5) Generate a requirement-quality checklist
 
 ```bash
-/spec checklist Authentication quality gates
+/spec:checklist Authentication quality gates
 ```
 
 This is not supposed to generate implementation TODOs. It is meant to verify that the spec is precise,
@@ -354,7 +354,7 @@ complete, and testable.
 ### 6) Build the implementation plan
 
 ```bash
-/spec plan Use TypeScript, Vitest, and existing auth services; avoid new infrastructure
+/spec:plan Use TypeScript, Vitest, and existing auth services; avoid new infrastructure
 ```
 
 What happens:
@@ -366,13 +366,13 @@ What happens:
 ### 7) Generate tasks
 
 ```bash
-/spec tasks
+/spec:tasks
 ```
 
 or
 
 ```bash
-/spec tasks Prioritize the MVP path and keep tasks grouped by user story
+/spec:tasks Prioritize the MVP path and keep tasks grouped by user story
 ```
 
 This step should produce a `tasks.md` with a strict checkbox-oriented execution plan.
@@ -380,7 +380,7 @@ This step should produce a `tasks.md` with a strict checkbox-oriented execution 
 ### 8) Analyze for contradictions
 
 ```bash
-/spec analyze
+/spec:analyze
 ```
 
 This step is intentionally read-only. It is there to catch inconsistencies between the spec, plan,
@@ -389,13 +389,13 @@ checklists, and tasks before coding begins.
 ### 9) Implement
 
 ```bash
-/spec implement
+/spec:implement
 ```
 
 or
 
 ```bash
-/spec implement Start with story 1, update tasks.md as each item completes
+/spec:implement Start with story 1, update tasks.md as each item completes
 ```
 
 Behavior worth knowing:
@@ -407,31 +407,31 @@ Behavior worth knowing:
 ### 10) Inspect progress any time
 
 ```bash
-/spec status
-/spec next
-/spec list
+/spec:status
+/spec:next
+/spec:list
 ```
 
 Use these when you want visibility rather than action:
 
-- `/spec status` shows artifact presence, checklist summaries, current branch, and known features
-- `/spec next` recommends the next workflow command
-- `/spec list` lists all numbered feature directories in `specs/`
+- `/spec:status` shows artifact presence, checklist summaries, current branch, and known features
+- `/spec:next` recommends the next workflow command
+- `/spec:list` lists all numbered feature directories in `specs/`
 
 ---
 
 ## Example end-to-end session
 
 ```bash
-/spec init
-/spec constitution Security-first, testable, low-complexity defaults
-/spec specify Build a native spec workflow package for pi
-/spec clarify
-/spec checklist Requirements quality for the initial MVP
-/spec plan Use TypeScript, Vitest, and direct pi tool access
-/spec tasks Group work by independently testable user stories
-/spec analyze
-/spec implement
+/spec:init
+/spec:constitution Security-first, testable, low-complexity defaults
+/spec:specify Build a native spec workflow package for pi
+/spec:clarify
+/spec:checklist Requirements quality for the initial MVP
+/spec:plan Use TypeScript, Vitest, and direct pi tool access
+/spec:tasks Group work by independently testable user stories
+/spec:analyze
+/spec:implement
 ```
 
 That sequence is the intended happy path.

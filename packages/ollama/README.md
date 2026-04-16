@@ -13,7 +13,7 @@ Experimental Ollama provider package for pi with both local and cloud support.
 - Exposes local models in `/model` as `ollama/<model-id>`
 - Exposes cloud models in `/model` as `ollama-cloud/<model-id>`
 - Prompts to download a missing local model when you select `ollama/<model-id>` and uses the Ollama CLI to pull it
-- Adds `/ollama status|refresh-models|models|info|pull` for a unified local + cloud workflow
+- Adds `/ollama:status|refresh-models|models|info|pull` for a unified local + cloud workflow
 
 ## Install
 
@@ -31,25 +31,25 @@ This package is intentionally separate from `@ifi/oh-pi` for now.
 2. Make sure the `ollama` CLI is installed and a local Ollama instance is running
 3. Open `/model` and select an `ollama/...` model
 4. If the model is not installed yet, pi will prompt to download it with the Ollama CLI
-5. Run `/ollama refresh-models` whenever you pull or remove local models outside pi
+5. Run `/ollama:refresh-models` whenever you pull or remove local models outside pi
 
 ### Ollama Cloud
 
 1. Install the package
-2. Open `/model` or run `/ollama models` to browse the public Ollama Cloud catalog
+2. Open `/model` or run `/ollama:models` to browse the public Ollama Cloud catalog
 3. Run `/login ollama-cloud` before using an `ollama-cloud/...` model
 4. Create an API key on Ollama when pi opens the keys page
 5. Paste the key back into pi
 6. Open `/model` and select an `ollama-cloud/...` model
-7. Optionally run `/ollama refresh-models` later to refresh both local and cloud catalogs
+7. Optionally run `/ollama:refresh-models` later to refresh both local and cloud catalogs
 
 ## Commands
 
-- `/ollama status` — show local CLI + daemon status, local install/download counts, and cloud auth/catalog status
-- `/ollama refresh-models` — refresh both local and cloud Ollama models
-- `/ollama models` — list local and cloud Ollama models with source/capability badges for easier selection
-- `/ollama info <model>` — show detailed metadata for a local or cloud Ollama model, including context window size
-- `/ollama pull <model>` — manually download a local Ollama model via the Ollama CLI
+- `/ollama:status` — show local CLI + daemon status, local install/download counts, and cloud auth/catalog status
+- `/ollama:refresh-models` — refresh both local and cloud Ollama models
+- `/ollama:models` — list local and cloud Ollama models with source/capability badges for easier selection
+- `/ollama:info <model>` — show detailed metadata for a local or cloud Ollama model, including context window size
+- `/ollama:pull <model>` — manually download a local Ollama model via the Ollama CLI
 - `/ollama-cloud status` — backward-compatible cloud-only status alias
 - `/ollama-cloud refresh-models` — backward-compatible cloud-only refresh alias
 

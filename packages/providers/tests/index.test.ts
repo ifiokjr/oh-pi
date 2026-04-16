@@ -141,8 +141,9 @@ describe("provider catalog extension", () => {
 		harness.ctx.ui.input = vi.fn(async () => "provider-api-key") as never;
 
 		providerCatalogExtension(harness.pi as never);
-		const command = harness.commands.get("providers");
-		await command.handler("login", harness.ctx);
+		expect(harness.commands.has("providers:login")).toBe(true);
+		const command = harness.commands.get("providers:login");
+		await command.handler("", harness.ctx);
 
 		expect(harness.ctx.ui.select).not.toHaveBeenCalled();
 		expect(harness.ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {

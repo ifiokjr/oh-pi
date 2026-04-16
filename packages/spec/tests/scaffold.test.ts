@@ -31,7 +31,7 @@ describe("workflow scaffold", () => {
 		expect(existsSync(paths.constitutionFile)).toBe(true);
 		expect(existsSync(paths.agentContextFile)).toBe(true);
 		expect(existsSync(path.join(paths.templatesDir, "commands", "specify.md"))).toBe(true);
-		expect(readFileSync(paths.workflowReadmeFile, "utf8")).toContain("/spec plan");
+		expect(readFileSync(paths.workflowReadmeFile, "utf8")).toContain("/spec:plan");
 		expect(readFileSync(paths.extensionsConfigFile, "utf8")).toContain("auto_execute_hooks");
 	});
 

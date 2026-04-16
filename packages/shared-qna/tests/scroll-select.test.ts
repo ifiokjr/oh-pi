@@ -2,6 +2,44 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../pi-tui-loader.js", () => ({
 	requirePiTuiModule: () => ({
+		Input: class MockInput {
+			value = "";
+			focused = false;
+			onSubmit?: (value: string) => void;
+			onEscape?: () => void;
+
+			setValue(value: string) {
+				this.value = value;
+			}
+
+			getValue() {
+				return this.value;
+			}
+
+			handleInput(data: string) {
+				if (data === "<enter>") {
+					this.onSubmit?.(this.value);
+					return;
+				}
+				if (data === "<escape>") {
+					this.onEscape?.();
+					return;
+				}
+				if (data === "<backspace>") {
+					this.value = this.value.slice(0, -1);
+					return;
+				}
+				if (data.length === 1) {
+					this.value += data;
+				}
+			}
+
+			render(_width: number) {
+				return [`> ${this.value}`];
+			}
+
+			invalidate() {}
+		},
 		Key: {
 			enter: "<enter>",
 			escape: "<escape>",
@@ -18,7 +56,12 @@ vi.mock("../pi-tui-loader.js", () => ({
 
 import { openScrollableSelect, type ScrollSelectConfig } from "../scroll-select.js";
 
-type CustomFactory = (...args: any[]) => { render: (width: number) => string[]; handleInput: (data: string) => void };
+type CustomFactory = (...args: any[]) => {
+	render: (width: number) => string[];
+	handleInput: (data: string) => void;
+	invalidate?: () => void;
+	focused?: boolean;
+};
 
 function createTheme() {
 	return {
@@ -27,22 +70,35 @@ function createTheme() {
 	};
 }
 
+async function flushAsyncWork(turns = 4) {
+	for (let index = 0; index < turns; index++) {
+		await Promise.resolve();
+	}
+}
+
 function createFactoryRunner() {
-	let factory: CustomFactory | undefined;
+	const factories: CustomFactory[] = [];
+	const resolvers: Array<((value: unknown) => void) | undefined> = [];
 	const ui = {
 		custom: vi.fn(((nextFactory: CustomFactory) => {
-			factory = nextFactory;
-			return Promise.resolve(null);
+			const index = factories.push(nextFactory) - 1;
+			if (index === 0) {
+				return Promise.resolve(null);
+			}
+			return new Promise((resolve) => {
+				resolvers[index] = resolve;
+			});
 		}) as NonNullable<Parameters<typeof openScrollableSelect<string>>[0]["custom"]>),
 		input: vi.fn(async () => null),
 		notify: vi.fn(),
 	};
 
-	function buildComponent(done = vi.fn()) {
+	function buildComponent(index = 0, done?: (value: unknown) => void) {
+		const factory = factories[index];
 		if (!factory) {
-			throw new Error("Expected custom factory to be captured.");
+			throw new Error(`Expected custom factory at index ${index}.`);
 		}
-		return factory({ requestRender: vi.fn() }, createTheme(), {}, done);
+		return factory({ requestRender: vi.fn() }, createTheme(), {}, done ?? resolvers[index] ?? vi.fn());
 	}
 
 	return { ui, buildComponent };
@@ -178,8 +234,7 @@ describe("openScrollableSelect", () => {
 
 		const component = buildComponent();
 		component.handleInput("/");
-		await Promise.resolve();
-		await Promise.resolve();
+		await flushAsyncWork();
 		const rendered = component.render(60).join("\n");
 		expect(rendered).toContain("Filter: beta");
 		expect(rendered).toContain("Beta");
@@ -206,8 +261,7 @@ describe("openScrollableSelect", () => {
 
 		const component = buildComponent();
 		component.handleInput("/");
-		await Promise.resolve();
-		await Promise.resolve();
+		await flushAsyncWork();
 
 		expect(ui.notify).toHaveBeenCalledWith('No provider matched "zzz".', "warning");
 		const rendered = component.render(60).join("\n");
@@ -234,13 +288,55 @@ describe("openScrollableSelect", () => {
 
 		const component = buildComponent();
 		component.handleInput("/");
-		await Promise.resolve();
-		await Promise.resolve();
+		await flushAsyncWork();
 		component.handleInput("/");
-		await Promise.resolve();
-		await Promise.resolve();
+		await flushAsyncWork();
 
 		expect(getOptions).toHaveBeenCalledTimes(1);
+	});
+
+	it("supports overlay-based search prompts without losing the picker", async () => {
+		const { ui, buildComponent } = createFactoryRunner();
+
+		await openScrollableSelect(ui, {
+			title: "Provider login",
+			options: [
+				{ value: "alpha", label: "Alpha" },
+				{ value: "beta", label: "Beta" },
+				{ value: "gamma", label: "Gamma" },
+			],
+			search: {
+				title: "Provider search",
+				placeholder: "Type a provider id or name",
+				useCustomOverlay: true,
+				getOptions(query) {
+					const all = [
+						{ value: "alpha", label: "Alpha" },
+						{ value: "beta", label: "Beta" },
+						{ value: "gamma", label: "Gamma" },
+					];
+					return all.filter((option) => option.label.toLowerCase().includes(query.toLowerCase()));
+				},
+			},
+		});
+
+		const component = buildComponent();
+		component.handleInput("/");
+		await flushAsyncWork(2);
+
+		expect(ui.custom).toHaveBeenCalledTimes(2);
+		const prompt = buildComponent(1);
+		prompt.handleInput("b");
+		prompt.handleInput("e");
+		prompt.handleInput("t");
+		prompt.handleInput("a");
+		prompt.handleInput("<enter>");
+		await flushAsyncWork();
+
+		const rendered = component.render(60).join("\n");
+		expect(ui.input).not.toHaveBeenCalled();
+		expect(rendered).toContain("Filter: beta");
+		expect(rendered).toContain("Beta");
 	});
 
 	it("handles enter and escape shortcuts", async () => {
@@ -254,12 +350,12 @@ describe("openScrollableSelect", () => {
 		});
 
 		const done = vi.fn();
-		const component = buildComponent(done);
+		const component = buildComponent(0, done);
 		component.handleInput("<enter>");
 		expect(done).toHaveBeenCalledWith("alpha");
 
 		const cancel = vi.fn();
-		const cancelComponent = buildComponent(cancel);
+		const cancelComponent = buildComponent(0, cancel);
 		cancelComponent.handleInput("<escape>");
 		expect(cancel).toHaveBeenCalledWith(null);
 	});

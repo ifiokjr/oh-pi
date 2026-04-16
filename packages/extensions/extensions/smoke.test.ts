@@ -15,6 +15,7 @@ describe("extensions runtime smoke tests", () => {
 		harness.emit("session_start", { type: "session_start" }, harness.ctx);
 
 		expect(harness.commands.has("schedule")).toBe(true);
+		expect(harness.commands.has("schedule:tui")).toBe(true);
 		expect(harness.commands.has("loop")).toBe(true);
 		expect(harness.tools.has("schedule_prompt")).toBe(true);
 

@@ -81,6 +81,7 @@ describe("ollama provider smoke tests", () => {
 		ollamaProviderExtension(harness.pi as never);
 
 		expect(harness.commands.has("ollama")).toBe(true);
+		expect(harness.commands.has("ollama:status")).toBe(true);
 		expect(harness.commands.has("ollama-cloud")).toBe(true);
 		expect(harness.providers.has("ollama")).toBe(true);
 		expect(harness.providers.has("ollama-cloud")).toBe(true);

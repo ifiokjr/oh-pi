@@ -9,17 +9,17 @@ This project uses the native pi spec workflow inspired by GitHub spec-kit.
 
 ## Core commands
 
-- /spec init
-- /spec constitution <principles>
-- /spec specify <feature description>
-- /spec clarify [focus]
-- /spec checklist [domain]
-- /spec plan <technical context>
-- /spec tasks [context]
-- /spec analyze [focus]
-- /spec implement [focus]
-- /spec status
-- /spec next
+- /spec:init
+- /spec:constitution <principles>
+- /spec:specify <feature description>
+- /spec:clarify [focus]
+- /spec:checklist [domain]
+- /spec:plan <technical context>
+- /spec:tasks [context]
+- /spec:analyze [focus]
+- /spec:implement [focus]
+- /spec:status
+- /spec:next
 
 ## Runtime notes
 

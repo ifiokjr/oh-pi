@@ -191,7 +191,7 @@ Not part of the default oh-pi extension manifest today, so it is not included in
 The watchdog runtime diagnostics can now be used to inspect startup handler timings after a restart:
 
 ```text
-/watchdog startup
+/watchdog:startup
 ```
 
 That surfaces the latest per-extension `session_start` timings recorded during the active instance so you can compare what the benchmark suite sees with what the editor instance is doing live.

@@ -36,7 +36,7 @@ npx @ifi/oh-pi
 These extensions add commands, tools, UI widgets, background process handling,
 usage monitoring, scheduling features, tool execution metadata,
 external-editor integration, git worktree awareness, and runtime performance protection
-(`/watchdog`, `/watchdog blame`, `/safe-mode`) to pi.
+(`/watchdog`, `/watchdog:blame`, `/safe-mode`) to pi.
 
 `git-guard` also blocks git bash invocations that are likely to open an interactive editor in agent environments (for example `git rebase --continue` without non-interactive editor overrides), preventing hangs before they happen.
 
@@ -101,9 +101,9 @@ instance changes in the same repository.
 
 When another live instance already owns scheduler activity for the workspace, pi prompts before taking over. You can also manage ownership explicitly with:
 
-- `/schedule adopt <id|all>`
-- `/schedule release <id|all>`
-- `/schedule clear-foreign`
+- `/schedule:adopt <id|all>`
+- `/schedule:release <id|all>`
+- `/schedule:clear-foreign`
 
 Use workspace scope sparingly for long-running shared checks like CI/build/deploy monitoring. For ordinary reminders and follow-ups, prefer the default instance scope.
 

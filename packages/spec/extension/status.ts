@@ -44,11 +44,11 @@ export function summarizeChecklists(checklistsDir?: string): ChecklistSummary[] 
 
 function nextStepsFor(paths: WorkflowPaths, initialized: boolean): string[] {
 	if (!initialized) {
-		return ["/spec init", "/spec constitution <principles>", "/spec specify <feature description>"];
+		return ["/spec:init", "/spec:constitution <principles>", "/spec:specify <feature description>"];
 	}
 
 	if (!(paths.featureDir && paths.featureSpec)) {
-		return ["/spec specify <feature description>", "/spec list"];
+		return ["/spec:specify <feature description>", "/spec:list"];
 	}
 
 	const steps: string[] = [];
@@ -59,25 +59,25 @@ function nextStepsFor(paths: WorkflowPaths, initialized: boolean): string[] {
 	const hasIncompleteChecklist = checklists.some((checklist) => checklist.incomplete > 0);
 
 	if (!specExists) {
-		steps.push("/spec specify <feature description>");
+		steps.push("/spec:specify <feature description>");
 		return steps;
 	}
 
-	steps.push("/spec clarify");
-	steps.push("/spec checklist quality");
+	steps.push("/spec:clarify");
+	steps.push("/spec:checklist quality");
 
 	if (!planExists) {
-		steps.push("/spec plan <technical context>");
+		steps.push("/spec:plan <technical context>");
 		return steps;
 	}
 
 	if (!tasksExist) {
-		steps.push("/spec tasks");
+		steps.push("/spec:tasks");
 		return steps;
 	}
 
-	steps.push("/spec analyze");
-	steps.push(hasIncompleteChecklist ? "/spec implement (after checklist review)" : "/spec implement");
+	steps.push("/spec:analyze");
+	steps.push(hasIncompleteChecklist ? "/spec:implement (after checklist review)" : "/spec:implement");
 
 	return steps;
 }
@@ -173,7 +173,7 @@ export function buildWorkflowStatus(options: {
 
 export function formatWorkflowStatus(status: WorkflowStatus): string {
 	const lines = [
-		"# /spec workflow status",
+		"# /spec:status",
 		"",
 		`- Repository root: ${status.repoRoot}`,
 		`- Initialized: ${status.initialized ? "yes" : "no"}`,
@@ -210,22 +210,22 @@ export function formatHelpReport(): string {
 	return [
 		"# Native /spec workflow",
 		"",
-		"Use `/spec` with one of these subcommands:",
+		"Use `/spec` or `/spec:<subcommand>` with one of these commands:",
 		"",
-		"- `/spec init` — scaffold `.specify/`, templates, and memory files",
-		"- `/spec constitution <principles>` — create or amend the project constitution",
-		"- `/spec specify <feature description>` — create a numbered feature branch and spec scaffold",
-		"- `/spec clarify [focus]` — resolve critical ambiguities in the active spec",
-		"- `/spec checklist [domain]` — generate a requirements-quality checklist",
-		"- `/spec plan <technical context>` — build the implementation plan and design artifacts",
-		"- `/spec tasks [context]` — derive an executable tasks.md ordered by user story",
-		"- `/spec analyze [focus]` — run a read-only cross-artifact consistency review",
-		"- `/spec implement [focus]` — execute the plan from tasks.md and mark completed tasks",
-		"- `/spec status` — show current workflow state",
-		"- `/spec next` — show the next recommended command",
-		"- `/spec list` — list all known feature directories",
+		"- `/spec:init` — scaffold `.specify/`, templates, and memory files",
+		"- `/spec:constitution <principles>` — create or amend the project constitution",
+		"- `/spec:specify <feature description>` — create a numbered feature branch and spec scaffold",
+		"- `/spec:clarify [focus]` — resolve critical ambiguities in the active spec",
+		"- `/spec:checklist [domain]` — generate a requirements-quality checklist",
+		"- `/spec:plan <technical context>` — build the implementation plan and design artifacts",
+		"- `/spec:tasks [context]` — derive an executable tasks.md ordered by user story",
+		"- `/spec:analyze [focus]` — run a read-only cross-artifact consistency review",
+		"- `/spec:implement [focus]` — execute the plan from tasks.md and mark completed tasks",
+		"- `/spec:status` — show current workflow state",
+		"- `/spec:next` — show the next recommended command",
+		"- `/spec:list` — list all known feature directories",
 		"",
-		"Tip: `/spec` with no arguments shows the current workflow status.",
+		"Tip: `/spec:status` shows the current workflow status.",
 	].join("\n");
 }
 

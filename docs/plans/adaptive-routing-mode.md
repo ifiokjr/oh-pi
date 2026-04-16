@@ -85,14 +85,14 @@ The user should be able to understand:
 
 Adaptive Routing Mode should eventually expose:
 
-- `/route on`
-- `/route off`
-- `/route status`
-- `/route explain`
-- `/route lock`
-- `/route unlock`
-- `/route refresh`
-- `/route feedback good|bad`
+- `/route:on`
+- `/route:off`
+- `/route:status`
+- `/route:explain`
+- `/route:lock`
+- `/route:unlock`
+- `/route:refresh`
+- `/route:feedback good|bad`
 
 ## 6. Routing Architecture
 

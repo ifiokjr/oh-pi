@@ -1647,6 +1647,8 @@ describe("schedulerExtension registration", () => {
 		expect(pi._commands.has("loop")).toBe(true);
 		expect(pi._commands.has("remind")).toBe(true);
 		expect(pi._commands.has("schedule")).toBe(true);
+		expect(pi._commands.has("schedule:tui")).toBe(true);
+		expect(pi._commands.has("schedule:delete")).toBe(true);
 		expect(pi._commands.has("unschedule")).toBe(true);
 	});
 

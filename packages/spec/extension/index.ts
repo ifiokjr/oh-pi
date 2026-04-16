@@ -116,7 +116,7 @@ async function resolveFeaturePaths(
 ): Promise<WorkflowPaths | undefined> {
 	const featureName = await resolveActiveFeatureName(ctx, repoRoot, currentBranch, hasGit);
 	if (!featureName) {
-		ctx.ui.notify("No active feature found. Run /spec specify <feature description> first.", "warning");
+		ctx.ui.notify("No active feature found. Run /spec:specify <feature description> first.", "warning");
 		return undefined;
 	}
 	return buildWorkflowPaths(repoRoot, featureName);
@@ -173,12 +173,12 @@ function handleInit(pi: ExtensionAPI, repoRoot: string, created: string[]): void
 	sendReport(
 		pi,
 		[
-			"# /spec init",
+			"# /spec:init",
 			"",
 			`- Repository root: ${repoRoot}`,
 			formatCreatedFiles(created),
 			"",
-			"Next: `/spec constitution <principles>` or `/spec specify <feature description>`.",
+			"Next: `/spec:constitution <principles>` or `/spec:specify <feature description>`.",
 		].join("\n"),
 	);
 }
@@ -228,7 +228,7 @@ function handleSpecify(
 	input: string,
 ): void {
 	if (!input) {
-		ctx.ui.notify("/spec specify requires a feature description.", "warning");
+		ctx.ui.notify("/spec:specify requires a feature description.", "warning");
 		return;
 	}
 
@@ -247,7 +247,7 @@ function handleSpecify(
 		sendReport(
 			pi,
 			[
-				"# /spec specify",
+				"# /spec:specify",
 				"",
 				`- Feature branch: ${prepared.branchName}`,
 				`- Feature number: ${prepared.featureNumber}`,
@@ -317,7 +317,7 @@ async function handleWorkflowStep(
 	}
 
 	queueWorkflow(pi, step, env.currentBranch, featurePaths, input);
-	ctx.ui.notify(`Queued /spec ${step} workflow.`, "info");
+	ctx.ui.notify(`Queued /spec:${step} workflow.`, "info");
 }
 
 export default function specExtension(pi: ExtensionAPI) {
@@ -326,9 +326,47 @@ export default function specExtension(pi: ExtensionAPI) {
 		return new Text(text, 0, 0);
 	});
 
+	const handleSpecCommand = async (rawArgs: string, ctx: ExtensionCommandContext): Promise<void> => {
+		const { subcommand, remainder } = tokenize(rawArgs);
+		if (!subcommand) {
+			ctx.ui.notify(`Unknown /spec subcommand: ${rawArgs.trim()}`, "warning");
+			sendReport(pi, formatHelpReport());
+			return;
+		}
+
+		const env = makeEnv(ctx);
+		if (subcommand === "init") {
+			handleInit(pi, env.repoRoot, ensureWorkflowScaffold(env.basePaths));
+			return;
+		}
+		if (subcommand === "help") {
+			sendReport(pi, formatHelpReport());
+			return;
+		}
+		if (subcommand === "list") {
+			sendReport(pi, formatFeatureList(env.repoRoot));
+			return;
+		}
+		if (subcommand === "status") {
+			await handleStatus(pi, ctx, env.repoRoot, env.currentBranch, env.hasGit);
+			return;
+		}
+		if (subcommand === "next") {
+			await handleNext(pi, ctx, env.repoRoot, env.currentBranch, env.hasGit);
+			return;
+		}
+		if (!isWorkflowStep(subcommand)) {
+			sendReport(pi, formatHelpReport());
+			return;
+		}
+
+		const input = await collectStepInput(ctx, subcommand, remainder);
+		await handleWorkflowStep(pi, ctx, env, subcommand, input);
+	};
+
 	pi.registerCommand("spec", {
 		description:
-			"Native spec-kit workflow for pi (/spec init|constitution|specify|clarify|checklist|plan|tasks|analyze|implement)",
+			"Native spec-kit workflow for pi (/spec:init|help|status|next|list|constitution|specify|clarify|checklist|plan|tasks|analyze|implement)",
 		getArgumentCompletions(prefix) {
 			const trimmed = prefix.trimStart();
 			if (trimmed.includes(" ")) {
@@ -340,42 +378,13 @@ export default function specExtension(pi: ExtensionAPI) {
 			}));
 			return values.length > 0 ? values : null;
 		},
-		handler: async (rawArgs, ctx) => {
-			const { subcommand, remainder } = tokenize(rawArgs);
-			if (!subcommand) {
-				ctx.ui.notify(`Unknown /spec subcommand: ${rawArgs.trim()}`, "warning");
-				sendReport(pi, formatHelpReport());
-				return;
-			}
-
-			const env = makeEnv(ctx);
-			if (subcommand === "init") {
-				handleInit(pi, env.repoRoot, ensureWorkflowScaffold(env.basePaths));
-				return;
-			}
-			if (subcommand === "help") {
-				sendReport(pi, formatHelpReport());
-				return;
-			}
-			if (subcommand === "list") {
-				sendReport(pi, formatFeatureList(env.repoRoot));
-				return;
-			}
-			if (subcommand === "status") {
-				await handleStatus(pi, ctx, env.repoRoot, env.currentBranch, env.hasGit);
-				return;
-			}
-			if (subcommand === "next") {
-				await handleNext(pi, ctx, env.repoRoot, env.currentBranch, env.hasGit);
-				return;
-			}
-			if (!isWorkflowStep(subcommand)) {
-				sendReport(pi, formatHelpReport());
-				return;
-			}
-
-			const input = await collectStepInput(ctx, subcommand, remainder);
-			await handleWorkflowStep(pi, ctx, env, subcommand, input);
-		},
+		handler: handleSpecCommand,
 	});
+
+	for (const subcommand of SPEC_SUBCOMMANDS) {
+		pi.registerCommand(`spec:${subcommand}`, {
+			description: `Alias for /spec:${subcommand}.`,
+			handler: (args, ctx) => handleSpecCommand(args ? `${subcommand} ${args}` : subcommand, ctx),
+		});
+	}
 }

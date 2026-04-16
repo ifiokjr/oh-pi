@@ -56,10 +56,10 @@ Subagents and ant-colony use these categories only when they do not already have
 
 ## Commands
 
-- `/route status`
-- `/route shadow`
-- `/route auto`
-- `/route off`
-- `/route explain`
-- `/route assignments`
-- `/route stats`
+- `/route:status`
+- `/route:shadow`
+- `/route:auto`
+- `/route:off`
+- `/route:explain`
+- `/route:assignments`
+- `/route:stats`

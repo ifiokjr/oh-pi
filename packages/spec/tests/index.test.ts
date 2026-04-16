@@ -93,25 +93,26 @@ describe("@ifi/pi-spec extension", () => {
 		specExtension(pi as any);
 
 		expect(pi.commands.has("spec")).toBe(true);
+		expect(pi.commands.has("spec:init")).toBe(true);
 		expect(pi.renderers.has("pi-spec-report")).toBe(true);
-		expect(pi.commands.get("spec")?.description).toContain("/spec init");
+		expect(pi.commands.get("spec")?.description).toContain("/spec:init");
 	});
 
-	it("/spec init scaffolds the workflow workspace and reports created files", async () => {
+	it("/spec:init scaffolds the workflow workspace and reports created files", async () => {
 		const repoRoot = createTempRepo("pi-spec-init");
 		const pi = createPiMock();
 		specExtension(pi as any);
 		const ctx = createCtx(repoRoot);
 
-		await pi.commands.get("spec")?.handler?.("init", ctx);
+		await pi.commands.get("spec:init")?.handler?.("", ctx);
 
 		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
-		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("/spec init");
+		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("/spec:init");
 		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("Created");
 		expect(existsSync(path.join(repoRoot, ".specify", "memory", "constitution.md"))).toBe(true);
 	});
 
-	it("/spec status does not auto-initialize an unprepared repository", async () => {
+	it("/spec:status does not auto-initialize an unprepared repository", async () => {
 		const repoRoot = createTempRepo("pi-spec-status-empty");
 		const pi = createPiMock();
 		specExtension(pi as any);
@@ -123,7 +124,7 @@ describe("@ifi/pi-spec extension", () => {
 		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("- Initialized: no");
 	});
 
-	it("/spec status reports workflow state without triggering the model", async () => {
+	it("/spec:status reports workflow state without triggering the model", async () => {
 		const repoRoot = createTempRepo("pi-spec-status");
 		mkdirSync(path.join(repoRoot, "specs", "001-auth-flow"), { recursive: true });
 		writeFileSync(path.join(repoRoot, "specs", "001-auth-flow", "spec.md"), "# Feature Specification", "utf8");
@@ -142,11 +143,11 @@ describe("@ifi/pi-spec extension", () => {
 		await pi.commands.get("spec")?.handler?.("status", ctx);
 
 		expect(pi.sendUserMessage).not.toHaveBeenCalled();
-		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("/spec workflow status");
+		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("# /spec:status");
 		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("001-auth-flow");
 	});
 
-	it("/spec specify prepares a feature workspace and queues the native workflow prompt", async () => {
+	it("/spec:specify prepares a feature workspace and queues the native workflow prompt", async () => {
 		const repoRoot = createTempRepo("pi-spec-specify");
 		mkdirSync(path.join(repoRoot, "specs", "002-existing-feature"), { recursive: true });
 		gitClientMock.listBranches.mockReturnValue(["001-first-feature"]);
@@ -167,7 +168,7 @@ describe("@ifi/pi-spec extension", () => {
 		expect(prompt).toContain("The native /spec runtime has already generated the feature number");
 	});
 
-	it("/spec plan scaffolds plan.md and references pi-agent.md in the queued prompt", async () => {
+	it("/spec:plan scaffolds plan.md and references pi-agent.md in the queued prompt", async () => {
 		const repoRoot = createTempRepo("pi-spec-plan");
 		mkdirSync(path.join(repoRoot, "specs", "001-auth-flow"), { recursive: true });
 		writeFileSync(path.join(repoRoot, "specs", "001-auth-flow", "spec.md"), "# Feature Specification", "utf8");
@@ -185,7 +186,7 @@ describe("@ifi/pi-spec extension", () => {
 		expect(prompt).toContain(path.join(repoRoot, ".specify", "templates", "commands", "plan.md"));
 	});
 
-	it("/spec implement stops when checklists are incomplete and the user declines to continue", async () => {
+	it("/spec:implement stops when checklists are incomplete and the user declines to continue", async () => {
 		const repoRoot = createTempRepo("pi-spec-implement");
 		const featureDir = path.join(repoRoot, "specs", "001-auth-flow");
 		mkdirSync(path.join(featureDir, "checklists"), { recursive: true });
