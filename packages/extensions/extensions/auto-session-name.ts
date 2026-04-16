@@ -105,6 +105,7 @@ function chooseName(messages: MessageLike[], currentName: string): string | unde
 
 export default function autoSessionNameExtension(pi: ExtensionAPI) {
 	let lastAutoName = "";
+	let manualNameLocked = false;
 	let compactContinuationQueued = false;
 
 	const emitResumeHint = (reason: "shutdown" | "switch", sessionFile: string | undefined) => {
@@ -128,11 +129,16 @@ export default function autoSessionNameExtension(pi: ExtensionAPI) {
 
 	pi.on("agent_end", async (event) => {
 		const messages = (event as { messages?: MessageLike[] }).messages ?? [];
-		if (messages.length === 0) {
+		if (messages.length === 0 || manualNameLocked) {
 			return;
 		}
 
 		const current = (pi.getSessionName?.() ?? "").trim();
+		if (current && current !== lastAutoName) {
+			manualNameLocked = true;
+			return;
+		}
+
 		const next = chooseName(messages, current);
 		if (!(next && next !== current && next !== lastAutoName)) {
 			return;
