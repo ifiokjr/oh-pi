@@ -249,8 +249,9 @@ describe("custom-footer extension", () => {
 			};
 
 			await pi._emit("session_start", {}, ctx);
+			const requestRender = vi.fn();
 			footerFactory(
-				{ requestRender: vi.fn() },
+				{ requestRender },
 				{ fg: (_color: string, text: string) => text },
 				{ onBranchChange: () => () => undefined, getGitBranch: () => "main" },
 			);
@@ -258,8 +259,10 @@ describe("custom-footer extension", () => {
 			await vi.advanceTimersByTimeAsync(500);
 			expect(refreshRepoWorktreeContext).toHaveBeenCalledTimes(1);
 
+			requestRender.mockClear();
 			await vi.advanceTimersByTimeAsync(60_000);
 			expect(refreshRepoWorktreeContext).toHaveBeenCalledTimes(1);
+			expect(requestRender).not.toHaveBeenCalled();
 		} finally {
 			getCachedRepoWorktreeContext.mockRestore();
 			refreshRepoWorktreeContext.mockRestore();

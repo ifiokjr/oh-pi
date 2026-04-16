@@ -103,6 +103,7 @@ The footer caches totals after startup, but the aggregation path is still O(n) o
 **Latest mitigation**
 
 - footer PR polling now matches the 60-second GH probe cooldown instead of waking every 30 seconds
+- the poll timer now probes for PR changes without forcing a footer rerender every minute when the visible footer content is unchanged
 - PR probe completions request a redraw only when the visible PR list actually changes
 - watchdog and scheduler status-bar writes should stay deduplicated so periodic clean-state refreshes do not spam identical `setStatus(...)` calls
 

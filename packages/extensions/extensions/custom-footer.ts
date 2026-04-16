@@ -281,7 +281,6 @@ export default function (pi: ExtensionAPI) {
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
 			const timer = setInterval(() => {
 				probeActivePrs();
-				tui.requestRender();
 			}, FOOTER_POLL_INTERVAL_MS);
 			probeActivePrs();
 
