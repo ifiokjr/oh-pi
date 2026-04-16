@@ -1053,19 +1053,19 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 	let startupCleanupTimer: ReturnType<typeof setTimeout> | undefined;
 	let startupGlobalCleanupCompleted = false;
-	const runGlobalStartupCleanup = () => {
+	const runGlobalStartupCleanup = async (): Promise<void> => {
 		if (startupGlobalCleanupCompleted) {
 			return;
 		}
 		startupGlobalCleanupCompleted = true;
-		cleanupOldChainDirs();
-		cleanupAllArtifactDirs(DEFAULT_ARTIFACT_CONFIG.cleanupDays);
+		await cleanupOldChainDirs();
+		await cleanupAllArtifactDirs(DEFAULT_ARTIFACT_CONFIG.cleanupDays);
 	};
-	const cleanupSessionArtifacts = (ctx: ExtensionContext) => {
+	const cleanupSessionArtifacts = async (ctx: ExtensionContext): Promise<void> => {
 		try {
 			const sessionFile = ctx.sessionManager.getSessionFile();
 			if (sessionFile) {
-				cleanupOldArtifacts(getArtifactsDir(sessionFile), DEFAULT_ARTIFACT_CONFIG.cleanupDays);
+				await cleanupOldArtifacts(getArtifactsDir(sessionFile), DEFAULT_ARTIFACT_CONFIG.cleanupDays);
 			}
 		} catch {}
 	};
@@ -1080,8 +1080,10 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		cancelStartupCleanup();
 		startupCleanupTimer = setTimeout(() => {
 			startupCleanupTimer = undefined;
-			runGlobalStartupCleanup();
-			cleanupSessionArtifacts(ctx);
+			void (async () => {
+				await runGlobalStartupCleanup();
+				await cleanupSessionArtifacts(ctx);
+			})();
 		}, STARTUP_CLEANUP_DELAY_MS);
 		startupCleanupTimer.unref?.();
 	};
@@ -1093,7 +1095,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			scheduleStartupCleanup(ctx);
 		} else {
 			cancelStartupCleanup();
-			cleanupSessionArtifacts(ctx);
+			void cleanupSessionArtifacts(ctx);
 		}
 		for (const timer of cleanupTimers.values()) clearTimeout(timer);
 		cleanupTimers.clear();

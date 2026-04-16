@@ -43,43 +43,59 @@ export function appendJsonl(filePath: string, line: string): void {
 	fs.appendFileSync(filePath, `${line}\n`);
 }
 
-export function cleanupOldArtifacts(dir: string, maxAgeDays: number): void {
-	if (!fs.existsSync(dir)) return;
+export async function cleanupOldArtifacts(dir: string, maxAgeDays: number): Promise<void> {
+	try {
+		await fs.promises.access(dir, fs.constants.F_OK);
+	} catch {
+		return;
+	}
 
 	const markerPath = path.join(dir, CLEANUP_MARKER_FILE);
 	const now = Date.now();
 
-	if (fs.existsSync(markerPath)) {
-		const stat = fs.statSync(markerPath);
-		if (now - stat.mtimeMs < 24 * 60 * 60 * 1000) return;
-	}
+	try {
+		const stat = await fs.promises.stat(markerPath);
+		if (now - stat.mtimeMs < 24 * 60 * 60 * 1000) {
+			return;
+		}
+	} catch {}
 
 	const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
 	const cutoff = now - maxAgeMs;
 
-	for (const file of fs.readdirSync(dir)) {
-		if (file === CLEANUP_MARKER_FILE) continue;
+	let files: string[];
+	try {
+		files = await fs.promises.readdir(dir);
+	} catch {
+		return;
+	}
+
+	for (const file of files) {
+		if (file === CLEANUP_MARKER_FILE) {
+			continue;
+		}
+
 		const filePath = path.join(dir, file);
 		try {
-			const stat = fs.statSync(filePath);
+			const stat = await fs.promises.stat(filePath);
 			if (stat.mtimeMs < cutoff) {
-				fs.unlinkSync(filePath);
+				await fs.promises.unlink(filePath);
 			}
 		} catch {}
 	}
 
-	fs.writeFileSync(markerPath, String(now));
+	try {
+		await fs.promises.writeFile(markerPath, String(now));
+	} catch {}
 }
 
-export function cleanupAllArtifactDirs(maxAgeDays: number): void {
-	cleanupOldArtifacts(TEMP_ARTIFACTS_DIR, maxAgeDays);
+export async function cleanupAllArtifactDirs(maxAgeDays: number): Promise<void> {
+	await cleanupOldArtifacts(TEMP_ARTIFACTS_DIR, maxAgeDays);
 
 	const sessionsBase = getSessionsBaseDir();
-	if (!fs.existsSync(sessionsBase)) return;
-
 	let dirs: string[];
 	try {
-		dirs = fs.readdirSync(sessionsBase);
+		dirs = await fs.promises.readdir(sessionsBase);
 	} catch {
 		return;
 	}
@@ -87,7 +103,7 @@ export function cleanupAllArtifactDirs(maxAgeDays: number): void {
 	for (const dir of dirs) {
 		const artifactsDir = path.join(sessionsBase, dir, "subagent-artifacts");
 		try {
-			cleanupOldArtifacts(artifactsDir, maxAgeDays);
+			await cleanupOldArtifacts(artifactsDir, maxAgeDays);
 		} catch {}
 	}
 }

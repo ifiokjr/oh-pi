@@ -101,12 +101,11 @@ export function removeChainDir(chainDir: string): void {
 	} catch {}
 }
 
-export function cleanupOldChainDirs(): void {
-	if (!fs.existsSync(CHAIN_RUNS_DIR)) return;
+export async function cleanupOldChainDirs(): Promise<void> {
 	const now = Date.now();
 	let dirs: string[];
 	try {
-		dirs = fs.readdirSync(CHAIN_RUNS_DIR);
+		dirs = await fs.promises.readdir(CHAIN_RUNS_DIR);
 	} catch {
 		return;
 	}
@@ -114,9 +113,9 @@ export function cleanupOldChainDirs(): void {
 	for (const dir of dirs) {
 		try {
 			const dirPath = path.join(CHAIN_RUNS_DIR, dir);
-			const stat = fs.statSync(dirPath);
+			const stat = await fs.promises.stat(dirPath);
 			if (stat.isDirectory() && now - stat.mtimeMs > CHAIN_DIR_MAX_AGE_MS) {
-				fs.rmSync(dirPath, { recursive: true });
+				await fs.promises.rm(dirPath, { recursive: true });
 			}
 		} catch {
 			// Skip directories that can't be processed; continue with others
