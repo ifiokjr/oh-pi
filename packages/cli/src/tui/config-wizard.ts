@@ -56,7 +56,7 @@ function buildWizardOptions(state: WizardState) {
 		},
 		{
 			value: "routing" as const,
-			label: sectionLabel("Routing", !!state.providerSetup),
+			label: sectionLabel("Routing Dashboard", !!state.providerSetup),
 			hint: summarizeRouting(state.adaptiveRouting),
 		},
 		{
@@ -109,10 +109,10 @@ export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): 
 
 		if (step === "providers") {
 			state.providerSetup = await setupProviders(env);
-			state.adaptiveRouting = await setupAdaptiveRouting([
-				...(env.existingProviders ?? []).map((name) => ({ name, apiKey: "none" })),
-				...state.providerSetup.providers,
-			]);
+			state.adaptiveRouting = await setupAdaptiveRouting(
+				[...(env.existingProviders ?? []).map((name) => ({ name, apiKey: "none" })), ...state.providerSetup.providers],
+				state.adaptiveRouting,
+			);
 			nextStep = "routing";
 			continue;
 		}
@@ -123,10 +123,10 @@ export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): 
 				nextStep = "providers";
 				continue;
 			}
-			state.adaptiveRouting = await setupAdaptiveRouting([
-				...(env.existingProviders ?? []).map((name) => ({ name, apiKey: "none" })),
-				...state.providerSetup.providers,
-			]);
+			state.adaptiveRouting = await setupAdaptiveRouting(
+				[...(env.existingProviders ?? []).map((name) => ({ name, apiKey: "none" })), ...state.providerSetup.providers],
+				state.adaptiveRouting,
+			);
 			nextStep = "appearance";
 			continue;
 		}

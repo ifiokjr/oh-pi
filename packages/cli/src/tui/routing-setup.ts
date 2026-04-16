@@ -1,32 +1,7 @@
 import * as p from "@clack/prompts";
 import type { ProviderConfig } from "@ifi/oh-pi-core";
 import type { AdaptiveRoutingModeConfig, AdaptiveRoutingSetupConfig } from "../types.js";
-
-const ROUTING_CATEGORIES = [
-	{ name: "quick-discovery", label: "Quick discovery", recommended: ["groq", "ollama-cloud", "ollama", "openai"] },
-	{ name: "planning-default", label: "Planning", recommended: ["openai", "ollama-cloud", "ollama", "groq"] },
-	{
-		name: "implementation-default",
-		label: "Implementation",
-		recommended: ["openai", "ollama-cloud", "ollama", "groq"],
-	},
-	{ name: "research-default", label: "Research", recommended: ["openai", "groq", "ollama-cloud", "ollama"] },
-	{
-		name: "review-critical",
-		label: "Review / critical validation",
-		recommended: ["openai", "ollama-cloud", "ollama", "groq"],
-	},
-	{
-		name: "visual-engineering",
-		label: "Visual / design work",
-		recommended: ["ollama-cloud", "ollama", "openai", "groq"],
-	},
-	{
-		name: "multimodal-default",
-		label: "Multimodal media work",
-		recommended: ["ollama-cloud", "ollama", "openai", "groq"],
-	},
-] as const;
+import { buildRoutingDashboard, ROUTING_CATEGORIES } from "./routing-dashboard.js";
 
 function uniqueProviderNames(providers: ProviderConfig[]): string[] {
 	return [...new Set(providers.map((provider) => provider.name.trim()).filter(Boolean))];
@@ -47,35 +22,45 @@ function suggestedProvider(category: (typeof ROUTING_CATEGORIES)[number], provid
 
 export async function setupAdaptiveRouting(
 	providers: ProviderConfig[],
+	currentConfig?: AdaptiveRoutingSetupConfig,
 ): Promise<AdaptiveRoutingSetupConfig | undefined> {
 	const providerNames = uniqueProviderNames(providers);
 	if (providerNames.length === 0) {
 		return undefined;
 	}
 
+	p.note(
+		buildRoutingDashboard({
+			providers,
+			config: currentConfig,
+		}),
+		"Provider & Routing Dashboard",
+	);
+
 	const shouldConfigure = await p.confirm({
-		message:
-			providerNames.length > 1
-				? "Configure startup provider assignments for subagents and ant-colony?"
+		message: currentConfig
+			? "Edit startup provider assignments for session, subagents, and ant-colony?"
+			: providerNames.length > 1
+				? "Configure startup provider assignments for session, subagents, and ant-colony?"
 				: `Use ${providerNames[0]} for delegated subagent and colony routing?`,
-		initialValue: providerNames.length > 1,
+		initialValue: currentConfig ? true : providerNames.length > 1,
 	});
 	if (p.isCancel(shouldConfigure)) {
 		p.cancel("Cancelled.");
 		process.exit(0);
 	}
 	if (!shouldConfigure) {
-		return undefined;
+		return currentConfig;
 	}
 
 	const mode = await p.select<AdaptiveRoutingModeConfig>({
+		initialValue: currentConfig?.mode ?? "off",
 		message: "Prompt routing mode for the optional adaptive-routing package:",
 		options: [
 			{ value: "off", label: "Off", hint: "Only delegated startup assignments; no per-prompt auto routing" },
 			{ value: "shadow", label: "Shadow", hint: "Suggest routes without switching models automatically" },
 			{ value: "auto", label: "Auto", hint: "Automatically switch models before each turn" },
 		],
-		initialValue: "off",
 	});
 	if (p.isCancel(mode)) {
 		p.cancel("Cancelled.");
@@ -91,7 +76,7 @@ export async function setupAdaptiveRouting(
 				label: provider,
 				hint: `Fallback order: ${orderProviders(provider, providerNames).join(" → ")}`,
 			})),
-			initialValue: suggestedProvider(category, providerNames),
+			initialValue: currentConfig?.categories[category.name]?.[0] ?? suggestedProvider(category, providerNames),
 		});
 		if (p.isCancel(preferred)) {
 			p.cancel("Cancelled.");
@@ -100,7 +85,17 @@ export async function setupAdaptiveRouting(
 		categories[category.name] = orderProviders(preferred, providerNames);
 	}
 
-	return { mode, categories };
+	const config = { mode, categories };
+
+	p.note(
+		buildRoutingDashboard({
+			providers,
+			config,
+		}),
+		"Provider & Routing Dashboard",
+	);
+
+	return config;
 }
 
 export function summarizeAdaptiveRouting(config: AdaptiveRoutingSetupConfig | undefined): string {

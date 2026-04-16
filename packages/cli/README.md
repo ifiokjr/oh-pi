@@ -7,6 +7,7 @@ Interactive TUI configurator for `pi-coding-agent`.
 `@ifi/oh-pi-cli` powers the interactive `oh-pi` setup experience. It helps configure:
 - providers and auth
 - models
+- provider/routing dashboard views for session, subagents, and ant-colony
 - extensions
 - prompts
 - skills
