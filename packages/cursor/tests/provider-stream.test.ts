@@ -184,10 +184,10 @@ beforeEach(() => {
 		return stream;
 	});
 	providerMocks.buildCursorRequestPayload.mockReturnValue({
-		requestBytes: { request: true },
+		requestBytes: new Uint8Array([1, 2, 3]),
 		blobStore: new Map([["blob", new Uint8Array([1, 2, 3])]]),
 		mcpTools: [{ name: "echo" }],
-	});
+	} as never);
 	providerMocks.decodeMcpArgsMap.mockImplementation((args: Record<string, unknown>) => args);
 	providerMocks.parseCursorConversation.mockReturnValue({ seed: "seed-text", userText: "Do the thing", trailingToolResults: [] });
 	providerMocks.sendExecResult.mockImplementation(
@@ -232,7 +232,7 @@ afterEach(() => {
 
 describe("streamSimpleCursor", () => {
 	it("throws when no Cursor API key is available", () => {
-		providerMocks.getEnvApiKey.mockReturnValueOnce(undefined);
+		providerMocks.getEnvApiKey.mockReturnValueOnce(undefined as never);
 		expect(() => streamSimpleCursor(createModel() as never, createContext() as never)).toThrow(
 			"No API key for provider: cursor",
 		);
@@ -274,8 +274,8 @@ describe("streamSimpleCursor", () => {
 			seed: "seed-text",
 			userText: "",
 			trailingToolResults: [{ toolCallId: "call-1", toolName: "echo", content: "pong", isError: false }],
-		});
-		providerMocks.getActiveRun.mockReturnValueOnce(activeRun);
+		} as never);
+		providerMocks.getActiveRun.mockReturnValueOnce(activeRun as never);
 
 		const stream = streamSimpleCursor(createModel() as never, createContext() as never, { sessionId: "session-1" } as never) as any;
 		await flushMicrotasks();
@@ -298,7 +298,11 @@ describe("streamSimpleCursor", () => {
 
 	it("streams new runs, handles server messages, and switches to tool-use mode on MCP execution", async () => {
 		const onPayload = vi.fn();
-		providerMocks.getConversationState.mockReturnValueOnce({ conversationId: "saved-conv", blobStore: new Map(), lastAccessMs: 0 });
+		providerMocks.getConversationState.mockReturnValueOnce({
+			conversationId: "saved-conv",
+			blobStore: new Map(),
+			lastAccessMs: 0,
+		} as never);
 
 		const stream = streamSimpleCursor(createModel() as never, createContext() as never, {
 			sessionId: "session-1",
@@ -309,7 +313,7 @@ describe("streamSimpleCursor", () => {
 		const connection = providerMocks.connections[0];
 		expect(connection.options).toMatchObject({ accessToken: "cursor-token", rpcPath: expect.anything(), url: "https://cursor.test" });
 		expect(connection.startHeartbeat).toHaveBeenCalledWith(providerMocks.makeHeartbeatFrame);
-		expect(connection.write).toHaveBeenCalledWith({ framed: { request: true } });
+		expect(connection.write).toHaveBeenCalledWith({ framed: new Uint8Array([1, 2, 3]) });
 		expect(onPayload).toHaveBeenCalledWith({ model: "composer-2", conversationId: "saved-conv", toolCount: 1 });
 
 		connection.handlers.onData?.({
