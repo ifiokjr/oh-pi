@@ -7,9 +7,10 @@ type Manifest = {
 	};
 };
 
-type BenchmarkTargetReport = {
+export type BenchmarkTargetReport = {
 	mode: "all" | "selected";
 	selectedExtensions: string[];
+	selectedFocusedBenchmarkIds: string[];
 	reasons: string[];
 	changedFiles: string[];
 };
@@ -17,6 +18,14 @@ type BenchmarkTargetReport = {
 const ROOT = process.cwd();
 const PACKAGE_PATH = path.join(ROOT, "package.json");
 const EXTENSION_PACKAGE_PREFIX = "packages/extensions/extensions/";
+const ALL_FOCUSED_BENCHMARK_IDS = [
+	"scheduler-runtime-context-with-store",
+	"custom-footer-usage-scan-large-history",
+	"usage-tracker-session-start-near-threshold",
+	"worktree-context-temp-repo",
+	"worktree-snapshot-temp-repo",
+	"custom-footer-first-render",
+] as const;
 const GLOBAL_PATH_PREFIXES = [
 	"package.json",
 	"pnpm-lock.yaml",
@@ -26,7 +35,45 @@ const GLOBAL_PATH_PREFIXES = [
 	"packages/core/",
 	"packages/providers/",
 	"benchmarks/",
-];
+	".github/workflows/ci.yml",
+] as const;
+const FOCUSED_BENCHMARK_RULES = [
+	{
+		prefixes: [
+			"packages/extensions/extensions/scheduler.ts",
+			"packages/extensions/extensions/scheduler-shared.ts",
+			"packages/extensions/extensions/scheduler-registration.ts",
+		],
+		benchmarkIds: ["scheduler-runtime-context-with-store"],
+	},
+	{
+		prefixes: [
+			"packages/extensions/extensions/custom-footer.ts",
+			"packages/extensions/extensions/custom-footer.test.ts",
+		],
+		benchmarkIds: [
+			"custom-footer-usage-scan-large-history",
+			"custom-footer-first-render",
+			"worktree-context-temp-repo",
+		],
+	},
+	{
+		prefixes: [
+			"packages/extensions/extensions/usage-tracker.ts",
+			"packages/extensions/extensions/usage-tracker.test.ts",
+		],
+		benchmarkIds: ["usage-tracker-session-start-near-threshold"],
+	},
+	{
+		prefixes: [
+			"packages/extensions/extensions/worktree.ts",
+			"packages/extensions/extensions/worktree.test.ts",
+			"packages/extensions/extensions/worktree-shared.ts",
+			"packages/extensions/extensions/worktree-shared.test.ts",
+		],
+		benchmarkIds: ["worktree-context-temp-repo", "worktree-snapshot-temp-repo", "custom-footer-first-render"],
+	},
+] as const;
 
 function toPosix(value: string): string {
 	return value.split(path.sep).join("/");
@@ -47,7 +94,7 @@ function getPackageExtensionIds(entries: string[]): string[] {
 		.map((entry) => extensionIdFromEntry(entry));
 }
 
-function impactsAllExtensions(filePath: string): boolean {
+function impactsAllBenchmarks(filePath: string): boolean {
 	return GLOBAL_PATH_PREFIXES.some((prefix) => filePath === prefix || filePath.startsWith(prefix));
 }
 
@@ -74,32 +121,49 @@ function inferImpactedExtensions(filePath: string, entries: string[], packageExt
 	return [];
 }
 
+function inferFocusedBenchmarkIds(filePath: string): string[] {
+	for (const rule of FOCUSED_BENCHMARK_RULES) {
+		if (rule.prefixes.some((prefix) => filePath === prefix || filePath.startsWith(prefix))) {
+			return [...rule.benchmarkIds];
+		}
+	}
+
+	return [];
+}
+
 export async function computeBenchmarkTargets(changedFiles: string[]): Promise<BenchmarkTargetReport> {
 	const manifest = JSON.parse(await fs.readFile(PACKAGE_PATH, "utf-8")) as Manifest;
 	const entries = (manifest.pi?.extensions ?? []).map((entry) => toPosix(entry).replace(/^\.\//, ""));
 	const packageExtensionIds = getPackageExtensionIds(entries);
-	const selected = new Set<string>();
+	const selectedExtensions = new Set<string>();
+	const selectedFocusedBenchmarkIds = new Set<string>();
 	const reasons: string[] = [];
 	let mode: BenchmarkTargetReport["mode"] = "selected";
 
 	for (const filePath of changedFiles.map(toPosix)) {
-		if (impactsAllExtensions(filePath)) {
+		if (impactsAllBenchmarks(filePath)) {
 			mode = "all";
 			reasons.push(`${filePath} affects shared benchmark/runtime infrastructure`);
 			continue;
 		}
 
 		for (const extensionId of inferImpactedExtensions(filePath, entries, packageExtensionIds)) {
-			selected.add(extensionId);
+			selectedExtensions.add(extensionId);
 			reasons.push(`${filePath} impacts ${extensionId}`);
+		}
+
+		for (const benchmarkId of inferFocusedBenchmarkIds(filePath)) {
+			selectedFocusedBenchmarkIds.add(benchmarkId);
+			reasons.push(`${filePath} targets ${benchmarkId}`);
 		}
 	}
 
-	const selectedExtensions =
-		mode === "all" ? Array.from(new Set(entries.map(extensionIdFromEntry))).sort() : [...selected].sort();
 	return {
 		mode,
-		selectedExtensions,
+		selectedExtensions:
+			mode === "all" ? Array.from(new Set(entries.map(extensionIdFromEntry))).sort() : [...selectedExtensions].sort(),
+		selectedFocusedBenchmarkIds:
+			mode === "all" ? [...ALL_FOCUSED_BENCHMARK_IDS] : [...selectedFocusedBenchmarkIds].sort(),
 		reasons: Array.from(new Set(reasons)),
 		changedFiles: changedFiles.map(toPosix),
 	};

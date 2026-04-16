@@ -24,13 +24,19 @@ OH_PI_BENCH_EXTENSION_FILTER=worktree pnpm bench:startup
 OH_PI_BENCH_EXTENSION_FILTER=watchdog,custom-footer pnpm bench:startup
 ```
 
-The startup suite always keeps the baseline startup/hotspot cases, then adds isolated extension startup cases for the selected extensions.
+To run only specific focused startup hotspots alongside the always-on startup baselines:
+
+```bash
+OH_PI_BENCH_FOCUSED_FILTER=worktree-context-temp-repo,worktree-snapshot-temp-repo pnpm bench:startup
+```
+
+The startup suite always keeps the baseline startup cases, adds only the selected focused hotspots when a focused filter is present, and then adds isolated extension startup cases for the selected extensions.
 
 ## CI behavior
 
 `pnpm bench:startup` runs on every pull request and push in GitHub Actions.
 
-For pull requests, the workflow computes impacted extensions from the changed files and sets `OH_PI_BENCH_EXTENSION_FILTER` automatically. If shared infrastructure changes, it benchmarks all default extensions.
+For pull requests, the workflow computes impacted extensions and focused startup hotspots from the changed files and sets `OH_PI_BENCH_EXTENSION_FILTER` plus `OH_PI_BENCH_FOCUSED_FILTER` automatically. If shared infrastructure changes, it benchmarks all default extensions and all focused hotspots.
 
 It writes machine-readable and Markdown reports to:
 
@@ -55,6 +61,8 @@ Current cases cover:
 7. first footer render cost
 
 Each benchmark has committed median/p95 budgets so regressions fail in CI while still emitting a readable report.
+
+Fast benchmarks can also use a per-sample time floor so each reported sample averages multiple inner runs. That reduces timer noise and makes CI results more stable.
 
 ## Existing manual scenario templates
 

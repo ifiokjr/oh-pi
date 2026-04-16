@@ -15,6 +15,8 @@ export type BenchmarkDefinition = {
 	warmupIterations?: number;
 	note?: string;
 	budget?: BenchmarkBudget;
+	minSampleTimeMs?: number;
+	maxSampleLoops?: number;
 	run: () => Promise<void> | void;
 };
 
@@ -26,6 +28,8 @@ export type BenchmarkResult = {
 	warmupIterations: number;
 	note?: string;
 	budget?: BenchmarkBudget;
+	minSampleTimeMs: number;
+	avgLoopsPerSample: number;
 	samplesMs: number[];
 	minMs: number;
 	maxMs: number;
@@ -91,17 +95,38 @@ function evaluateBudget(result: { medianMs: number; p95Ms: number; budget?: Benc
 	return failures;
 }
 
+async function runSample(definition: BenchmarkDefinition): Promise<{ sampleMs: number; loopCount: number }> {
+	const minSampleTimeMs = Math.max(0, definition.minSampleTimeMs ?? 0);
+	const maxSampleLoops = Math.max(1, definition.maxSampleLoops ?? 1_000);
+	let loopCount = 0;
+	const startedAt = performance.now();
+
+	while (true) {
+		await definition.run();
+		loopCount += 1;
+
+		const elapsedMs = performance.now() - startedAt;
+		if (elapsedMs >= minSampleTimeMs || loopCount >= maxSampleLoops) {
+			return {
+				sampleMs: elapsedMs / loopCount,
+				loopCount,
+			};
+		}
+	}
+}
+
 export async function runBenchmark(definition: BenchmarkDefinition): Promise<BenchmarkResult> {
 	const warmupIterations = Math.max(0, definition.warmupIterations ?? 1);
 	for (let index = 0; index < warmupIterations; index++) {
-		await definition.run();
+		await runSample(definition);
 	}
 
 	const samplesMs: number[] = [];
+	const sampleLoopCounts: number[] = [];
 	for (let index = 0; index < definition.iterations; index++) {
-		const startedAt = performance.now();
-		await definition.run();
-		samplesMs.push(performance.now() - startedAt);
+		const sample = await runSample(definition);
+		samplesMs.push(sample.sampleMs);
+		sampleLoopCounts.push(sample.loopCount);
 	}
 
 	const sortedSamples = [...samplesMs].sort((left, right) => left - right);
@@ -120,6 +145,8 @@ export async function runBenchmark(definition: BenchmarkDefinition): Promise<Ben
 		warmupIterations,
 		note: definition.note,
 		budget: definition.budget,
+		minSampleTimeMs: Math.max(0, definition.minSampleTimeMs ?? 0),
+		avgLoopsPerSample: round(mean(sampleLoopCounts)),
 		samplesMs: sortedSamples.map((value) => round(value)),
 		minMs,
 		maxMs,
@@ -140,8 +167,8 @@ function toMarkdown(report: BenchmarkSuiteReport): string {
 		`- CI: ${report.environment.ci ? "yes" : "no"}`,
 		`- SHA: ${report.environment.sha ?? "unknown"}`,
 		"",
-		"| Benchmark | Group | Median | p95 | Mean | Budget | Status |",
-		"| --- | --- | ---: | ---: | ---: | --- | --- |",
+		"| Benchmark | Group | Median | p95 | Mean | Sample Floor | Budget | Status |",
+		"| --- | --- | ---: | ---: | ---: | --- | --- | --- |",
 	];
 
 	for (const result of report.results) {
@@ -154,8 +181,12 @@ function toMarkdown(report: BenchmarkSuiteReport): string {
 					.join(" · ")
 			: "—";
 		const status = result.budgetFailures.length === 0 ? "✅ pass" : `❌ ${result.budgetFailures.join("; ")}`;
+		const sampleFloor =
+			result.minSampleTimeMs > 0
+				? `${result.minSampleTimeMs.toFixed(0)}ms floor · ${result.avgLoopsPerSample.toFixed(1)} loops/sample`
+				: "—";
 		lines.push(
-			`| ${result.label} | ${result.group} | ${result.medianMs.toFixed(2)}ms | ${result.p95Ms.toFixed(2)}ms | ${result.meanMs.toFixed(2)}ms | ${budget} | ${status} |`,
+			`| ${result.label} | ${result.group} | ${result.medianMs.toFixed(2)}ms | ${result.p95Ms.toFixed(2)}ms | ${result.meanMs.toFixed(2)}ms | ${sampleFloor} | ${budget} | ${status} |`,
 		);
 
 		if (result.note) {
