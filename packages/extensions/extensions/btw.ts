@@ -14,6 +14,7 @@
  * Based on https://github.com/dbachelder/pi-btw by Dan Bachelder (MIT).
  */
 
+import { requirePiTuiModule } from "@ifi/pi-shared-qna";
 import {
 	type ThinkingLevel as AiThinkingLevel,
 	type AssistantMessage,
@@ -40,6 +41,11 @@ const BTW_SYSTEM_PROMPT = [
 	"Do not act as if you need to continue unfinished work from the main session unless the user explicitly asks you to prepare something for injection back to it.",
 ].join(" ");
 const STARTUP_THREAD_RESTORE_DELAY_MS = 250;
+const BTW_WIDGET_MAX_VISIBLE_SLOTS = 2;
+const BTW_WIDGET_MAX_PREVIEW_LINES = 8;
+const BTW_OVERLAY_WIDTH = "80%";
+const BTW_OVERLAY_MAX_HEIGHT = "80%";
+const BTW_OVERLAY_VIEWPORT_HEIGHT = 18;
 
 type SessionThinkingLevel = "off" | AiThinkingLevel;
 
@@ -75,6 +81,47 @@ interface WidgetThemeHelpers {
 	success: (text: string) => string;
 	italic: (text: string) => string;
 	warning: (text: string) => string;
+}
+
+interface BtwTheme {
+	fg: (color: string, text: string) => string;
+	bold: (text: string) => string;
+	italic: (text: string) => string;
+}
+
+interface ActiveBtwOverlay {
+	scrollOffset: number;
+	requestRender: () => void;
+}
+
+interface PiTuiHelpers {
+	key: {
+		enter: string;
+		escape: string;
+		up: string;
+		down: string;
+		ctrl: (key: string) => string;
+	};
+	matchesKey: (input: string, key: string) => boolean;
+	truncateToWidth: (text: string, width: number) => string;
+	wrapTextWithAnsi: (text: string, width: number) => string[];
+}
+
+let cachedPiTui: PiTuiHelpers | undefined;
+
+function getPiTui() {
+	if (cachedPiTui) {
+		return cachedPiTui;
+	}
+
+	const piTuiModule = requirePiTuiModule() as Record<string, unknown>;
+	cachedPiTui = {
+		key: piTuiModule.Key as PiTuiHelpers["key"],
+		matchesKey: piTuiModule.matchesKey as PiTuiHelpers["matchesKey"],
+		truncateToWidth: piTuiModule.truncateToWidth as PiTuiHelpers["truncateToWidth"],
+		wrapTextWithAnsi: piTuiModule.wrapTextWithAnsi as PiTuiHelpers["wrapTextWithAnsi"],
+	};
+	return cachedPiTui;
 }
 
 function isVisibleBtwMessage(message: { role: string; customType?: string }): boolean {
@@ -299,31 +346,168 @@ function notify(ctx: ExtensionContext | ExtensionCommandContext, message: string
 	}
 }
 
-/** Render a single slot's lines into the widget parts array. */
-function renderSlotLines(slot: BtwSlot, parts: string[], helpers: WidgetThemeHelpers) {
-	const { dim, success, italic, warning } = helpers;
+function buildWidgetThemeHelpers(theme: BtwTheme): WidgetThemeHelpers {
+	return {
+		dim: (text: string) => theme.fg("dim", text),
+		success: (text: string) => theme.fg("success", text),
+		italic: (text: string) => theme.fg("dim", theme.italic(text)),
+		warning: (text: string) => theme.fg("warning", text),
+	};
+}
 
-	parts.push(`${dim("│ ")}${success("› ")}${slot.question}`);
+function buildSlotLines(slot: BtwSlot, helpers: WidgetThemeHelpers): string[] {
+	const { dim, success, italic, warning } = helpers;
+	const lines = [`${dim("│ ")}${success("› ")}${slot.question}`];
 
 	if (slot.thinking) {
-		const cursor = slot.answer || slot.done ? "" : warning(" ▍");
-		parts.push(`${dim("│ ")}${italic(slot.thinking)}${cursor}`);
+		const thinkingLines = slot.thinking.split("\n");
+		for (let i = 0; i < thinkingLines.length; i++) {
+			const cursor = i === thinkingLines.length - 1 && !slot.answer && !slot.done ? warning(" ▍") : "";
+			lines.push(`${dim("│ ")}${italic(thinkingLines[i] || " ")}${cursor}`);
+		}
 	}
 
 	if (slot.answer) {
 		const answerLines = slot.answer.split("\n");
-		parts.push(`${dim("│ ")}${answerLines[0]}`);
-		if (answerLines.length > 1) {
-			parts.push(answerLines.slice(1).join("\n"));
-		}
-		if (!slot.done) {
-			parts[parts.length - 1] += warning(" ▍");
+		for (let i = 0; i < answerLines.length; i++) {
+			const cursor = i === answerLines.length - 1 && !slot.done ? warning(" ▍") : "";
+			lines.push(`${dim("│ ")}${answerLines[i] || " "}${cursor}`);
 		}
 	} else if (!slot.done) {
-		parts.push(`${dim("│ ")}${warning("thinking...")}`);
+		lines.push(`${dim("│ ")}${warning("thinking...")}`);
 	}
 
-	parts.push(`${dim("│ ")}${dim(`model: ${slot.modelLabel}`)}`);
+	lines.push(`${dim("│ ")}${dim(`model: ${slot.modelLabel}`)}`);
+	return lines;
+}
+
+function appendCompactSlotPreview(slot: BtwSlot, parts: string[], helpers: WidgetThemeHelpers) {
+	const slotLines = buildSlotLines(slot, helpers);
+	const visible = slotLines.slice(0, BTW_WIDGET_MAX_PREVIEW_LINES);
+	parts.push(...visible);
+
+	const hiddenLineCount = slotLines.length - visible.length;
+	if (hiddenLineCount > 0) {
+		parts.push(
+			`${helpers.dim("│ ")}${helpers.dim(`… ${hiddenLineCount} more line${hiddenLineCount === 1 ? "" : "s"} — /btw:open`)}`,
+		);
+	}
+}
+
+function wrapBtwLines(lines: string[], width: number): string[] {
+	const { truncateToWidth, wrapTextWithAnsi } = getPiTui();
+	const safeWidth = Math.max(20, width);
+	const wrapped: string[] = [];
+
+	for (const line of lines) {
+		const next = line.length === 0 ? [""] : wrapTextWithAnsi(line, safeWidth);
+		for (const segment of next) {
+			wrapped.push(truncateToWidth(segment, safeWidth));
+		}
+	}
+
+	return wrapped;
+}
+
+function formatScrollInfo(above: number, below: number): string {
+	const parts: string[] = [];
+	if (above > 0) {
+		parts.push(`↑ ${above} more`);
+	}
+	if (below > 0) {
+		parts.push(`↓ ${below} more`);
+	}
+	return parts.join(" • ");
+}
+
+function buildBtwOverlayLines(
+	theme: BtwTheme,
+	width: number,
+	scrollOffset: number,
+	state: { slots: BtwSlot[]; exchangeCount: number; widgetStatus: string | null },
+): { lines: string[]; maxOffset: number } {
+	const helpers = buildWidgetThemeHelpers(theme);
+	const header = [
+		theme.bold("💭 BTW thread"),
+		theme.fg("dim", "Scrollable full side conversation. The widget above the editor stays compact."),
+		"",
+	];
+	const body: string[] = [];
+
+	if (state.slots.length === 0) {
+		body.push(theme.fg("dim", "No BTW thread to show."));
+	} else {
+		const hiddenCompleted = Math.max(0, state.exchangeCount - state.slots.length);
+		body.push(
+			theme.fg(
+				"dim",
+				`${state.exchangeCount} saved exchange${state.exchangeCount === 1 ? "" : "s"} · ${state.slots.length} visible slot${state.slots.length === 1 ? "" : "s"}${hiddenCompleted > 0 ? ` · ${hiddenCompleted} restored` : ""}`,
+			),
+		);
+		body.push("");
+
+		for (let i = 0; i < state.slots.length; i++) {
+			if (i > 0) {
+				body.push(helpers.dim("│ ───"));
+			}
+			body.push(...buildSlotLines(state.slots[i], helpers));
+		}
+	}
+
+	if (state.widgetStatus) {
+		body.push("");
+		body.push(`${helpers.dim("│ ")}${helpers.warning(state.widgetStatus)}`);
+	}
+
+	const wrappedBody = wrapBtwLines(body, Math.max(20, width - 2));
+	const maxOffset = Math.max(0, wrappedBody.length - BTW_OVERLAY_VIEWPORT_HEIGHT);
+	const start = Math.max(0, Math.min(scrollOffset, maxOffset));
+	const visible = wrappedBody.slice(start, start + BTW_OVERLAY_VIEWPORT_HEIGHT);
+	const below = Math.max(0, wrappedBody.length - (start + BTW_OVERLAY_VIEWPORT_HEIGHT));
+	const footerInfo = formatScrollInfo(start, below);
+	const footer = theme.fg(
+		"dim",
+		`[↑↓/j/k] scroll • [pgup/pgdn] jump • [home/end] ends • [esc/q] close${footerInfo ? ` • ${footerInfo}` : ""}`,
+	);
+
+	return {
+		lines: wrapBtwLines([...header, ...visible, "", footer], Math.max(20, width - 2)),
+		maxOffset,
+	};
+}
+
+function getBtwOverlayAction(data: string, scrollOffset: number, maxOffset: number): number | "close" | null {
+	const { key, matchesKey } = getPiTui();
+
+	if (matchesKey(data, key.escape) || data === "q" || data === " " || matchesKey(data, key.enter)) {
+		return "close";
+	}
+
+	if (matchesKey(data, key.up) || data === "k" || matchesKey(data, key.ctrl("p"))) {
+		return Math.max(0, scrollOffset - 1);
+	}
+
+	if (matchesKey(data, key.down) || data === "j" || matchesKey(data, key.ctrl("n"))) {
+		return Math.min(maxOffset, scrollOffset + 1);
+	}
+
+	if (data === "\u001b[5~") {
+		return Math.max(0, scrollOffset - BTW_OVERLAY_VIEWPORT_HEIGHT);
+	}
+
+	if (data === "\u001b[6~") {
+		return Math.min(maxOffset, scrollOffset + BTW_OVERLAY_VIEWPORT_HEIGHT);
+	}
+
+	if (data === "g" || data === "\u001b[H") {
+		return 0;
+	}
+
+	if (data === "G" || data === "\u001b[F") {
+		return maxOffset;
+	}
+
+	return null;
 }
 
 /** Remove a slot and re-render after abort. */
@@ -359,6 +543,7 @@ export default function (pi: ExtensionAPI) {
 	let pendingThread: BtwDetails[] = [];
 	let slots: BtwSlot[] = [];
 	let widgetStatus: string | null = null;
+	let activeOverlay: ActiveBtwOverlay | null = null;
 
 	function abortActiveSlots() {
 		for (const slot of slots) {
@@ -369,6 +554,8 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	function renderWidget(ctx: ExtensionContext | ExtensionCommandContext) {
+		activeOverlay?.requestRender();
+
 		if (!ctx.hasUI) {
 			return;
 		}
@@ -381,36 +568,104 @@ export default function (pi: ExtensionAPI) {
 		ctx.ui.setWidget(
 			"btw",
 			(_tui, theme) => {
-				const helpers: WidgetThemeHelpers = {
-					dim: (text: string) => theme.fg("dim", text),
-					success: (text: string) => theme.fg("success", text),
-					italic: (text: string) => theme.fg("dim", theme.italic(text)),
-					warning: (text: string) => theme.fg("warning", text),
-				};
-
+				const helpers = buildWidgetThemeHelpers(theme);
 				const parts: string[] = [];
 				const title = " 💭 btw ";
-				const hint = " /btw:clear dismiss · /btw:inject send ";
-				const lineWidth = Math.max(22, 68 - title.length - hint.length);
+				const hint = " /btw:open view · /btw:inject send · /btw:clear dismiss ";
+				const frameWidth = 88;
+				const lineWidth = Math.max(12, frameWidth - title.length - hint.length);
+				const visibleSlots = slots.slice(-BTW_WIDGET_MAX_VISIBLE_SLOTS);
+				const hiddenSlotCount = Math.max(0, slots.length - visibleSlots.length);
 
 				parts.push(helpers.dim(`╭${title}${"─".repeat(lineWidth)}${hint}╮`));
+				parts.push(
+					`${helpers.dim("│ ")}${helpers.dim(`${pendingThread.length} exchange${pendingThread.length === 1 ? "" : "s"} in thread · showing latest ${visibleSlots.length}`)}`,
+				);
 
-				for (let i = 0; i < slots.length; i++) {
+				if (hiddenSlotCount > 0) {
+					parts.push(
+						`${helpers.dim("│ ")}${helpers.dim(`… ${hiddenSlotCount} earlier slot${hiddenSlotCount === 1 ? "" : "s"} hidden — /btw:open`)}`,
+					);
+				}
+
+				for (let i = 0; i < visibleSlots.length; i++) {
 					if (i > 0) {
 						parts.push(helpers.dim("│ ───"));
 					}
-					renderSlotLines(slots[i], parts, helpers);
+					appendCompactSlotPreview(visibleSlots[i], parts, helpers);
 				}
 
 				if (widgetStatus) {
 					parts.push(`${helpers.dim("│ ")}${helpers.warning(widgetStatus)}`);
 				}
 
-				parts.push(helpers.dim(`╰${"─".repeat(68)}╯`));
-
+				parts.push(helpers.dim(`╰${"─".repeat(frameWidth)}╯`));
 				return new Text(parts.join("\n"), 0, 0);
 			},
 			{ placement: "aboveEditor" },
+		);
+	}
+
+	async function openBtwOverlay(ctx: ExtensionContext | ExtensionCommandContext) {
+		if (!ctx.hasUI || typeof ctx.ui.custom !== "function") {
+			notify(ctx, "BTW overlay is unavailable in this pi runtime.", "warning");
+			return;
+		}
+
+		if (slots.length === 0) {
+			notify(ctx, "No BTW thread to show.", "warning");
+			return;
+		}
+
+		await ctx.ui.custom(
+			(tui, theme, _keybindings, done) => {
+				const overlay: ActiveBtwOverlay = {
+					scrollOffset: 0,
+					requestRender: tui.requestRender,
+				};
+				activeOverlay = overlay;
+
+				return {
+					render(width: number) {
+						const { lines, maxOffset } = buildBtwOverlayLines(theme, width, overlay.scrollOffset, {
+							slots,
+							exchangeCount: pendingThread.length,
+							widgetStatus,
+						});
+						overlay.scrollOffset = Math.max(0, Math.min(overlay.scrollOffset, maxOffset));
+						return lines;
+					},
+					handleInput(data: string) {
+						const { maxOffset } = buildBtwOverlayLines(theme, 80, overlay.scrollOffset, {
+							slots,
+							exchangeCount: pendingThread.length,
+							widgetStatus,
+						});
+						const action = getBtwOverlayAction(data, overlay.scrollOffset, maxOffset);
+
+						if (action === null) {
+							return;
+						}
+
+						if (action === "close") {
+							done(undefined);
+							return;
+						}
+
+						overlay.scrollOffset = action;
+						tui.requestRender();
+					},
+					dispose() {
+						if (activeOverlay === overlay) {
+							activeOverlay = null;
+						}
+					},
+				};
+			},
+			{
+				overlay: true,
+				overlayOptions: { anchor: "center", width: BTW_OVERLAY_WIDTH, maxHeight: BTW_OVERLAY_MAX_HEIGHT },
+			},
 		);
 	}
 
@@ -722,6 +977,10 @@ export default function (pi: ExtensionAPI) {
 		notify(ctx, "Cleared BTW thread.", "info");
 	};
 
+	const btwOpenHandler = async (_args: string, ctx: ExtensionCommandContext) => {
+		await openBtwOverlay(ctx);
+	};
+
 	const btwInjectHandler = async (args: string, ctx: ExtensionCommandContext) => {
 		if (pendingThread.length === 0) {
 			notify(ctx, "No BTW thread to inject.", "warning");
@@ -769,13 +1028,18 @@ export default function (pi: ExtensionAPI) {
 	// ── Register /btw commands ────────────────────────────────────────────────
 
 	pi.registerCommand("btw", {
-		description: "Side conversation in a widget above the editor. Add --save to persist a visible note.",
+		description: "Side conversation in a compact widget above the editor. Add --save to persist a visible note.",
 		handler: btwHandler,
 	});
 
 	pi.registerCommand("btw:new", {
 		description: "Start a fresh BTW thread. Optionally ask the first question immediately.",
 		handler: btwNewHandler,
+	});
+
+	pi.registerCommand("btw:open", {
+		description: "Open the full BTW thread in a scrollable overlay.",
+		handler: btwOpenHandler,
 	});
 
 	pi.registerCommand("btw:clear", {
@@ -803,6 +1067,11 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("qq:new", {
 		description: "Start a fresh QQ thread. Alias for /btw:new.",
 		handler: btwNewHandler,
+	});
+
+	pi.registerCommand("qq:open", {
+		description: "Open the full QQ thread in a scrollable overlay. Alias for /btw:open.",
+		handler: btwOpenHandler,
 	});
 
 	pi.registerCommand("qq:clear", {

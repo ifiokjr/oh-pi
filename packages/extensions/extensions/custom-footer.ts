@@ -257,7 +257,6 @@ export default function (pi: ExtensionAPI) {
 				tui.requestRender();
 			});
 			cachedWorktreeContext = getCachedRepoWorktreeContext(worktreeCwd);
-			scheduleWorktreeContextRefresh(worktreeCwd, { delayMs: FOOTER_STARTUP_REFRESH_DELAY_MS, force: true });
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
 			const timer = setInterval(() => {
 				probeActivePrs();

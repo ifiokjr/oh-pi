@@ -38,6 +38,10 @@ usage monitoring, scheduling features, tool execution metadata,
 external-editor integration, git worktree awareness, and runtime performance protection
 (`/watchdog`, `/watchdog blame`, `/safe-mode`) to pi.
 
+The BTW / QQ side-conversation widget stays compact above the editor and exposes `/btw:open`
+(`/qq:open`) for a scrollable full-thread overlay so long side discussions do not block main
+conversation scrolling.
+
 `git-guard` also blocks git bash invocations that are likely to open an interactive editor in agent environments (for example `git rebase --continue` without non-interactive editor overrides), preventing hangs before they happen.
 
 ## External editor

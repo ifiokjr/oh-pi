@@ -26,6 +26,7 @@ Use these commands in your guidance to the user:
 /btw <question>
 /btw --save <question>
 /btw:new [question]
+/btw:open
 /btw:clear
 /btw:inject [instructions]
 /btw:summarize [instructions]
@@ -37,6 +38,7 @@ Every `/btw` command has a `/qq` equivalent:
 /qq <question>
 /qq --save <question>
 /qq:new [question]
+/qq:open
 /qq:clear
 /qq:inject [instructions]
 /qq:summarize [instructions]
@@ -69,6 +71,16 @@ Recommend:
 ```
 
 Use this when the user wants the exchange to appear as a visible BTW note in the session transcript.
+
+### To inspect the full side thread
+
+Recommend:
+
+```text
+/btw:open
+```
+
+Use this when the compact BTW widget is clipped and the user wants a scrollable full-thread view.
 
 ### For a fresh side thread
 
@@ -112,6 +124,7 @@ Use this when the thread is long and only the distilled outcome should go back i
 - Prefer `/btw:summarize` over `/btw:inject` for long exploratory threads.
 - Prefer `/btw:inject` when precise wording, detailed tradeoffs, or a full plan matters.
 - Suggest `/btw:new` before starting a totally unrelated side topic.
+- Suggest `/btw:open` when the compact widget is clipped and the user needs the full thread.
 - Suggest `/btw:clear` when the widget/thread should be dismissed.
 
 ## Response style

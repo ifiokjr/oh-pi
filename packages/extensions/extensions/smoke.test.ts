@@ -28,7 +28,9 @@ describe("extensions runtime smoke tests", () => {
 		btwExtension(harness.pi as never);
 
 		expect(harness.commands.has("btw")).toBe(true);
+		expect(harness.commands.has("btw:open")).toBe(true);
 		expect(harness.commands.has("qq")).toBe(true);
+		expect(harness.commands.has("qq:open")).toBe(true);
 
 		await harness.commands.get("btw").handler("what changed?", harness.ctx);
 		expect(harness.notifications.some((item) => item.msg.includes("No active model selected"))).toBe(true);
