@@ -72,7 +72,7 @@ name: scout
 description: Fast codebase recon
 tools: read, grep, find, ls, bash, mcp:chrome-devtools  # mcp: requires pi-mcp-adapter
 extensions:                 # absent=all, empty=none, csv=allowlist
-model: claude-haiku-4-5
+category: quick-discovery   # optional delegated routing category
 thinking: high               # off, minimal, low, medium, high, xhigh
 skill: safe-bash, chrome-devtools  # comma-separated skills to inject
 output: context.md           # writes to {chain_dir}/context.md
@@ -85,6 +85,8 @@ Your system prompt goes here (the markdown body after frontmatter).
 ```
 
 The `thinking` field sets a default extended thinking level for the agent. At runtime it's appended as a `:level` suffix to the model string (e.g., `claude-sonnet-4-5:high`). If the model already has a thinking suffix (from a chain-clarify override), the agent's default is not double-applied.
+
+The optional `category` field lets agents participate in delegated startup routing. When a runtime override or explicit `model` is not present, subagents can resolve a concrete model from `~/.pi/agent/extensions/adaptive-routing/config.json`.
 
 **Extension sandboxing**
 

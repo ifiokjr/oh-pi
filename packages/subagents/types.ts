@@ -87,6 +87,8 @@ export interface SingleResult {
 	messages: Message[];
 	usage: Usage;
 	model?: string;
+	modelSource?: "runtime-override" | "frontmatter-model" | "delegated-category" | "session-default";
+	modelCategory?: string;
 	error?: string;
 	/** Whether the subagent was aborted via signal (vs failed naturally). */
 	aborted?: boolean;
@@ -215,6 +217,8 @@ export interface RunSyncOptions {
 	share?: boolean;
 	/** Override the agent's default model (format: "provider/id" or just "id") */
 	modelOverride?: string;
+	modelSource?: SingleResult["modelSource"];
+	modelCategory?: string;
 	/** Skills to inject (overrides agent default if provided) */
 	skills?: string[];
 }

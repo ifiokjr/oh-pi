@@ -105,7 +105,7 @@ export const SubagentParams = Type.Object({
 	config: Type.Optional(
 		Type.Any({
 			description:
-				"Agent or chain config for create/update. Agent: name, description, scope ('user'|'project', default 'user'), systemPrompt, model, tools (comma-separated), extensions (comma-separated), skills (comma-separated), thinking, output, reads, progress. Chain: name, description, scope, steps (array of {agent, task?, output?, reads?, model?, skills?, progress?}). Presence of 'steps' creates a chain instead of an agent.",
+				"Agent or chain config for create/update. Agent: name, description, scope ('user'|'project', default 'user'), systemPrompt, model, category, tools (comma-separated), extensions (comma-separated), skills (comma-separated), thinking, output, reads, progress. Chain: name, description, scope, steps (array of {agent, task?, output?, reads?, model?, skills?, progress?}). Presence of 'steps' creates a chain instead of an agent.",
 		}),
 	),
 	tasks: Type.Optional(Type.Array(TaskItem, { description: "PARALLEL mode: [{agent, task}, ...]" })),

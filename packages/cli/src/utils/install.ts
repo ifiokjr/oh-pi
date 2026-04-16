@@ -3,6 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } fr
 import { basename, dirname, join } from "node:path";
 import { type OhPConfig, resolvePiAgentDir } from "@ifi/oh-pi-core";
 import {
+	writeAdaptiveRoutingConfig,
 	writeAgents,
 	writeExtensions,
 	writeKeybindings,
@@ -97,6 +98,7 @@ export function applyConfig(config: OhPConfig) {
 	writeKeybindings(agentDir, config);
 	writeAgents(agentDir, config);
 	writeExtensions(agentDir, config);
+	writeAdaptiveRoutingConfig(agentDir, config);
 	writePrompts(agentDir, config);
 	writeSkills(agentDir, config);
 	writeTheme(agentDir, config);

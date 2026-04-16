@@ -128,6 +128,20 @@ Ctrl+Shift+A                Open colony details panel
 /colony Refactor auth system from session-based to JWT, maintaining API compatibility
 ```
 
+## Delegated Routing Categories
+
+When `@ifi/pi-extension-adaptive-routing` is installed, colony castes and worker classes can resolve models from delegated startup categories in `~/.pi/agent/extensions/adaptive-routing/config.json`.
+
+Default categories:
+
+- scout → `quick-discovery`
+- worker/backend → `implementation-default`
+- soldier/review → `review-critical`
+- design → `visual-engineering`
+- multimodal → `multimodal-default`
+
+Explicit `ant_colony` model overrides still win over delegated routing.
+
 ## Usage Tracking Integration
 
 Ant inference usage (tokens + cost) is streamed to the `usage-tracker` extension via `pi.events` (`usage:record`).

@@ -175,12 +175,23 @@ export function boltIcon(): string {
 export function buildReport(state: ColonyState): string {
 	const m = state.metrics;
 	const elapsed = state.finishedAt ? formatDuration(state.finishedAt - state.createdAt) : "?";
+	const routingSummary = Array.from(
+		new Set(
+			state.ants
+				.filter((ant) => ant.model)
+				.map(
+					(ant) =>
+						`${ant.caste}: ${ant.model}${ant.routeSource ? ` (${ant.routeSource}${ant.routeCategory ? `:${ant.routeCategory}` : ""})` : ""}`,
+				),
+		),
+	);
 	return [
 		`## ${antIcon()} Ant Colony Report`,
 		`**Goal:** ${state.goal}`,
 		`**Status:** ${statusIcon(state.status)} ${state.status} │ ${formatCost(m.totalCost)}`,
 		`**Duration:** ${elapsed}`,
 		`**Tasks:** ${m.tasksDone}/${m.tasksTotal} done${m.tasksFailed > 0 ? `, ${m.tasksFailed} failed` : ""}`,
+		...(routingSummary.length > 0 ? [`**Routing:** ${routingSummary.join(" │ ")}`] : []),
 		"",
 		...state.tasks.filter((t) => t.status === "done").map((t) => `- ${checkMark()} **${t.title}**`),
 		...state.tasks

@@ -52,6 +52,9 @@ function buildDetailLines(
 	const progress = agent.defaultProgress ? "on" : "off";
 
 	lines.push(renderFieldLine("Model:", agent.model ?? "default", contentWidth, theme));
+	if (agent.extraFields?.category) {
+		lines.push(renderFieldLine("Category:", agent.extraFields.category, contentWidth, theme));
+	}
 	lines.push(renderFieldLine("Thinking:", agent.thinking ?? "off", contentWidth, theme));
 	lines.push(renderFieldLine("Tools:", tools, contentWidth, theme));
 	lines.push(renderFieldLine("MCP:", mcp, contentWidth, theme));

@@ -1,7 +1,7 @@
 ---
 name: worker
 description: General-purpose subagent with full capabilities, isolated context
-model: claude-sonnet-4-6
+category: implementation-default
 defaultReads: context.md, plan.md
 defaultProgress: true
 ---

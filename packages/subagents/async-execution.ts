@@ -24,6 +24,7 @@ import type { RunnerStep } from "./parallel-utils.js";
 import { resolvePiPackageRoot } from "./pi-spawn.js";
 import { buildSkillInjection, normalizeSkillInput, resolveSkills } from "./skills.js";
 import { type ArtifactConfig, type Details, type MaxOutputConfig, ASYNC_DIR, RESULTS_DIR } from "./types.js";
+import { resolveSubagentModelResolution } from "./model-routing.js";
 
 const require = createRequire(import.meta.url);
 const piPackageRoot = resolvePiPackageRoot();
@@ -50,6 +51,8 @@ export interface AsyncExecutionContext {
 	pi: ExtensionAPI;
 	cwd: string;
 	currentSessionId: string;
+	currentModel?: string;
+	availableModels?: Array<{ provider: string; id: string; fullId: string }>;
 }
 
 export interface AsyncChainParams {
@@ -160,11 +163,16 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 		const outputPath = resolveSingleOutputPath(s.output, ctx.cwd, s.cwd ?? cwd);
 		const task = injectSingleOutputInstruction(s.task ?? "{previous}", outputPath);
 
+		let modelResolution = resolveSubagentModelResolution(a, ctx.availableModels ?? [], s.model);
+		if (!modelResolution.model && ctx.currentModel) {
+			modelResolution = { ...modelResolution, model: ctx.currentModel, source: "session-default" };
+		}
+
 		return {
 			agent: s.agent,
 			task,
 			cwd: s.cwd,
-			model: applyThinkingSuffix(s.model ?? a.model, a.thinking),
+			model: applyThinkingSuffix(modelResolution.model, a.thinking),
 			tools: a.tools,
 			extensions: a.extensions,
 			mcpDirectTools: a.mcpDirectTools,
@@ -270,6 +278,10 @@ export function executeAsyncSingle(id: string, params: AsyncSingleParams): Async
 	const runnerCwd = cwd ?? ctx.cwd;
 	const outputPath = resolveSingleOutputPath(params.output, ctx.cwd, cwd);
 	const taskWithOutputInstruction = injectSingleOutputInstruction(task, outputPath);
+	let modelResolution = resolveSubagentModelResolution(agentConfig, ctx.availableModels ?? [], undefined);
+	if (!modelResolution.model && ctx.currentModel) {
+		modelResolution = { ...modelResolution, model: ctx.currentModel, source: "session-default" };
+	}
 	const pid = spawnRunner(
 		{
 			id,
@@ -278,7 +290,7 @@ export function executeAsyncSingle(id: string, params: AsyncSingleParams): Async
 					agent,
 					task: taskWithOutputInstruction,
 					cwd,
-					model: applyThinkingSuffix(agentConfig.model, agentConfig.thinking),
+					model: applyThinkingSuffix(modelResolution.model, agentConfig.thinking),
 					tools: agentConfig.tools,
 					extensions: agentConfig.extensions,
 					mcpDirectTools: agentConfig.mcpDirectTools,

@@ -149,6 +149,8 @@ export async function runSync(
 		messages: [],
 		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
 		model: modelArg,
+		modelSource: options.modelSource,
+		modelCategory: options.modelCategory,
 		skills: resolvedSkills.length > 0 ? resolvedSkills.map((s) => s.name) : undefined,
 		skillsWarning: missingSkills.length > 0 ? `Skills not found: ${missingSkills.join(", ")}` : undefined,
 	};

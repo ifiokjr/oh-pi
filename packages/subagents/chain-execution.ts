@@ -34,6 +34,7 @@ import { runSync } from "./execution.js";
 import { buildChainSummary } from "./formatters.js";
 import { getFinalOutput, mapConcurrent } from "./utils.js";
 import { recordRun } from "./run-history.js";
+import { resolveSubagentModelResolution } from "./model-routing.js";
 import {
 	type AgentProgress,
 	type ArtifactConfig,
@@ -324,13 +325,19 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				// Assemble final task: prefix (READ/WRITE instructions) + task + suffix
 				taskStr = prefix + taskStr + suffix;
 
-				// Resolve model to full provider/model format for consistent display
 				const taskAgentConfig = agents.find((a) => a.name === task.agent);
 				const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
-				const effectiveModel =
-					(task.model ? resolveModelFullId(task.model, availableModels) : null) ??
-					resolveModelFullId(taskAgentConfig?.model, availableModels) ??
-					resolveModelFullId(inheritedModel, availableModels);
+				const explicitModel = task.model ? resolveModelFullId(task.model, availableModels) : undefined;
+				let modelResolution = taskAgentConfig
+					? resolveSubagentModelResolution(taskAgentConfig, availableModels, explicitModel)
+					: { model: explicitModel, source: explicitModel ? ("runtime-override" as const) : ("session-default" as const) };
+				if (!modelResolution.model && inheritedModel) {
+					modelResolution = {
+						...modelResolution,
+						model: resolveModelFullId(inheritedModel, availableModels),
+						source: "session-default",
+					};
+				}
 
 				const r = await runSync(ctx.cwd, agents, task.agent, taskStr, {
 					cwd: task.cwd ?? cwd,
@@ -341,7 +348,9 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 					share: shareEnabled,
 					artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
 					artifactConfig,
-					modelOverride: effectiveModel,
+					modelOverride: modelResolution.model,
+					modelSource: modelResolution.source,
+					modelCategory: modelResolution.category,
 					skills: behavior.skills === false ? [] : behavior.skills,
 					onUpdate: onUpdate
 						? (p) => {
@@ -480,11 +489,16 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 			// Assemble final task: prefix (READ/WRITE instructions) + task + suffix (progress, previous summary)
 			stepTask = prefix + stepTask + suffix;
 
-			// Resolve model: TUI override (already full format) or agent's model resolved to full format
-			const effectiveModel =
-				tuiOverride?.model ??
-				(seqStep.model ? resolveModelFullId(seqStep.model, availableModels) : null) ??
-				resolveModelFullId(agentConfig.model, availableModels);
+			const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
+			const explicitModel = tuiOverride?.model ?? (seqStep.model ? resolveModelFullId(seqStep.model, availableModels) : undefined);
+			let modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, explicitModel);
+			if (!modelResolution.model && inheritedModel) {
+				modelResolution = {
+					...modelResolution,
+					model: resolveModelFullId(inheritedModel, availableModels),
+					source: "session-default",
+				};
+			}
 
 			// Run step
 			const r = await runSync(ctx.cwd, agents, seqStep.agent, stepTask, {
@@ -496,7 +510,9 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				share: shareEnabled,
 				artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
 				artifactConfig,
-				modelOverride: effectiveModel,
+				modelOverride: modelResolution.model,
+				modelSource: modelResolution.source,
+				modelCategory: modelResolution.category,
 				skills: behavior.skills === false ? [] : behavior.skills,
 				onUpdate: onUpdate
 					? (p) => {

@@ -74,9 +74,9 @@ describe("discoverAgents", () => {
 		expect(names).toContain("multimodal-summariser");
 
 		const byName = new Map(result.agents.map((agent) => [agent.name, agent]));
-		expect(byName.get("artist")?.model).toBe("gemini-3.1-pro-high");
-		expect(byName.get("frontend-designer")?.model).toBe("claude-opus-4-6");
-		expect(byName.get("multimodal-summariser")?.model).toBe("gemini-3-flash");
+		expect(byName.get("artist")?.extraFields?.category).toBe("visual-engineering");
+		expect(byName.get("frontend-designer")?.extraFields?.category).toBe("visual-engineering");
+		expect(byName.get("multimodal-summariser")?.extraFields?.category).toBe("multimodal-default");
 		expect(result.projectAgentsDir).toBe(getSharedProjectAgentsDir(cwd));
 	});
 

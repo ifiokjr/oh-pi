@@ -24,6 +24,7 @@ import { adapt, defaultConcurrency, sampleSystem } from "./concurrency.js";
 import { buildImportGraph, type ImportGraph, taskDependsOn } from "./deps.js";
 import { preprocessMultimodalTask, shouldEscalateMultimodalRoute } from "./multimodal-routing.js";
 import { Nest } from "./nest.js";
+import { DEFAULT_COLONY_CATEGORIES, resolveColonyCategoryModel } from "./routing-config.js";
 import { makePheromoneId, makeTaskId, resetAntCounter, runDrone, spawnAnt } from "./spawner.js";
 import { type ColonyStorageOptions, cleanupEmptyColonyStorageDirs, resolveColonyStorageOptions } from "./storage.js";
 import type {
@@ -471,7 +472,15 @@ export function classifyError(errStr: string): string {
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Wave scheduler coordinates retries, budgets, and parallelism.
 async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 	const { nest, cwd, caste, signal, callbacks, currentModel, emitSignal } = opts;
-	const casteModel = opts.modelOverrides?.[caste] || currentModel;
+	const availableModels =
+		opts.modelRegistry?.getAvailable().map((model) => ({
+			provider: model.provider,
+			id: model.id,
+			fullId: `${model.provider}/${model.id}`,
+		})) ?? [];
+	const casteCategory = DEFAULT_COLONY_CATEGORIES[caste];
+	const casteDelegatedModel = resolveColonyCategoryModel(casteCategory, availableModels);
+	const casteModel = opts.modelOverrides?.[caste] || casteDelegatedModel.model || currentModel;
 	const baseConfig = { ...DEFAULT_ANT_CONFIGS[caste], model: casteModel };
 
 	// Budget-aware turn cap: if the budget planner recommends fewer turns, use that
@@ -525,9 +534,13 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 		}
 
 		const shouldUseCheapMultimodalFirst = caste === "worker" && task.workerClass === "multimodal";
+		const workerClassCategory = task.workerClass ? DEFAULT_COLONY_CATEGORIES[task.workerClass] : undefined;
+		const workerClassDelegatedModel = resolveColonyCategoryModel(workerClassCategory, availableModels);
 		let selectedModel =
 			caste === "worker"
-				? (task.workerClass ? opts.modelOverrides?.[task.workerClass] : undefined) || casteModel
+				? (task.workerClass ? opts.modelOverrides?.[task.workerClass] : undefined) ||
+					workerClassDelegatedModel.model ||
+					casteModel
 				: casteModel;
 		if (shouldUseCheapMultimodalFirst && opts.modelOverrides?.multimodal) {
 			selectedModel = opts.modelOverrides.multimodal;
@@ -539,6 +552,13 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 			taskId: task.id,
 			pid: null,
 			model: selectedModel,
+			routeSource:
+				(task.workerClass ? opts.modelOverrides?.[task.workerClass] : undefined) || opts.modelOverrides?.[caste]
+					? "override"
+					: workerClassDelegatedModel.model || casteDelegatedModel.model
+						? "delegated-category"
+						: "session-default",
+			routeCategory: workerClassDelegatedModel.model ? workerClassCategory : casteCategory,
 			usage: { input: 0, output: 0, cost: 0, turns: 0 },
 			startedAt: Date.now(),
 			finishedAt: null,

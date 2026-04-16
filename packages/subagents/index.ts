@@ -60,6 +60,7 @@ import { handleManagementAction } from "./agent-management.js";
 import { registerSubagentCommands } from "./command-registration.js";
 import { ensureAccessibleDir, expandTildePath, getSubagentSessionRoot, loadSubagentConfig } from "./bootstrap.js";
 import { createSubagentRuntimeMonitor } from "./runtime-monitor.js";
+import { resolveSubagentModelResolution } from "./model-routing.js";
 
 const STARTUP_CLEANUP_DELAY_MS = 250;
 
@@ -285,7 +286,17 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					};
 				}
 				const id = randomUUID();
-				const asyncCtx = { pi, cwd: ctx.cwd, currentSessionId: currentSessionId! };
+				const asyncCtx = {
+					pi,
+					cwd: ctx.cwd,
+					currentSessionId: currentSessionId!,
+					currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+					availableModels: ctx.modelRegistry.getAvailable().map((m) => ({
+						provider: m.provider,
+						id: m.id,
+						fullId: `${m.provider}/${m.id}`,
+					})),
+				};
 
 				if (hasChain && params.chain) {
 					const normalized = normalizeSkillInput(params.skill);
@@ -378,7 +389,17 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 						};
 					}
 					const id = randomUUID();
-					const asyncCtx = { pi, cwd: ctx.cwd, currentSessionId: currentSessionId! };
+					const asyncCtx = {
+						pi,
+						cwd: ctx.cwd,
+						currentSessionId: currentSessionId!,
+						currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+						availableModels: ctx.modelRegistry.getAvailable().map((m) => ({
+							provider: m.provider,
+							id: m.id,
+							fullId: `${m.provider}/${m.id}`,
+						})),
+					};
 					return executeAsyncChain(id, {
 						chain: chainResult.requestedAsync.chain,
 						agents,
@@ -422,7 +443,22 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				// Mutable copies for TUI modifications
 				let tasks = params.tasks.map((t) => t.task);
 				const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
-				const modelOverrides: (string | undefined)[] = params.tasks.map((t) => (t as { model?: string }).model ?? inheritedModel);
+				const availableModels = ctx.modelRegistry.getAvailable().map((m) => ({
+					provider: m.provider,
+					id: m.id,
+					fullId: `${m.provider}/${m.id}`,
+				}));
+				const modelResolutions = agentConfigs.map((config, i) => {
+					const resolution = resolveSubagentModelResolution(
+						config,
+						availableModels,
+						(params.tasks?.[i] as { model?: string } | undefined)?.model,
+					);
+					if (!resolution.model && inheritedModel) {
+						return { ...resolution, model: inheritedModel, source: "session-default" as const };
+					}
+					return resolution;
+				});
 				// Initialize skill overrides from task-level skill params (may be overridden by TUI)
 				const skillOverrides: (string[] | false | undefined)[] = params.tasks.map((t) =>
 					normalizeSkillInput((t as { skill?: string | string[] | boolean }).skill),
@@ -467,7 +503,13 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					tasks = result.templates;
 					for (let i = 0; i < result.behaviorOverrides.length; i++) {
 						const override = result.behaviorOverrides[i];
-						if (override?.model) modelOverrides[i] = override.model;
+						if (override?.model) {
+							modelResolutions[i] = {
+								model: override.model,
+								source: "runtime-override",
+								category: modelResolutions[i]?.category,
+							};
+						}
 						if (override?.skills !== undefined) skillOverrides[i] = override.skills;
 					}
 
@@ -486,13 +528,23 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 							};
 						}
 						const id = randomUUID();
-						const asyncCtx = { pi, cwd: ctx.cwd, currentSessionId: currentSessionId! };
+						const asyncCtx = {
+							pi,
+							cwd: ctx.cwd,
+							currentSessionId: currentSessionId!,
+							currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+							availableModels: ctx.modelRegistry.getAvailable().map((m) => ({
+								provider: m.provider,
+								id: m.id,
+								fullId: `${m.provider}/${m.id}`,
+							})),
+						};
 						// Convert parallel tasks to a chain with a single parallel step
 						const parallelTasks = params.tasks!.map((t, i) => ({
 							agent: t.agent,
 							task: tasks[i],
 							cwd: t.cwd,
-							...(modelOverrides[i] ? { model: modelOverrides[i] } : {}),
+							...(modelResolutions[i]?.model ? { model: modelResolutions[i]?.model } : {}),
 							...(skillOverrides[i] !== undefined ? { skill: skillOverrides[i] } : {}),
 						}));
 						return executeAsyncChain(id, {
@@ -527,7 +579,9 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 						artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
 						artifactConfig,
 						maxOutput: params.maxOutput,
-						modelOverride: modelOverrides[i],
+						modelOverride: modelResolutions[i]?.model,
+						modelSource: modelResolutions[i]?.source,
+						modelCategory: modelResolutions[i]?.category,
 						skills: effectiveSkills === false ? [] : effectiveSkills,
 						onUpdate: onUpdate
 							? (p) => {
@@ -608,7 +662,20 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				}
 
 				let task = params.task!;
-				let modelOverride: string | undefined = (params.model as string | undefined) ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined);
+				const availableModels = ctx.modelRegistry.getAvailable().map((m) => ({
+					provider: m.provider,
+					id: m.id,
+					fullId: `${m.provider}/${m.id}`,
+				}));
+				let modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, params.model as string | undefined);
+				if (!modelResolution.model && ctx.model) {
+					modelResolution = {
+						...modelResolution,
+						model: `${ctx.model.provider}/${ctx.model.id}`,
+						source: "session-default",
+					};
+				}
+				let modelOverride: string | undefined = modelResolution.model;
 				let skillOverride: string[] | false | undefined = normalizeSkillInput(params.skill);
 				// Normalize output: true means "use default" (same as undefined), false means disable
 				const rawOutput = params.output !== undefined ? params.output : agentConfig.output;
@@ -651,7 +718,14 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					// Apply TUI overrides
 					task = result.templates[0]!;
 					const override = result.behaviorOverrides[0];
-					if (override?.model) modelOverride = override.model;
+					if (override?.model) {
+						modelOverride = override.model;
+						modelResolution = {
+							model: override.model,
+							source: "runtime-override",
+							category: modelResolution.category,
+						};
+					}
 					if (override?.output !== undefined) effectiveOutput = override.output;
 					if (override?.skills !== undefined) skillOverride = override.skills;
 
@@ -670,7 +744,17 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 							};
 						}
 						const id = randomUUID();
-						const asyncCtx = { pi, cwd: ctx.cwd, currentSessionId: currentSessionId! };
+						const asyncCtx = {
+							pi,
+							cwd: ctx.cwd,
+							currentSessionId: currentSessionId!,
+							currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+							availableModels: ctx.modelRegistry.getAvailable().map((m) => ({
+								provider: m.provider,
+								id: m.id,
+								fullId: `${m.provider}/${m.id}`,
+							})),
+						};
 						return executeAsyncSingle(id, {
 							agent: params.agent!,
 							task,
@@ -705,6 +789,8 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					maxOutput: params.maxOutput,
 					onUpdate,
 					modelOverride,
+					modelSource: modelResolution.source,
+					modelCategory: modelResolution.category,
 					skills: effectiveSkills,
 				});
 				recordRun(params.agent!, cleanTask, r.exitCode, r.progressSummary?.durationMs ?? 0);

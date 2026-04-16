@@ -3,7 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OhPConfig } from "@ifi/oh-pi-core";
 import { afterEach, describe, expect, it } from "vitest";
-import { writeAgents, writeExtensions, writeModelConfig, writeProviderEnv } from "./writers.js";
+import {
+	writeAdaptiveRoutingConfig,
+	writeAgents,
+	writeExtensions,
+	writeModelConfig,
+	writeProviderEnv,
+} from "./writers.js";
 
 const tempDirs: string[] = [];
 
@@ -61,6 +67,32 @@ describe("writeExtensions", () => {
 
 		expect(existsSync(join(dir, "extensions", "spec", "index.ts"))).toBe(true);
 		expect(existsSync(join(dir, "extensions", "spec", "assets", "templates", "spec-template.md"))).toBe(true);
+	});
+});
+
+describe("writeAdaptiveRoutingConfig", () => {
+	it("writes delegated provider assignments for adaptive routing", () => {
+		const dir = makeTempDir();
+		writeAdaptiveRoutingConfig(
+			dir,
+			makeConfig({
+				adaptiveRouting: {
+					mode: "shadow",
+					categories: {
+						"quick-discovery": ["groq", "openai"],
+						"implementation-default": ["openai", "ollama-cloud"],
+					},
+				},
+			}),
+		);
+
+		const configPath = join(dir, "extensions", "adaptive-routing", "config.json");
+		expect(existsSync(configPath)).toBe(true);
+		const text = readFileSync(configPath, "utf8");
+		expect(text).toContain('"mode": "shadow"');
+		expect(text).toContain('"quick-discovery"');
+		expect(text).toContain('"preferredProviders"');
+		expect(text).toContain('"groq"');
 	});
 });
 

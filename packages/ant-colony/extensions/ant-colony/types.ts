@@ -87,6 +87,8 @@ export interface Ant {
 	taskId: string | null;
 	pid: number | null;
 	model: string;
+	routeSource?: "override" | "delegated-category" | "session-default";
+	routeCategory?: string;
 	usage: { input: number; output: number; cost: number; turns: number };
 	startedAt: number;
 	finishedAt: number | null;

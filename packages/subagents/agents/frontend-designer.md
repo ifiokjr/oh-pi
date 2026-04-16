@@ -2,7 +2,7 @@
 name: frontend-designer
 description: High-end frontend design specialist for distinctive, production-grade interfaces
 tools: read, grep, find, ls, bash, write
-model: claude-opus-4-6
+category: visual-engineering
 defaultReads: context.md, plan.md
 defaultProgress: true
 ---

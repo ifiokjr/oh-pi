@@ -55,11 +55,15 @@ export async function confirmApply(config: OhPConfig, env: EnvInfo) {
 			: t("confirm.providerStrategyReplace");
 
 	// ═══ Summary ═══
+	const adaptiveRoutingSummary = config.adaptiveRouting
+		? `${config.adaptiveRouting.mode} · ${Object.keys(config.adaptiveRouting.categories).length} categories`
+		: t("confirm.none");
 	const summary = [
 		`${t("confirm.providerStrategy")} ${chalk.cyan(providerStrategy)}`,
 		`${t("confirm.providers")}  ${chalk.cyan(providerNames)}`,
 		`${t("confirm.model")}      ${chalk.cyan(primaryModel)}`,
 		`${t("confirm.fallbackProviders")} ${chalk.cyan(fallbackProviders)}`,
+		`Adaptive routing ${chalk.cyan(adaptiveRoutingSummary)}`,
 		`${t("confirm.theme")}      ${chalk.cyan(config.theme)}`,
 		`${t("confirm.keybindings")}${chalk.cyan(config.keybindings)}`,
 		`${t("confirm.thinking")}   ${chalk.cyan(config.thinking)}`,
@@ -131,6 +135,9 @@ export async function confirmApply(config: OhPConfig, env: EnvInfo) {
 		`${chalk.gray("├── ")}AGENTS.md ${chalk.dim(config.agents)}`,
 		...(config.extensions.length > 0
 			? [`${chalk.gray("├── ")}extensions/ ${chalk.dim(`${config.extensions.length} items`)}`]
+			: []),
+		...(config.adaptiveRouting
+			? [`${chalk.gray("├── ")}extensions/adaptive-routing/config.json ${chalk.dim("provider assignments")}`]
 			: []),
 		...(config.prompts.length > 0
 			? [`${chalk.gray("├── ")}prompts/ ${chalk.dim(`${config.prompts.length} templates`)}`]

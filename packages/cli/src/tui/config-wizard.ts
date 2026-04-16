@@ -7,16 +7,18 @@ import { selectAgents } from "./agents-select.js";
 import { selectExtensions } from "./extension-select.js";
 import { selectKeybindings } from "./keybinding-select.js";
 import { type ProviderSetupResult, setupProviders } from "./provider-setup.js";
+import { setupAdaptiveRouting, summarizeAdaptiveRouting } from "./routing-setup.js";
 import { selectTheme } from "./theme-select.js";
 
 export type WizardBaseConfig = Pick<
 	OhPConfig,
 	"theme" | "keybindings" | "extensions" | "prompts" | "agents" | "thinking"
 >;
-type WizardStep = "providers" | "appearance" | "features" | "agents" | "finish";
+type WizardStep = "providers" | "routing" | "appearance" | "features" | "agents" | "finish";
 
 interface WizardState {
 	providerSetup: ProviderSetupResult | null;
+	adaptiveRouting: OhPConfig["adaptiveRouting"];
 	theme: string;
 	keybindings: string;
 	extensions: string[];
@@ -33,6 +35,10 @@ function summarizeAppearance(theme: string, keybindings: string): string {
 	return `${t("confirm.theme")} ${theme} · ${t("confirm.keybindings")} ${keybindings}`;
 }
 
+function summarizeRouting(config: OhPConfig["adaptiveRouting"]): string {
+	return `Routing ${summarizeAdaptiveRouting(config)}`;
+}
+
 function summarizeFeatures(extensions: string[]): string {
 	return t("custom.tabFeaturesHint", { count: extensions.length });
 }
@@ -47,6 +53,11 @@ function buildWizardOptions(state: WizardState) {
 			value: "providers" as const,
 			label: sectionLabel(t("custom.tabProviders"), !!state.providerSetup),
 			hint: summarizeProviders(state.providerSetup),
+		},
+		{
+			value: "routing" as const,
+			label: sectionLabel("Routing", !!state.providerSetup),
+			hint: summarizeRouting(state.adaptiveRouting),
 		},
 		{
 			value: "appearance" as const,
@@ -75,6 +86,7 @@ export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): 
 	const defaultExtensions = EXTENSIONS.filter((e) => e.default).map((e) => e.name);
 	const state: WizardState = {
 		providerSetup: null,
+		adaptiveRouting: undefined,
 		theme: initial.theme,
 		keybindings: initial.keybindings,
 		extensions: initial.extensions.length > 0 ? [...initial.extensions] : defaultExtensions,
@@ -97,6 +109,24 @@ export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): 
 
 		if (step === "providers") {
 			state.providerSetup = await setupProviders(env);
+			state.adaptiveRouting = await setupAdaptiveRouting([
+				...(env.existingProviders ?? []).map((name) => ({ name, apiKey: "none" })),
+				...state.providerSetup.providers,
+			]);
+			nextStep = "routing";
+			continue;
+		}
+
+		if (step === "routing") {
+			if (!state.providerSetup) {
+				p.log.warn(t("custom.needProviders"));
+				nextStep = "providers";
+				continue;
+			}
+			state.adaptiveRouting = await setupAdaptiveRouting([
+				...(env.existingProviders ?? []).map((name) => ({ name, apiKey: "none" })),
+				...state.providerSetup.providers,
+			]);
 			nextStep = "appearance";
 			continue;
 		}
@@ -135,6 +165,7 @@ export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): 
 			prompts: state.prompts,
 			agents: state.agents,
 			thinking: state.thinking,
+			adaptiveRouting: state.adaptiveRouting,
 		};
 	}
 }

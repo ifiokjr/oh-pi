@@ -1,6 +1,6 @@
 import { copyFileSync, existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { OhPConfig } from "@ifi/oh-pi-core";
+import type { AdaptiveRoutingSetupConfig, OhPConfig } from "@ifi/oh-pi-core";
 import { KEYBINDING_SCHEMES, MODEL_CAPABILITIES, PROVIDERS } from "@ifi/oh-pi-core";
 import { ensureDir, syncDir } from "./install.js";
 import { resources } from "./resources.js";
@@ -290,6 +290,36 @@ export function writeExtensions(agentDir: string, config: OhPConfig) {
 			}
 		}
 	}
+}
+
+function buildAdaptiveRoutingConfig(config: AdaptiveRoutingSetupConfig) {
+	const categories = Object.fromEntries(
+		Object.entries(config.categories).map(([category, providers]) => [
+			category,
+			{
+				preferredProviders: providers,
+			},
+		]),
+	);
+	return {
+		mode: config.mode,
+		delegatedRouting: {
+			enabled: true,
+			categories,
+		},
+	};
+}
+
+export function writeAdaptiveRoutingConfig(agentDir: string, config: OhPConfig) {
+	if (!config.adaptiveRouting) {
+		return;
+	}
+	const adaptiveRoutingDir = join(agentDir, "extensions", "adaptive-routing");
+	ensureDir(adaptiveRoutingDir);
+	writeFileSync(
+		join(adaptiveRoutingDir, "config.json"),
+		`${JSON.stringify(buildAdaptiveRoutingConfig(config.adaptiveRouting), null, 2)}\n`,
+	);
 }
 
 /** Copy selected prompt templates to the agent directory. */
