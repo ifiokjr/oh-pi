@@ -84,9 +84,9 @@ This is the most expensive focused startup-adjacent benchmark today and maps dir
 - `scheduler persisted store load (50 tasks)`
 - included indirectly by the full-stack startup cases
 
-**What to watch**
+**Latest mitigation**
 
-The scheduler store is capped, so this path is not the largest benchmark today, but it is on the hot startup path and should stay small. The runtime heartbeat also updates footer status, so repeated identical `pi-scheduler` status text should stay coalesced instead of being re-sent on every periodic tick.
+The shared status-bar cache now skips initial no-op `setStatus(key, undefined)` clears for unseen keys. That removes the idle startup status writes that still showed up in the runtime churn report for scheduler and watchdog while preserving real clears after a visible status had been shown.
 
 ### 3. `packages/extensions/extensions/custom-footer.ts`
 

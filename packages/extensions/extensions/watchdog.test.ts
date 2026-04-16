@@ -336,7 +336,7 @@ describe("watchdog extension", () => {
 		expect(ctx._statuses.get("safe-mode")).toBeUndefined();
 	});
 
-	it("coalesces repeated clean watchdog status clears", async () => {
+	it("skips repeated clean watchdog status clears when nothing was shown", async () => {
 		const pi = createMockPi();
 		const ctx = createMockCtx();
 		watchdogExtension(pi as any);
@@ -352,7 +352,7 @@ describe("watchdog extension", () => {
 		await vi.advanceTimersByTimeAsync(10_000);
 
 		const watchdogCalls = ctx._statusCalls.filter((call) => call.key === "watchdog");
-		expect(watchdogCalls).toEqual([{ key: "watchdog", value: undefined }]);
+		expect(watchdogCalls).toEqual([]);
 	});
 
 	it("resets watchdog history and clears alert status", async () => {
