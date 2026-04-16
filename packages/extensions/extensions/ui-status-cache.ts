@@ -34,6 +34,10 @@ export function createStatusBarState() {
 				return false;
 			}
 
+			if (!lastValues.has(key) && value === undefined) {
+				return false;
+			}
+
 			if (lastValues.has(key) && lastValues.get(key) === value) {
 				return false;
 			}
