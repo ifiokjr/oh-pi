@@ -15,6 +15,7 @@
 		"@types/node",
 		"@types/ws",
 		"@typescript/native-preview",
+		"@vitest/coverage-v8",
 		"chalk",
 		"croner",
 		"hono",
