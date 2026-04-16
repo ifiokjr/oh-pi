@@ -52,7 +52,8 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 | ------------------------------------------------ | ---------------------------------- | -------------------------------------- |
 | [`@ifi/oh-pi`](./packages/oh-pi)                 | One-command installer for all pkgs | `npx @ifi/oh-pi`                       |
 | [`@ifi/oh-pi-core`](./packages/core)             | Shared types, registries, i18n     | (library, not installed directly)      |
-| [`@ifi/oh-pi-extensions`](./packages/extensions)          | 14 extensions (see below)                   | `pi install npm:@ifi/oh-pi-extensions`      |
+| [`@ifi/oh-pi-extensions`](./packages/extensions)          | Core extension pack (see below)             | `pi install npm:@ifi/oh-pi-extensions`      |
+| [`@ifi/pi-extension-adaptive-routing`](./packages/adaptive-routing) | Optional adaptive + delegated routing       | `pi install npm:@ifi/pi-extension-adaptive-routing` |
 | [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)          | Multi-agent swarm extension                 | `pi install npm:@ifi/oh-pi-ant-colony`      |
 | [`@ifi/pi-extension-subagents`](./packages/subagents)     | Full-featured subagent delegation extension | `pi install npm:@ifi/pi-extension-subagents` |
 | [`@ifi/pi-plan`](./packages/plan)                         | Branch-aware planning mode extension        | `pi install npm:@ifi/pi-plan`               |
@@ -66,9 +67,9 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 | [`@ifi/oh-pi-skills`](./packages/skills)                  | 12 skill packs                              | `pi install npm:@ifi/oh-pi-skills`          |
 | [`@ifi/oh-pi-agents`](./packages/agents)                  | 5 AGENTS.md templates                       | (used by CLI only)                          |
 
-`@ifi/pi-provider-catalog`, `@ifi/pi-provider-cursor`, and `@ifi/pi-provider-ollama` stay opt-in
-for now and are **not** installed by `npx @ifi/oh-pi`. They are intentionally shipped as separate
-experimental provider packages.
+`@ifi/pi-extension-adaptive-routing`, `@ifi/pi-provider-catalog`, `@ifi/pi-provider-cursor`, and
+`@ifi/pi-provider-ollama` stay opt-in for now and are **not** installed by `npx @ifi/oh-pi`.
+They are intentionally shipped as separate optional packages.
 
 ### Native `/spec` Workflow
 
@@ -278,30 +279,16 @@ Agent: bash npm run dev
 
 **Commands:** `bg_status list` | `bg_status log --pid 12345` | `bg_status stop --pid 12345`
 
-### 🧭 Adaptive Routing (`adaptive-routing`) — **default: off**
+### 🧭 Adaptive Routing (`adaptive-routing`) — **optional package**
 
-Lets pi operate in a model-agnostic mode by choosing a model and thinking level per prompt based on
-prompt shape, user preferences, live provider headroom, and local fallback policy.
+Adaptive routing now ships as its own package so users can opt into routing behavior explicitly:
 
-**Key ideas:**
+```bash
+pi install npm:@ifi/pi-extension-adaptive-routing
+```
 
-- `shadow` mode suggests a route without changing the current model
-- `auto` mode applies the selected route before the turn starts
-- premium providers can be protected with reserve thresholds
-- route decisions, disagreements, and feedback are stored locally under shared pi storage
-- routed premium fallbacks can include future providers like Cursor when installed
-
-**Commands:**
-
-- `/route status`
-- `/route shadow`
-- `/route auto`
-- `/route off`
-- `/route explain`
-- `/route lock`
-- `/route unlock`
-- `/route feedback <category>`
-- `/route stats`
+It adds `/route` controls, local routing telemetry, and delegated startup categories that subagents
+and ant-colony can use for provider assignment when no explicit model override is set.
 
 ### 💰 Usage Tracker (`usage-tracker`) — **default: off**
 

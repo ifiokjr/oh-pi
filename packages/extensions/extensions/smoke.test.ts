@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
-import adaptiveRoutingExtension from "./adaptive-routing.js";
 import autoUpdateExtension from "./auto-update.js";
 import btwExtension from "./btw.js";
 import externalEditorExtension from "./external-editor.js";
@@ -86,12 +85,6 @@ describe("extensions runtime smoke tests", () => {
 				reason: expect.stringContaining("Interactive git command blocked"),
 			}),
 		);
-	});
-
-	it("registers adaptive routing commands without crashing", () => {
-		const harness = createExtensionHarness();
-		adaptiveRoutingExtension(harness.pi as never);
-		expect(harness.commands.has("route")).toBe(true);
 	});
 
 	it("registers external editor command and shortcut without crashing", () => {

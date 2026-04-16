@@ -1,9 +1,9 @@
 [
   {
-    "name": "design-premium-prefers-claude",
+    "name": "design-premium-prefers-openai-with-open-source-fallbacks",
     "prompt": "Design a polished settings page with better spacing, hierarchy, and visual tone.",
     "intent": "design",
-    "expectedModel": "anthropic/claude-opus-4.6",
+    "expectedModel": "openai/gpt-5.4",
     "expectedThinking": "high"
   },
   {
@@ -14,10 +14,10 @@
     "expectedThinking": "xhigh"
   },
   {
-    "name": "quick-question-prefers-cheap-tier",
+    "name": "quick-question-prefers-open-source-cheap-tier",
     "prompt": "What file registers the scheduler command?",
     "intent": "quick-qna",
-    "expectedModel": "google/gemini-2.5-flash",
-    "expectedThinking": "minimal"
+    "expectedModel": "groq/llama-3.3-70b-versatile",
+    "expectedThinking": "off"
   }
 ]

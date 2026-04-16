@@ -69,6 +69,18 @@ export interface FallbackGroupPolicy {
 	description?: string;
 }
 
+export interface DelegatedCategoryPolicy {
+	candidates?: string[];
+	preferredProviders?: string[];
+	fallbackGroup?: string;
+	defaultThinking?: RouteThinkingLevel;
+}
+
+export interface DelegatedRoutingConfig {
+	enabled: boolean;
+	categories: Record<string, DelegatedCategoryPolicy>;
+}
+
 export interface AdaptiveRoutingConfig {
 	mode: AdaptiveRoutingMode;
 	routerModels: string[];
@@ -79,6 +91,7 @@ export interface AdaptiveRoutingConfig {
 	taskClasses: Record<string, TaskClassPolicy>;
 	providerReserves: Partial<Record<string, ProviderReservePolicy>>;
 	fallbackGroups: Record<string, FallbackGroupPolicy>;
+	delegatedRouting: DelegatedRoutingConfig;
 }
 
 export interface PromptRouteClassification {

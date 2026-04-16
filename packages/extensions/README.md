@@ -5,7 +5,6 @@ Core first-party extensions for pi.
 ## Included extensions
 
 This package includes extensions such as:
-- adaptive-routing / route
 - git-guard
 - auto-session-name
 - custom-footer
@@ -35,7 +34,7 @@ npx @ifi/oh-pi
 ## What it provides
 
 These extensions add commands, tools, UI widgets, background process handling,
-usage monitoring, adaptive model routing, scheduling features, tool execution metadata,
+usage monitoring, scheduling features, tool execution metadata,
 external-editor integration, git worktree awareness, and runtime performance protection
 (`/watchdog`, `/watchdog blame`, `/safe-mode`) to pi.
 
@@ -65,28 +64,6 @@ The `worktree` extension adds centralized git worktree awareness for oh-pi:
 
 pi-owned worktrees are stored under shared pi storage using a workspace-mirrored root so every repo
 gets a stable namespace. Each managed worktree records which pi instance/session created it and why.
-
-## Adaptive routing
-
-Adaptive routing adds a user-friendly `/route` command set and an opt-in model-agnostic mode (off by default) that can:
-
-- classify prompts with a cheap router model
-- choose model and thinking level before a turn starts
-- respect provider reserve thresholds and fallback groups
-- suggest routes in shadow mode before automatically applying them
-- persist local-only telemetry and feedback under shared pi storage
-
-Key commands:
-
-- `/route status`
-- `/route shadow`
-- `/route auto`
-- `/route off`
-- `/route explain`
-- `/route lock`
-- `/route unlock`
-- `/route feedback <category>`
-- `/route stats`
 
 ## Scheduler follow-ups
 

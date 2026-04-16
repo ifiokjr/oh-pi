@@ -259,7 +259,7 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 
 	pi.registerCommand("route", {
 		description:
-			"Adaptive routing controls: /route [status|on|off|shadow|auto|explain|lock|unlock|refresh|feedback|stats]",
+			"Adaptive routing controls: /route [status|on|off|shadow|auto|explain|assignments|lock|unlock|refresh|feedback|stats]",
 		async handler(args, ctx) {
 			const command = args.trim();
 			const [head, ...rest] = command.split(/\s+/).filter(Boolean);
@@ -334,6 +334,9 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 				}
 				case "stats":
 					await openOverlay(ctx, formatStats(computeStats(readTelemetryEvents())));
+					return;
+				case "assignments":
+					await openOverlay(ctx, buildDelegatedAssignmentLines(readAdaptiveRoutingConfig(), ctx));
 					return;
 				case "explain":
 					await openOverlay(ctx, buildExplanationLines(runtime.lastDecision, runtime.usage));
@@ -482,6 +485,75 @@ function buildExplanationLines(decision: RouteDecision | undefined, usage: Provi
 	}
 	lines.push("Press q, esc, space, or enter to close.");
 	return lines;
+}
+
+function buildDelegatedAssignmentLines(
+	config: ReturnType<typeof readAdaptiveRoutingConfig>,
+	ctx: ExtensionCommandContext,
+): string[] {
+	const lines = ["Delegated Routing Assignments"];
+	const delegated = config.delegatedRouting;
+	if (!delegated.enabled) {
+		lines.push("Delegated routing is disabled.");
+		return lines;
+	}
+	const availableModels = ctx.modelRegistry.getAvailable().map((model) => ({
+		provider: model.provider,
+		id: model.id,
+		fullId: `${model.provider}/${model.id}`,
+	}));
+	const categoryEntries = Object.entries(delegated.categories);
+	if (categoryEntries.length === 0) {
+		lines.push("No delegated categories configured.");
+		return lines;
+	}
+	for (const [category, policy] of categoryEntries) {
+		const resolvedModel = resolveDelegatedAssignmentModel(category, policy, config, availableModels);
+		lines.push(`- ${category}`);
+		if (policy.preferredProviders?.length) {
+			lines.push(`  providers: ${policy.preferredProviders.join(" → ")}`);
+		}
+		if (policy.fallbackGroup) {
+			lines.push(`  fallback group: ${policy.fallbackGroup}`);
+		}
+		if (policy.candidates?.length) {
+			lines.push(`  candidates: ${policy.candidates.join(" → ")}`);
+		}
+		if (policy.defaultThinking) {
+			lines.push(`  thinking: ${policy.defaultThinking}`);
+		}
+		lines.push(`  resolved: ${resolvedModel ?? "(no matching installed model)"}`);
+	}
+	lines.push("Press q, esc, space, or enter to close.");
+	return lines;
+}
+
+function resolveDelegatedAssignmentModel(
+	category: string,
+	policy: NonNullable<ReturnType<typeof readAdaptiveRoutingConfig>["delegatedRouting"]["categories"][string]>,
+	config: ReturnType<typeof readAdaptiveRoutingConfig>,
+	availableModels: Array<{ provider: string; id: string; fullId: string }>,
+): string | undefined {
+	const refs = [
+		...(policy.candidates ?? []),
+		...(policy.fallbackGroup ? (config.fallbackGroups[policy.fallbackGroup]?.candidates ?? []) : []),
+	];
+	for (const ref of refs) {
+		const match = ref.endsWith("/<best-available>")
+			? availableModels.find((model) => model.provider === ref.slice(0, ref.indexOf("/")))
+			: availableModels.find((model) => model.fullId === ref || model.id === ref);
+		if (match) {
+			return match.fullId;
+		}
+	}
+	for (const provider of policy.preferredProviders ?? []) {
+		const match = availableModels.find((model) => model.provider === provider);
+		if (match) {
+			return match.fullId;
+		}
+	}
+	const cheapFallback = category === "quick-discovery" ? availableModels.find((model) => model.provider === "google") : undefined;
+	return cheapFallback?.fullId;
 }
 
 async function openOverlay(ctx: ExtensionCommandContext, lines: string[]): Promise<void> {

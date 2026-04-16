@@ -1,0 +1,46 @@
+{
+  "name": "@ifi/pi-extension-adaptive-routing",
+  "version": "0.4.4",
+  "description": "Optional adaptive and delegated routing extension for pi.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "adaptive-routing",
+    "routing"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "files": [
+    "*.ts",
+    "*.json",
+    "README.md",
+    "!**/*.test.ts"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifiokjr/oh-pi.git",
+    "directory": "packages/adaptive-routing"
+  },
+  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/adaptive-routing",
+  "bugs": {
+    "url": "https://github.com/ifiokjr/oh-pi/issues"
+  },
+  "scripts": {
+    "build": "pnpm run typecheck && pnpm run test:worktree",
+    "typecheck": "tsgo --project ./tsconfig.json --noEmit",
+    "test:worktree": "vitest run ./*.test.ts"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-agent-core": ">=0.56.1",
+    "@mariozechner/pi-ai": ">=0.56.1",
+    "@mariozechner/pi-coding-agent": ">=0.56.1",
+    "@mariozechner/pi-tui": ">=0.56.1",
+    "@sinclair/typebox": "*"
+  }
+}

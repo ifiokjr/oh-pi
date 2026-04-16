@@ -23,14 +23,15 @@ The implementation should:
 
 **Language**: TypeScript (strict mode)  
 **Primary packages**:
-- `packages/extensions` — adaptive routing, safety/runtime extensions
+- `packages/adaptive-routing` — adaptive routing package
+- `packages/extensions` — safety/runtime extensions
 - `packages/subagents` — agent definitions, execution, management UI, schemas
 - `packages/ant-colony` — caste configs, spawning, budget planning, UI
 
 **Testing**: Vitest  
 **Build tool**: pnpm workspace  
 **Existing routing primitives**:
-- `packages/extensions/extensions/adaptive-routing/*`
+- `packages/adaptive-routing/*`
 - `docs/plans/adaptive-routing-mode.md`
 
 ## Design Constraints
@@ -122,10 +123,10 @@ This plan is complete when:
 - `packages/subagents/index.ts`
 - `packages/subagents/types.ts`
 - `packages/subagents/settings.ts` if chain inheritance changes are needed
-- `packages/extensions/extensions/adaptive-routing/*` shared helpers/config/types
+- `packages/adaptive-routing/*` shared helpers/config/types
 - tests:
   - `packages/subagents/tests/*`
-  - `packages/extensions/extensions/adaptive-routing/*.test.ts`
+  - `packages/adaptive-routing/*.test.ts`
 
 **Acceptance**:
 - subagent with category and no model gets deterministic routed model

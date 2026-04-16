@@ -11,6 +11,7 @@ export const INSTALLER_PACKAGES = [
 ];
 
 export const EXPERIMENTAL_PACKAGES = [
+	"@ifi/pi-extension-adaptive-routing",
 	"@ifi/pi-provider-catalog",
 	"@ifi/pi-provider-cursor",
 	"@ifi/pi-provider-ollama",

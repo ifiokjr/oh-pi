@@ -43,7 +43,7 @@ export const DEFAULT_INTENT_POLICIES: Record<RouteIntent, IntentRoutingPolicy> =
 	design: {
 		preferredTier: "premium",
 		defaultThinking: "high",
-		preferredProviders: ["anthropic"],
+		preferredProviders: ["openai", "ollama-cloud", "ollama"],
 		fallbackGroup: "design-premium",
 	},
 	architecture: {
@@ -69,22 +69,22 @@ export const DEFAULT_INTENT_POLICIES: Record<RouteIntent, IntentRoutingPolicy> =
 
 export const DEFAULT_FALLBACK_GROUPS: Record<string, FallbackGroupPolicy> = {
 	"cheap-router": {
-		candidates: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
-		description: "Low-cost classifier and quick-turn routing pool.",
+		candidates: ["openai/gpt-5-mini", "groq/llama-3.3-70b-versatile", "ollama-cloud/gpt-oss:20b"],
+		description: "Low-cost quick-turn pool with open-source fallbacks.",
 	},
 	"design-premium": {
-		candidates: ["anthropic/claude-opus-4.6", "openai/gpt-5.4"],
-		description: "Premium design-focused routing pool.",
+		candidates: ["openai/gpt-5.4", "ollama-cloud/qwen3-coder-next", "ollama-cloud/qwen3.5:397b"],
+		description: "Premium design-focused routing pool with strong open-model backups.",
 	},
 	"peak-reasoning": {
-		candidates: ["openai/gpt-5.4", "anthropic/claude-opus-4.6", "cursor-agent/<best-available>"],
-		description: "Peak reasoning pool with premium cross-provider fallbacks.",
+		candidates: ["openai/gpt-5.4", "ollama-cloud/qwen3-next:80b", "ollama-cloud/gpt-oss:120b", "cursor-agent/<best-available>"],
+		description: "Peak reasoning pool with open-source and premium cross-provider fallbacks.",
 	},
 };
 
 export const DEFAULT_ADAPTIVE_ROUTING_CONFIG: AdaptiveRoutingConfig = {
 	mode: "off",
-	routerModels: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
+	routerModels: ["openai/gpt-5-mini", "groq/llama-3.3-70b-versatile", "ollama-cloud/gpt-oss:20b"],
 	stickyTurns: 1,
 	telemetry: {
 		mode: "local",
@@ -98,23 +98,23 @@ export const DEFAULT_ADAPTIVE_ROUTING_CONFIG: AdaptiveRoutingConfig = {
 	taskClasses: {
 		quick: {
 			defaultThinking: "minimal",
-			candidates: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
+			candidates: ["openai/gpt-5-mini", "groq/llama-3.3-70b-versatile", "ollama-cloud/gpt-oss:20b"],
 			fallbackGroup: "cheap-router",
 		},
 		"design-premium": {
 			defaultThinking: "high",
-			candidates: ["anthropic/claude-opus-4.6", "openai/gpt-5.4"],
+			candidates: ["openai/gpt-5.4", "ollama-cloud/qwen3-coder-next", "ollama-cloud/qwen3.5:397b"],
 			fallbackGroup: "design-premium",
 		},
 		peak: {
 			defaultThinking: "xhigh",
-			candidates: ["openai/gpt-5.4", "anthropic/claude-opus-4.6", "cursor-agent/<best-available>"],
+			candidates: ["openai/gpt-5.4", "ollama-cloud/qwen3-next:80b", "ollama-cloud/gpt-oss:120b", "cursor-agent/<best-available>"],
 			fallbackGroup: "peak-reasoning",
 		},
 	},
 	providerReserves: {
 		openai: { minRemainingPct: 15, applyToTiers: ["premium", "peak"], allowOverrideForPeak: true },
-		anthropic: { minRemainingPct: 15, applyToTiers: ["premium", "peak"], allowOverrideForPeak: true },
+		groq: { minRemainingPct: 10, applyToTiers: ["cheap", "balanced"], allowOverrideForPeak: false },
 		"cursor-agent": {
 			minRemainingPct: 20,
 			applyToTiers: ["premium", "peak"],
@@ -123,4 +123,40 @@ export const DEFAULT_ADAPTIVE_ROUTING_CONFIG: AdaptiveRoutingConfig = {
 		},
 	},
 	fallbackGroups: DEFAULT_FALLBACK_GROUPS,
+	delegatedRouting: {
+		enabled: true,
+		categories: {
+			"quick-discovery": {
+				preferredProviders: ["groq", "ollama-cloud", "ollama", "openai"],
+				fallbackGroup: "cheap-router",
+				defaultThinking: "minimal",
+			},
+			"planning-default": {
+				preferredProviders: ["openai", "ollama-cloud", "ollama", "groq"],
+				defaultThinking: "medium",
+			},
+			"implementation-default": {
+				preferredProviders: ["openai", "ollama-cloud", "ollama", "groq"],
+				defaultThinking: "medium",
+			},
+			"research-default": {
+				preferredProviders: ["openai", "groq", "ollama-cloud", "ollama"],
+				defaultThinking: "medium",
+			},
+			"review-critical": {
+				preferredProviders: ["openai", "ollama-cloud", "ollama", "groq"],
+				fallbackGroup: "peak-reasoning",
+				defaultThinking: "high",
+			},
+			"visual-engineering": {
+				preferredProviders: ["ollama-cloud", "ollama", "openai", "groq"],
+				fallbackGroup: "design-premium",
+				defaultThinking: "high",
+			},
+			"multimodal-default": {
+				preferredProviders: ["ollama-cloud", "ollama", "openai", "groq"],
+				defaultThinking: "medium",
+			},
+		},
+	},
 };

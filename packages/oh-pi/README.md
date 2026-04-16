@@ -34,6 +34,13 @@ npx @ifi/oh-pi --remove             # uninstall all oh-pi packages from pi
 | `@ifi/oh-pi-skills`          | web-search, debug-helper, git-workflow, rust-workspace-bootstrap, and more                  |
 | `@ifi/oh-pi-agents`          | AGENTS.md templates for common roles                                                        |
 
+Optional packages that stay opt-in:
+
+- `@ifi/pi-extension-adaptive-routing` — install separately when you want `/route`, delegated startup routing, and provider assignment categories
+- `@ifi/pi-provider-catalog`
+- `@ifi/pi-provider-cursor`
+- `@ifi/pi-provider-ollama`
+
 ## Getting Started
 
 ```bash

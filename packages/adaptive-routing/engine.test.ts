@@ -39,21 +39,21 @@ const candidates = normalizeRouteCandidates([
 		maxTokens: 32768,
 	},
 	{
-		provider: "google",
-		id: "gemini-2.5-flash",
-		name: "Gemini 2.5 Flash",
-		api: "google-generative-ai",
-		baseUrl: "https://generativelanguage.googleapis.com",
-		reasoning: true,
-		input: ["text", "image"],
+		provider: "groq",
+		id: "llama-3.3-70b-versatile",
+		name: "Llama 3.3 70B Versatile",
+		api: "openai-completions",
+		baseUrl: "https://api.groq.com/openai/v1",
+		reasoning: false,
+		input: ["text"],
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-		contextWindow: 1048576,
-		maxTokens: 65536,
+		contextWindow: 128000,
+		maxTokens: 32768,
 	},
 ] as never);
 
 describe("adaptive routing engine", () => {
-	it("routes design-heavy prompts toward Claude premium models", () => {
+	it("routes design-heavy prompts toward non-Anthropic premium defaults when available", () => {
 		const classification = classifyPromptHeuristically(
 			"Design a polished dashboard with stronger hierarchy and visual tone.",
 		);
@@ -77,8 +77,8 @@ describe("adaptive routing engine", () => {
 			},
 		});
 
-		expect(decision?.selectedModel).toBe("anthropic/claude-opus-4.6");
-		expect(decision?.explanation.codes).toContain("intent_design_bias");
+		expect(decision?.selectedModel).toBe("openai/gpt-5.4");
+		expect(decision?.explanation.codes).toContain("premium_allowed");
 	});
 
 	it("protects low-quota providers when reserve thresholds are crossed", () => {
@@ -125,7 +125,7 @@ describe("adaptive routing engine", () => {
 					providers: {
 						anthropic: { confidence: "authoritative", remainingPct: 60 },
 						openai: { confidence: "authoritative", remainingPct: 60 },
-						google: { confidence: "unknown", remainingPct: undefined },
+						groq: { confidence: "unknown", remainingPct: undefined },
 					},
 					updatedAt: Date.now(),
 				},

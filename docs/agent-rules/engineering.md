@@ -63,6 +63,7 @@ packages/
   core/                   → @ifi/oh-pi-core (compiled library: types, registry, i18n)
   cli/                    → @ifi/oh-pi-cli (compiled binary: TUI configurator)
   extensions/             → @ifi/oh-pi-extensions (raw .ts extensions)
+  adaptive-routing/       → @ifi/pi-extension-adaptive-routing (optional raw .ts routing package)
   ant-colony/             → @ifi/oh-pi-ant-colony (raw .ts multi-agent swarm)
   themes/                 → @ifi/oh-pi-themes (JSON theme files)
   prompts/                → @ifi/oh-pi-prompts (markdown prompt templates)

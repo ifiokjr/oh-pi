@@ -8,7 +8,6 @@
   "pi": {
     "extensions": [
       "./extensions/watchdog.ts",
-      "./extensions/adaptive-routing.ts",
       "./extensions/auto-session-name.ts",
       "./extensions/auto-update.ts",
       "./extensions/bg-process.ts",

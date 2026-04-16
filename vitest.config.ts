@@ -17,6 +17,7 @@ export default defineConfig({
 		include: [
 			"scripts/**/*.test.ts",
 			"packages/core/src/**/*.test.ts",
+			"packages/adaptive-routing/**/*.test.ts",
 			"packages/cli/src/**/*.test.ts",
 			"packages/extensions/extensions/**/*.test.ts",
 			"packages/ant-colony/tests/**/*.test.ts",

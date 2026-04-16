@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
-import { loadJsonConfigFile, type NormalizedConfigResult } from "../config-loader.js";
+import { loadJsonConfigFile, type NormalizedConfigResult } from "./config-loader.js";
 import { DEFAULT_ADAPTIVE_ROUTING_CONFIG } from "./defaults.js";
 import type {
 	AdaptiveRoutingConfig,
@@ -9,6 +9,8 @@ import type {
 	AdaptiveRoutingPrivacyLevel,
 	AdaptiveRoutingTelemetryConfig,
 	AdaptiveRoutingTelemetryMode,
+	DelegatedCategoryPolicy,
+	DelegatedRoutingConfig,
 	FallbackGroupPolicy,
 	IntentRoutingPolicy,
 	ProviderReservePolicy,
@@ -84,6 +86,7 @@ function normalizeAdaptiveRoutingConfigWithWarnings(raw: unknown): NormalizedCon
 			taskClasses: normalizeTaskClasses(cfg.taskClasses, fallback.taskClasses),
 			providerReserves: normalizeProviderReserves(cfg.providerReserves, fallback.providerReserves),
 			fallbackGroups: normalizeFallbackGroups(cfg.fallbackGroups, fallback.fallbackGroups),
+			delegatedRouting: normalizeDelegatedRouting(cfg.delegatedRouting, fallback.delegatedRouting),
 		},
 		warnings,
 	};
@@ -277,6 +280,41 @@ function normalizeFallbackGroupPolicy(
 	return {
 		candidates,
 		description: normalizeOptionalString(value.description, fallback?.description),
+	};
+}
+
+function normalizeDelegatedRouting(value: unknown, fallback: DelegatedRoutingConfig): DelegatedRoutingConfig {
+	if (!value || typeof value !== "object") {
+		return {
+			enabled: fallback.enabled,
+			categories: { ...fallback.categories },
+		};
+	}
+	const cfg = value as Record<string, unknown>;
+	const categories = { ...fallback.categories };
+	if (cfg.categories && typeof cfg.categories === "object") {
+		for (const [name, rawPolicy] of Object.entries(cfg.categories as Record<string, unknown>)) {
+			if (!rawPolicy || typeof rawPolicy !== "object") {
+				continue;
+			}
+			categories[name] = normalizeDelegatedCategory(rawPolicy as Record<string, unknown>, categories[name]);
+		}
+	}
+	return {
+		enabled: typeof cfg.enabled === "boolean" ? cfg.enabled : fallback.enabled,
+		categories,
+	};
+}
+
+function normalizeDelegatedCategory(
+	value: Record<string, unknown>,
+	fallback?: DelegatedCategoryPolicy,
+): DelegatedCategoryPolicy {
+	return {
+		candidates: normalizeOptionalStringArray(value.candidates, fallback?.candidates),
+		preferredProviders: normalizeOptionalStringArray(value.preferredProviders, fallback?.preferredProviders),
+		fallbackGroup: normalizeOptionalString(value.fallbackGroup, fallback?.fallbackGroup),
+		defaultThinking: normalizeOptionalThinking(value.defaultThinking, fallback?.defaultThinking),
 	};
 }
 
