@@ -58,6 +58,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^3.2.4
         version: 3.2.4(vitest@3.2.4(@types/node@22.19.13)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.3))
+      tsx:
+        specifier: ^4.20.6
+        version: 4.21.0
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -95,7 +98,7 @@ importers:
         version: link:../analytics-db
       '@tanstack/react-query':
         specifier: ^5.74.0
-        version: 5.99.0(react@19.2.5)
+        version: 5.99.1(react@19.2.5)
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -1203,11 +1206,6 @@ packages:
       '@mariozechner/pi-tui': '>=0.56.1'
       '@sinclair/typebox': '*'
 
-  '@ifi/pi-shared-qna@0.4.4':
-    resolution: {integrity: sha512-zNHh5LMlim57x6h/31N3FakERggY2QzwTBnCEo9DloPh57PjHJ9z+9lk+8nM3ktOP0wZkcY8OHr2a2f8jNgV4w==}
-    peerDependencies:
-      '@mariozechner/pi-tui': '*'
-
   '@ifi/pi-spec@0.4.4':
     resolution: {integrity: sha512-BOSklndS4VOdBcf33n4jHbIygia0oe3V2w4L8TCh0LEBnOqCzUJzYC/6L/xr4qXyGK5w0RdJxa/qMm0l7RGFmg==}
     peerDependencies:
@@ -1866,11 +1864,11 @@ packages:
     peerDependencies:
       vite: 7.3.2
 
-  '@tanstack/query-core@5.99.0':
-    resolution: {integrity: sha512-3Jv3WQG0BCcH7G+7lf/bP8QyBfJOXeY+T08Rin3GZ1bshvwlbPt7NrDHMEzGdKIOmOzvIQmxjk28YEQX60k7pQ==}
+  '@tanstack/query-core@5.99.1':
+    resolution: {integrity: sha512-5E8xwxyWvr22yt7zvzP3KOZ5TUElOdVA45NP3/Ao1m9mvc9i18NLTDe9m3M00BH2DR5J20cv7xckMPlhKNs+vQ==}
 
-  '@tanstack/react-query@5.99.0':
-    resolution: {integrity: sha512-OY2bCqPemT1LlqJ8Y2CUau4KELnIhhG9Ol3ZndPbdnB095pRbPo1cHuXTndg8iIwtoHTgwZjyaDnQ0xD0mYwAw==}
+  '@tanstack/react-query@5.99.1':
+    resolution: {integrity: sha512-akg5GdwW70lvJvCqVHZ7tizGyc+TATjUzKX9RuF1xknhEe/1leofXk7YLYbrbRsuhNbHJBAayaQUMvvOFZ5L5g==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -2232,8 +2230,8 @@ packages:
   base64-js@1.5.1:
     resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
 
-  baseline-browser-mapping@2.10.19:
-    resolution: {integrity: sha512-qCkNLi2sfBOn8XhZQ0FXsT1Ki/Yo5P90hrkRamVFRS7/KV9hpfA4HkoWNU152+8w0zPjnxo5psx5NL3PSGgv5g==}
+  baseline-browser-mapping@2.10.20:
+    resolution: {integrity: sha512-1AaXxEPfXT+GvTBJFuy4yXVHWJBXa4OdbIebGN/wX5DlsIkU0+wzGnd2lOzokSk51d5LUmqjgBLRLlypLUqInQ==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
@@ -2886,8 +2884,8 @@ packages:
     resolution: {integrity: sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==}
     engines: {node: '>= 0.4'}
 
-  hasown@2.0.2:
-    resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
+  hasown@2.0.3:
+    resolution: {integrity: sha512-ej4AhfhfL2Q2zpMmLo7U1Uv9+PyhIZpgQLGT1F9miIGmiCJIoCgSmczFdrc97mWT4kVY72KA+WnnhJ5pghSvSg==}
     engines: {node: '>= 0.4'}
 
   highlight.js@10.7.3:
@@ -4859,16 +4857,12 @@ snapshots:
   '@ifi/pi-plan@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)':
     dependencies:
       '@ifi/pi-extension-subagents': 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)
-      '@ifi/pi-shared-qna': 0.4.4(@mariozechner/pi-tui@0.56.1)
+      '@ifi/pi-shared-qna': link:packages/shared-qna
       '@mariozechner/pi-agent-core': 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-ai': 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent': 0.56.1(ws@8.19.0)(zod@3.25.76)
       '@mariozechner/pi-tui': 0.56.1
       '@sinclair/typebox': 0.34.48
-
-  '@ifi/pi-shared-qna@0.4.4(@mariozechner/pi-tui@0.56.1)':
-    dependencies:
-      '@mariozechner/pi-tui': 0.56.1
 
   '@ifi/pi-spec@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.19.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.48)':
     dependencies:
@@ -5563,11 +5557,11 @@ snapshots:
       tailwindcss: 4.2.2
       vite: 7.3.2(@types/node@22.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.3)
 
-  '@tanstack/query-core@5.99.0': {}
+  '@tanstack/query-core@5.99.1': {}
 
-  '@tanstack/react-query@5.99.0(react@19.2.5)':
+  '@tanstack/react-query@5.99.1(react@19.2.5)':
     dependencies:
-      '@tanstack/query-core': 5.99.0
+      '@tanstack/query-core': 5.99.1
       react: 19.2.5
 
   '@testing-library/dom@10.4.1':
@@ -6003,7 +5997,7 @@ snapshots:
 
   base64-js@1.5.1: {}
 
-  baseline-browser-mapping@2.10.19: {}
+  baseline-browser-mapping@2.10.20: {}
 
   basic-ftp@5.3.0: {}
 
@@ -6050,7 +6044,7 @@ snapshots:
 
   browserslist@4.28.2:
     dependencies:
-      baseline-browser-mapping: 2.10.19
+      baseline-browser-mapping: 2.10.20
       caniuse-lite: 1.0.30001788
       electron-to-chromium: 1.5.340
       node-releases: 2.0.37
@@ -6552,7 +6546,7 @@ snapshots:
       get-proto: 1.0.1
       gopd: 1.2.0
       has-symbols: 1.1.0
-      hasown: 2.0.2
+      hasown: 2.0.3
       math-intrinsics: 1.1.0
 
   get-proto@1.0.1:
@@ -6614,7 +6608,7 @@ snapshots:
 
   has-symbols@1.1.0: {}
 
-  hasown@2.0.2:
+  hasown@2.0.3:
     dependencies:
       function-bind: 1.1.2
 

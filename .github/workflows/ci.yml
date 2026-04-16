@@ -309,7 +309,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: pnpm test:patch-coverage
+        run: pnpm tsx ./scripts/check-patch-coverage.ts --threshold 100 --lcov coverage/lcov.info
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4.6.2
