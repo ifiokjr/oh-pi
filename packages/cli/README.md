@@ -8,6 +8,7 @@ Interactive TUI configurator for `pi-coding-agent`.
 - providers and auth
 - models
 - provider/routing dashboard views for session, subagents, and ant-colony
+- direct optional package installs from the routing dashboard
 - extensions
 - prompts
 - skills

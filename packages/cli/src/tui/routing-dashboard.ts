@@ -1,8 +1,7 @@
-import { createRequire } from "node:module";
 import type { ProviderConfig } from "@ifi/oh-pi-core";
 import type { AdaptiveRoutingSetupConfig } from "../types.js";
-
-const require = createRequire(import.meta.url);
+import type { PiPackageInstallScope, PiPackageInstallState } from "../utils/pi-packages.js";
+import { detectPiPackageInstallScopes } from "../utils/pi-packages.js";
 
 export const ROUTING_CATEGORIES = [
 	{
@@ -83,7 +82,9 @@ export interface OptionalRoutingPackageState {
 	packageName: string;
 	label: string;
 	hint: string;
+	scope: PiPackageInstallScope;
 	installed: boolean;
+	selected: boolean;
 }
 
 interface RoutingDashboardOptions {
@@ -92,22 +93,38 @@ interface RoutingDashboardOptions {
 	packageStates?: OptionalRoutingPackageState[];
 }
 
-function defaultPackageResolver(packageName: string): boolean {
-	try {
-		require.resolve(`${packageName}/package.json`);
-		return true;
-	} catch {
-		return false;
-	}
+export function detectOptionalRoutingPackages(
+	detectStates: (packageNames: string[]) => PiPackageInstallState[] = detectPiPackageInstallScopes,
+	selectedPackages: string[] = [],
+): OptionalRoutingPackageState[] {
+	const selected = new Set(selectedPackages);
+	const states = new Map(
+		detectStates(OPTIONAL_ROUTING_PACKAGES.map((pkg) => pkg.packageName)).map((pkg) => [pkg.packageName, pkg]),
+	);
+	return OPTIONAL_ROUTING_PACKAGES.map((pkg) => {
+		const state = states.get(pkg.packageName);
+		const scope = state?.scope ?? "none";
+		return {
+			...pkg,
+			scope,
+			installed: scope !== "none",
+			selected: selected.has(pkg.packageName),
+		};
+	});
 }
 
-export function detectOptionalRoutingPackages(
-	resolvePackage: (packageName: string) => boolean = defaultPackageResolver,
-): OptionalRoutingPackageState[] {
-	return OPTIONAL_ROUTING_PACKAGES.map((pkg) => ({
-		...pkg,
-		installed: resolvePackage(pkg.packageName),
-	}));
+export function suggestOptionalRoutingPackages(providerNames: string[], config?: AdaptiveRoutingSetupConfig): string[] {
+	const packages: string[] = [];
+	if (config && config.mode !== "off") {
+		packages.push("@ifi/pi-extension-adaptive-routing");
+	}
+	if (providerNames.some((provider) => provider === "ollama" || provider === "ollama-cloud")) {
+		packages.push("@ifi/pi-provider-ollama");
+	}
+	if (providerNames.some((provider) => provider === "cursor" || provider === "cursor-agent")) {
+		packages.push("@ifi/pi-provider-cursor");
+	}
+	return [...new Set(packages)];
 }
 
 function mergeProviderConfigs(providers: ProviderConfig[]): ProviderConfig[] {
@@ -156,10 +173,20 @@ function resolveCategoryTarget(
 	return "session default";
 }
 
+function formatPackageState(pkg: OptionalRoutingPackageState): string {
+	if (pkg.installed) {
+		return `installed (${pkg.scope})`;
+	}
+	if (pkg.selected) {
+		return "selected for install";
+	}
+	return "not installed";
+}
+
 function buildOptionalPackageLines(packageStates: OptionalRoutingPackageState[]): string[] {
 	return packageStates.map((pkg) => {
-		const state = pkg.installed ? "installed" : "not installed";
-		return `- ${pkg.label}: ${state} — ${pkg.hint}`;
+		const installHint = pkg.installed || pkg.selected ? "" : ` · install with pi install npm:${pkg.packageName}`;
+		return `- ${pkg.label}: ${formatPackageState(pkg)} — ${pkg.hint}${installHint}`;
 	});
 }
 
@@ -191,19 +218,14 @@ function buildConsumerLines(
 	consumerKey: "subagents" | "colony",
 ): string[] {
 	const lines = [`${title}:`];
-	let hasConsumers = false;
 	for (const category of ROUTING_CATEGORIES) {
 		const consumers = category[consumerKey];
 		if (consumers.length === 0) {
 			continue;
 		}
-		hasConsumers = true;
 		lines.push(
 			`- ${consumers.join(", ")} → ${resolveCategoryTarget(category.name, providers, config)} (${category.label})`,
 		);
-	}
-	if (!hasConsumers) {
-		lines.push("- none");
 	}
 	return lines;
 }
