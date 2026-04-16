@@ -8,12 +8,38 @@ const { getAgentDir } = vi.hoisted(() => ({
 }));
 
 vi.mock("@mariozechner/pi-coding-agent", () => ({ getAgentDir }));
+vi.mock("@ifi/oh-pi-core", async () => {
+	return await import("../../core/src/model-intelligence.ts");
+});
+vi.mock("@ifi/pi-extension-adaptive-routing/delegated-runtime.ts", async () => {
+	return await import("../../adaptive-routing/delegated-runtime.ts");
+});
 
-import { resolveSubagentModelResolution } from "../model-routing.js";
+import { resolveSubagentModelResolution, toAvailableModelRefs } from "../model-routing.js";
 
 const sampleModels = [
-	{ provider: "google", id: "gemini-2.5-flash", fullId: "google/gemini-2.5-flash" },
-	{ provider: "openai", id: "gpt-5-mini", fullId: "openai/gpt-5-mini" },
+	{
+		provider: "google",
+		id: "gemini-2.5-flash",
+		name: "Gemini 2.5 Flash",
+		reasoning: true,
+		input: ["text", "image"],
+		contextWindow: 1_000_000,
+		maxTokens: 64_000,
+		cost: { input: 0.1, output: 0.4, cacheRead: 0, cacheWrite: 0 },
+		fullId: "google/gemini-2.5-flash",
+	},
+	{
+		provider: "openai",
+		id: "gpt-5-mini",
+		name: "GPT-5 Mini",
+		reasoning: true,
+		input: ["text", "image"],
+		contextWindow: 400_000,
+		maxTokens: 128_000,
+		cost: { input: 0.25, output: 2, cacheRead: 0, cacheWrite: 0 },
+		fullId: "openai/gpt-5-mini",
+	},
 ];
 
 afterEach(() => {
@@ -53,6 +79,7 @@ describe("resolveSubagentModelResolution", () => {
 						enabled: true,
 						categories: {
 							"quick-discovery": {
+								candidates: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
 								preferredProviders: ["google", "openai"],
 							},
 						},
@@ -80,6 +107,238 @@ describe("resolveSubagentModelResolution", () => {
 				source: "delegated-category",
 				category: "quick-discovery",
 			});
+		} finally {
+			rmSync(tempAgentDir, { recursive: true, force: true });
+		}
+	});
+
+	it("applies provider disables and per-subagent overrides", () => {
+		const tempAgentDir = mkdtempSync(join(tmpdir(), "subagent-routing-"));
+		getAgentDir.mockReturnValue(tempAgentDir);
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		writeFileSync(
+			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
+			JSON.stringify(
+				{
+					delegatedRouting: {
+						enabled: true,
+						categories: {
+							"quick-discovery": {
+								preferredProviders: ["google", "openai"],
+							},
+						},
+					},
+					delegatedModelSelection: {
+						disabledProviders: ["google"],
+						roleOverrides: {
+							"subagent:scout": {
+								preferredModels: ["openai/gpt-5-mini"],
+							},
+						},
+					},
+				},
+				null,
+				2,
+			),
+		);
+
+		try {
+			const result = resolveSubagentModelResolution(
+				{
+					name: "scout",
+					description: "Scout",
+					systemPrompt: "Prompt",
+					source: "builtin",
+					filePath: "/tmp/scout.md",
+					extraFields: { category: "quick-discovery" },
+				},
+				sampleModels,
+				undefined,
+				{ taskText: "Briefly inspect the repo and summarize the likely entry points." },
+			);
+			expect(result.model).toBe("openai/gpt-5-mini");
+			expect(result.source).toBe("delegated-category");
+		} finally {
+			rmSync(tempAgentDir, { recursive: true, force: true });
+		}
+	});
+
+	it("uses usage snapshots plus latency telemetry for delegated selection", () => {
+		const tempAgentDir = mkdtempSync(join(tmpdir(), "subagent-routing-"));
+		getAgentDir.mockReturnValue(tempAgentDir);
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "adaptive-routing"), { recursive: true });
+		writeFileSync(
+			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
+			JSON.stringify(
+				{
+					delegatedRouting: {
+						enabled: true,
+						categories: {
+							"quick-discovery": {
+								candidates: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
+								preferredProviders: ["openai", "google"],
+								preferFastModels: true,
+							},
+						},
+					},
+					delegatedModelSelection: {
+						preferLowerUsage: true,
+					},
+				},
+				null,
+				2,
+			),
+		);
+		writeFileSync(
+			join(tempAgentDir, "usage-tracker-rate-limits.json"),
+			JSON.stringify(
+				{
+					providers: {
+						openai: { windows: [{ percentLeft: 15 }] },
+						google: { windows: [{ percentLeft: 80 }] },
+					},
+				},
+				null,
+				2,
+			),
+		);
+		writeFileSync(
+			join(tempAgentDir, "adaptive-routing", "aggregates.json"),
+			JSON.stringify(
+				{
+					perModelLatencyMs: {
+						"google/gemini-2.5-flash": { avgMs: 1500, count: 4 },
+						"openai/gpt-5-mini": { avgMs: 7000, count: 2 },
+					},
+				},
+				null,
+				2,
+			),
+		);
+
+		try {
+			const result = resolveSubagentModelResolution(
+				{
+					name: "scout",
+					description: "Scout",
+					systemPrompt: "Prompt",
+					source: "builtin",
+					filePath: "/tmp/scout.md",
+					extraFields: { category: "quick-discovery" },
+				},
+				sampleModels,
+				undefined,
+				{ taskText: "Quickly scan the project and summarize the likely hotspots." },
+			);
+			expect(result.model).toBe("google/gemini-2.5-flash");
+		} finally {
+			rmSync(tempAgentDir, { recursive: true, force: true });
+		}
+	});
+
+	it("infers task profiles from agent names without explicit categories", () => {
+		expect(
+			resolveSubagentModelResolution(
+				{ name: "planner", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/planner.md" },
+				sampleModels,
+			).model,
+		).toBeDefined();
+		expect(
+			resolveSubagentModelResolution(
+				{ name: "design-helper", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/design.md" },
+				sampleModels,
+			).source,
+		).toBe("delegated-category");
+		expect(
+			resolveSubagentModelResolution(
+				{ name: "writer-docs", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/write.md" },
+				sampleModels,
+			).source,
+		).toBe("delegated-category");
+		expect(
+			resolveSubagentModelResolution(
+				{ name: "code-helper", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/code.md" },
+				sampleModels,
+			).source,
+		).toBe("delegated-category");
+		expect(
+			resolveSubagentModelResolution(
+				{ name: "generalist", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/general.md" },
+				sampleModels,
+			).source,
+		).toBe("delegated-category");
+	});
+
+	it("adds full ids when converting available model refs", () => {
+		const refs = toAvailableModelRefs([
+			{
+				provider: "openai",
+				id: "gpt-5-mini",
+				name: "GPT-5 Mini",
+				reasoning: true,
+				input: ["text", "image"],
+				contextWindow: 400_000,
+				maxTokens: 128_000,
+				cost: { input: 0.25, output: 2, cacheRead: 0, cacheWrite: 0 },
+			},
+		]);
+		expect(refs[0]?.fullId).toBe("openai/gpt-5-mini");
+	});
+
+	it("prefers measured-fast models when latency telemetry exists", () => {
+		const tempAgentDir = mkdtempSync(join(tmpdir(), "subagent-routing-"));
+		getAgentDir.mockReturnValue(tempAgentDir);
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "adaptive-routing"), { recursive: true });
+		writeFileSync(
+			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
+			JSON.stringify(
+				{
+					delegatedRouting: {
+						enabled: true,
+						categories: {
+							"quick-discovery": {
+								candidates: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
+								preferredProviders: ["openai", "google"],
+								preferFastModels: true,
+							},
+						},
+					},
+				},
+				null,
+				2,
+			),
+		);
+		writeFileSync(
+			join(tempAgentDir, "adaptive-routing", "aggregates.json"),
+			JSON.stringify(
+				{
+					perModelLatencyMs: {
+						"google/gemini-2.5-flash": { avgMs: 1500, count: 4 },
+						"openai/gpt-5-mini": { avgMs: 7000, count: 2 },
+					},
+				},
+				null,
+				2,
+			),
+		);
+
+		try {
+			const result = resolveSubagentModelResolution(
+				{
+					name: "scout",
+					description: "Scout",
+					systemPrompt: "Prompt",
+					source: "builtin",
+					filePath: "/tmp/scout.md",
+					extraFields: { category: "quick-discovery" },
+				},
+				sampleModels,
+				undefined,
+				{ taskText: "Quickly scan the project and summarize the likely hotspots." },
+			);
+			expect(result.model).toBe("google/gemini-2.5-flash");
 		} finally {
 			rmSync(tempAgentDir, { recursive: true, force: true });
 		}

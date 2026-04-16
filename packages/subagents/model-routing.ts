@@ -1,13 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import {
+	inspectDelegatedSelection,
+	type DelegatedAvailableModelRef,
+} from "@ifi/pi-extension-adaptive-routing/delegated-runtime.ts";
+import type { DelegatedAvailableModel, ModelTaskProfile } from "@ifi/oh-pi-core";
 import type { AgentConfig } from "./agents.js";
 
-export type AvailableModelRef = {
-	provider: string;
-	id: string;
-	fullId: string;
-};
+export type AvailableModelRef = DelegatedAvailableModelRef;
 
 export type SubagentModelResolution = {
 	model?: string;
@@ -15,105 +13,95 @@ export type SubagentModelResolution = {
 	category?: string;
 };
 
-type DelegatedCategoryPolicy = {
-	candidates?: string[];
-	preferredProviders?: string[];
-	fallbackGroup?: string;
+const DEFAULT_CATEGORY_TASK_PROFILES: Record<string, ModelTaskProfile> = {
+	"quick-discovery": "planning",
+	"planning-default": "planning",
+	"implementation-default": "coding",
+	"research-default": "planning",
+	"review-critical": "planning",
+	"visual-engineering": "design",
+	"multimodal-default": "design",
 };
 
-type DelegatedRoutingConfig = {
-	enabled?: boolean;
-	categories?: Record<string, DelegatedCategoryPolicy>;
+const DEFAULT_CATEGORY_MIN_CONTEXT: Partial<Record<string, number>> = {
+	"review-critical": 128_000,
+	"visual-engineering": 128_000,
+	"multimodal-default": 128_000,
 };
-
-type AdaptiveRoutingConfig = {
-	fallbackGroups?: Record<string, { candidates?: string[] } | string[]>;
-	delegatedRouting?: DelegatedRoutingConfig;
-};
-
-function getAdaptiveRoutingConfigPath(): string {
-	return join(getAgentDir(), "extensions", "adaptive-routing", "config.json");
-}
-
-function readAdaptiveRoutingConfig(): AdaptiveRoutingConfig {
-	const path = getAdaptiveRoutingConfigPath();
-	if (!existsSync(path)) {
-		return {};
-	}
-	try {
-		return JSON.parse(readFileSync(path, "utf-8")) as AdaptiveRoutingConfig;
-	} catch {
-		return {};
-	}
-}
 
 function categoryForAgent(agent: AgentConfig): string | undefined {
 	const value = agent.extraFields?.category;
 	return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
-function fallbackCandidates(config: AdaptiveRoutingConfig, fallbackGroup: string | undefined): string[] {
-	if (!fallbackGroup) {
-		return [];
+function inferTaskProfileForAgent(agent: AgentConfig, category: string | undefined): ModelTaskProfile {
+	if (category && DEFAULT_CATEGORY_TASK_PROFILES[category]) {
+		return DEFAULT_CATEGORY_TASK_PROFILES[category];
 	}
-	const group = config.fallbackGroups?.[fallbackGroup];
-	if (Array.isArray(group)) {
-		return group.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+
+	const name = agent.name.toLowerCase();
+	if (name.includes("plan") || name.includes("research") || name.includes("scout")) {
+		return "planning";
 	}
-	return (group?.candidates ?? []).filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+	if (name.includes("design") || name.includes("ui") || name.includes("visual")) {
+		return "design";
+	}
+	if (name.includes("write") || name.includes("doc") || name.includes("prompt")) {
+		return "writing";
+	}
+	if (name.includes("code") || name.includes("impl") || name.includes("engineer")) {
+		return "coding";
+	}
+	return "all";
 }
 
-function findModelForReference(reference: string, availableModels: AvailableModelRef[]): AvailableModelRef | undefined {
-	if (reference.endsWith("/<best-available>")) {
-		const provider = reference.slice(0, reference.indexOf("/"));
-		return availableModels.find((model) => model.provider === provider);
-	}
-	return availableModels.find((model) => model.fullId === reference || model.id === reference);
+function resolveDelegatedAgentModel(
+	agent: AgentConfig,
+	availableModels: AvailableModelRef[],
+	options: { currentModel?: string; taskText?: string } = {},
+): string | undefined {
+	const category = categoryForAgent(agent);
+	const inspection = inspectDelegatedSelection({
+		availableModels,
+		category,
+		roleKeys: [category ? `subagent-category:${category}` : "", `subagent:${agent.name}`].filter(Boolean),
+		defaults: {
+			taskProfile: inferTaskProfileForAgent(agent, category),
+			preferFastModels: category === "quick-discovery",
+			minContextWindow: category ? DEFAULT_CATEGORY_MIN_CONTEXT[category] : undefined,
+			allowSmallContextForSmallTasks: true,
+		},
+		currentModel: options.currentModel,
+		taskText: options.taskText,
+	});
+	return inspection.selection?.selectedModel;
 }
 
-function resolveDelegatedCategoryModel(category: string, availableModels: AvailableModelRef[]): string | undefined {
-	const config = readAdaptiveRoutingConfig();
-	const delegated = config.delegatedRouting;
-	if (delegated?.enabled === false) {
-		return undefined;
-	}
-	const policy = delegated?.categories?.[category];
-	if (!policy) {
-		return undefined;
-	}
-	const candidateRefs = [...(policy.candidates ?? []), ...fallbackCandidates(config, policy.fallbackGroup)];
-	for (const reference of candidateRefs) {
-		const model = findModelForReference(reference, availableModels);
-		if (model) {
-			return model.fullId;
-		}
-	}
-	for (const provider of policy.preferredProviders ?? []) {
-		const model = availableModels.find((entry) => entry.provider === provider);
-		if (model) {
-			return model.fullId;
-		}
-	}
-	return undefined;
+export function toAvailableModelRefs(models: DelegatedAvailableModel[]): AvailableModelRef[] {
+	return models.map((model) => ({
+		...model,
+		fullId: `${model.provider}/${model.id}`,
+	}));
 }
 
 export function resolveSubagentModelResolution(
 	agent: AgentConfig,
 	availableModels: AvailableModelRef[],
 	runtimeOverride?: string,
+	options: { currentModel?: string; taskText?: string } = {},
 ): SubagentModelResolution {
+	const category = categoryForAgent(agent);
 	if (runtimeOverride) {
-		return { model: runtimeOverride, source: "runtime-override", category: categoryForAgent(agent) };
+		return { model: runtimeOverride, source: "runtime-override", category };
 	}
 	if (agent.model) {
-		return { model: agent.model, source: "frontmatter-model", category: categoryForAgent(agent) };
+		return { model: agent.model, source: "frontmatter-model", category };
 	}
-	const category = categoryForAgent(agent);
-	if (category) {
-		const delegatedModel = resolveDelegatedCategoryModel(category, availableModels);
-		if (delegatedModel) {
-			return { model: delegatedModel, source: "delegated-category", category };
-		}
+
+	const delegatedModel = resolveDelegatedAgentModel(agent, availableModels, options);
+	if (delegatedModel) {
+		return { model: delegatedModel, source: "delegated-category", category };
 	}
+
 	return { source: "session-default", category };
 }

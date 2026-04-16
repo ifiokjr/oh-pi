@@ -10,7 +10,10 @@ import type {
 	AdaptiveRoutingTelemetryConfig,
 	AdaptiveRoutingTelemetryMode,
 	DelegatedCategoryPolicy,
+	DelegatedModelSelectionConfig,
 	DelegatedRoutingConfig,
+	DelegatedSelectionOverride,
+	DelegatedTaskProfile,
 	FallbackGroupPolicy,
 	IntentRoutingPolicy,
 	ProviderReservePolicy,
@@ -35,6 +38,7 @@ const ROUTE_INTENTS = new Set<RouteIntent>([
 
 const ROUTE_TIERS = new Set<RouteTier>(["cheap", "balanced", "premium", "peak"]);
 const ROUTE_THINKING_LEVELS = new Set<RouteThinkingLevel>(["off", "minimal", "low", "medium", "high", "xhigh"]);
+const DELEGATED_TASK_PROFILES = new Set<DelegatedTaskProfile>(["design", "planning", "writing", "coding", "all"]);
 const ROUTING_MODES = new Set<AdaptiveRoutingMode>(["off", "shadow", "auto"]);
 const TELEMETRY_MODES = new Set<AdaptiveRoutingTelemetryMode>(["off", "local", "export"]);
 const PRIVACY_LEVELS = new Set<AdaptiveRoutingPrivacyLevel>(["minimal", "redacted", "full-local"]);
@@ -87,6 +91,10 @@ function normalizeAdaptiveRoutingConfigWithWarnings(raw: unknown): NormalizedCon
 			providerReserves: normalizeProviderReserves(cfg.providerReserves, fallback.providerReserves),
 			fallbackGroups: normalizeFallbackGroups(cfg.fallbackGroups, fallback.fallbackGroups),
 			delegatedRouting: normalizeDelegatedRouting(cfg.delegatedRouting, fallback.delegatedRouting),
+			delegatedModelSelection: normalizeDelegatedModelSelection(
+				cfg.delegatedModelSelection,
+				fallback.delegatedModelSelection,
+			),
 		},
 		warnings,
 	};
@@ -315,7 +323,116 @@ function normalizeDelegatedCategory(
 		preferredProviders: normalizeOptionalStringArray(value.preferredProviders, fallback?.preferredProviders),
 		fallbackGroup: normalizeOptionalString(value.fallbackGroup, fallback?.fallbackGroup),
 		defaultThinking: normalizeOptionalThinking(value.defaultThinking, fallback?.defaultThinking),
+		taskProfile: normalizeOptionalDelegatedTaskProfile(value.taskProfile, fallback?.taskProfile),
+		preferFastModels: normalizeOptionalBoolean(value.preferFastModels, fallback?.preferFastModels),
+		preferLowCost: normalizeOptionalBoolean(value.preferLowCost, fallback?.preferLowCost),
+		requireReasoning: normalizeOptionalBoolean(value.requireReasoning, fallback?.requireReasoning),
+		requireMultimodal: normalizeOptionalBoolean(value.requireMultimodal, fallback?.requireMultimodal),
+		minContextWindow: normalizeOptionalMinContextWindow(value.minContextWindow, fallback?.minContextWindow),
+		allowSmallContextForSmallTasks: normalizeOptionalBoolean(
+			value.allowSmallContextForSmallTasks,
+			fallback?.allowSmallContextForSmallTasks,
+		),
 	};
+}
+
+function normalizeDelegatedModelSelection(
+	value: unknown,
+	fallback: DelegatedModelSelectionConfig,
+): DelegatedModelSelectionConfig {
+	if (!value || typeof value !== "object") {
+		return {
+			disabledProviders: [...fallback.disabledProviders],
+			disabledModels: [...fallback.disabledModels],
+			preferLowerUsage: fallback.preferLowerUsage,
+			allowSmallContextForSmallTasks: fallback.allowSmallContextForSmallTasks,
+			roleOverrides: { ...fallback.roleOverrides },
+		};
+	}
+	const cfg = value as Record<string, unknown>;
+	return {
+		disabledProviders: normalizeStringArray(
+			cfg.disabledProviders ?? cfg.excludedProviders,
+			fallback.disabledProviders,
+		),
+		disabledModels: normalizeStringArray(cfg.disabledModels ?? cfg.excludedModels, fallback.disabledModels),
+		preferLowerUsage:
+			typeof cfg.preferLowerUsage === "boolean" ? cfg.preferLowerUsage : fallback.preferLowerUsage,
+		allowSmallContextForSmallTasks:
+			typeof cfg.allowSmallContextForSmallTasks === "boolean"
+				? cfg.allowSmallContextForSmallTasks
+				: fallback.allowSmallContextForSmallTasks,
+			roleOverrides: normalizeDelegatedRoleOverrides(cfg.roleOverrides, fallback.roleOverrides),
+		};
+}
+
+function normalizeDelegatedRoleOverrides(
+	value: unknown,
+	fallback: DelegatedModelSelectionConfig["roleOverrides"],
+): DelegatedModelSelectionConfig["roleOverrides"] {
+	const next: DelegatedModelSelectionConfig["roleOverrides"] = { ...fallback };
+	if (!value || typeof value !== "object") {
+		return next;
+	}
+	for (const [key, rawOverride] of Object.entries(value as Record<string, unknown>)) {
+		if (!rawOverride || typeof rawOverride !== "object") {
+			continue;
+		}
+		next[key] = normalizeDelegatedSelectionOverride(rawOverride as Record<string, unknown>, next[key]);
+	}
+	return next;
+}
+
+function normalizeDelegatedSelectionOverride(
+	value: Record<string, unknown>,
+	fallback?: DelegatedSelectionOverride,
+): DelegatedSelectionOverride {
+	return {
+		candidateModels: normalizeOptionalStringArray(value.candidateModels, fallback?.candidateModels),
+		preferredModels: normalizeOptionalStringArray(value.preferredModels, fallback?.preferredModels),
+		preferredProviders: normalizeOptionalStringArray(value.preferredProviders, fallback?.preferredProviders),
+		blockedModels: normalizeOptionalStringArray(value.blockedModels, fallback?.blockedModels),
+		blockedProviders: normalizeOptionalStringArray(value.blockedProviders, fallback?.blockedProviders),
+		taskProfile: normalizeOptionalDelegatedTaskProfile(value.taskProfile, fallback?.taskProfile),
+		preferFastModels: normalizeOptionalBoolean(value.preferFastModels, fallback?.preferFastModels),
+		preferLowCost: normalizeOptionalBoolean(value.preferLowCost, fallback?.preferLowCost),
+		preferLowerUsage: normalizeOptionalBoolean(value.preferLowerUsage, fallback?.preferLowerUsage),
+		requireReasoning: normalizeOptionalBoolean(value.requireReasoning, fallback?.requireReasoning),
+		requireMultimodal: normalizeOptionalBoolean(value.requireMultimodal, fallback?.requireMultimodal),
+		minContextWindow: normalizeOptionalMinContextWindow(value.minContextWindow, fallback?.minContextWindow),
+		allowSmallContextForSmallTasks: normalizeOptionalBoolean(
+			value.allowSmallContextForSmallTasks,
+			fallback?.allowSmallContextForSmallTasks,
+		),
+	};
+}
+
+function normalizeOptionalBoolean(value: unknown, fallback?: boolean): boolean | undefined {
+	if (typeof value === "boolean") {
+		return value;
+	}
+	return fallback;
+}
+
+function normalizeOptionalMinContextWindow(value: unknown, fallback?: number): number | undefined {
+	if (value === undefined) {
+		return fallback;
+	}
+	const parsed = Number(value);
+	if (!Number.isFinite(parsed)) {
+		return fallback;
+	}
+	return Math.max(1024, Math.round(parsed));
+}
+
+function normalizeOptionalDelegatedTaskProfile(
+	value: unknown,
+	fallback?: DelegatedTaskProfile,
+): DelegatedTaskProfile | undefined {
+	if (typeof value === "string" && DELEGATED_TASK_PROFILES.has(value as DelegatedTaskProfile)) {
+		return value as DelegatedTaskProfile;
+	}
+	return fallback;
 }
 
 function normalizeStickyTurns(value: unknown, fallback: number): number {

@@ -53,6 +53,7 @@
 		"pi:switch": "node --experimental-strip-types ./scripts/pi-source-switch.mts",
 		"pi:local": "node --experimental-strip-types ./scripts/pi-source-switch.mts local",
 		"pi:published": "node --experimental-strip-types ./scripts/pi-source-switch.mts remote",
+		"models:refresh-intelligence": "node ./scripts/generate-model-intelligence-snapshot.mjs",
 		"mdt": "mdt",
 		"docs:list": "pnpm mdt list",
 		"docs:update": "pnpm mdt update",

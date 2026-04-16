@@ -32,7 +32,8 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@ifi/oh-pi-core": "0.4.4"
+    "@ifi/oh-pi-core": "0.4.4",
+    "@ifi/pi-extension-adaptive-routing": "0.4.4"
   },
   "repository": {
     "type": "git",

@@ -60,7 +60,7 @@ import { handleManagementAction } from "./agent-management.js";
 import { registerSubagentCommands } from "./command-registration.js";
 import { ensureAccessibleDir, expandTildePath, getSubagentSessionRoot, loadSubagentConfig } from "./bootstrap.js";
 import { createSubagentRuntimeMonitor } from "./runtime-monitor.js";
-import { resolveSubagentModelResolution } from "./model-routing.js";
+import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
 
 const STARTUP_CLEANUP_DELAY_MS = 250;
 
@@ -92,6 +92,20 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
 		getLastUiContext: () => lastUiContext,
 		getSafeModeEnabled: () => safeModeEnabled,
 	});
+	const getAvailableRoutingModels = (ctx: ExtensionContext): ModelInfo[] => {
+		return toAvailableModelRefs(
+			ctx.modelRegistry.getAvailable().map((model) => ({
+				provider: model.provider,
+				id: model.id,
+				name: model.name,
+				reasoning: model.reasoning,
+				input: [...model.input],
+				contextWindow: model.contextWindow,
+				maxTokens: model.maxTokens,
+				cost: { ...model.cost },
+			})),
+		);
+	};
 
 	const tool: ToolDefinition<typeof SubagentParams, Details> = {
 		name: "subagent",
@@ -291,11 +305,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					cwd: ctx.cwd,
 					currentSessionId: currentSessionId!,
 					currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
-					availableModels: ctx.modelRegistry.getAvailable().map((m) => ({
-						provider: m.provider,
-						id: m.id,
-						fullId: `${m.provider}/${m.id}`,
-					})),
+					availableModels: getAvailableRoutingModels(ctx),
 				};
 
 				if (hasChain && params.chain) {
@@ -394,11 +404,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 						cwd: ctx.cwd,
 						currentSessionId: currentSessionId!,
 						currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
-						availableModels: ctx.modelRegistry.getAvailable().map((m) => ({
-							provider: m.provider,
-							id: m.id,
-							fullId: `${m.provider}/${m.id}`,
-						})),
+						availableModels: getAvailableRoutingModels(ctx),
 					};
 					return executeAsyncChain(id, {
 						chain: chainResult.requestedAsync.chain,
@@ -443,16 +449,13 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				// Mutable copies for TUI modifications
 				let tasks = params.tasks.map((t) => t.task);
 				const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
-				const availableModels = ctx.modelRegistry.getAvailable().map((m) => ({
-					provider: m.provider,
-					id: m.id,
-					fullId: `${m.provider}/${m.id}`,
-				}));
+				const availableModels = getAvailableRoutingModels(ctx);
 				const modelResolutions = agentConfigs.map((config, i) => {
 					const resolution = resolveSubagentModelResolution(
 						config,
 						availableModels,
 						(params.tasks?.[i] as { model?: string } | undefined)?.model,
+						{ currentModel: inheritedModel, taskText: tasks[i] },
 					);
 					if (!resolution.model && inheritedModel) {
 						return { ...resolution, model: inheritedModel, source: "session-default" as const };
@@ -533,11 +536,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 							cwd: ctx.cwd,
 							currentSessionId: currentSessionId!,
 							currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
-							availableModels: ctx.modelRegistry.getAvailable().map((m) => ({
-								provider: m.provider,
-								id: m.id,
-								fullId: `${m.provider}/${m.id}`,
-							})),
+							availableModels: getAvailableRoutingModels(ctx),
 						};
 						// Convert parallel tasks to a chain with a single parallel step
 						const parallelTasks = params.tasks!.map((t, i) => ({
@@ -662,12 +661,11 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				}
 
 				let task = params.task!;
-				const availableModels = ctx.modelRegistry.getAvailable().map((m) => ({
-					provider: m.provider,
-					id: m.id,
-					fullId: `${m.provider}/${m.id}`,
-				}));
-				let modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, params.model as string | undefined);
+				const availableModels = getAvailableRoutingModels(ctx);
+				let modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, params.model as string | undefined, {
+					currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+					taskText: task,
+				});
 				if (!modelResolution.model && ctx.model) {
 					modelResolution = {
 						...modelResolution,
@@ -749,11 +747,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 							cwd: ctx.cwd,
 							currentSessionId: currentSessionId!,
 							currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
-							availableModels: ctx.modelRegistry.getAvailable().map((m) => ({
-								provider: m.provider,
-								id: m.id,
-								fullId: `${m.provider}/${m.id}`,
-							})),
+							availableModels: getAvailableRoutingModels(ctx),
 						};
 						return executeAsyncSingle(id, {
 							agent: params.agent!,

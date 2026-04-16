@@ -1,27 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import {
+	inspectDelegatedSelection,
+	type DelegatedAvailableModelRef,
+} from "@ifi/pi-extension-adaptive-routing/delegated-runtime.ts";
+import type { DelegatedAvailableModel, DelegatedSelectionUsageSnapshot, ModelTaskProfile } from "@ifi/oh-pi-core";
 import type { AntCaste, WorkerClass } from "./types.js";
 
-export type AvailableModelRef = {
-	provider: string;
-	id: string;
-	fullId: string;
-};
-
-type DelegatedCategoryPolicy = {
-	candidates?: string[];
-	preferredProviders?: string[];
-	fallbackGroup?: string;
-};
-
-type AdaptiveRoutingConfig = {
-	fallbackGroups?: Record<string, { candidates?: string[] } | string[]>;
-	delegatedRouting?: {
-		enabled?: boolean;
-		categories?: Record<string, DelegatedCategoryPolicy>;
-	};
-};
+export type AvailableModelRef = DelegatedAvailableModelRef;
 
 export const DEFAULT_COLONY_CATEGORIES: Record<AntCaste | WorkerClass, string> = {
 	scout: "quick-discovery",
@@ -34,70 +18,57 @@ export const DEFAULT_COLONY_CATEGORIES: Record<AntCaste | WorkerClass, string> =
 	review: "review-critical",
 };
 
-function getAdaptiveRoutingConfigPath(): string {
-	return join(getAgentDir(), "extensions", "adaptive-routing", "config.json");
-}
+const DEFAULT_CATEGORY_TASK_PROFILES: Record<string, ModelTaskProfile> = {
+	"quick-discovery": "planning",
+	"implementation-default": "coding",
+	"review-critical": "planning",
+	"visual-engineering": "design",
+	"multimodal-default": "design",
+};
 
-function readAdaptiveRoutingConfig(): AdaptiveRoutingConfig {
-	const path = getAdaptiveRoutingConfigPath();
-	if (!existsSync(path)) {
-		return {};
-	}
-	try {
-		return JSON.parse(readFileSync(path, "utf-8")) as AdaptiveRoutingConfig;
-	} catch {
-		return {};
-	}
-}
+const DEFAULT_CATEGORY_MIN_CONTEXT: Partial<Record<string, number>> = {
+	"review-critical": 128_000,
+	"visual-engineering": 128_000,
+	"multimodal-default": 128_000,
+};
 
-function findModelForReference(reference: string, availableModels: AvailableModelRef[]): AvailableModelRef | undefined {
-	if (reference.endsWith("/<best-available>")) {
-		const provider = reference.slice(0, reference.indexOf("/"));
-		return availableModels.find((model) => model.provider === provider);
-	}
-	return availableModels.find((model) => model.fullId === reference || model.id === reference);
-}
-
-function fallbackCandidates(config: AdaptiveRoutingConfig, fallbackGroup: string | undefined): string[] {
-	if (!fallbackGroup) {
-		return [];
-	}
-	const group = config.fallbackGroups?.[fallbackGroup];
-	if (Array.isArray(group)) {
-		return group.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
-	}
-	return (group?.candidates ?? []).filter(
-		(entry): entry is string => typeof entry === "string" && entry.trim().length > 0,
-	);
+export function toAvailableModelRefs(models: DelegatedAvailableModel[]): AvailableModelRef[] {
+	return models.map((model) => ({
+		...model,
+		fullId: `${model.provider}/${model.id}`,
+	}));
 }
 
 export function resolveColonyCategoryModel(
 	category: string | undefined,
 	availableModels: AvailableModelRef[],
+	options: {
+		currentModel?: string;
+		taskText?: string;
+		usage?: Record<string, DelegatedSelectionUsageSnapshot>;
+		roleKeys?: string[];
+	} = {},
 ): { model?: string; category?: string; source: "delegated-category" | "session-default" } {
 	if (!category) {
 		return { source: "session-default" };
 	}
-	const config = readAdaptiveRoutingConfig();
-	if (config.delegatedRouting?.enabled === false) {
-		return { category, source: "session-default" };
-	}
-	const policy = config.delegatedRouting?.categories?.[category];
-	if (!policy) {
-		return { category, source: "session-default" };
-	}
-	const candidateRefs = [...(policy.candidates ?? []), ...fallbackCandidates(config, policy.fallbackGroup)];
-	for (const reference of candidateRefs) {
-		const model = findModelForReference(reference, availableModels);
-		if (model) {
-			return { model: model.fullId, category, source: "delegated-category" };
-		}
-	}
-	for (const provider of policy.preferredProviders ?? []) {
-		const model = availableModels.find((entry) => entry.provider === provider);
-		if (model) {
-			return { model: model.fullId, category, source: "delegated-category" };
-		}
+
+	const inspection = inspectDelegatedSelection({
+		availableModels,
+		category,
+		roleKeys: [`colony-category:${category}`, ...(options.roleKeys ?? [])],
+		defaults: {
+			taskProfile: DEFAULT_CATEGORY_TASK_PROFILES[category] ?? "all",
+			preferFastModels: category === "quick-discovery",
+			minContextWindow: DEFAULT_CATEGORY_MIN_CONTEXT[category],
+			allowSmallContextForSmallTasks: true,
+		},
+		currentModel: options.currentModel,
+		taskText: options.taskText,
+		usage: options.usage,
+	});
+	if (inspection.selection?.selectedModel) {
+		return { model: inspection.selection.selectedModel, category, source: "delegated-category" };
 	}
 	return { category, source: "session-default" };
 }

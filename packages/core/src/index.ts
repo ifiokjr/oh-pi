@@ -10,6 +10,26 @@ export { getLocale, selectLanguage, setLocale, t } from "./i18n.js";
 export type { IconMode, IconName } from "./icons.js";
 export { icon, isPlainIcons, setPlainIcons } from "./icons.js";
 export { EXTENSIONS, KEYBINDING_SCHEMES, MODEL_CAPABILITIES, PROVIDERS, THEMES } from "./registry.js";
+export {
+	findModelIntelligence,
+	getModelIntelligenceSnapshot,
+	mergeDelegatedSelectionPolicies,
+	selectDelegatedModel,
+} from "./model-intelligence.js";
+export type {
+	DelegatedAvailableModel,
+	DelegatedSelectionLatencySnapshot,
+	DelegatedSelectionPolicy,
+	DelegatedSelectionRankedCandidate,
+	DelegatedSelectionResult,
+	DelegatedSelectionUsageSnapshot,
+	ModelIntelligenceRuntimeModel,
+	ModelIntelligenceRuntimeSnapshot,
+	ModelIntelligenceTaskScore,
+	ModelTaskProfile,
+	ProviderUsageConfidence,
+	TaskSizeTier,
+} from "./model-intelligence.js";
 export type {
 	DiscoveredModel,
 	Locale,
