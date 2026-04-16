@@ -9,6 +9,7 @@ export const publishedPackages = [
 	...compiledPackages,
 	{ name: "@ifi/oh-pi-extensions", dir: "packages/extensions" },
 	{ name: "@ifi/oh-pi-ant-colony", dir: "packages/ant-colony" },
+	{ name: "@ifi/pi-diagnostics", dir: "packages/diagnostics" },
 	{ name: "@ifi/oh-pi-themes", dir: "packages/themes" },
 	{ name: "@ifi/oh-pi-prompts", dir: "packages/prompts" },
 	{ name: "@ifi/oh-pi-skills", dir: "packages/skills" },

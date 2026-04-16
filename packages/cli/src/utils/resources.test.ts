@@ -20,6 +20,12 @@ describe("resources", () => {
 		expect(p.startsWith("/")).toBe(true);
 	});
 
+	it("diagnosticsDir returns correct path", () => {
+		const p = resources.diagnosticsDir();
+		expect(/(?:packages\/diagnostics|node_modules\/@ifi\/pi-diagnostics)(?:\/|$)/.test(p)).toBe(true);
+		expect(p.startsWith("/")).toBe(true);
+	});
+
 	it("planDir returns correct path", () => {
 		const p = resources.planDir();
 		expect(/(?:packages\/plan|node_modules\/@ifi\/pi-plan)(?:\/|$)/.test(p)).toBe(true);

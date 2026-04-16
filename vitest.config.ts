@@ -32,6 +32,7 @@ export default defineConfig({
 			"packages/core/src/**/*.test.ts",
 			"packages/adaptive-routing/**/*.test.ts",
 			"packages/cli/src/**/*.test.ts",
+			"packages/diagnostics/tests/**/*.test.ts",
 			"packages/extensions/extensions/**/*.test.ts",
 			"packages/ant-colony/tests/**/*.test.ts",
 			"packages/subagents/tests/**/*.test.ts",

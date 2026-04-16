@@ -24,6 +24,7 @@ describe("pi package extension entrypoints", () => {
 			"packages/adaptive-routing/package.json",
 			"packages/spec/package.json",
 			"packages/ant-colony/package.json",
+			"packages/diagnostics/package.json",
 			"packages/cursor/package.json",
 			"packages/ollama/package.json",
 		];
