@@ -2787,6 +2787,11 @@ describe("edge cases", () => {
 		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBe(true);
 	});
 
+	it("shows colon-style guidance for unsupported scope changes", async () => {
+		await pi._commands.get("schedule").handler("scope", ctx);
+		expect(ctx._notifications.at(-1)?.msg).toContain("/schedule:scope is not supported yet");
+	});
+
 	it("shows workspace, creator, and full prompt after selecting a task", async () => {
 		const prompt = "check the full deployment pipeline and report every failing stage";
 		await pi._commands.get("loop").handler(`5m ${prompt}`, ctx);

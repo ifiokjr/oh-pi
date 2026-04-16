@@ -1,8 +1,10 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import ollamaProviderExtension from "../index.js";
+import * as localModule from "../local.js";
+import * as modelsModule from "../models.js";
 import { createTestOllamaBackend } from "./test-backend.js";
 
 const envSnapshot = { ...process.env };
@@ -177,5 +179,53 @@ describe("ollama provider smoke tests", () => {
 		]);
 		expect(backend.getAuthHeaders()).toEqual(["", "", ""]);
 		await backend.close();
+	});
+
+	it("supports colon aliases for info and pull usage", async () => {
+		const harness = createExtensionHarness();
+		harnesses.push(harness);
+		(harness.ctx as any).modelRegistry = {
+			...(harness.ctx.modelRegistry as object),
+			authStorage: {
+				get: vi.fn(() => undefined),
+				set: vi.fn(),
+			},
+		};
+		ollamaProviderExtension(harness.pi as never);
+
+		await harness.commands.get("ollama:pull")?.handler?.("", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("Usage: /ollama:pull <model>");
+
+		await harness.commands.get("ollama:pull")?.handler?.("missing-model", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("Run /ollama:refresh-models first.");
+
+		await harness.commands.get("ollama:info")?.handler?.("", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("Usage: /ollama:info <model>");
+
+		await harness.commands.get("ollama:info")?.handler?.("missing-model", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("Run /ollama:refresh-models first.");
+
+		await harness.commands.get("ollama:status")?.handler?.("", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("Ollama");
+	});
+
+	it("uses colon-style guidance when a local model is not installed yet", async () => {
+		vi.spyOn(localModule, "getOllamaCliStatus").mockResolvedValue({ available: true, version: "0.9.0" });
+		vi.spyOn(modelsModule, "discoverOllamaLocalModels").mockResolvedValue([]);
+		const harness = createExtensionHarness();
+		harnesses.push(harness);
+		ollamaProviderExtension(harness.pi as never);
+
+		await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
+		await new Promise((resolve) => setTimeout(resolve, 300));
+
+		const provider = harness.providers.get("ollama");
+		expect(provider).toBeDefined();
+		expect(() =>
+			provider?.streamSimple?.(
+				{ provider: "ollama", id: "missing-model" } as never,
+				{} as never,
+			),
+		).toThrowError(/\/ollama:pull missing-model/);
 	});
 });

@@ -247,7 +247,7 @@ function handleSpecify(
 		sendReport(
 			pi,
 			[
-				"# /spec:specify",
+				"# /spec specify",
 				"",
 				`- Feature branch: ${prepared.branchName}`,
 				`- Feature number: ${prepared.featureNumber}`,
@@ -326,48 +326,10 @@ export default function specExtension(pi: ExtensionAPI) {
 		return new Text(text, 0, 0);
 	});
 
-	const handleSpecCommand = async (rawArgs: string, ctx: ExtensionCommandContext): Promise<void> => {
-		const { subcommand, remainder } = tokenize(rawArgs);
-		if (!subcommand) {
-			ctx.ui.notify(`Unknown /spec subcommand: ${rawArgs.trim()}`, "warning");
-			sendReport(pi, formatHelpReport());
-			return;
-		}
-
-		const env = makeEnv(ctx);
-		if (subcommand === "init") {
-			handleInit(pi, env.repoRoot, ensureWorkflowScaffold(env.basePaths));
-			return;
-		}
-		if (subcommand === "help") {
-			sendReport(pi, formatHelpReport());
-			return;
-		}
-		if (subcommand === "list") {
-			sendReport(pi, formatFeatureList(env.repoRoot));
-			return;
-		}
-		if (subcommand === "status") {
-			await handleStatus(pi, ctx, env.repoRoot, env.currentBranch, env.hasGit);
-			return;
-		}
-		if (subcommand === "next") {
-			await handleNext(pi, ctx, env.repoRoot, env.currentBranch, env.hasGit);
-			return;
-		}
-		if (!isWorkflowStep(subcommand)) {
-			sendReport(pi, formatHelpReport());
-			return;
-		}
-
-		const input = await collectStepInput(ctx, subcommand, remainder);
-		await handleWorkflowStep(pi, ctx, env, subcommand, input);
-	};
-
-	pi.registerCommand("spec", {
+	const specCommand = {
 		description:
-			"Native spec-kit workflow for pi (/spec:init|help|status|next|list|constitution|specify|clarify|checklist|plan|tasks|analyze|implement)",
-		getArgumentCompletions(prefix) {
+			"Native spec-kit workflow for pi (/spec:init|constitution|specify|clarify|checklist|plan|tasks|analyze|implement)",
+		getArgumentCompletions(prefix: string) {
 			const trimmed = prefix.trimStart();
 			if (trimmed.includes(" ")) {
 				return null;
@@ -378,13 +340,51 @@ export default function specExtension(pi: ExtensionAPI) {
 			}));
 			return values.length > 0 ? values : null;
 		},
-		handler: handleSpecCommand,
-	});
+		handler: async (rawArgs: string, ctx: ExtensionCommandContext) => {
+			const { subcommand, remainder } = tokenize(rawArgs);
+			if (!subcommand) {
+				ctx.ui.notify(`Unknown /spec subcommand: ${rawArgs.trim()}`, "warning");
+				sendReport(pi, formatHelpReport());
+				return;
+			}
+
+			const env = makeEnv(ctx);
+			if (subcommand === "init") {
+				handleInit(pi, env.repoRoot, ensureWorkflowScaffold(env.basePaths));
+				return;
+			}
+			if (subcommand === "help") {
+				sendReport(pi, formatHelpReport());
+				return;
+			}
+			if (subcommand === "list") {
+				sendReport(pi, formatFeatureList(env.repoRoot));
+				return;
+			}
+			if (subcommand === "status") {
+				await handleStatus(pi, ctx, env.repoRoot, env.currentBranch, env.hasGit);
+				return;
+			}
+			if (subcommand === "next") {
+				await handleNext(pi, ctx, env.repoRoot, env.currentBranch, env.hasGit);
+				return;
+			}
+			if (!isWorkflowStep(subcommand)) {
+				sendReport(pi, formatHelpReport());
+				return;
+			}
+
+			const input = await collectStepInput(ctx, subcommand, remainder);
+			await handleWorkflowStep(pi, ctx, env, subcommand, input);
+		},
+	};
+
+	pi.registerCommand("spec", specCommand);
 
 	for (const subcommand of SPEC_SUBCOMMANDS) {
 		pi.registerCommand(`spec:${subcommand}`, {
 			description: `Alias for /spec:${subcommand}.`,
-			handler: (args, ctx) => handleSpecCommand(args ? `${subcommand} ${args}` : subcommand, ctx),
+			handler: (args, ctx) => specCommand.handler(args ? `${subcommand} ${args}` : subcommand, ctx),
 		});
 	}
 }

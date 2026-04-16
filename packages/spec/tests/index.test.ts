@@ -93,6 +93,7 @@ describe("@ifi/pi-spec extension", () => {
 		specExtension(pi as any);
 
 		expect(pi.commands.has("spec")).toBe(true);
+		expect(pi.commands.has("spec:help")).toBe(true);
 		expect(pi.commands.has("spec:init")).toBe(true);
 		expect(pi.renderers.has("pi-spec-report")).toBe(true);
 		expect(pi.commands.get("spec")?.description).toContain("/spec:init");
@@ -118,7 +119,7 @@ describe("@ifi/pi-spec extension", () => {
 		specExtension(pi as any);
 		const ctx = createCtx(repoRoot);
 
-		await pi.commands.get("spec")?.handler?.("status", ctx);
+		await pi.commands.get("spec:status")?.handler?.("", ctx);
 
 		expect(existsSync(path.join(repoRoot, ".specify"))).toBe(false);
 		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("- Initialized: no");
@@ -140,11 +141,38 @@ describe("@ifi/pi-spec extension", () => {
 			},
 		});
 
-		await pi.commands.get("spec")?.handler?.("status", ctx);
+		await pi.commands.get("spec:status")?.handler?.("", ctx);
 
 		expect(pi.sendUserMessage).not.toHaveBeenCalled();
 		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("# /spec:status");
 		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("001-auth-flow");
+	});
+
+	it("/spec:specify warns when no feature description is provided", async () => {
+		const repoRoot = createTempRepo("pi-spec-specify-empty");
+		const pi = createPiMock();
+		specExtension(pi as any);
+		const ctx = createCtx(repoRoot);
+
+		await pi.commands.get("spec:specify")?.handler?.("", ctx);
+
+		expect(ctx.ui.notify).toHaveBeenCalledWith("/spec:specify requires a feature description.", "warning");
+		expect(pi.sendUserMessage).not.toHaveBeenCalled();
+	});
+
+	it("/spec:plan warns when there is no active feature", async () => {
+		const repoRoot = createTempRepo("pi-spec-plan-no-feature");
+		const pi = createPiMock();
+		specExtension(pi as any);
+		const ctx = createCtx(repoRoot);
+
+		await pi.commands.get("spec:plan")?.handler?.("Use TypeScript with Vitest", ctx);
+
+		expect(ctx.ui.notify).toHaveBeenCalledWith(
+			"No active feature found. Run /spec:specify <feature description> first.",
+			"warning",
+		);
+		expect(pi.sendUserMessage).not.toHaveBeenCalled();
 	});
 
 	it("/spec:specify prepares a feature workspace and queues the native workflow prompt", async () => {

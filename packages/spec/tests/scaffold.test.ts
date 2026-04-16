@@ -31,7 +31,18 @@ describe("workflow scaffold", () => {
 		expect(existsSync(paths.constitutionFile)).toBe(true);
 		expect(existsSync(paths.agentContextFile)).toBe(true);
 		expect(existsSync(path.join(paths.templatesDir, "commands", "specify.md"))).toBe(true);
-		expect(readFileSync(paths.workflowReadmeFile, "utf8")).toContain("/spec:plan");
+		const workflowReadme = readFileSync(paths.workflowReadmeFile, "utf8");
+		expect(workflowReadme).toContain("/spec:init");
+		expect(workflowReadme).toContain("/spec:constitution <principles>");
+		expect(workflowReadme).toContain("/spec:specify <feature description>");
+		expect(workflowReadme).toContain("/spec:clarify [focus]");
+		expect(workflowReadme).toContain("/spec:checklist [domain]");
+		expect(workflowReadme).toContain("/spec:plan <technical context>");
+		expect(workflowReadme).toContain("/spec:tasks [context]");
+		expect(workflowReadme).toContain("/spec:analyze [focus]");
+		expect(workflowReadme).toContain("/spec:implement [focus]");
+		expect(workflowReadme).toContain("/spec:status");
+		expect(workflowReadme).toContain("/spec:next");
 		expect(readFileSync(paths.extensionsConfigFile, "utf8")).toContain("auto_execute_hooks");
 	});
 

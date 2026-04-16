@@ -320,6 +320,35 @@ describe("watchdog extension", () => {
 		expect(ctx._notifications.some((item) => item.msg.includes("safe mode automatically"))).toBe(true);
 	});
 
+	it("suppresses repeated alert notifications after the limit", async () => {
+		const pi = createMockPi();
+		const ctx = createMockCtx();
+		watchdogExtension(pi as any);
+
+		mockCpuUsageSequence([
+			{ user: 0, system: 0 },
+			{ user: 0, system: 0 },
+			{ user: 4_500_000, system: 0 },
+			{ user: 4_500_000, system: 0 },
+			{ user: 4_500_000, system: 0 },
+			{ user: 4_500_000, system: 0 },
+		]);
+		mockMemoryUsage({
+			rss: 1400 * 1024 * 1024,
+			heapUsed: 900 * 1024 * 1024,
+			heapTotal: 1000 * 1024 * 1024,
+		});
+		histogram.mean = 30_000_000;
+		histogram.max = 320_000_000;
+		histogram.percentile.mockReturnValue(180_000_000);
+
+		await pi._emit("session_start", {}, ctx);
+		await vi.advanceTimersByTimeAsync(10_000);
+		await vi.advanceTimersByTimeAsync(55_000);
+
+		expect(ctx._notifications.some((item) => item.msg.includes("Further alerts suppressed"))).toBe(true);
+	});
+
 	it("registers safe-mode commands that toggle shared state", async () => {
 		const pi = createMockPi();
 		const ctx = createMockCtx();
@@ -445,5 +474,17 @@ describe("watchdog extension", () => {
 		expect(rendered).toContain("Current sample");
 		expect(rendered).toContain("Recent alerts");
 		expect(rendered).toContain("Config:");
+	});
+
+	it("supports colon aliases for startup and status guidance", async () => {
+		const pi = createMockPi();
+		const ctx = createMockCtx();
+		watchdogExtension(pi as any);
+
+		await pi._commands.get("watchdog:startup").handler("", ctx);
+		expect(ctx._notifications.at(-1)?.msg).toContain("/watchdog:startup");
+
+		expect(pi._commands.get("watchdog:status")?.description).toContain("watchdog status");
+		await expect(pi._commands.get("watchdog:status").handler("", ctx)).resolves.toBeUndefined();
 	});
 });

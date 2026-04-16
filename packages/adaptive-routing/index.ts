@@ -270,97 +270,97 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 		updateStatus(ctx);
 	});
 
-	const handleRouteCommand = async (args: string, ctx: ExtensionCommandContext): Promise<void> => {
-		const command = args.trim();
-		const [head, ...rest] = command.split(/\s+/).filter(Boolean);
-		const subcommand = (head ?? "status").toLowerCase();
-		runtime.state = readAdaptiveRoutingState();
+	const routeCommand = {
+		description:
+			"Adaptive routing controls: /route:status|on|auto|off|shadow|explain|assignments|lock|unlock|refresh|feedback|stats",
+		async handler(args: string, ctx: ExtensionCommandContext) {
+			const command = args.trim();
+			const [head, ...rest] = command.split(/\s+/).filter(Boolean);
+			const subcommand = (head ?? "status").toLowerCase();
+			runtime.state = readAdaptiveRoutingState();
 
-		switch (subcommand) {
-			case "on":
-			case "auto":
-				runtime.state.mode = "auto";
-				persistState();
-				updateStatus(ctx);
-				ctx.ui.notify("Adaptive routing set to auto mode.", "info");
-				return;
-			case "off":
-				runtime.state.mode = "off";
-				persistState();
-				updateStatus(ctx);
-				ctx.ui.notify("Adaptive routing disabled.", "warning");
-				return;
-			case "shadow":
-				runtime.state.mode = "shadow";
-				persistState();
-				updateStatus(ctx);
-				ctx.ui.notify("Adaptive routing set to shadow mode.", "info");
-				return;
-			case "lock": {
-				if (!ctx.model) {
-					ctx.ui.notify("No active model to lock.", "warning");
+			switch (subcommand) {
+				case "on":
+				case "auto":
+					runtime.state.mode = "auto";
+					persistState();
+					updateStatus(ctx);
+					ctx.ui.notify("Adaptive routing set to auto mode.", "info");
 					return;
-				}
-				runtime.state.lock = {
-					model: `${ctx.model.provider}/${ctx.model.id}`,
-					thinking: pi.getThinkingLevel() as RouteThinkingLevel,
-					setAt: Date.now(),
-				};
-				persistState();
-				updateStatus(ctx);
-				ctx.ui.notify(
-					`Adaptive routing locked to ${runtime.state.lock.model}:${runtime.state.lock.thinking}.`,
-					"info",
-				);
-				return;
-			}
-			case "unlock":
-				runtime.state.lock = undefined;
-				persistState();
-				updateStatus(ctx);
-				ctx.ui.notify("Adaptive routing lock cleared.", "info");
-				return;
-			case "refresh":
-				refreshUsageSnapshot();
-				runtime.state = readAdaptiveRoutingState();
-				ctx.ui.notify("Adaptive routing config and usage refreshed.", "info");
-				updateStatus(ctx);
-				return;
-			case "feedback": {
-				const category = normalizeFeedbackCategory(rest[0]);
-				if (!category) {
+				case "off":
+					runtime.state.mode = "off";
+					persistState();
+					updateStatus(ctx);
+					ctx.ui.notify("Adaptive routing disabled.", "warning");
+					return;
+				case "shadow":
+					runtime.state.mode = "shadow";
+					persistState();
+					updateStatus(ctx);
+					ctx.ui.notify("Adaptive routing set to shadow mode.", "info");
+					return;
+				case "lock": {
+					if (!ctx.model) {
+						ctx.ui.notify("No active model to lock.", "warning");
+						return;
+					}
+					runtime.state.lock = {
+						model: `${ctx.model.provider}/${ctx.model.id}`,
+						thinking: pi.getThinkingLevel() as RouteThinkingLevel,
+						setAt: Date.now(),
+					};
+					persistState();
+					updateStatus(ctx);
 					ctx.ui.notify(
-						"Usage: /route:feedback <good|bad|wrong-intent|overkill|underpowered|wrong-provider|wrong-thinking>",
-						"warning",
+						`Adaptive routing locked to ${runtime.state.lock.model}:${runtime.state.lock.thinking}.`,
+						"info",
 					);
 					return;
 				}
-				appendTelemetryEvent(
-					readAdaptiveRoutingConfig().telemetry,
-					createFeedbackEvent(runtime.lastDecision, category),
-				);
-				ctx.ui.notify(`Recorded route feedback: ${category}.`, "info");
-				return;
+				case "unlock":
+					runtime.state.lock = undefined;
+					persistState();
+					updateStatus(ctx);
+					ctx.ui.notify("Adaptive routing lock cleared.", "info");
+					return;
+				case "refresh":
+					refreshUsageSnapshot();
+					runtime.state = readAdaptiveRoutingState();
+					ctx.ui.notify("Adaptive routing config and usage refreshed.", "info");
+					updateStatus(ctx);
+					return;
+				case "feedback": {
+					const category = normalizeFeedbackCategory(rest[0]);
+					if (!category) {
+						ctx.ui.notify(
+							"Usage: /route:feedback <good|bad|wrong-intent|overkill|underpowered|wrong-provider|wrong-thinking>",
+							"warning",
+						);
+						return;
+					}
+					appendTelemetryEvent(
+						readAdaptiveRoutingConfig().telemetry,
+						createFeedbackEvent(runtime.lastDecision, category),
+					);
+					ctx.ui.notify(`Recorded route feedback: ${category}.`, "info");
+					return;
+				}
+				case "stats":
+					await openOverlay(ctx, formatStats(computeStats(readTelemetryEvents())));
+					return;
+				case "assignments":
+					await openOverlay(ctx, buildDelegatedAssignmentLines(readAdaptiveRoutingConfig(), ctx));
+					return;
+				case "explain":
+					await openOverlay(ctx, buildExplanationLines(runtime.lastDecision, runtime.usage));
+					return;
+				default:
+					ctx.ui.notify(buildStatusLine(runtime.state, runtime.lastDecision, getEffectiveMode()), "info");
 			}
-			case "stats":
-				await openOverlay(ctx, formatStats(computeStats(readTelemetryEvents())));
-				return;
-			case "assignments":
-				await openOverlay(ctx, buildDelegatedAssignmentLines(readAdaptiveRoutingConfig(), ctx));
-				return;
-			case "explain":
-				await openOverlay(ctx, buildExplanationLines(runtime.lastDecision, runtime.usage));
-				return;
-			default:
-				ctx.ui.notify(buildStatusLine(runtime.state, runtime.lastDecision, getEffectiveMode()), "info");
-		}
+		},
 	};
 
-	pi.registerCommand("route", {
-		description:
-			"Adaptive routing controls: /route:status|on|auto|off|shadow|explain|assignments|lock|unlock|refresh|feedback|stats",
-		handler: handleRouteCommand,
-	});
+	pi.registerCommand("route", routeCommand);
 
 	const routeAliases: Array<{ name: string; subcommand: string; description: string }> = [
 		{ name: "route:status", subcommand: "status", description: "Show the current adaptive routing status." },
@@ -380,7 +380,8 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 	for (const alias of routeAliases) {
 		pi.registerCommand(alias.name, {
 			description: alias.description,
-			handler: (args, ctx) => handleRouteCommand(args ? `${alias.subcommand} ${args}` : alias.subcommand, ctx),
+			handler: (args: string, ctx: ExtensionCommandContext) =>
+				routeCommand.handler(args ? `${alias.subcommand} ${args}` : alias.subcommand, ctx),
 		});
 	}
 }

@@ -64,75 +64,75 @@ function registerProvider(pi: ExtensionAPI, provider: SupportedProviderDefinitio
 }
 
 function registerProvidersCommand(pi: ExtensionAPI): void {
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Explicit subcommand routing keeps provider actions readable.
-	const handleProvidersCommand = async (args: string, ctx: ProviderCommandContext): Promise<void> => {
-		const trimmed = args.trim();
-		const [rawAction = "status", ...rest] = trimmed ? trimmed.split(/\s+/) : ["status"];
-		const action = rawAction.toLowerCase();
-		const query = rest.join(" ").trim();
-
-		if (action === "login") {
-			const provider = await resolveProviderSelection(query, ctx);
-			if (!provider) {
-				return;
-			}
-			await loginProviderFromCommand(pi, ctx, provider);
-			return;
-		}
-
-		if (action === "refresh-models") {
-			const providers = query && query.toLowerCase() !== "all" ? findProviders(query) : SUPPORTED_PROVIDERS;
-			if (providers.length === 0) {
-				ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
-				return;
-			}
-			const refreshed = await refreshProviders(pi, ctx, providers);
-			ctx.modelRegistry.refresh?.();
-			ctx.ui.notify(renderRefreshSummary(refreshed, providers.length), "info");
-			return;
-		}
-
-		if (action === "list") {
-			ctx.ui.notify(renderProviderList(query), "info");
-			return;
-		}
-
-		if (action === "info") {
-			if (!query) {
-				ctx.ui.notify("Usage: /providers:info <provider>", "warning");
-				return;
-			}
-			const provider = findProviders(query)[0];
-			if (!provider) {
-				ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
-				return;
-			}
-			ctx.ui.notify(await renderProviderInfo(provider, ctx), "info");
-			return;
-		}
-
-		if (action === "models") {
-			if (!query) {
-				ctx.ui.notify("Usage: /providers:models <provider>", "warning");
-				return;
-			}
-			const provider = findProviders(query)[0];
-			if (!provider) {
-				ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
-				return;
-			}
-			ctx.ui.notify(await renderProviderModels(provider, ctx), "info");
-			return;
-		}
-
-		ctx.ui.notify(renderStatus(ctx), "info");
-	};
-
-	pi.registerCommand("providers", {
+	const providersCommand = {
 		description:
 			"Inspect, log in to, or refresh the OpenCode-backed multi-provider catalog: /providers, /providers:status, /providers:list [query], /providers:info <provider>, /providers:models <provider>, /providers:login [provider], /providers:refresh-models [provider|all]",
-		handler: handleProvidersCommand,
-	});
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This explicit command router keeps each provider subcommand readable.
+		async handler(args: string, ctx: ExtensionCommandContext) {
+			const trimmed = args.trim();
+			const [rawAction = "status", ...rest] = trimmed ? trimmed.split(/\s+/) : ["status"];
+			const action = rawAction.toLowerCase();
+			const query = rest.join(" ").trim();
+
+			if (action === "login") {
+				const provider = await resolveProviderSelection(query, ctx);
+				if (!provider) {
+					return;
+				}
+				await loginProviderFromCommand(pi, ctx, provider);
+				return;
+			}
+
+			if (action === "refresh-models") {
+				const providers = query && query.toLowerCase() !== "all" ? findProviders(query) : SUPPORTED_PROVIDERS;
+				if (providers.length === 0) {
+					ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
+					return;
+				}
+				const refreshed = await refreshProviders(pi, ctx, providers);
+				ctx.modelRegistry.refresh?.();
+				ctx.ui.notify(renderRefreshSummary(refreshed, providers.length), "info");
+				return;
+			}
+
+			if (action === "list") {
+				ctx.ui.notify(renderProviderList(query), "info");
+				return;
+			}
+
+			if (action === "info") {
+				if (!query) {
+					ctx.ui.notify("Usage: /providers:info <provider>", "warning");
+					return;
+				}
+				const provider = findProviders(query)[0];
+				if (!provider) {
+					ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
+					return;
+				}
+				ctx.ui.notify(await renderProviderInfo(provider, ctx), "info");
+				return;
+			}
+
+			if (action === "models") {
+				if (!query) {
+					ctx.ui.notify("Usage: /providers:models <provider>", "warning");
+					return;
+				}
+				const provider = findProviders(query)[0];
+				if (!provider) {
+					ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
+					return;
+				}
+				ctx.ui.notify(await renderProviderModels(provider, ctx), "info");
+				return;
+			}
+
+			ctx.ui.notify(renderStatus(ctx), "info");
+		},
+	};
+
+	pi.registerCommand("providers", providersCommand);
 
 	const aliases: Array<{ name: string; subcommand: string; description: string }> = [
 		{ name: "providers:status", subcommand: "status", description: "Show multi-provider catalog status." },
@@ -162,7 +162,8 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 	for (const alias of aliases) {
 		pi.registerCommand(alias.name, {
 			description: alias.description,
-			handler: (args, ctx) => handleProvidersCommand(args ? `${alias.subcommand} ${args}` : alias.subcommand, ctx),
+			handler: (args: string, ctx: ExtensionCommandContext) =>
+				providersCommand.handler(args ? `${alias.subcommand} ${args}` : alias.subcommand, ctx),
 		});
 	}
 }
@@ -414,7 +415,6 @@ async function selectProviderFromOverlay(
 				? {
 						title: "Provider search",
 						placeholder: "Type a provider id or name",
-						useCustomOverlay: true,
 						getOptions(query) {
 							if (!query) {
 								return options;

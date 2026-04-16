@@ -698,55 +698,55 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		}
 	});
 
-	const handleWatchdogCommand = async (args: string, ctx: ExtensionCommandContext): Promise<void> => {
-		activeCtx = ctx;
-		setSafeModeStatus();
-		loadConfigNow();
-		const command = args.trim().toLowerCase() || "status";
-		switch (command) {
-			case "on":
-				enabled = true;
-				resetCounters();
-				ensureTimer();
-				ctx.ui.notify("Performance watchdog enabled.", "info");
-				return;
-			case "off":
-				enabled = false;
-				stopTimer();
-				setAlertStatus(undefined);
-				ctx.ui.notify("Performance watchdog disabled.", "warning");
-				return;
-			case "sample":
-				latestSample = takeSample();
-				ctx.ui.notify(formatWatchdogStatus(latestSample), "info");
-				return;
-			case "reset":
-				resetHistory();
-				ctx.ui.notify("Performance watchdog history reset.", "info");
-				return;
-			case "overlay":
-			case "dashboard":
-				await openOverlay(ctx);
-				return;
-			case "config":
-				notifyConfig(ctx);
-				return;
-			case "blame":
-				notifyBlame(ctx);
-				return;
-			case "startup":
-				notifyStartupBreakdown(ctx);
-				return;
-			default:
-				notifyStatus(ctx);
-		}
-	};
-
-	pi.registerCommand("watchdog", {
+	const watchdogCommand = {
 		description:
 			"Inspect or control the performance watchdog: /watchdog:status|startup|overlay|dashboard|config|reset|on|off|sample|blame",
-		handler: handleWatchdogCommand,
-	});
+		async handler(args, ctx) {
+			activeCtx = ctx;
+			setSafeModeStatus();
+			loadConfigNow();
+			const command = args.trim().toLowerCase() || "status";
+			switch (command) {
+				case "on":
+					enabled = true;
+					resetCounters();
+					ensureTimer();
+					ctx.ui.notify("Performance watchdog enabled.", "info");
+					return;
+				case "off":
+					enabled = false;
+					stopTimer();
+					setAlertStatus(undefined);
+					ctx.ui.notify("Performance watchdog disabled.", "warning");
+					return;
+				case "sample":
+					latestSample = takeSample();
+					ctx.ui.notify(formatWatchdogStatus(latestSample), "info");
+					return;
+				case "reset":
+					resetHistory();
+					ctx.ui.notify("Performance watchdog history reset.", "info");
+					return;
+				case "overlay":
+				case "dashboard":
+					await openOverlay(ctx);
+					return;
+				case "config":
+					notifyConfig(ctx);
+					return;
+				case "blame":
+					notifyBlame(ctx);
+					return;
+				case "startup":
+					notifyStartupBreakdown(ctx);
+					return;
+				default:
+					notifyStatus(ctx);
+			}
+		},
+	};
+
+	pi.registerCommand("watchdog", watchdogCommand);
 
 	const watchdogAliases: Array<{ name: string; subcommand: string; description: string }> = [
 		{ name: "watchdog:status", subcommand: "status", description: "Show the current watchdog status." },
@@ -764,7 +764,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	for (const alias of watchdogAliases) {
 		pi.registerCommand(alias.name, {
 			description: alias.description,
-			handler: (args, ctx) => handleWatchdogCommand(args ? `${alias.subcommand} ${args}` : alias.subcommand, ctx),
+			handler: (args, ctx) => watchdogCommand.handler(args ? `${alias.subcommand} ${args}` : alias.subcommand, ctx),
 		});
 	}
 

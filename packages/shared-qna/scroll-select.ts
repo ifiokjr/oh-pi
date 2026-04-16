@@ -2,16 +2,6 @@ import { requirePiTuiModule } from "./pi-tui-loader.js";
 
 let cachedPiTui:
 	| {
-			Input: new () => {
-				onSubmit?: (value: string) => void;
-				onEscape?: () => void;
-				focused?: boolean;
-				setValue: (value: string) => void;
-				getValue: () => string;
-				handleInput: (data: string) => void;
-				render: (width: number) => string[];
-				invalidate?: () => void;
-			};
 			Key: {
 				enter: string;
 				escape: string;
@@ -32,16 +22,6 @@ function getPiTui() {
 	}
 
 	cachedPiTui = requirePiTuiModule() as {
-		Input: new () => {
-			onSubmit?: (value: string) => void;
-			onEscape?: () => void;
-			focused?: boolean;
-			setValue: (value: string) => void;
-			getValue: () => string;
-			handleInput: (data: string) => void;
-			render: (width: number) => string[];
-			invalidate?: () => void;
-		};
 		Key: {
 			enter: string;
 			escape: string;
@@ -67,7 +47,6 @@ export interface ScrollSelectSearchConfig<T> {
 	placeholder?: string;
 	getOptions: (query: string) => Promise<ScrollSelectOption<T>[]> | ScrollSelectOption<T>[];
 	emptyMessage?: (query: string) => string;
-	useCustomOverlay?: boolean;
 }
 
 export interface ScrollSelectConfig<T> {
@@ -87,9 +66,7 @@ type ScrollSelectUi = {
 		factory: (tui: { requestRender: () => void }, theme: ScrollSelectTheme, keybindings: unknown, done: (value: T) => void) => {
 			render: (width: number) => string[];
 			handleInput: (data: string) => void;
-			invalidate?: () => void;
 			dispose?: () => void;
-			focused?: boolean;
 		},
 		options?: unknown,
 	) => Promise<T>;
@@ -103,77 +80,12 @@ type ScrollSelectTheme = {
 	bold: (text: string) => string;
 };
 
-class ScrollSelectSearchPromptComponent {
-	readonly width = 72;
-
-	private readonly input = new (getPiTui().Input)();
-	private _focused = false;
-
-	get focused(): boolean {
-		return this._focused;
-	}
-
-	set focused(value: boolean) {
-		this._focused = value;
-		this.input.focused = value;
-	}
-
-	constructor(
-		private readonly theme: ScrollSelectTheme,
-		private readonly title: string,
-		private readonly placeholder: string | undefined,
-		initialValue: string,
-		private readonly done: (value: string | null) => void,
-	) {
-		this.input.setValue(initialValue);
-		this.input.onSubmit = (value) => this.done(value);
-		this.input.onEscape = () => this.done(null);
-	}
-
-	render(width: number): string[] {
-		const { truncateToWidth, wrapTextWithAnsi } = getPiTui();
-		const safeWidth = Math.max(24, Math.min(width, this.width));
-		const bodyWidth = Math.max(20, safeWidth - 2);
-		const lines: string[] = [];
-
-		for (const line of this.title.split("\n")) {
-			for (const wrapped of wrapTextWithAnsi(this.theme.bold(line), bodyWidth)) {
-				lines.push(truncateToWidth(wrapped, bodyWidth));
-			}
-		}
-
-		if (this.placeholder?.trim()) {
-			lines.push("");
-			for (const wrapped of wrapTextWithAnsi(this.theme.fg("dim", this.placeholder), bodyWidth)) {
-				lines.push(truncateToWidth(wrapped, bodyWidth));
-			}
-		}
-
-		lines.push("");
-		for (const line of this.input.render(bodyWidth)) {
-			lines.push(truncateToWidth(line, bodyWidth));
-		}
-		lines.push("");
-		lines.push(truncateToWidth(this.theme.fg("dim", "[enter] apply • [esc] cancel"), bodyWidth));
-		return lines;
-	}
-
-	handleInput(data: string): void {
-		this.input.handleInput(data);
-	}
-
-	invalidate(): void {
-		this.input.invalidate?.();
-	}
-
-	dispose(): void {}
-}
-
 class ScrollSelectComponent<T> {
+	focused = false;
+
 	private readonly tui: { requestRender: () => void };
 	private readonly theme: ScrollSelectTheme;
 	private readonly done: (value: T | null) => void;
-	private readonly custom: ScrollSelectUi["custom"];
 	private readonly input: ScrollSelectUi["input"];
 	private readonly notify: ScrollSelectUi["notify"];
 	private readonly baseOptions: ScrollSelectOption<T>[];
@@ -182,8 +94,6 @@ class ScrollSelectComponent<T> {
 	private readonly emptyMessage: string;
 	private readonly maxVisibleOptions: number;
 	private readonly search?: ScrollSelectSearchConfig<T>;
-
-	focused = false;
 
 	private options: ScrollSelectOption<T>[];
 	private cursorIndex: number;
@@ -196,7 +106,6 @@ class ScrollSelectComponent<T> {
 			tui: { requestRender: () => void };
 			theme: ScrollSelectTheme;
 			done: (value: T | null) => void;
-			custom: ScrollSelectUi["custom"];
 			input: ScrollSelectUi["input"];
 			notify: ScrollSelectUi["notify"];
 		},
@@ -204,7 +113,6 @@ class ScrollSelectComponent<T> {
 		this.tui = dependencies.tui;
 		this.theme = dependencies.theme;
 		this.done = dependencies.done;
-		this.custom = dependencies.custom;
 		this.input = dependencies.input;
 		this.notify = dependencies.notify;
 		this.baseOptions = [...config.options];
@@ -344,81 +252,38 @@ class ScrollSelectComponent<T> {
 	}
 
 	private async promptSearch(): Promise<void> {
-		if (!this.search || this.searching) {
+		if (!this.search || typeof this.input !== "function" || this.searching) {
 			return;
-		}
-
-		const raw = await this.openSearchPrompt();
-		if (raw === null || raw === undefined) {
-			return;
-		}
-
-		await this.applySearchQuery(raw.trim());
-	}
-
-	private async openSearchPrompt(): Promise<string | null | undefined> {
-		const search = this.search;
-		if (!search) {
-			return null;
-		}
-
-		if (search.useCustomOverlay && typeof this.custom === "function") {
-			this.searching = true;
-			try {
-				return await this.custom<string | null>(
-					(_tui, theme, _keybindings, done) =>
-						new ScrollSelectSearchPromptComponent(
-							theme,
-							search.title,
-							this.searchQuery || search.placeholder,
-							this.searchQuery,
-							done,
-						),
-					{
-						overlay: true,
-						overlayOptions: {
-							anchor: "center",
-							width: 72,
-							maxHeight: 10,
-						},
-					},
-				);
-			} finally {
-				this.searching = false;
-			}
-		}
-
-		if (typeof this.input !== "function") {
-			return null;
 		}
 
 		this.searching = true;
 		try {
-			return await this.input(search.title, this.searchQuery || search.placeholder);
+			const raw = await this.input(this.search.title, this.searchQuery || this.search.placeholder);
+			if (raw === null || raw === undefined) {
+				return;
+			}
+
+			const query = raw.trim();
+			if (query === this.searchQuery) {
+				return;
+			}
+
+			const nextOptions = await this.search.getOptions(query);
+			if (nextOptions.length === 0) {
+				this.notify?.(
+					this.search.emptyMessage?.(query) ?? `No option matched ${query ? `"${query}"` : "the current filter"}.`,
+					"warning",
+				);
+				return;
+			}
+
+			this.searchQuery = query;
+			this.options = [...nextOptions];
+			this.cursorIndex = 0;
+			this.tui.requestRender();
 		} finally {
 			this.searching = false;
 		}
-	}
-
-	private async applySearchQuery(query: string): Promise<void> {
-		const search = this.search;
-		if (!search || query === this.searchQuery) {
-			return;
-		}
-
-		const nextOptions = await search.getOptions(query);
-		if (nextOptions.length === 0) {
-			this.notify?.(
-				search.emptyMessage?.(query) ?? `No option matched ${query ? `"${query}"` : "the current filter"}.`,
-				"warning",
-			);
-			return;
-		}
-
-		this.searchQuery = query;
-		this.options = [...nextOptions];
-		this.cursorIndex = 0;
-		this.tui.requestRender();
 	}
 }
 
@@ -449,7 +314,6 @@ export async function openScrollableSelect<T>(ui: ScrollSelectUi, config: Scroll
 				tui,
 				theme,
 				done,
-				custom: ui.custom,
 				input: ui.input,
 				notify: ui.notify,
 			}),

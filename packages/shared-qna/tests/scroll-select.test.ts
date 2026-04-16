@@ -2,44 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../pi-tui-loader.js", () => ({
 	requirePiTuiModule: () => ({
-		Input: class MockInput {
-			value = "";
-			focused = false;
-			onSubmit?: (value: string) => void;
-			onEscape?: () => void;
-
-			setValue(value: string) {
-				this.value = value;
-			}
-
-			getValue() {
-				return this.value;
-			}
-
-			handleInput(data: string) {
-				if (data === "<enter>") {
-					this.onSubmit?.(this.value);
-					return;
-				}
-				if (data === "<escape>") {
-					this.onEscape?.();
-					return;
-				}
-				if (data === "<backspace>") {
-					this.value = this.value.slice(0, -1);
-					return;
-				}
-				if (data.length === 1) {
-					this.value += data;
-				}
-			}
-
-			render(_width: number) {
-				return [`> ${this.value}`];
-			}
-
-			invalidate() {}
-		},
 		Key: {
 			enter: "<enter>",
 			escape: "<escape>",
@@ -293,50 +255,6 @@ describe("openScrollableSelect", () => {
 		await flushAsyncWork();
 
 		expect(getOptions).toHaveBeenCalledTimes(1);
-	});
-
-	it("supports overlay-based search prompts without losing the picker", async () => {
-		const { ui, buildComponent } = createFactoryRunner();
-
-		await openScrollableSelect(ui, {
-			title: "Provider login",
-			options: [
-				{ value: "alpha", label: "Alpha" },
-				{ value: "beta", label: "Beta" },
-				{ value: "gamma", label: "Gamma" },
-			],
-			search: {
-				title: "Provider search",
-				placeholder: "Type a provider id or name",
-				useCustomOverlay: true,
-				getOptions(query) {
-					const all = [
-						{ value: "alpha", label: "Alpha" },
-						{ value: "beta", label: "Beta" },
-						{ value: "gamma", label: "Gamma" },
-					];
-					return all.filter((option) => option.label.toLowerCase().includes(query.toLowerCase()));
-				},
-			},
-		});
-
-		const component = buildComponent();
-		component.handleInput("/");
-		await flushAsyncWork(2);
-
-		expect(ui.custom).toHaveBeenCalledTimes(2);
-		const prompt = buildComponent(1);
-		prompt.handleInput("b");
-		prompt.handleInput("e");
-		prompt.handleInput("t");
-		prompt.handleInput("a");
-		prompt.handleInput("<enter>");
-		await flushAsyncWork();
-
-		const rendered = component.render(60).join("\n");
-		expect(ui.input).not.toHaveBeenCalled();
-		expect(rendered).toContain("Filter: beta");
-		expect(rendered).toContain("Beta");
 	});
 
 	it("handles enter and escape shortcuts", async () => {

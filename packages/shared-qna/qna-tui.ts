@@ -23,7 +23,6 @@ function getPiTui() {
 		Editor: new (tui: TUI, theme: EditorTheme) => {
 			disableSubmit?: boolean;
 			onChange?: () => void;
-			focused?: boolean;
 			setText: (text: string) => void;
 			getText: () => string;
 			render: (width: number) => string[];
@@ -255,7 +254,6 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 	private editor: {
 		disableSubmit?: boolean;
 		onChange?: () => void;
-		focused?: boolean;
 		setText: (text: string) => void;
 		getText: () => string;
 		render: (width: number) => string[];
@@ -286,16 +284,6 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 	private green = (s: string) => s;
 	private yellow = (s: string) => s;
 	private gray = (s: string) => s;
-	private _focused = false;
-
-	get focused(): boolean {
-		return this._focused;
-	}
-
-	set focused(value: boolean) {
-		this._focused = value;
-		this.editor.focused = value;
-	}
 
 	constructor(
 		questions: TQuestion[],

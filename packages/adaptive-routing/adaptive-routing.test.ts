@@ -210,4 +210,19 @@ describe("adaptive routing extension", () => {
 		expect(harness.ctx.model).toMatchObject({ provider: "google", id: "gemini-2.5-flash" });
 		expect(harness.notifications.some((item) => item.msg.includes("Adaptive route suggestion"))).toBe(true);
 	});
+
+	it("routes alias feedback commands through the colon form", async () => {
+		writeFileSync(
+			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
+			`${JSON.stringify({ mode: "auto" }, null, 2)}\n`,
+		);
+		const harness = createExtensionHarness();
+		adaptiveRoutingExtension(harness.pi as never);
+
+		await harness.commands.get("route:feedback")?.handler?.("", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("Usage: /route:feedback");
+
+		await harness.commands.get("route:status")?.handler?.("", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("adaptive routing");
+	});
 });

@@ -343,11 +343,6 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				return;
 			}
 
-			if (action === "adopt" || action === "release") {
-				ctx.ui.notify(`Usage: /schedule:${action} <id|all>`, "warning");
-				return;
-			}
-
 			if (rawExtra) {
 				ctx.ui.notify("Too many arguments for /schedule.", "warning");
 				return;
