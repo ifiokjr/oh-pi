@@ -1,4 +1,8 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+
+const coreEntry = fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url));
+const sharedQnaEntry = fileURLToPath(new URL("./packages/shared-qna/index.ts", import.meta.url));
 
 const coverageInclude = ["scripts/**/*.{ts,mts,mjs}", "packages/**/*.{ts,tsx,mts,mjs}"];
 const coverageExclude = [
@@ -13,6 +17,12 @@ const coverageExclude = [
 ];
 
 export default defineConfig({
+	resolve: {
+		alias: {
+			"@ifi/oh-pi-core": coreEntry,
+			"@ifi/pi-shared-qna": sharedQnaEntry,
+		},
+	},
 	test: {
 		include: [
 			"benchmarks/**/*.test.ts",
