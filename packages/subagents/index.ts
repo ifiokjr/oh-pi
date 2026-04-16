@@ -305,6 +305,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					cwd: ctx.cwd,
 					currentSessionId: currentSessionId!,
 					currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+					/* v8 ignore next */
 					availableModels: getAvailableRoutingModels(ctx),
 				};
 

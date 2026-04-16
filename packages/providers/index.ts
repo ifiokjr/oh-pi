@@ -1,3 +1,4 @@
+/* v8 ignore file */
 import * as sharedQna from "@ifi/pi-shared-qna";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import {

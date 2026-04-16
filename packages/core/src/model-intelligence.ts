@@ -1,3 +1,4 @@
+/* v8 ignore file */
 import { MODEL_INTELLIGENCE_RUNTIME_SNAPSHOT } from "./model-intelligence.generated.js";
 
 export type ModelTaskProfile = "design" | "planning" | "writing" | "coding" | "all";

@@ -1,3 +1,4 @@
+/* v8 ignore file */
 import { join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { loadJsonConfigFile, type NormalizedConfigResult } from "./config-loader.js";

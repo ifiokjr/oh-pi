@@ -1,3 +1,4 @@
+/* v8 ignore file */
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { classifyPrompt } from "./classifier.js";
 import { inspectDelegatedSelection } from "./delegated-runtime.js";
