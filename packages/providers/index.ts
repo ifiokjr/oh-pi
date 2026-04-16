@@ -49,7 +49,7 @@ type ProviderRegistryContext = {
 
 type ProviderCommandContext = {
 	modelRegistry: ProviderModelRegistry;
-	ui: Pick<ExtensionCommandContext["ui"], "notify" | "select" | "input">;
+	ui: Pick<ExtensionCommandContext["ui"], "custom" | "notify" | "select" | "input">;
 };
 
 type ProviderStatusContext = {
@@ -492,8 +492,8 @@ async function openProviderScrollableSelect<T>(
 			overlay: true,
 			overlayOptions: {
 				anchor: "center",
-				width: config.overlayWidth ?? "80%",
-				maxHeight: config.overlayMaxHeight ?? "75%",
+				width: (config.overlayWidth ?? "80%") as never,
+				maxHeight: (config.overlayMaxHeight ?? "75%") as never,
 			},
 		},
 	);
