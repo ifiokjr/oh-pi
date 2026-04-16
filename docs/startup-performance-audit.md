@@ -82,19 +82,25 @@ This is the most expensive focused startup-adjacent benchmark today and maps dir
 
 **What to watch**
 
-The scheduler store is capped, so this path is not the largest benchmark today, but it is on the hot startup path and should stay small.
+The scheduler store is capped, so this path is not the largest benchmark today, but it is on the hot startup path and should stay small. The runtime heartbeat also updates footer status, so repeated identical `pi-scheduler` status text should stay coalesced instead of being re-sent on every periodic tick.
 
 ### 3. `packages/extensions/extensions/custom-footer.ts`
 
 **Why it matters**
 
-The footer caches totals after startup, but the aggregation path is still O(n) over assistant messages. It also schedules worktree snapshot refreshes, which means it can trigger the synchronous git path above.
+The footer caches totals after startup, but the aggregation path is still O(n) over assistant messages. It also polls for PR visibility and requests redraws on an interval, so even after the worktree split it can still contribute background UI churn if that cadence is too aggressive.
 
 **Current benchmark coverage**
 
 - `custom footer usage scan (50k messages)`
 - `custom footer first render (200-entry history)`
 - included indirectly by the full-stack startup cases
+
+**Latest mitigation**
+
+- footer PR polling now matches the 60-second GH probe cooldown instead of waking every 30 seconds
+- PR probe completions request a redraw only when the visible PR list actually changes
+- watchdog and scheduler status-bar writes should stay deduplicated so periodic clean-state refreshes do not spam identical `setStatus(...)` calls
 
 ### 4. `packages/extensions/extensions/usage-tracker.ts`
 

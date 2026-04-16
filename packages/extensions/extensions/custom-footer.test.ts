@@ -223,7 +223,7 @@ describe("custom-footer extension", () => {
 		}
 	});
 
-	it("does not refresh worktree snapshots on the 30-second PR poll timer", async () => {
+	it("does not refresh worktree snapshots on the footer PR poll timer", async () => {
 		vi.useFakeTimers();
 		const getCachedRepoWorktreeContext = vi
 			.spyOn(worktreeShared, "getCachedRepoWorktreeContext")
@@ -258,7 +258,7 @@ describe("custom-footer extension", () => {
 			await vi.advanceTimersByTimeAsync(500);
 			expect(refreshRepoWorktreeContext).toHaveBeenCalledTimes(1);
 
-			await vi.advanceTimersByTimeAsync(30_000);
+			await vi.advanceTimersByTimeAsync(60_000);
 			expect(refreshRepoWorktreeContext).toHaveBeenCalledTimes(1);
 		} finally {
 			getCachedRepoWorktreeContext.mockRestore();

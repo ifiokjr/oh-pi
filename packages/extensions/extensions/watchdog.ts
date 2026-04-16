@@ -29,6 +29,7 @@ import {
 	setSafeModeState,
 	subscribeSafeMode,
 } from "./runtime-mode";
+import { createStatusBarState } from "./ui-status-cache.js";
 import {
 	type ExtensionDiagnostic,
 	formatExtensionDiagnostic,
@@ -421,17 +422,14 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	let lastSampleAt = Date.now();
 	let configLoaded = false;
 	let startupConfigTimer: ReturnType<typeof setTimeout> | null = null;
+	const statusBar = createStatusBarState();
 
 	const setAlertStatus = (text: string | undefined) => {
-		if (activeCtx?.hasUI) {
-			activeCtx.ui.setStatus("watchdog", text);
-		}
+		statusBar.set(activeCtx, "watchdog", text);
 	};
 
 	const setSafeModeStatus = (state = getSafeModeState()) => {
-		if (activeCtx?.hasUI) {
-			activeCtx.ui.setStatus("safe-mode", formatSafeModeStatusHint(state));
-		}
+		statusBar.set(activeCtx, "safe-mode", formatSafeModeStatusHint(state));
 	};
 
 	const stopTimer = () => {
@@ -794,9 +792,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	pi.on("session_shutdown", () => {
 		cancelStartupConfigLoad();
 		setAlertStatus(undefined);
-		if (activeCtx?.hasUI) {
-			activeCtx.ui.setStatus("safe-mode", undefined);
-		}
+		statusBar.set(activeCtx, "safe-mode", undefined);
 		stopTimer();
 		histogram.disable();
 	});

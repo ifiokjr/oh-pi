@@ -39,6 +39,7 @@ export type PrInfo = {
 };
 
 const PR_PROBE_COOLDOWN_MS = 60_000;
+const FOOTER_POLL_INTERVAL_MS = 60_000;
 const FOOTER_STARTUP_REFRESH_DELAY_MS = 250;
 const FOOTER_STARTUP_DEFER_ENTRY_THRESHOLD = 250;
 
@@ -47,6 +48,16 @@ export type FooterUsageTotals = {
 	output: number;
 	cost: number;
 };
+
+function samePrs(left: PrInfo[], right: PrInfo[]): boolean {
+	return (
+		left.length === right.length &&
+		left.every((pr, index) => {
+			const candidate = right[index];
+			return pr.number === candidate?.number && pr.url === candidate?.url && pr.headRefName === candidate?.headRefName;
+		})
+	);
+}
 
 /** Format a millisecond duration as a compact human-readable string (e.g. `42s`, `3m12s`, `1h5m`). */
 export function formatElapsed(ms: number): string {
@@ -201,6 +212,15 @@ export default function (pi: ExtensionAPI) {
 		return cachedWorktreeContext;
 	};
 
+	const updateCachedPrs = (nextCachedPrs: PrInfo[]) => {
+		if (samePrs(cachedPrs, nextCachedPrs)) {
+			return;
+		}
+
+		cachedPrs = nextCachedPrs;
+		requestFooterRender?.();
+	};
+
 	const probePrs = (branch: string | null) => {
 		if (!branch || prProbeInFlight) {
 			return;
@@ -210,7 +230,7 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 		if (branch !== prProbedForBranch) {
-			cachedPrs = [];
+			updateCachedPrs([]);
 		}
 		prProbeInFlight = true;
 		prProbedForBranch = branch;
@@ -220,18 +240,18 @@ export default function (pi: ExtensionAPI) {
 		})
 			.then(({ stdout, exitCode }) => {
 				if (exitCode !== 0 || !stdout.trim()) {
-					cachedPrs = [];
+					updateCachedPrs([]);
 					return;
 				}
 				try {
 					const parsed = JSON.parse(stdout.trim()) as Array<{ number?: number; url?: string; headRefName?: string }>;
-					cachedPrs = parsed.filter((entry): entry is PrInfo => !!entry.number && !!entry.url);
+					updateCachedPrs(parsed.filter((entry): entry is PrInfo => !!entry.number && !!entry.url));
 				} catch {
-					cachedPrs = [];
+					updateCachedPrs([]);
 				}
 			})
 			.catch(() => {
-				cachedPrs = [];
+				updateCachedPrs([]);
 			})
 			.finally(() => {
 				prProbeInFlight = false;
@@ -262,7 +282,7 @@ export default function (pi: ExtensionAPI) {
 			const timer = setInterval(() => {
 				probeActivePrs();
 				tui.requestRender();
-			}, 30000);
+			}, FOOTER_POLL_INTERVAL_MS);
 			probeActivePrs();
 
 			return {

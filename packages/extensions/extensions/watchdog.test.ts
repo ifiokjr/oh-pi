@@ -97,6 +97,7 @@ function createMockPi() {
 function createMockCtx() {
 	const notifications: Array<{ msg: string; level: string }> = [];
 	const statuses = new Map<string, string | undefined>();
+	const statusCalls: Array<{ key: string; value: string | undefined }> = [];
 	const custom = vi.fn().mockResolvedValue(undefined);
 	return {
 		hasUI: true,
@@ -105,12 +106,14 @@ function createMockCtx() {
 				notifications.push({ msg, level });
 			},
 			setStatus(key: string, value: string | undefined) {
+				statusCalls.push({ key, value });
 				statuses.set(key, value);
 			},
 			custom,
 		},
 		_notifications: notifications,
 		_statuses: statuses,
+		_statusCalls: statusCalls,
 		_custom: custom,
 	};
 }
@@ -331,6 +334,25 @@ describe("watchdog extension", () => {
 		await command.handler("off", ctx);
 		expect(getSafeModeState().enabled).toBe(false);
 		expect(ctx._statuses.get("safe-mode")).toBeUndefined();
+	});
+
+	it("coalesces repeated clean watchdog status clears", async () => {
+		const pi = createMockPi();
+		const ctx = createMockCtx();
+		watchdogExtension(pi as any);
+
+		mockCpuUsageSequence([
+			{ user: 0, system: 0 },
+			{ user: 0, system: 0 },
+			{ user: 0, system: 0 },
+		]);
+		mockMemoryUsage();
+
+		await pi._emit("session_start", {}, ctx);
+		await vi.advanceTimersByTimeAsync(10_000);
+
+		const watchdogCalls = ctx._statusCalls.filter((call) => call.key === "watchdog");
+		expect(watchdogCalls).toEqual([{ key: "watchdog", value: undefined }]);
 	});
 
 	it("resets watchdog history and clears alert status", async () => {

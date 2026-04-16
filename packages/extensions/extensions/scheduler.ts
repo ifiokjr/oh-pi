@@ -61,6 +61,7 @@ import {
 	type ScheduleTask,
 	THREE_DAYS,
 } from "./scheduler-shared.js";
+import { createStatusBarState } from "./ui-status-cache.js";
 import { RUNTIME_DIAGNOSTICS_EVENT } from "./watchdog-runtime-diagnostics.js";
 
 export {
@@ -148,6 +149,7 @@ export class SchedulerRuntime {
 	private readonly dispatchTimestamps: number[] = [];
 	private lastRateLimitNoticeAt = 0;
 	private readonly instanceId = randomUUID().slice(0, 12);
+	private readonly statusBar = createStatusBarState();
 	private sessionId: string | null = null;
 	private dispatchMode: SchedulerDispatchMode = "auto";
 	private startupOwnershipHandled = false;
@@ -174,9 +176,9 @@ export class SchedulerRuntime {
 		}
 		this.safeModeEnabled = enabled;
 
-		if (enabled && this.runtimeCtx?.hasUI) {
-			this.runtimeCtx.ui.setStatus("pi-scheduler", undefined);
-			this.runtimeCtx.ui.setStatus("pi-scheduler-stale", undefined);
+		if (enabled) {
+			this.setStatus("pi-scheduler", undefined);
+			this.setStatus("pi-scheduler-stale", undefined);
 		}
 
 		// Restart the scheduler timer with the appropriate interval.
@@ -215,10 +217,12 @@ export class SchedulerRuntime {
 
 	clearStatus(ctx?: ExtensionContext) {
 		const target = ctx ?? this.runtimeCtx;
-		if (target?.hasUI) {
-			target.ui.setStatus("pi-scheduler", undefined);
-			target.ui.setStatus("pi-scheduler-stale", undefined);
-		}
+		this.setStatus("pi-scheduler", undefined, target);
+		this.setStatus("pi-scheduler-stale", undefined, target);
+	}
+
+	private setStatus(key: "pi-scheduler" | "pi-scheduler-stale", value: string | undefined, ctx = this.runtimeCtx) {
+		this.statusBar.set(ctx, key, value);
 	}
 
 	private resolveRecurringExpiryMs(expiresInMs?: number): number {
@@ -613,23 +617,24 @@ export class SchedulerRuntime {
 		}
 		// In safe mode, suppress all status bar updates to reduce UI churn.
 		if (this.safeModeEnabled) {
-			this.runtimeCtx.ui.setStatus("pi-scheduler", undefined);
-			this.runtimeCtx.ui.setStatus("pi-scheduler-stale", undefined);
+			this.setStatus("pi-scheduler", undefined);
+			this.setStatus("pi-scheduler-stale", undefined);
 			return;
 		}
 		// Clear the stale-task status hint when no tasks need review.
 		const staleCount = Array.from(this.tasks.values()).filter((t) => t.enabled && t.resumeRequired).length;
 		if (staleCount === 0) {
-			this.runtimeCtx.ui.setStatus("pi-scheduler-stale", undefined);
+			this.setStatus("pi-scheduler-stale", undefined);
 		}
+
 		if (this.tasks.size === 0) {
-			this.runtimeCtx.ui.setStatus("pi-scheduler", undefined);
+			this.setStatus("pi-scheduler", undefined);
 			return;
 		}
 
 		const enabled = Array.from(this.tasks.values()).filter((t) => t.enabled);
 		if (enabled.length === 0) {
-			this.runtimeCtx.ui.setStatus("pi-scheduler", `${this.tasks.size} task${this.tasks.size === 1 ? "" : "s"} paused`);
+			this.setStatus("pi-scheduler", `${this.tasks.size} task${this.tasks.size === 1 ? "" : "s"} paused`);
 			return;
 		}
 
@@ -648,7 +653,7 @@ export class SchedulerRuntime {
 			const next = new Date(nextRunAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 			parts.push(`${scheduled.length} active • next ${next}`);
 		}
-		this.runtimeCtx.ui.setStatus("pi-scheduler", parts.join(" • ") || "paused");
+		this.setStatus("pi-scheduler", parts.join(" • ") || "paused");
 	}
 
 	private pruneDispatchHistory(now: number) {
@@ -1938,10 +1943,7 @@ export class SchedulerRuntime {
 			"warning",
 		);
 		// Persist a compact hint in the status bar so users see it without repeated notifications.
-		this.runtimeCtx.ui.setStatus(
-			"pi-scheduler-stale",
-			`⚠ ${count} stale task${count === 1 ? "" : "s"} — /schedule to review`,
-		);
+		this.setStatus("pi-scheduler-stale", `⚠ ${count} stale task${count === 1 ? "" : "s"} — /schedule to review`);
 	}
 
 	private resumeReasonLabel(reason: ResumeReason): string {

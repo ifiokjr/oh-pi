@@ -117,6 +117,7 @@ function createMockPi() {
 function createMockCtx(overrides: Record<string, any> = {}) {
 	const notifications: { msg: string; type: string }[] = [];
 	const statusMap = new Map<string, any>();
+	const statusCalls: Array<{ key: string; value: any }> = [];
 
 	return {
 		cwd: overrides.cwd ?? "/mock-project",
@@ -131,6 +132,7 @@ function createMockCtx(overrides: Record<string, any> = {}) {
 				notifications.push({ msg, type });
 			},
 			setStatus(key: string, value: any) {
+				statusCalls.push({ key, value });
 				if (value === undefined) {
 					statusMap.delete(key);
 				} else {
@@ -143,6 +145,7 @@ function createMockCtx(overrides: Record<string, any> = {}) {
 		},
 		_notifications: notifications,
 		_statusMap: statusMap,
+		_statusCalls: statusCalls,
 	};
 }
 
@@ -1260,6 +1263,20 @@ describe("SchedulerRuntime", () => {
 			runtime.setTaskEnabled(task.id, false);
 			runtime.updateStatus();
 			expect(ctx._statusMap.get("pi-scheduler")).toContain("paused");
+		});
+
+		it("coalesces identical periodic status text", () => {
+			const ctx = createMockCtx();
+			runtime.setRuntimeContext(ctx as any);
+			runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
+
+			runtime.updateStatus();
+			const initialCalls = ctx._statusCalls.filter((call) => call.key === "pi-scheduler");
+			expect(initialCalls).toHaveLength(1);
+
+			runtime.updateStatus();
+			const repeatedCalls = ctx._statusCalls.filter((call) => call.key === "pi-scheduler");
+			expect(repeatedCalls).toHaveLength(1);
 		});
 
 		it("does not update without UI", () => {
