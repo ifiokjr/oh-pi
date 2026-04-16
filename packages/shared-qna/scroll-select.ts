@@ -357,15 +357,20 @@ class ScrollSelectComponent<T> {
 	}
 
 	private async openSearchPrompt(): Promise<string | null | undefined> {
-		if (this.search?.useCustomOverlay && typeof this.custom === "function") {
+		const search = this.search;
+		if (!search) {
+			return null;
+		}
+
+		if (search.useCustomOverlay && typeof this.custom === "function") {
 			this.searching = true;
 			try {
 				return await this.custom<string | null>(
 					(_tui, theme, _keybindings, done) =>
 						new ScrollSelectSearchPromptComponent(
 							theme,
-							this.search.title,
-							this.searchQuery || this.search.placeholder,
+							search.title,
+							this.searchQuery || search.placeholder,
 							this.searchQuery,
 							done,
 						),
@@ -389,21 +394,22 @@ class ScrollSelectComponent<T> {
 
 		this.searching = true;
 		try {
-			return await this.input(this.search.title, this.searchQuery || this.search.placeholder);
+			return await this.input(search.title, this.searchQuery || search.placeholder);
 		} finally {
 			this.searching = false;
 		}
 	}
 
 	private async applySearchQuery(query: string): Promise<void> {
-		if (!this.search || query === this.searchQuery) {
+		const search = this.search;
+		if (!search || query === this.searchQuery) {
 			return;
 		}
 
-		const nextOptions = await this.search.getOptions(query);
+		const nextOptions = await search.getOptions(query);
 		if (nextOptions.length === 0) {
 			this.notify?.(
-				this.search.emptyMessage?.(query) ?? `No option matched ${query ? `"${query}"` : "the current filter"}.`,
+				search.emptyMessage?.(query) ?? `No option matched ${query ? `"${query}"` : "the current filter"}.`,
 				"warning",
 			);
 			return;
