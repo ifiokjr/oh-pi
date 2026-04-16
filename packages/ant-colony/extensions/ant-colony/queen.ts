@@ -12,6 +12,9 @@
  * The scheduling loop models real ant colonies: ants leave nest → forage → return → leave again.
  */
 
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { dirname, extname, join, relative, resolve } from "node:path";
 import type { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import {
 	applyConcurrencyCap,
@@ -142,6 +145,119 @@ export function createUsageLimitsTracker(eventBus?: ColonyEventBus): UsageLimits
 			// instance to avoid duplicate listeners on subsequent requestSnapshot() calls.
 		},
 	};
+}
+
+const REVIEW_TYPECHECK_CONFIG_FILES = ["tsconfig.json", "tsconfig.base.json", "jsconfig.json"] as const;
+const REVIEW_TYPECHECK_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"]);
+const REVIEW_TYPECHECK_TIMEOUT_MS = 30_000;
+
+type ReviewTypecheckInvocation = {
+	command: string;
+	args: string[];
+	cwd: string;
+	projectFiles: string[];
+};
+
+function isTypeScriptPath(file: string): boolean {
+	return REVIEW_TYPECHECK_EXTENSIONS.has(extname(file).toLowerCase());
+}
+
+function walkCandidateDirectories(startDir: string, rootDir: string): string[] {
+	const normalizedRoot = resolve(rootDir);
+	const directories: string[] = [];
+	let currentDir = resolve(startDir);
+
+	while (true) {
+		directories.push(currentDir);
+		if (currentDir === normalizedRoot) {
+			return directories;
+		}
+
+		const parentDir = dirname(currentDir);
+		const relativeToRoot = relative(normalizedRoot, currentDir);
+		if (parentDir === currentDir || relativeToRoot.startsWith("..") || relativeToRoot === "") {
+			return directories;
+		}
+		currentDir = parentDir;
+	}
+}
+
+function findNearestReviewTypecheckProject(searchStart: string, rootDir: string): string | null {
+	for (const dir of walkCandidateDirectories(searchStart, rootDir)) {
+		for (const configFile of REVIEW_TYPECHECK_CONFIG_FILES) {
+			const candidate = join(dir, configFile);
+			if (existsSync(candidate)) {
+				return candidate;
+			}
+		}
+	}
+
+	return null;
+}
+
+export function collectReviewTypecheckProjects(executionCwd: string, tasks: Pick<Task, "files">[]): string[] {
+	const normalizedCwd = resolve(executionCwd);
+	const projectFiles = new Set<string>();
+
+	for (const task of tasks) {
+		for (const file of task.files) {
+			if (!isTypeScriptPath(file)) {
+				continue;
+			}
+
+			const filePath = resolve(normalizedCwd, file);
+			const searchStart = relative(normalizedCwd, filePath).startsWith("..") ? normalizedCwd : dirname(filePath);
+			const projectFile = findNearestReviewTypecheckProject(searchStart, normalizedCwd);
+			if (projectFile) {
+				projectFiles.add(projectFile);
+			}
+		}
+	}
+
+	return [...projectFiles].sort((left, right) => left.localeCompare(right));
+}
+
+export function resolveReviewTypecheckInvocation(
+	executionCwd: string,
+	tasks: Pick<Task, "files">[],
+): ReviewTypecheckInvocation | null {
+	const projectFiles = collectReviewTypecheckProjects(executionCwd, tasks);
+	if (projectFiles.length === 0) {
+		return null;
+	}
+
+	const normalizedCwd = resolve(executionCwd);
+	const localTsc = join(normalizedCwd, "node_modules", ".bin", process.platform === "win32" ? "tsc.cmd" : "tsc");
+	const hasLocalTsc = existsSync(localTsc);
+	const command = hasLocalTsc ? localTsc : "npx";
+	const args = hasLocalTsc
+		? ["--noEmit", ...projectFiles.flatMap((projectFile) => ["--project", projectFile])]
+		: ["tsc", "--noEmit", ...projectFiles.flatMap((projectFile) => ["--project", projectFile])];
+
+	return {
+		command,
+		args,
+		cwd: normalizedCwd,
+		projectFiles,
+	};
+}
+
+export function runReviewTypecheck(executionCwd: string, tasks: Pick<Task, "files">[]): boolean {
+	const invocation = resolveReviewTypecheckInvocation(executionCwd, tasks);
+	if (!invocation) {
+		return true;
+	}
+
+	try {
+		execFileSync(invocation.command, invocation.args, {
+			cwd: invocation.cwd,
+			timeout: REVIEW_TYPECHECK_TIMEOUT_MS,
+			stdio: "pipe",
+		});
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 function makeInitialScoutTask(goal: string): Task {
@@ -1104,18 +1220,12 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 			}
 		}
 
-		// ═══ Auto-check: run tsc before soldier review ═══
-		let tscPassed = true;
-		try {
-			const { execSync } = await import("node:child_process");
-			execSync("npx tsc --noEmit", { cwd: executionCwd, timeout: 30000, stdio: "pipe" });
-		} catch {
-			tscPassed = false;
-		}
+		// ═══ Auto-check: run typecheck before soldier review when worker output touched TypeScript ═══
+		const completedWorkerTasks = nest.getAllTasks().filter((t) => t.caste === "worker" && t.status === "done");
+		const tscPassed = runReviewTypecheck(executionCwd, completedWorkerTasks);
 
 		// ═══ Phase 3: Review ═══
 		waveBase.budgetPlan = refreshBudgetPlan(); // Refresh budget before review phase
-		const completedWorkerTasks = nest.getAllTasks().filter((t) => t.caste === "worker" && t.status === "done");
 		if (completedWorkerTasks.length > 0 && (!tscPassed || completedWorkerTasks.length > 3)) {
 			nest.updateState({ status: "reviewing" });
 			callbacks.onPhase?.("reviewing", "Dispatching soldier ants to review changes...");
@@ -1237,15 +1347,8 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		}
 
 		// Soldier review for resumed colony (conditions match runColony)
-		let tscPassed = true;
-		try {
-			const { execSync } = await import("node:child_process");
-			execSync("npx tsc --noEmit", { cwd: executionCwd, timeout: 30000, stdio: "pipe" });
-		} catch {
-			tscPassed = false;
-		}
-
 		const completedWorkerTasks = nest.getAllTasks().filter((t) => t.caste === "worker" && t.status === "done");
+		const tscPassed = runReviewTypecheck(executionCwd, completedWorkerTasks);
 		if (completedWorkerTasks.length > 0 && (!tscPassed || completedWorkerTasks.length > 3)) {
 			nest.updateState({ status: "reviewing" });
 			const reviewTask = makeReviewTask(completedWorkerTasks);

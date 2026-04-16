@@ -43,8 +43,17 @@ const STALE_LOCK_THRESHOLD_MS = 30_000;
 /** Maximum time to wait for a live state lock before surfacing an error. */
 const STATE_LOCK_WAIT_MS = 3_000;
 
-/** Base spin duration while waiting for another process to release the state lock. */
+/** Base wait duration while waiting for another process to release the state lock. */
 const STATE_LOCK_SPIN_MS = 5;
+const LOCK_WAIT_BUFFER = new Int32Array(new SharedArrayBuffer(4));
+
+function blockingSleep(ms: number): void {
+	if (!(Number.isFinite(ms) && ms > 0)) {
+		return;
+	}
+
+	Atomics.wait(LOCK_WAIT_BUFFER, 0, 0, Math.ceil(ms));
+}
 
 /**
  * Score a task by combining its static priority with pheromone signals.
@@ -468,7 +477,6 @@ export class Nest {
 		return this.fsErrorCode(error) === "ENOENT";
 	}
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Lock acquisition requires spin-wait + stale-lock recovery + directory recovery.
 	private withStateLock<T>(fn: () => T): T {
 		const start = Date.now();
 		while (true) {
@@ -495,11 +503,8 @@ export class Nest {
 				if (Date.now() - start > STATE_LOCK_WAIT_MS) {
 					throw new Error(this.buildStateLockTimeoutMessage());
 				}
-				// Busy-wait with jitter to avoid thundering herd.
-				const until = Date.now() + STATE_LOCK_SPIN_MS + Math.random() * STATE_LOCK_SPIN_MS * 2;
-				while (Date.now() < until) {
-					/* spin */
-				}
+				// Sleep with jitter instead of burning CPU in a tight busy loop.
+				blockingSleep(STATE_LOCK_SPIN_MS + Math.random() * STATE_LOCK_SPIN_MS * 2);
 			}
 		}
 		try {

@@ -24,10 +24,12 @@ vi.mock("@mariozechner/pi-ai", () => ({ getModel: vi.fn() }));
 import { Nest } from "../extensions/ant-colony/nest.js";
 import {
 	classifyError,
+	collectReviewTypecheckProjects,
 	createUsageLimitsTracker,
 	decidePromoteOrFinalize,
 	makeColonyId,
 	quorumMergeTasks,
+	resolveReviewTypecheckInvocation,
 	shouldUseScoutQuorum,
 	validateExecutionPlan,
 } from "../extensions/ant-colony/queen.js";
@@ -199,6 +201,45 @@ describe("createUsageLimitsTracker", () => {
 		tracker.requestSnapshot();
 		tracker.dispose();
 		expect(off).toHaveBeenCalledWith("usage:limits", expect.any(Function));
+	});
+});
+
+describe("review typecheck helpers", () => {
+	it("collects nearest project files for changed TypeScript tasks", () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), "queen-typecheck-projects-"));
+		const packageDir = path.join(root, "packages", "feature");
+		fs.mkdirSync(path.join(packageDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(packageDir, "tsconfig.json"), "{}", "utf-8");
+
+		const projects = collectReviewTypecheckProjects(root, [
+			mkTask({ files: ["packages/feature/src/index.ts"] }),
+			mkTask({ files: ["README.md"] }),
+		]);
+
+		expect(projects).toEqual([path.join(packageDir, "tsconfig.json")]);
+		fs.rmSync(root, { recursive: true, force: true });
+	});
+
+	it("skips review typecheck when no TypeScript files were changed", () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), "queen-typecheck-skip-"));
+		fs.writeFileSync(path.join(root, "tsconfig.json"), "{}", "utf-8");
+
+		expect(collectReviewTypecheckProjects(root, [mkTask({ files: ["README.md"] })])).toEqual([]);
+		expect(resolveReviewTypecheckInvocation(root, [mkTask({ files: ["README.md"] })])).toBeNull();
+		fs.rmSync(root, { recursive: true, force: true });
+	});
+
+	it("prefers the local tsc binary when the workspace already has dependencies installed", () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), "queen-typecheck-local-bin-"));
+		fs.mkdirSync(path.join(root, "node_modules", ".bin"), { recursive: true });
+		fs.writeFileSync(path.join(root, "tsconfig.json"), "{}", "utf-8");
+		fs.writeFileSync(path.join(root, "node_modules", ".bin", "tsc"), "#!/bin/sh\n", "utf-8");
+
+		const invocation = resolveReviewTypecheckInvocation(root, [mkTask({ files: ["src/index.ts"] })]);
+
+		expect(invocation?.command).toContain(path.join("node_modules", ".bin", "tsc"));
+		expect(invocation?.args).toContain(path.join(root, "tsconfig.json"));
+		fs.rmSync(root, { recursive: true, force: true });
 	});
 });
 

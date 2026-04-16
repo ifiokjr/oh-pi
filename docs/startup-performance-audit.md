@@ -128,10 +128,17 @@ The colony runtime keeps orchestration in-process. The deeper audit found severa
 - synchronous nest/state writes
 - busy-wait lock spinning
 - blocking `npx tsc --noEmit`
+- repeated background status refreshes while colonies are active
 
 **Benchmark status**
 
 The new PR-gated suite covers the default extension stack at startup, but colony runtime execution still needs a dedicated focused benchmark suite.
+
+**Latest mitigation**
+
+- background colony footer status should now be deduplicated so identical progress summaries do not keep re-sending `setStatus(...)`
+- nest lock contention now sleeps with `Atomics.wait(...)` instead of burning CPU in a tight busy loop while another process holds the lock
+- pre-review typecheck now runs only when completed worker tasks touched TypeScript files under a detectable TS project, and it prefers the local `node_modules/.bin/tsc` binary over `npx`
 
 ### 6. `packages/subagents/*`
 

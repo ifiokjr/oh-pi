@@ -209,4 +209,16 @@ describe("withStateLock spin", () => {
 		expect(() => nest.updateState({ status: "reviewing" })).not.toThrow();
 		expect(fs.existsSync(nest.dir)).toBe(true);
 	});
+
+	it("times out cleanly when another live process keeps the state lock", () => {
+		const lockFile = (nest as { lockFile: string }).lockFile;
+		fs.writeFileSync(lockFile, `${process.pid}:invalid`, "utf-8");
+		const nowSpy = vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValueOnce(0).mockReturnValueOnce(3_001);
+
+		try {
+			expect(() => nest.updateState({ status: "reviewing" })).toThrow(/withStateLock timeout/);
+		} finally {
+			nowSpy.mockRestore();
+		}
+	});
 });

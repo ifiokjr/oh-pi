@@ -463,4 +463,29 @@ describe("index-level telemetry propagation", () => {
 		expect(pi._eventHandlers.has("ant-colony:clear-ui")).toBe(true);
 		expect(pi._eventHandlers.has("ant-colony:notify")).toBe(true);
 	});
+
+	it("coalesces identical ant-colony status refreshes", async () => {
+		const pi = createMockPi();
+		antColonyExtension(pi as any);
+		const ctx = {
+			cwd: process.cwd(),
+			model: { provider: "test", id: "model" },
+			modelRegistry: {},
+			ui: {
+				setStatus: vi.fn(),
+				notify: vi.fn(),
+				custom: vi.fn().mockResolvedValue(undefined),
+			},
+		};
+
+		pi._emit("session_start", {}, ctx);
+		const colonyCommand = pi._commands.get("colony");
+		await colonyCommand.handler("status churn", ctx);
+		ctx.ui.setStatus.mockClear();
+
+		pi.events.emit("ant-colony:render");
+		pi.events.emit("ant-colony:render");
+
+		expect(ctx.ui.setStatus).toHaveBeenCalledTimes(1);
+	});
 });
