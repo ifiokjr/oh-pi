@@ -7,7 +7,33 @@ vi.mock("@mariozechner/pi-ai", () => ({
 }));
 
 vi.mock("@mariozechner/pi-tui", () => ({
-	Text: class Text {},
+	Text: class Text {
+		text: string;
+		x: number;
+		y: number;
+
+		constructor(text: string, x: number, y: number) {
+			this.text = text;
+			this.x = x;
+			this.y = y;
+		}
+	},
+	Key: {
+		enter: "\r",
+		escape: "\u001b",
+		up: "\u001b[A",
+		down: "\u001b[B",
+		ctrl: (key: string) => key,
+	},
+	matchesKey: (input: string, key: string) => input === key,
+	truncateToWidth: (text: string, width: number) => text.slice(0, width),
+	wrapTextWithAnsi: (text: string, width: number) => {
+		const lines: string[] = [];
+		for (let i = 0; i < text.length; i += width) {
+			lines.push(text.slice(i, i + width));
+		}
+		return lines.length > 0 ? lines : [""];
+	},
 }));
 
 vi.mock("@mariozechner/pi-coding-agent", () => ({
@@ -59,6 +85,12 @@ describe("resolveBtwApiKey", () => {
 });
 
 describe("btw startup restore", () => {
+	const fakeTheme = {
+		fg: (_color: string, text: string) => text,
+		bold: (text: string) => text,
+		italic: (text: string) => text,
+	};
+
 	beforeEach(() => {
 		vi.useFakeTimers();
 	});
@@ -111,5 +143,88 @@ describe("btw startup restore", () => {
 		await vi.advanceTimersByTimeAsync(250);
 
 		expect(getBranch).not.toHaveBeenCalled();
+	});
+
+	it("keeps the widget compact and points long threads to /btw:open", async () => {
+		const harness = createExtensionHarness();
+		harness.ctx.sessionManager.getBranch = vi.fn(() => [
+			{
+				type: "custom",
+				customType: "btw-thread-entry",
+				data: {
+					question: "What changed?",
+					thinking: "outline\ntradeoffs\nedge-cases",
+					answer: Array.from({ length: 12 }, (_, index) => `line ${index + 1}`).join("\n"),
+					provider: "anthropic",
+					model: "claude-sonnet-4",
+					thinkingLevel: "off",
+					timestamp: Date.now(),
+				},
+			},
+		]);
+		harness.ctx.ui.setWidget = vi.fn();
+
+		btwExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+		await vi.advanceTimersByTimeAsync(250);
+
+		const widgetFactory = (harness.ctx.ui.setWidget as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[1];
+		const rendered = widgetFactory({}, fakeTheme);
+
+		expect(rendered.text).toContain("/btw:open");
+		expect(rendered.text).toContain("more lines");
+		expect(rendered.text).toContain("line 1");
+		expect(rendered.text).not.toContain("line 12");
+	});
+
+	it("opens a scrollable overlay for the full BTW thread", async () => {
+		const harness = createExtensionHarness();
+		harness.ctx.sessionManager.getBranch = vi.fn(() => [
+			{
+				type: "custom",
+				customType: "btw-thread-entry",
+				data: {
+					question: "Walk through every step",
+					thinking: "",
+					answer: Array.from({ length: 30 }, (_, index) => `line ${index + 1}`).join("\n"),
+					provider: "anthropic",
+					model: "claude-sonnet-4",
+					thinkingLevel: "off",
+					timestamp: Date.now(),
+				},
+			},
+		]);
+		let overlayFactory: any;
+		harness.ctx.ui.custom = vi.fn(async (factory: any) => {
+			overlayFactory = factory;
+			return undefined;
+		}) as never;
+
+		btwExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+		await vi.advanceTimersByTimeAsync(250);
+		await harness.commands.get("btw:open").handler("", harness.ctx);
+
+		expect(harness.ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {
+			overlay: true,
+			overlayOptions: {
+				anchor: "center",
+				width: "80%",
+				maxHeight: "80%",
+			},
+		});
+
+		const overlay = overlayFactory({ requestRender: vi.fn() }, fakeTheme, {}, () => undefined);
+		const firstRender = overlay.render(60).join("\n");
+		expect(firstRender).toContain("BTW thread");
+		expect(firstRender).toContain("[↑↓/j/k] scroll");
+		expect(firstRender).not.toContain("line 30");
+
+		for (let i = 0; i < 20; i++) {
+			overlay.handleInput("j");
+		}
+
+		const scrolledRender = overlay.render(60).join("\n");
+		expect(scrolledRender).toContain("line 30");
 	});
 });
