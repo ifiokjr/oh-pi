@@ -178,6 +178,14 @@ export function getGitDiff(base, head) {
 	});
 }
 
+export function shouldIgnoreFileForPatchCoverage(filePath) {
+	if (!fs.existsSync(filePath)) {
+		return false;
+	}
+	const source = fs.readFileSync(filePath, "utf8").slice(0, 256);
+	return source.includes("/* c8 ignore file */") || source.includes("/* v8 ignore file */");
+}
+
 export function runPatchCoverageCheck({ base, head, lcovPath, threshold }) {
 	if (!base || !head) {
 		console.log("Skipping patch coverage check because BASE_SHA or HEAD_SHA is missing.");
@@ -188,7 +196,10 @@ export function runPatchCoverageCheck({ base, head, lcovPath, threshold }) {
 	const diffText = getGitDiff(base, head);
 	const coverageByFile = parseLcovByFile(lcovText);
 	const changedLines = parseChangedLinesFromDiff(diffText);
-	const summary = calculatePatchCoverage(changedLines, coverageByFile);
+	const filteredChangedLines = new Map(
+		[...changedLines.entries()].filter(([file]) => !shouldIgnoreFileForPatchCoverage(file)),
+	);
+	const summary = calculatePatchCoverage(filteredChangedLines, coverageByFile);
 
 	if (summary.total === 0) {
 		console.log("Patch coverage: 100.00% (no changed executable lines found)");
