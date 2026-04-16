@@ -371,6 +371,8 @@ describe("pi source switcher helpers", () => {
 		expect(result.stdout).toContain(`Repo: ${repoDir}`);
 		expect(result.stdout).toContain(workspacePackages.get("@ifi/oh-pi-extensions") ?? "");
 		expect(result.stdout).toContain("Dry run only — settings were not written");
+		expect(result.stdout).toContain("run `pnpm install --frozen-lockfile` before restarting pi");
+		expect(result.stdout).toContain("stale node_modules can surface missing internal @ifi/* package errors");
 		expect(readFileSync(settingsPath, "utf8")).toBe(`${originalSettings}\n`);
 	});
 
@@ -425,6 +427,34 @@ describe("pi source switcher helpers", () => {
 		expect(piLog).toContain("update npm:@ifi/oh-pi-extensions@0.4.4");
 		expect(piLog).toContain("install npm:@ifi/pi-provider-cursor@0.4.4");
 	}, 20_000);
+
+	it("prints a workspace install reminder after switching to local mode", () => {
+		const agentDir = createTempDir("oh-pi-switcher-agent-");
+		const settingsPath = path.join(agentDir, "settings.json");
+		writeFileSync(settingsPath, JSON.stringify({ packages: ["npm:@ifi/oh-pi-extensions@0.4.3"] }, null, 2));
+
+		const workspacePackages = createWorkspaceRepo();
+		const repoDir = path.dirname(path.dirname(workspacePackages.get("@ifi/oh-pi-extensions") ?? ""));
+		const logPath = path.join(agentDir, "pi.log");
+		const piBinDir = createFakePiExecutable(logPath);
+
+		const result = runSwitcher(["local", "--path", repoDir], {
+			env: {
+				PATH: [piBinDir, path.dirname(process.execPath), process.env.PATH ?? ""].join(path.delimiter),
+				PI_CODING_AGENT_DIR: agentDir,
+				PI_CODING_AGENT_BIN: piBinDir,
+				PI_TEST_LOG_PATH: logPath,
+			},
+		});
+
+		const savedSettings = JSON.parse(readFileSync(settingsPath, "utf8")) as { packages: unknown[] };
+		const savedSources = savedSettings.packages.map(getPackageSource).filter((value): value is string => Boolean(value));
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain("run `pnpm install --frozen-lockfile` before restarting pi");
+		expect(result.stdout).toContain("stale node_modules can surface missing internal @ifi/* package errors");
+		expect(savedSources).toContain(workspacePackages.get("@ifi/oh-pi-extensions") ?? "");
+	});
 
 	it("exits with an error when local mode cannot resolve the full managed workspace set", () => {
 		const repoDir = createTempDir("oh-pi-switcher-incomplete-");

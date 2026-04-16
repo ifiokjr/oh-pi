@@ -598,6 +598,12 @@ function printChangeSummary(mode: Mode, changes: readonly Change[], settingsPath
 	}
 }
 
+function printLocalInstallHint(repoPath: string) {
+	console.log("");
+	console.log(`Reminder: if you recently pulled, rebased, or switched branches in ${repoPath}, run \`pnpm install --frozen-lockfile\` before restarting pi.`);
+	console.log("Local source mode loads workspace files directly, so stale node_modules can surface missing internal @ifi/* package errors.");
+}
+
 function printStatus(currentSources: ReadonlyMap<string, string>, settingsPath: string, piLocal: boolean) {
 	const scope = piLocal ? "project" : "user";
 	console.log(`\noh-pi managed package sources (${scope} settings)`);
@@ -683,6 +689,9 @@ export function main(argv: string[] = process.argv) {
 	const nextSettings: SettingsFile = { ...settings, packages: nextEntries };
 	if (options.dryRun) {
 		console.log("\nDry run only — settings were not written and pi install/update was not run.");
+		if (options.mode === "local") {
+			printLocalInstallHint(options.repoPath);
+		}
 		console.log("When you apply this switch, fully restart pi; /reload can keep old package modules alive.");
 		return;
 	}
@@ -690,6 +699,9 @@ export function main(argv: string[] = process.argv) {
 	writeSettings(settingsPath, nextSettings);
 	const pi = findPi();
 	updatePiSources(pi, currentSources, desiredSources);
+	if (options.mode === "local") {
+		printLocalInstallHint(options.repoPath);
+	}
 	console.log("\n✅ Done. Fully restart pi to reload the switched packages.");
 	console.log("⚠️  Avoid /reload after switching sources; it can keep previously loaded package modules alive.");
 }

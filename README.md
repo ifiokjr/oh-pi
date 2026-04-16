@@ -597,6 +597,10 @@ What it does:
 After switching, fully restart `pi`. Do not rely on `/reload` for source switches because it can
 keep previously loaded package modules alive.
 
+If you recently pulled, rebased, or switched branches in the checkout you pointed `pi` at, run
+`pnpm install --frozen-lockfile` there before restarting `pi`. Local source mode loads workspace
+files directly, so stale `node_modules` can surface missing internal `@ifi/*` package errors.
+
 This is intended to be the normal development loop for testing a branch locally before cutting a
 release.
 
