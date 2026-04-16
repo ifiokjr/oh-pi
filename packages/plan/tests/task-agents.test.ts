@@ -8,6 +8,18 @@ vi.mock("@ifi/pi-extension-subagents/utils.ts", () => ({
 	getFinalOutput: vi.fn(),
 }));
 
+vi.mock("@ifi/pi-shared-qna", () => ({
+	requirePiTuiModule: () => ({
+		Text: class Text {
+			constructor(
+				public text: string,
+				public x: number,
+				public y: number,
+			) {}
+		},
+	}),
+}));
+
 import { runSync } from "@ifi/pi-extension-subagents/execution.ts";
 import { getFinalOutput } from "@ifi/pi-extension-subagents/utils.ts";
 import { buildTaskAgentRunDetails, normalizeTaskAgentTasks, registerTaskAgentTools } from "../task-agents.js";
@@ -26,11 +38,11 @@ function makeSingleResult(exitCode: number, error?: string) {
 	};
 }
 
-function registerTools(getState = () => ({ active: true })) {
+function registerTools(getState = () => ({ active: true }), activeTools?: string[]) {
 	const tools = new Map<string, any>();
 	registerTaskAgentTools(
 		{
-			getActiveTools: () => ["read", "grep", "find", "ls", "bash", "web_search"],
+			getActiveTools: () => activeTools ?? ["read", "grep", "find", "ls", "bash", "web_search"],
 			registerTool: (tool: { name: string }) => {
 				tools.set(tool.name, tool);
 			},
@@ -102,6 +114,30 @@ describe("task agent tool registration", () => {
 		expect(Array.from(tools.keys()).sort()).toEqual(["steer_task_agent", "task_agents"]);
 	});
 
+	it("renders compact call previews for task agent batches", () => {
+		const tools = registerTools();
+		const taskAgentsTool = tools.get("task_agents");
+		const rendered = taskAgentsTool.renderCall(
+			{
+				tasks: [
+					{ id: "a", prompt: "Inspect auth middleware ordering" },
+					{ id: "b", prompt: "Inspect docs and summarize deployment notes" },
+					{ id: "c", prompt: "Inspect tests" },
+					{ id: "d", prompt: "Inspect config" },
+					{ id: "e", prompt: "Inspect more files" },
+				],
+			},
+			{
+				bold: (text: string) => text,
+				fg: (_tone: string, text: string) => text,
+			},
+		);
+
+		expect(rendered.text).toContain("task agents 5 tasks");
+		expect(rendered.text).toContain("- a:");
+		expect(rendered.text).toContain("... +1 more");
+	});
+
 	it("rejects task_agents when plan mode is inactive", async () => {
 		const tools = registerTools(() => ({ active: false }));
 		const taskAgentsTool = tools.get("task_agents");
@@ -119,6 +155,54 @@ describe("task agent tool registration", () => {
 });
 
 describe("task_agents tool", () => {
+	it("renders partial and expanded task progress output", () => {
+		const tools = registerTools();
+		const taskAgentsTool = tools.get("task_agents");
+		const result = {
+			details: {
+				runId: "run-1",
+				completed: 1,
+				total: 5,
+				tasks: [
+					{
+						taskId: "a",
+						prompt: "Inspect auth",
+						status: "running",
+						latestActivity: "→ read src/auth.ts",
+						activityCount: 2,
+					},
+					{ taskId: "b", prompt: "Inspect docs", status: "completed", latestActivity: "done", activityCount: 1 },
+					{ taskId: "c", prompt: "Inspect cli", status: "failed", latestActivity: "boom", activityCount: 4 },
+					{ taskId: "d", prompt: "Inspect ui", status: "queued", activityCount: 0 },
+					{ taskId: "e", prompt: "Inspect build", status: "queued", activityCount: 0 },
+				],
+			},
+			content: [{ type: "text", text: "progress" }],
+		};
+
+		const compact = taskAgentsTool.renderResult(
+			result,
+			{ expanded: false, isPartial: true },
+			{
+				bold: (text: string) => text,
+				fg: (_tone: string, text: string) => text,
+			},
+		);
+		expect(compact.text).toContain("run-1 1/5");
+		expect(compact.text).toContain("Press Ctrl+O to expand");
+
+		const expanded = taskAgentsTool.renderResult(
+			result,
+			{ expanded: true, isPartial: true },
+			{
+				bold: (text: string) => text,
+				fg: (_tone: string, text: string) => text,
+			},
+		);
+		expect(expanded.text).toContain("a running");
+		expect(expanded.text).not.toContain("Press Ctrl+O to expand");
+	});
+
 	it("runs planning tasks through the bundled subagent runtime", async () => {
 		const tools = registerTools();
 		const taskAgentsTool = tools.get("task_agents");
@@ -153,6 +237,64 @@ describe("task_agents tool", () => {
 		expect(result.content[0]?.text).toContain("Use steer_task_agent");
 	});
 
+	it("renders expanded completed results and plain fallback output", () => {
+		const tools = registerTools();
+		const taskAgentsTool = tools.get("task_agents");
+		const detailed = taskAgentsTool.renderResult(
+			{
+				details: {
+					runId: "run-2",
+					successCount: 1,
+					totalCount: 2,
+					tasks: [
+						{
+							taskId: "auth",
+							task: "Inspect auth",
+							cwd: "/repo",
+							output: "Summary",
+							references: ["src/auth.ts"],
+							exitCode: 0,
+							stderr: "",
+							activities: [{ kind: "assistant", text: "summary", timestamp: 1 }],
+							startedAt: 1,
+							finishedAt: 2_001,
+							steeringNotes: ["Focus on middleware"],
+						},
+						{
+							taskId: "docs",
+							task: "Inspect docs",
+							cwd: "/repo/docs",
+							output: "",
+							references: [],
+							exitCode: 1,
+							stderr: "failed badly",
+							activities: [],
+							startedAt: 1,
+							finishedAt: 61_001,
+							steeringNotes: [],
+						},
+					],
+				},
+				content: [{ type: "text", text: "done" }],
+			},
+			{ expanded: true, isPartial: false },
+			{ bold: (text: string) => text, fg: (_tone: string, text: string) => text },
+		);
+
+		expect(detailed.text).toContain("Steering notes:");
+		expect(detailed.text).toContain("Duration:");
+		expect(detailed.text).toContain("References:");
+		expect(detailed.text).toContain("failed badly");
+		expect(detailed.text).toContain("Ctrl+O to collapse.");
+
+		const fallback = taskAgentsTool.renderResult(
+			{ details: undefined, content: [{ type: "text", text: "plain fallback" }] },
+			{ expanded: false, isPartial: false },
+			{ bold: (text: string) => text, fg: (_tone: string, text: string) => text },
+		);
+		expect(fallback.text).toBe("plain fallback");
+	});
+
 	it("marks the overall result as error when any delegated task fails", async () => {
 		const tools = registerTools();
 		const taskAgentsTool = tools.get("task_agents");
@@ -179,6 +321,81 @@ describe("task_agents tool", () => {
 });
 
 describe("steer_task_agent", () => {
+	it("renders steer call previews", () => {
+		const tools = registerTools();
+		const steerTaskAgentTool = tools.get("steer_task_agent");
+		const rendered = steerTaskAgentTool.renderCall(
+			{ runId: "run-1", taskId: "auth", instruction: "Focus carefully on middleware ordering and auth regressions" },
+			{ bold: (text: string) => text, fg: (_tone: string, text: string) => text },
+		);
+
+		expect(rendered.text).toContain("steer task agent run-1/auth");
+		expect(rendered.text).toContain("Focus carefully on middleware ordering");
+	});
+
+	it("rejects steer_task_agent when plan mode is inactive", async () => {
+		const tools = registerTools(() => ({ active: false }));
+		const steerTaskAgentTool = tools.get("steer_task_agent");
+		const result = await steerTaskAgentTool.execute(
+			"call-1",
+			{ runId: "x", taskId: "y", instruction: "z" },
+			undefined,
+			undefined,
+			{
+				cwd: "/repo",
+			},
+		);
+
+		expect(result.isError).toBe(true);
+		expect(result.content[0]?.text).toContain("steer_task_agent is only available while plan mode is active");
+	});
+
+	it("rejects invalid or unknown steer requests", async () => {
+		const tools = registerTools();
+		const taskAgentsTool = tools.get("task_agents");
+		const steerTaskAgentTool = tools.get("steer_task_agent");
+		(runSync as MockRunSync).mockResolvedValueOnce(makeSingleResult(0));
+		(getFinalOutput as MockGetFinalOutput).mockReturnValueOnce("Initial summary");
+
+		const firstRun = await taskAgentsTool.execute(
+			"call-1",
+			{ tasks: [{ id: "auth-scan", prompt: "Inspect auth" }], concurrency: 1 },
+			undefined,
+			undefined,
+			{ cwd: "/repo" },
+		);
+
+		const missingArgs = await steerTaskAgentTool.execute(
+			"call-2",
+			{ runId: "", taskId: "", instruction: "" },
+			undefined,
+			undefined,
+			{ cwd: "/repo" },
+		);
+		expect(missingArgs.isError).toBe(true);
+		expect(missingArgs.content[0]?.text).toContain("runId, taskId, and instruction are required");
+
+		const unknownRun = await steerTaskAgentTool.execute(
+			"call-3",
+			{ runId: "unknown", taskId: "auth-scan", instruction: "retry" },
+			undefined,
+			undefined,
+			{ cwd: "/repo" },
+		);
+		expect(unknownRun.isError).toBe(true);
+		expect(unknownRun.content[0]?.text).toContain("Known runIds");
+
+		const unknownTask = await steerTaskAgentTool.execute(
+			"call-4",
+			{ runId: firstRun.details.runId, taskId: "missing", instruction: "retry" },
+			undefined,
+			undefined,
+			{ cwd: "/repo" },
+		);
+		expect(unknownTask.isError).toBe(true);
+		expect(unknownTask.content[0]?.text).toContain("Known taskIds: auth-scan");
+	});
+
 	it("reruns a previous task with extra steering via the subagent runtime", async () => {
 		const tools = registerTools();
 		const taskAgentsTool = tools.get("task_agents");

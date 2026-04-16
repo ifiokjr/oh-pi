@@ -286,6 +286,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4.4.0
 
@@ -301,6 +303,13 @@ jobs:
 
       - name: Run tests with coverage
         run: pnpm test:coverage
+
+      - name: Enforce 100% patch coverage
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node ./scripts/check-patch-coverage.mjs --threshold 100 --lcov coverage/lcov.info
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4.6.2

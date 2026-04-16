@@ -399,6 +399,96 @@ describe("ant-colony extension commands", () => {
 		expect(resumeColonyMock).toHaveBeenCalledTimes(2);
 		expect(ctx._notifications.filter((n) => n.msg.includes("Resuming:")).length).toBe(2);
 	});
+
+	it("bg_colony_status requires explicit requests and rate limits manual snapshots", async () => {
+		const colonyCmd = pi._commands.get("colony");
+		await colonyCmd.handler("Manual status goal", ctx);
+
+		const statusTool = pi._tools.get("bg_colony_status");
+		const passive = await statusTool.execute("tool-1", {}, undefined, undefined, {
+			sessionManager: {
+				getBranch: () => [{ type: "message", message: { role: "user", content: "keep working" } }],
+			},
+		});
+		expect(passive.isError).toBe(true);
+		expect(passive.content[0]?.text).toContain("Passive mode is active");
+
+		const explicitCtx = {
+			sessionManager: {
+				getBranch: () => [{ type: "message", message: { role: "user", content: "show colony status now" } }],
+			},
+		};
+		const snapshot = await statusTool.execute("tool-2", {}, undefined, undefined, explicitCtx);
+		expect(snapshot.isError).toBeFalsy();
+		expect(snapshot.content[0]?.text).toContain("Manual status goal");
+		expect(snapshot.content[0]?.text).toContain("Workspace:");
+
+		const rateLimited = await statusTool.execute("tool-3", {}, undefined, undefined, explicitCtx);
+		expect(rateLimited.isError).toBe(true);
+		expect(rateLimited.content[0]?.text).toContain("Manual status snapshot is rate-limited");
+	});
+
+	it("ant_colony tool launches background colonies, renders summaries, and rejects missing models", async () => {
+		const antColonyTool = pi._tools.get("ant_colony");
+		const launched = await antColonyTool.execute(
+			"tool-1",
+			{ goal: "Tool-driven colony", maxAnts: 3, maxCost: 1 },
+			undefined,
+			undefined,
+			{
+				hasUI: true,
+				cwd,
+				model: { provider: "anthropic", id: "claude-sonnet-4" },
+				modelRegistry: undefined,
+				sessionManager: { getSessionFile: () => null },
+			},
+		);
+		expect(launched.content[0]?.text).toContain("[COLONY_SIGNAL:LAUNCHED]");
+		expect(launched.content[0]?.text).toContain("Tool-driven colony");
+
+		const theme = {
+			fg: (_color: string, text: string) => text,
+			bold: (text: string) => text,
+		};
+		const renderedCall = antColonyTool.renderCall({ goal: "Tool-driven colony", maxAnts: 3, maxCost: 1 }, theme);
+		expect(renderedCall.text).toContain("ant_colony");
+		expect(renderedCall.text).toContain("×3");
+		expect(renderedCall.text).toContain("$1");
+
+		const renderedResult = antColonyTool.renderResult(launched, {}, theme);
+		expect(renderedResult.children).toHaveLength(3);
+		expect(renderedResult.children[0]?.text).toContain("Colony launched in background");
+
+		const missingModel = await antColonyTool.execute("tool-2", { goal: "No model" }, undefined, undefined, {
+			hasUI: false,
+			cwd,
+			model: undefined,
+		});
+		expect(missingModel.isError).toBe(true);
+		expect(missingModel.content[0]?.text).toContain("no model available");
+	});
+
+	it("registers progress and report message renderers", () => {
+		const progressRenderer = pi.registerMessageRenderer.mock.calls.find(
+			(call) => call[0] === "ant-colony-progress",
+		)?.[1];
+		const reportRenderer = pi.registerMessageRenderer.mock.calls.find((call) => call[0] === "ant-colony-report")?.[1];
+		const theme = {
+			fg: (_color: string, text: string) => text,
+			bold: (text: string) => text,
+		};
+
+		const progress = progressRenderer?.({ content: "[COLONY_SIGNAL:FAILED] colony failed loudly" }, theme);
+		expect(progress?.text).toContain("failed");
+		expect(progress?.text).toContain("colony failed loudly");
+
+		const report = reportRenderer?.(
+			{ content: "done\n**Duration:** 4s\n- ✅ Completed task\n- input: 20\n- output: 10" },
+			theme,
+		);
+		expect(report.children.length).toBeGreaterThan(0);
+		expect(report.children[0]?.text).toContain("Ant Colony Report");
+	});
 });
 
 describe("index-level telemetry propagation", () => {

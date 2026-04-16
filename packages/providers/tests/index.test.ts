@@ -170,4 +170,59 @@ describe("provider catalog extension", () => {
 		expect(stored.get(provider.id)).toMatchObject({ type: "oauth", providerId: provider.id });
 		expect(refresh).toHaveBeenCalledTimes(1);
 	});
+
+	it("routes list, info, models, and refresh-models subcommands", async () => {
+		const provider = getSupportedProvider("moonshotai");
+		const harness = createExtensionHarness();
+		harness.ctx.modelRegistry = {
+			authStorage: {
+				get: vi.fn((providerId: string) =>
+					providerId === provider.id
+						? {
+								type: "oauth",
+								providerId: provider.id,
+								refresh: "moonshot-key",
+								access: "moonshot-key",
+								expires: Date.now() + 60_000,
+								lastModelRefresh: Date.now(),
+								models: [
+									{
+										id: "moonshot-v1",
+										name: "Moonshot V1",
+										contextWindow: 131072,
+										outputTokens: 16384,
+										input: ["text", "image"],
+										output: ["text"],
+										reasoning: true,
+										cost: { input: 0, output: 0 },
+									},
+								],
+							}
+						: undefined,
+				),
+				set: vi.fn(),
+			},
+			refresh: vi.fn(),
+		} as never;
+
+		providerCatalogExtension(harness.pi as never);
+		const command = harness.commands.get("providers");
+
+		await command.handler("list moon", harness.ctx);
+		expect(harness.notifications.at(-1)?.msg).toContain(`${provider.id} — ${provider.name}`);
+
+		await command.handler(`info ${provider.id}`, harness.ctx);
+		expect(harness.notifications.at(-1)?.msg).toContain("Configured via: login");
+		expect(harness.notifications.at(-1)?.msg).toContain("Models available: 1");
+
+		await command.handler(`models ${provider.id}`, harness.ctx);
+		expect(harness.notifications.at(-1)?.msg).toContain(`${provider.id} models:`);
+		expect(harness.notifications.at(-1)?.msg).toContain("Moonshot V1 [reasoning · vision]");
+
+		await command.handler("refresh-models missing-provider", harness.ctx);
+		expect(harness.notifications.at(-1)).toEqual({
+			msg: 'No provider matched "missing-provider". Run /providers list first.',
+			type: "warning",
+		});
+	});
 });

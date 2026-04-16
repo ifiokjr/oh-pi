@@ -3,6 +3,14 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const childProcessMocks = vi.hoisted(() => ({
+	execFileSync: vi.fn(),
+}));
+
+vi.mock("node:child_process", () => ({
+	execFileSync: childProcessMocks.execFileSync,
+}));
+
 vi.mock("@mariozechner/pi-coding-agent", () => ({
 	AuthStorage: class {},
 	createAgentSession: vi.fn(),
@@ -30,6 +38,7 @@ import {
 	makeColonyId,
 	quorumMergeTasks,
 	resolveReviewTypecheckInvocation,
+	runReviewTypecheck,
 	shouldUseScoutQuorum,
 	validateExecutionPlan,
 } from "../extensions/ant-colony/queen.js";
@@ -159,6 +168,12 @@ describe("validateExecutionPlan", () => {
 });
 
 describe("createUsageLimitsTracker", () => {
+	it("returns a no-op tracker when no event bus is provided", () => {
+		const tracker = createUsageLimitsTracker();
+		expect(tracker.requestSnapshot()).toBeNull();
+		expect(() => tracker.dispose()).not.toThrow();
+	});
+
 	it("supports event buses without off()", () => {
 		const handlers: Array<(data: unknown) => void> = [];
 		const bus = {
@@ -229,6 +244,31 @@ describe("review typecheck helpers", () => {
 		fs.rmSync(root, { recursive: true, force: true });
 	});
 
+	it("prefers the nearest nested project when multiple configs exist", () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), "queen-typecheck-nested-"));
+		const packageDir = path.join(root, "packages", "feature");
+		const srcDir = path.join(packageDir, "src");
+		fs.mkdirSync(srcDir, { recursive: true });
+		fs.writeFileSync(path.join(root, "tsconfig.json"), "{}", "utf-8");
+		fs.writeFileSync(path.join(packageDir, "tsconfig.json"), "{}", "utf-8");
+
+		const projects = collectReviewTypecheckProjects(root, [mkTask({ files: ["packages/feature/src/index.ts"] })]);
+
+		expect(projects).toEqual([path.join(packageDir, "tsconfig.json")]);
+		fs.rmSync(root, { recursive: true, force: true });
+	});
+
+	it("falls back to npx tsc when no local binary exists", () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), "queen-typecheck-npx-"));
+		fs.writeFileSync(path.join(root, "tsconfig.json"), "{}", "utf-8");
+
+		const invocation = resolveReviewTypecheckInvocation(root, [mkTask({ files: ["src/index.ts"] })]);
+
+		expect(invocation?.command).toBe("npx");
+		expect(invocation?.args.slice(0, 2)).toEqual(["tsc", "--noEmit"]);
+		fs.rmSync(root, { recursive: true, force: true });
+	});
+
 	it("prefers the local tsc binary when the workspace already has dependencies installed", () => {
 		const root = fs.mkdtempSync(path.join(os.tmpdir(), "queen-typecheck-local-bin-"));
 		fs.mkdirSync(path.join(root, "node_modules", ".bin"), { recursive: true });
@@ -239,6 +279,26 @@ describe("review typecheck helpers", () => {
 
 		expect(invocation?.command).toContain(path.join("node_modules", ".bin", "tsc"));
 		expect(invocation?.args).toContain(path.join(root, "tsconfig.json"));
+		fs.rmSync(root, { recursive: true, force: true });
+	});
+
+	it("returns true when typecheck succeeds and false when it fails", () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), "queen-typecheck-run-"));
+		fs.writeFileSync(path.join(root, "tsconfig.json"), "{}", "utf-8");
+
+		childProcessMocks.execFileSync.mockReturnValueOnce(Buffer.from("ok"));
+		expect(runReviewTypecheck(root, [mkTask({ files: ["src/index.ts"] })])).toBe(true);
+		expect(childProcessMocks.execFileSync).toHaveBeenCalledWith(
+			"npx",
+			expect.arrayContaining(["tsc", "--noEmit", "--project", path.join(root, "tsconfig.json")]),
+			expect.objectContaining({ cwd: root, stdio: "pipe" }),
+		);
+
+		childProcessMocks.execFileSync.mockImplementationOnce(() => {
+			throw new Error("boom");
+		});
+		expect(runReviewTypecheck(root, [mkTask({ files: ["src/index.ts"] })])).toBe(false);
+		expect(runReviewTypecheck(root, [mkTask({ files: ["README.md"] })])).toBe(true);
 		fs.rmSync(root, { recursive: true, force: true });
 	});
 });
@@ -312,6 +372,7 @@ let tmpDir: string;
 let nest: Nest;
 
 beforeEach(() => {
+	childProcessMocks.execFileSync.mockReset();
 	tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "queen-test-"));
 	nest = new Nest(tmpDir, "test-colony", { mode: "project" });
 	nest.init(mkState());

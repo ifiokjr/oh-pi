@@ -8,14 +8,14 @@ coverage:
   status:
     project:
       default:
-        target: auto
-        threshold: 1%
-        informational: true
+        target: 60%
+        threshold: 0%
+        informational: false
     patch:
       default:
-        target: auto
-        threshold: 1%
-        informational: true
+        target: 100%
+        threshold: 0%
+        informational: false
 
 comment:
   behavior: default
