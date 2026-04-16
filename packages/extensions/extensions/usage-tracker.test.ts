@@ -1200,6 +1200,33 @@ describe("usage-tracker extension", () => {
 			expect(requestRender).toHaveBeenCalledTimes(1);
 		});
 
+		it("does not re-render for deferred startup work when the widget stays visually empty", async () => {
+			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
+			mockFetch.mockResolvedValue(makeFetchResponse({ body: {} }));
+			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						render: (width: number) => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const requestRender = vi.fn();
+			widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+			requestRender.mockClear();
+
+			await vi.advanceTimersByTimeAsync(2_000);
+			await Promise.resolve();
+
+			expect(requestRender).not.toHaveBeenCalled();
+		});
+
 		it("does not rely on a periodic widget timer while idle", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);

@@ -154,8 +154,50 @@ export default function usageTracker(pi: ExtensionAPI) {
 	let persistedStateLoadTimer: ReturnType<typeof setTimeout> | null = null;
 	let startupRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let requestWidgetRender: (() => void) | null = null;
+	let lastWidgetSignature: string | null = null;
 
-	const requestUsageWidgetRender = () => {
+	const getUsageWidgetSignature = (ctx: ExtensionContext | null | undefined = activeCtx): string => {
+		if (!widgetVisible) {
+			return "hidden";
+		}
+		if (getSafeModeState().enabled) {
+			return "safe-mode";
+		}
+
+		const activeProvider = getActiveProvider(ctx);
+		const totals = getTotals(activeProvider);
+		const visibleTotals =
+			activeProvider && totals.turns > 0
+				? {
+						cost: totals.cost,
+						input: totals.input,
+						output: totals.output,
+					}
+				: null;
+		const visibleRateLimits = getRateLimitEntries(activeProvider)
+			.filter((rl) => !(rl.error || rl.windows.length === 0))
+			.map((rl) => ({
+				provider: rl.provider,
+				windows: rl.windows.map((window) => ({
+					label: window.label,
+					percentLeft: window.percentLeft,
+					resetDescription: window.resetDescription,
+				})),
+			}));
+
+		return JSON.stringify({
+			activeProvider,
+			visibleTotals,
+			visibleRateLimits,
+		});
+	};
+
+	const requestUsageWidgetRender = (ctx: ExtensionContext | null | undefined = activeCtx) => {
+		const nextSignature = getUsageWidgetSignature(ctx);
+		if (nextSignature === lastWidgetSignature) {
+			return;
+		}
+		lastWidgetSignature = nextSignature;
 		requestWidgetRender?.();
 	};
 
@@ -1536,11 +1578,13 @@ export default function usageTracker(pi: ExtensionAPI) {
 		ctx.ui.setWidget("usage-tracker", (tui, theme) => {
 			const componentRequestRender = () => tui.requestRender();
 			requestWidgetRender = componentRequestRender;
-			const unsubSafeMode = subscribeSafeMode(() => requestUsageWidgetRender());
+			lastWidgetSignature = getUsageWidgetSignature(activeCtx ?? ctx);
+			const unsubSafeMode = subscribeSafeMode(() => requestUsageWidgetRender(activeCtx ?? ctx));
 			return {
 				dispose() {
 					if (requestWidgetRender === componentRequestRender) {
 						requestWidgetRender = null;
+						lastWidgetSignature = null;
 					}
 					unsubSafeMode();
 				},
@@ -1619,6 +1663,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 				mountWidget(ctx);
 				ctx.ui.notify("Usage widget shown.", "info");
 			} else {
+				lastWidgetSignature = null;
 				ctx.ui.setWidget("usage-tracker", undefined);
 				ctx.ui.notify("Usage widget hidden. Run /usage-toggle to show.", "info");
 			}
