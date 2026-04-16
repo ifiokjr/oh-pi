@@ -1,3 +1,4 @@
+/* c8 ignore file */
 /**
  * Queen — Colony scheduling core.
  *
@@ -12,7 +13,6 @@
  * The scheduling loop models real ant colonies: ants leave nest → forage → return → leave again.
  */
 
-/* c8 ignore file */
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
