@@ -155,10 +155,10 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 			id: model.id,
 			name: model.name,
 			reasoning: model.reasoning,
-			input: [...model.input],
+			input: model.input ? [...model.input] : ["text"],
 			contextWindow: model.contextWindow,
 			maxTokens: model.maxTokens,
-			cost: { ...model.cost },
+			cost: model.cost ? { ...model.cost } : { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		})),
 	);
 	const availableSkills = discoverAvailableSkills(ctx.cwd);

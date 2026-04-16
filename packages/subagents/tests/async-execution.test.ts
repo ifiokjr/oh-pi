@@ -86,6 +86,12 @@ vi.mock("../types.js", () => ({
 }));
 vi.mock("../model-routing.js", () => ({
 	resolveSubagentModelResolution: asyncMocks.resolveSubagentModelResolution,
+	toAvailableModelRefs: (models: any[]) =>
+		models.map((model) => ({
+			...model,
+			fullId: model.fullId ?? `${model.provider}/${model.id}`,
+			input: model.input ?? ["text"],
+		})),
 }));
 
 import { executeAsyncChain, executeAsyncSingle, isAsyncAvailable } from "../async-execution.js";
