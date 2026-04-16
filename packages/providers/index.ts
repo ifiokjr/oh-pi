@@ -1,3 +1,4 @@
+import { openScrollableSelect, type ScrollSelectOption } from "@ifi/pi-shared-qna";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import {
 	createApiKeyOAuthProvider,
@@ -43,11 +44,6 @@ type RuntimeProviderState = {
 	lastError: Map<string, string | null>;
 	registered: Set<string>;
 };
-
-const PROVIDER_SELECTION_PAGE_SIZE = 10;
-const PROVIDER_PICKER_PREVIOUS = "← Previous 10";
-const PROVIDER_PICKER_NEXT = "Next 10 →";
-const PROVIDER_PICKER_SEARCH = "Search providers…";
 
 const runtimeState: RuntimeProviderState = {
 	models: new Map(),
@@ -367,82 +363,49 @@ async function resolveProviderSelection(
 		return matchedProviders[0] ?? null;
 	}
 
-	return await selectProviderPage(ctx, matchedProviders);
+	return await selectProviderFromOverlay(ctx, matchedProviders);
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Provider picker coordinates pagination, search, and selection in one loop.
-async function selectProviderPage(
+async function selectProviderFromOverlay(
 	ctx: ProviderCommandContext,
 	providers: readonly SupportedProviderDefinition[],
 ): Promise<SupportedProviderDefinition | null> {
-	if (providers.length === 0) {
-		return null;
-	}
-	const select = ctx.ui.select;
-	if (providers.length === 1 || typeof select !== "function") {
-		return providers[0] ?? null;
-	}
+	const options = buildProviderPickerOptions(providers, ctx);
+	return await openScrollableSelect(ctx.ui, {
+		title: `Select provider to log in (${providers.length} total)`,
+		options,
+		footerHint: typeof ctx.ui.input === "function" ? "type / to search" : undefined,
+		search:
+			typeof ctx.ui.input === "function"
+				? {
+						title: "Provider search",
+						placeholder: "Type a provider id or name",
+						getOptions(query) {
+							if (!query) {
+								return options;
+							}
 
-	let visibleProviders = [...providers];
-	let page = 0;
+							return buildProviderPickerOptions(findProviders(query), ctx);
+						},
+						emptyMessage(query) {
+							return `No provider matched "${query}".`;
+						},
+					}
+				: undefined,
+		maxVisibleOptions: 12,
+		overlayWidth: "80%",
+		overlayMaxHeight: "75%",
+	});
+}
 
-	while (visibleProviders.length > 0) {
-		const pageCount = Math.max(1, Math.ceil(visibleProviders.length / PROVIDER_SELECTION_PAGE_SIZE));
-		page = Math.min(page, pageCount - 1);
-		const start = page * PROVIDER_SELECTION_PAGE_SIZE;
-		const pageProviders = visibleProviders.slice(start, start + PROVIDER_SELECTION_PAGE_SIZE);
-		const optionToProvider = new Map<string, SupportedProviderDefinition>();
-		const options = pageProviders.map((provider) => {
-			const option = formatProviderPickerOption(provider, ctx);
-			optionToProvider.set(option, provider);
-			return option;
-		});
-
-		if (page > 0) {
-			options.push(PROVIDER_PICKER_PREVIOUS);
-		}
-		if (page < pageCount - 1) {
-			options.push(PROVIDER_PICKER_NEXT);
-		}
-		if (typeof ctx.ui.input === "function") {
-			options.push(PROVIDER_PICKER_SEARCH);
-		}
-
-		const selection = await select(
-			[
-				`Select provider to log in (${visibleProviders.length} total)`,
-				`Page ${page + 1}/${pageCount} · max ${PROVIDER_SELECTION_PAGE_SIZE} providers per page`,
-			].join("\n"),
-			options,
-		);
-		if (!selection) {
-			return null;
-		}
-
-		if (selection === PROVIDER_PICKER_PREVIOUS) {
-			page = Math.max(0, page - 1);
-			continue;
-		}
-		if (selection === PROVIDER_PICKER_NEXT) {
-			page = Math.min(pageCount - 1, page + 1);
-			continue;
-		}
-		if (selection === PROVIDER_PICKER_SEARCH) {
-			const search = (await promptProviderInput(ctx, "Provider search", "Type a provider id or name")).trim();
-			const nextProviders = search ? findProviders(search) : [...providers];
-			if (nextProviders.length === 0) {
-				ctx.ui.notify(`No provider matched "${search}".`, "warning");
-				continue;
-			}
-			visibleProviders = nextProviders;
-			page = 0;
-			continue;
-		}
-
-		return optionToProvider.get(selection) ?? null;
-	}
-
-	return null;
+function buildProviderPickerOptions(
+	providers: readonly SupportedProviderDefinition[],
+	ctx: ProviderStatusContext,
+): ScrollSelectOption<SupportedProviderDefinition>[] {
+	return providers.map((provider) => ({
+		value: provider,
+		label: formatProviderPickerOption(provider, ctx),
+	}));
 }
 
 function formatProviderPickerOption(provider: SupportedProviderDefinition, ctx: ProviderStatusContext): string {
