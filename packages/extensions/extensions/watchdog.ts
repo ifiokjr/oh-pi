@@ -32,7 +32,9 @@ import {
 import {
 	type ExtensionDiagnostic,
 	formatExtensionDiagnostic,
+	formatStartupDiagnostic,
 	getExtensionDiagnostics,
+	getStartupDiagnostics,
 	installRuntimeDiagnostics,
 } from "./watchdog-runtime-diagnostics";
 
@@ -622,6 +624,20 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		);
 	};
 
+	const notifyStartupBreakdown = (ctx: ExtensionCommandContext | ExtensionContext) => {
+		const diagnostics = getStartupDiagnostics();
+		if (diagnostics.length === 0) {
+			ctx.ui.notify("No startup timings recorded yet. Restart the session and run /watchdog startup.", "info");
+			return;
+		}
+
+		const totalLastStartupMs = diagnostics.reduce((total, diagnostic) => total + diagnostic.lastMs, 0);
+		ctx.ui.notify(
+			`Startup timings: total ${totalLastStartupMs.toFixed(1)}ms | ${diagnostics.slice(0, 5).map(formatStartupDiagnostic).join(" | ")}`,
+			"info",
+		);
+	};
+
 	const notifyConfig = (ctx: ExtensionCommandContext | ExtensionContext) => {
 		loadConfigNow();
 		ctx.ui.notify(
@@ -686,7 +702,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 
 	pi.registerCommand("watchdog", {
 		description:
-			"Inspect or control the performance watchdog: /watchdog [status|overlay|config|reset|on|off|sample|blame]",
+			"Inspect or control the performance watchdog: /watchdog [status|startup|overlay|config|reset|on|off|sample|blame]",
 		async handler(args, ctx) {
 			activeCtx = ctx;
 			setSafeModeStatus();
@@ -722,6 +738,9 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 					return;
 				case "blame":
 					notifyBlame(ctx);
+					return;
+				case "startup":
+					notifyStartupBreakdown(ctx);
 					return;
 				default:
 					notifyStatus(ctx);

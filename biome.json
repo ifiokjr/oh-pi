@@ -9,6 +9,7 @@
 	},
 	"files": {
 		"includes": [
+			"benchmarks/**/*.ts",
 			"packages/core/src/**/*.ts",
 			"packages/cli/src/**/*.ts",
 			"packages/extensions/extensions/**/*.ts",
@@ -243,7 +244,7 @@
 			}
 		},
 		{
-			"includes": ["**/*.test.ts"],
+			"includes": ["**/*.test.ts", "benchmarks/**/*.ts"],
 			"linter": {
 				"rules": {
 					"suspicious": {

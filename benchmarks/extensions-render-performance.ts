@@ -65,12 +65,20 @@ for (const size of sizes) {
 	const branch = buildBranch(size);
 	const cached = scanBranch(branch);
 
-	const fullScan = time("full-scan", () => {
-		scanBranch(branch);
-	}, renders);
-	const cachedRead = time("cached", () => {
-		renderFromCached(cached);
-	}, renders);
+	const fullScan = time(
+		"full-scan",
+		() => {
+			scanBranch(branch);
+		},
+		renders,
+	);
+	const cachedRead = time(
+		"cached",
+		() => {
+			renderFromCached(cached);
+		},
+		renders,
+	);
 	const speedup = cachedRead.totalMs > 0 ? fullScan.totalMs / cachedRead.totalMs : Number.POSITIVE_INFINITY;
 
 	console.log(
@@ -85,4 +93,6 @@ for (const size of sizes) {
 	);
 }
 
-console.log("\nTip: this benchmark isolates the session-length scaling problem that can make footer redraws interfere with typing responsiveness.");
+console.log(
+	"\nTip: this benchmark isolates the session-length scaling problem that can make footer redraws interfere with typing responsiveness.",
+);

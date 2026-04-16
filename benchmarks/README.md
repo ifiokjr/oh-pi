@@ -1,51 +1,64 @@
-# Benchmarks (Scaffold)
+# Benchmarks
 
-This directory provides a **unified template** for benchmarking comparisons between:
+This directory contains the repo's TypeScript benchmark suites.
 
-- Single agent
-- Multi-agent colony (ant colony)
+## Benchmark suites
 
-> Current phase provides documentation scaffolding only — no implementation scripts.
+- `startup/startup-bench.test.ts` — PR-gated startup and hotspot regressions for the default oh-pi extension stack
+- `extensions-render-performance.ts` — session-length-sensitive footer/render microbench
+- `live-runtime-behavior.ts` — always-on widget and overlay rendering microbench
 
-## Goals
+## Run benchmarks locally
 
-Comparative evaluation across these dimensions:
+```bash
+pnpm bench:startup
+pnpm bench:extensions-render
+pnpm bench:live-runtime
+pnpm bench
+```
 
-1. Success Rate
-2. Duration
-3. Cost
-4. Rollback Rate
+To benchmark only one or a few extensions in isolation:
 
-Stratified by task complexity:
+```bash
+OH_PI_BENCH_EXTENSION_FILTER=worktree pnpm bench:startup
+OH_PI_BENCH_EXTENSION_FILTER=watchdog,custom-footer pnpm bench:startup
+```
 
-- S (Small)
-- M (Medium)
-- L (Large)
+The startup suite always keeps the baseline startup/hotspot cases, then adds isolated extension startup cases for the selected extensions.
 
-## Files
+## CI behavior
 
-- `scenarios.md`: Scenario list template (by S/M/L tier)
-- `results-template.md`: Results recording template (single agent vs colony)
-- `extensions-render-performance.mjs`: benchmark for session-length-sensitive extension rendering paths
-- `live-runtime-behavior.mjs`: benchmark for capped live widgets and fixed-window overlay rendering
+`pnpm bench:startup` runs on every pull request and push in GitHub Actions.
 
-## Suggested Execution Flow (Manual)
+For pull requests, the workflow computes impacted extensions from the changed files and sets `OH_PI_BENCH_EXTENSION_FILTER` automatically. If shared infrastructure changes, it benchmarks all default extensions.
 
-1. Pick a scenario from `scenarios.md` (with complexity level).
-2. Run the same scenario with both:
-   - Single agent
-   - Ant colony
-3. Record each run's results in `results-template.md`.
-4. Aggregate the four metrics per complexity level.
+It writes machine-readable and Markdown reports to:
 
-## Recording Constraints
+```text
+coverage/benchmarks/startup/
+```
 
-- Keep inputs and acceptance criteria consistent for the same scenario.
-- Cost measurement must be consistent (e.g. both estimated by tokens / API spend).
-- Rollback rate needs clear definition (e.g. "proportion of runs requiring manual revert or redo").
+The CI job uploads those reports as artifacts and appends the Markdown summary to the GitHub step summary.
 
-## Future Extensions
+## What the startup suite measures
 
-- Add automated data collection scripts.
-- Add visualization reports.
-- Integrate results into CI periodic regression.
+The startup suite focuses on the first-load experience instead of task success/cost metrics.
+
+Current cases cover:
+
+1. full-stack extension registration + `session_start`
+2. near-threshold session-history startup work
+3. scheduler persisted-task loading
+4. custom-footer large-history usage scans
+5. usage-tracker startup hydration
+6. worktree snapshot git probes
+7. first footer render cost
+
+Each benchmark has committed median/p95 budgets so regressions fail in CI while still emitting a readable report.
+
+## Existing manual scenario templates
+
+The scenario templates below are still available for broader product evaluations:
+
+- `scenarios.md`
+- `results-template.md`

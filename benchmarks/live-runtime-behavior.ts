@@ -45,7 +45,10 @@ function renderRecentSamples(samples) {
 	return samples
 		.slice(-8)
 		.reverse()
-		.map((sample) => `${sample.age} · cpu ${sample.cpu}% · rss ${sample.rss}MB · p99 ${sample.p99}ms · max ${sample.max}ms`);
+		.map(
+			(sample) =>
+				`${sample.age} · cpu ${sample.cpu}% · rss ${sample.rss}MB · p99 ${sample.p99}ms · max ${sample.max}ms`,
+		);
 }
 
 function makeSamples(count) {

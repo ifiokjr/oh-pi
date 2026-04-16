@@ -54,6 +54,15 @@ export type ExtensionDiagnostic = {
 	reasons: string[];
 };
 
+export type StartupDiagnostic = {
+	extensionId: string;
+	source: string;
+	totalMs: number;
+	lastMs: number;
+	count: number;
+	latestAt: number | null;
+};
+
 export const RUNTIME_DIAGNOSTICS_EVENT = "oh-pi:runtime-diagnostics:metric";
 
 const profiles = new Map<string, RuntimeProfile>();
@@ -306,6 +315,34 @@ export function getExtensionDiagnostics(now = Date.now()): ExtensionDiagnostic[]
 
 export function formatExtensionDiagnostic(diagnostic: ExtensionDiagnostic): string {
 	return `${diagnostic.extensionId} · ${diagnostic.reasons.join(" · ")}`;
+}
+
+export function getStartupDiagnostics(): StartupDiagnostic[] {
+	const diagnostics: StartupDiagnostic[] = [];
+
+	for (const profile of profiles.values()) {
+		const startupSamples = profile.eventSamples.filter((sample) => sample.name === "session_start");
+		if (startupSamples.length === 0) {
+			continue;
+		}
+
+		const totalMs = startupSamples.reduce((total, sample) => total + sample.durationMs, 0);
+		const latestSample = startupSamples.at(-1) ?? null;
+		diagnostics.push({
+			extensionId: profile.extensionId,
+			source: profile.source,
+			totalMs: Math.round(totalMs * 100) / 100,
+			lastMs: Math.round((latestSample?.durationMs ?? 0) * 100) / 100,
+			count: startupSamples.length,
+			latestAt: latestSample?.timestamp ?? null,
+		});
+	}
+
+	return diagnostics.sort((left, right) => right.lastMs - left.lastMs || right.totalMs - left.totalMs);
+}
+
+export function formatStartupDiagnostic(diagnostic: StartupDiagnostic): string {
+	return `${diagnostic.extensionId} · last ${diagnostic.lastMs.toFixed(1)}ms · total ${diagnostic.totalMs.toFixed(1)}ms`;
 }
 
 function wrapContext<T>(ctx: T, extensionId: string, source: string): T {

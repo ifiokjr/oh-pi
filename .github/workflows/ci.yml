@@ -340,10 +340,80 @@ jobs:
       - name: Verify compatibility smoke suite
         run: pnpm verify:pi-compat -- --version ${{ matrix.version }}
 
+  benchmark:
+    name: Benchmarks (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4.4.0
+
+      - uses: actions/setup-node@v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Determine impacted startup benchmark targets
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          mkdir -p coverage/benchmarks
+          if [ "$EVENT_NAME" = "pull_request" ] && [ -n "$BASE_SHA" ]; then
+            git diff --name-only "$BASE_SHA...$HEAD_SHA" > coverage/benchmarks/changed-files.txt
+          elif [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            git diff --name-only "$BEFORE_SHA...$HEAD_SHA" > coverage/benchmarks/changed-files.txt
+          else
+            git ls-files > coverage/benchmarks/changed-files.txt
+          fi
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types \
+            ./benchmarks/startup/select-targets.ts coverage/benchmarks/changed-files.txt \
+            > coverage/benchmarks/startup-targets.json
+          TARGETS=$(node --input-type=module -e "import fs from 'node:fs'; const report = JSON.parse(fs.readFileSync('coverage/benchmarks/startup-targets.json', 'utf8')); console.log(report.mode === 'all' ? 'all' : report.selectedExtensions.join(','));")
+          echo "OH_PI_BENCH_EXTENSION_FILTER=$TARGETS" >> "$GITHUB_ENV"
+
+      - name: Run startup and microbench suites
+        run: |
+          pnpm bench:startup
+          pnpm bench:extensions-render | tee coverage/benchmarks/extensions-render.txt
+          pnpm bench:live-runtime | tee coverage/benchmarks/live-runtime.txt
+
+      - name: Append benchmark summary
+        run: |
+          echo "## Startup benchmark targets" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat coverage/benchmarks/startup-targets.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          cat coverage/benchmarks/startup/startup-benchmarks.md >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Extensions render microbench" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat coverage/benchmarks/extensions-render.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Live runtime microbench" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat coverage/benchmarks/live-runtime.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: benchmark-report
+          path: coverage/benchmarks/
+          if-no-files-found: error
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [commit-lint, changeset, docs, security, lint, typecheck, test, compat]
+    needs: [commit-lint, changeset, docs, security, lint, typecheck, test, compat, benchmark]
     # Run build even if changeset was skipped (release commits)
     if: "!failure() && !cancelled()"
     steps:

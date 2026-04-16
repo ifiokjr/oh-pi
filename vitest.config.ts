@@ -15,6 +15,7 @@ const coverageExclude = [
 export default defineConfig({
 	test: {
 		include: [
+			"benchmarks/**/*.test.ts",
 			"scripts/**/*.test.ts",
 			"packages/core/src/**/*.test.ts",
 			"packages/cli/src/**/*.test.ts",
