@@ -74,7 +74,7 @@ const localDiscoveryState: RuntimeDiscoveryState = {
 };
 
 const cloudEnvDiscoveryState: RuntimeDiscoveryState = {
-	models: [],
+	models: getFallbackOllamaCloudModels(),
 	lastRefresh: null,
 	lastError: null,
 };
@@ -92,7 +92,7 @@ function registerOllamaLocalProvider(pi: ExtensionAPI): void {
 		apiKey: OLLAMA_LOCAL_API_KEY_LITERAL,
 		baseUrl: getOllamaLocalRuntimeConfig().apiUrl,
 		models: toProviderModels(getRegisteredLocalModels()),
-		streamSimple: streamSimpleOllamaLocal,
+		streamSimple: streamSimpleOllama,
 	});
 }
 
@@ -103,7 +103,7 @@ function registerOllamaCloudProvider(pi: ExtensionAPI): void {
 		baseUrl: getOllamaCloudRuntimeConfig().apiUrl,
 		oauth: createOllamaCloudOAuthProvider(),
 		models: toProviderModels(cloudEnvDiscoveryState.models),
-		streamSimple: streamSimpleOllamaCloud,
+		streamSimple: streamSimpleOllama,
 	});
 }
 
@@ -409,6 +409,18 @@ async function pullLocalModel(pi: ExtensionAPI, ctx: CommandContextLike, modelId
 
 	activeLocalPulls.set(modelId, run);
 	return run;
+}
+
+function streamSimpleOllama(model: Model<any>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream {
+	if (model.provider === OLLAMA_LOCAL_PROVIDER) {
+		return streamSimpleOllamaLocal(model, context, options);
+	}
+
+	if (model.provider === OLLAMA_CLOUD_PROVIDER) {
+		return streamSimpleOllamaCloud(model, context, options);
+	}
+
+	return streamSimpleOpenAICompletions(model as Model<"openai-completions">, context, options);
 }
 
 function streamSimpleOllamaCloud(model: Model<any>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream {

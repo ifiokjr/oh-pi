@@ -42,6 +42,27 @@ describe("ollama provider smoke tests", () => {
 		await expect(harness.emitAsync("session_start", { type: "session_start" }, harness.ctx)).resolves.toBeDefined();
 	});
 
+	it("seeds cloud fallback models before async discovery finishes", async () => {
+		const backend = await createTestOllamaBackend();
+		backend.setModels([
+			{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752 },
+			{ id: "kimi-k2.5", capabilities: ["completion", "tools", "thinking", "vision"], contextWindow: 262144 },
+		]);
+		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
+		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
+		process.env.PI_OLLAMA_CLOUD_SHOW_URL = `${backend.origin}/api/show`;
+		delete process.env.OLLAMA_API_KEY;
+
+		const harness = createExtensionHarness();
+		ollamaProviderExtension(harness.pi as never);
+
+		const initialModels = harness.providers.get("ollama-cloud")?.models as Array<{ id: string }> | undefined;
+		expect(initialModels?.some((model) => model.id === "glm-5.1")).toBe(true);
+		expect((initialModels?.length ?? 0) > 2).toBe(true);
+
+		await backend.close();
+	});
+
 	it("bootstraps the public cloud catalog without an API key", async () => {
 		const backend = await createTestOllamaBackend();
 		backend.setModels([

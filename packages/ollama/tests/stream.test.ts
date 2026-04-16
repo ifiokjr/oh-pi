@@ -1,7 +1,10 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { streamSimpleOpenAICompletions, type Model } from "@mariozechner/pi-ai";
-import { describe, expect, it } from "vitest";
+import { registerApiProvider, resetApiProviders, streamSimple, streamSimpleOpenAICompletions, type Model } from "@mariozechner/pi-ai";
+import { afterEach, describe, expect, it } from "vitest";
+import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
+import ollamaProviderExtension from "../index.js";
+import { OLLAMA_API } from "../config.js";
 import { toOllamaModel } from "../models.js";
 
 type ChatCompletionPayload = {
@@ -106,6 +109,10 @@ function extractText(blocks: Array<{ type: string; text?: string }>): string {
 	return blocks.filter((block) => block.type === "text").map((block) => block.text ?? "").join("");
 }
 
+afterEach(() => {
+	resetApiProviders();
+});
+
 describe("ollama glm cloud streaming", () => {
 	it("uses z.ai thinking flags and a larger default token budget when reasoning is enabled", async () => {
 		const backend = await createReasoningAwareChatBackend();
@@ -165,6 +172,50 @@ describe("ollama glm cloud streaming", () => {
 			});
 			expect(payloads[0]?.reasoning_effort).toBeUndefined();
 			expect(backend.requests[0]).toMatchObject({ enable_thinking: false, max_tokens: 32_000 });
+		} finally {
+			await backend.close();
+		}
+	});
+
+	it("keeps cloud glm requests on the cloud path even when the local provider registers last", async () => {
+		const backend = await createReasoningAwareChatBackend();
+		const harness = createExtensionHarness();
+		ollamaProviderExtension(harness.pi as never);
+
+		const cloudProvider = harness.providers.get("ollama-cloud");
+		const localProvider = harness.providers.get("ollama");
+		if (!cloudProvider || !localProvider) {
+			throw new Error("Expected ollama providers to be registered");
+		}
+
+		registerApiProvider(
+			{
+				api: OLLAMA_API,
+				stream: (model, context, options) => cloudProvider.streamSimple(model, context, options),
+				streamSimple: cloudProvider.streamSimple,
+			},
+			"test:ollama-cloud",
+		);
+		registerApiProvider(
+			{
+				api: OLLAMA_API,
+				stream: (model, context, options) => localProvider.streamSimple(model, context, options),
+				streamSimple: localProvider.streamSimple,
+			},
+			"test:ollama-local",
+		);
+
+		try {
+			const result = await streamSimple(
+				createCloudGlmModel(backend.apiUrl),
+				{
+					messages: [{ role: "user", content: "Reply with exactly: OK", timestamp: Date.now() }],
+				},
+				{ apiKey: "test-key" },
+			).result();
+
+			expect(extractText(result.content as Array<{ type: string; text?: string }>)).toBe("OK");
+			expect(backend.requests[0]).toMatchObject({ model: "glm-5.1", max_tokens: 32_000, enable_thinking: false });
 		} finally {
 			await backend.close();
 		}
