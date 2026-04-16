@@ -122,6 +122,7 @@ The usage tracker hydrates from session history near startup and also schedules 
 
 - usage widget redraws should now be event-driven from usage/probe/session changes instead of a fixed 15-second timer
 - widget rendering should follow the latest active session context after `session_switch` without requiring a remount
+- deferred startup probe/cache work now skips requesting a widget redraw when the visible widget state stays unchanged, which removes the remaining idle startup no-op rerender from the runtime churn report
 
 ### 5. `packages/ant-colony/extensions/ant-colony/*`
 

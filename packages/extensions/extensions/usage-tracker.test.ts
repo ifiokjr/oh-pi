@@ -280,6 +280,7 @@ function stripAnsiForTest(text: string): string {
 // ─── Import ──────────────────────────────────────────────────────────────────
 
 import { existsSync, promises as fsPromises, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resetSafeModeStateForTests, setSafeModeState } from "./runtime-mode";
 import usageTracker from "./usage-tracker.js";
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -324,6 +325,7 @@ describe("usage-tracker extension", () => {
 	});
 
 	afterEach(() => {
+		resetSafeModeStateForTests();
 		vi.useRealTimers();
 	});
 
@@ -1200,6 +1202,33 @@ describe("usage-tracker extension", () => {
 			expect(requestRender).toHaveBeenCalledTimes(1);
 		});
 
+		it("does not re-render for deferred startup work when the widget stays visually empty", async () => {
+			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
+			mockFetch.mockResolvedValue(makeFetchResponse({ body: {} }));
+			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						render: (width: number) => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const requestRender = vi.fn();
+			widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+			requestRender.mockClear();
+
+			await vi.advanceTimersByTimeAsync(2_000);
+			await Promise.resolve();
+
+			expect(requestRender).not.toHaveBeenCalled();
+		});
+
 		it("does not rely on a periodic widget timer while idle", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
@@ -1218,6 +1247,61 @@ describe("usage-tracker extension", () => {
 			requestRender.mockClear();
 
 			vi.advanceTimersByTime(60_000);
+
+			expect(requestRender).not.toHaveBeenCalled();
+		});
+
+		it("clears widget render tracking on dispose and on hidden widget updates", async () => {
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						dispose: () => void;
+						render: (width: number) => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const requestRender = vi.fn();
+			const component = widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+
+			await pi._commands.get("usage-toggle").handler("", ctx);
+			component?.dispose();
+			requestRender.mockClear();
+
+			pi._emit("model_select", { type: "model_select" }, ctx);
+			await Promise.resolve();
+
+			expect(requestRender).not.toHaveBeenCalled();
+		});
+
+		it("switches to a safe-mode widget signature without repeated rerenders", async () => {
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+
+			const widgetFactory = ctx._widgets.get("usage-tracker") as
+				| ((
+						tui: { requestRender: () => void },
+						theme: { fg: (_color: string, text: string) => string },
+				  ) => {
+						dispose: () => void;
+						render: (width: number) => string[];
+				  })
+				| undefined;
+			expect(widgetFactory).toBeDefined();
+			const requestRender = vi.fn();
+			widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+			requestRender.mockClear();
+
+			setSafeModeState(true, { source: "manual" });
+			expect(requestRender).toHaveBeenCalledTimes(1);
+
+			requestRender.mockClear();
+			pi._emit("model_select", { type: "model_select" }, ctx);
+			await Promise.resolve();
 
 			expect(requestRender).not.toHaveBeenCalled();
 		});
