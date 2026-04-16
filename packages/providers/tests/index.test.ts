@@ -5,9 +5,6 @@ import { getSupportedProvider } from "../config.js";
 import providerCatalogExtension, { resetProviderCatalogRuntimeStateForTests, SUPPORTED_PROVIDERS } from "../index.js";
 
 const envSnapshot = { ...process.env };
-const PROVIDER_PICKER_PREVIOUS = "← Previous 10";
-const PROVIDER_PICKER_NEXT = "Next 10 →";
-const PROVIDER_PICKER_SEARCH = "Search providers…";
 
 function jsonResponse(body: unknown): Response {
 	return new Response(JSON.stringify(body), {
@@ -95,7 +92,7 @@ describe("provider catalog extension", () => {
 		expect(refresh).toHaveBeenCalledTimes(1);
 	});
 
-	it("pages provider login selections in groups of 10 and lazily registers the chosen provider", async () => {
+	it("shows a scrollable provider login picker and lazily registers the chosen provider", async () => {
 		const provider = SUPPORTED_PROVIDERS[10];
 		if (!provider) {
 			throw new Error("Expected at least 11 providers in the catalog.");
@@ -135,13 +132,11 @@ describe("provider catalog extension", () => {
 			refresh,
 		} as never;
 
-		const pickerCalls: string[][] = [];
-		harness.ctx.ui.select = vi.fn((_title: string, options: string[]) => {
-			pickerCalls.push(options);
-			if (pickerCalls.length === 1) {
-				return Promise.resolve(PROVIDER_PICKER_NEXT);
-			}
-			return Promise.resolve(`${provider.name} — ${provider.id} · login`);
+		let pickerFactory: any;
+		harness.ctx.ui.select = vi.fn(async () => null) as never;
+		harness.ctx.ui.custom = vi.fn((factory: any) => {
+			pickerFactory = factory;
+			return Promise.resolve(provider);
 		}) as never;
 		harness.ctx.ui.input = vi.fn(async () => "provider-api-key") as never;
 
@@ -149,12 +144,28 @@ describe("provider catalog extension", () => {
 		const command = harness.commands.get("providers");
 		await command.handler("login", harness.ctx);
 
-		const providerOptions = (pickerCalls[0] ?? []).filter((option) => {
-			return (
-				option !== PROVIDER_PICKER_PREVIOUS && option !== PROVIDER_PICKER_NEXT && option !== PROVIDER_PICKER_SEARCH
-			);
+		expect(harness.ctx.ui.select).not.toHaveBeenCalled();
+		expect(harness.ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {
+			overlay: true,
+			overlayOptions: {
+				anchor: "center",
+				width: "80%",
+				maxHeight: "75%",
+			},
 		});
-		expect(providerOptions).toHaveLength(10);
+
+		const component = pickerFactory(
+			{ requestRender: vi.fn() },
+			{ fg: (_color: string, text: string) => text, bold: (text: string) => text },
+			{},
+			() => undefined,
+		);
+		const rendered = component.render(120).join("\n");
+		expect(rendered).toContain("Select provider to log in");
+		expect(rendered).toContain("type / to search");
+		expect(rendered).not.toContain("Next 10");
+		expect(rendered).not.toContain("Previous 10");
+
 		expect(harness.providers.has(provider.id)).toBe(true);
 		expect(stored.get(provider.id)).toMatchObject({ type: "oauth", providerId: provider.id });
 		expect(refresh).toHaveBeenCalledTimes(1);

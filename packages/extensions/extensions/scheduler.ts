@@ -26,6 +26,7 @@ instance changes in the same repository.
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { openScrollableSelect, type ScrollSelectOption } from "@ifi/pi-shared-qna";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import {
 	computeNextCronRunAt,
@@ -127,6 +128,12 @@ type CompletionOptions = {
 	retryIntervalMs?: number;
 	maxAttempts?: number;
 };
+
+type TaskManagerSelection =
+	| { kind: "task"; taskId: string }
+	| { kind: "clear-other" }
+	| { kind: "clear-all" }
+	| { kind: "close" };
 
 // ── Runtime ─────────────────────────────────────────────────────────────────
 
@@ -845,11 +852,15 @@ export class SchedulerRuntime {
 			}
 
 			const otherTasks = this.getTasksNotCreatedHere();
-			const clearOtherLabel =
-				otherTasks.length > 0 ? `🧹 Clear tasks not created here (${otherTasks.length})` : undefined;
-			const options = this.buildTaskManagerOptions(list, clearOtherLabel);
-			const selected = await ctx.ui.select(`Scheduled tasks for ${this.getWorkspaceLabel(ctx)} (select one)`, options);
-			const selection = await this.handleTaskManagerSelection(ctx, selected, list, otherTasks, clearOtherLabel);
+			const selected = await openScrollableSelect(ctx.ui, {
+				title: `Scheduled tasks for ${this.getWorkspaceLabel(ctx)} (select one)`,
+				options: this.buildTaskManagerOptions(list, otherTasks),
+				footerHint: "Enter manages the selected task",
+				maxVisibleOptions: 12,
+				overlayWidth: "80%",
+				overlayMaxHeight: "75%",
+			});
+			const selection = await this.handleTaskManagerSelection(ctx, selected, list, otherTasks);
 			if (selection === "close") {
 				return;
 			}
@@ -857,8 +868,7 @@ export class SchedulerRuntime {
 				continue;
 			}
 
-			const taskId = selected.slice(0, 8);
-			const task = this.tasks.get(taskId);
+			const task = this.tasks.get(selected.taskId);
 			if (!task) {
 				ctx.ui.notify("Task no longer exists. Refreshing list...", "warning");
 				continue;
@@ -871,28 +881,38 @@ export class SchedulerRuntime {
 		}
 	}
 
-	private buildTaskManagerOptions(list: ScheduleTask[], clearOtherLabel?: string): string[] {
-		const options = list.map((task) => this.taskOptionLabel(task));
-		if (clearOtherLabel) {
-			options.push(clearOtherLabel);
+	private buildTaskManagerOptions(
+		list: ScheduleTask[],
+		otherTasks: ScheduleTask[],
+	): ScrollSelectOption<TaskManagerSelection>[] {
+		const options = list.map((task) => ({
+			value: { kind: "task", taskId: task.id } as const,
+			label: this.taskOptionLabel(task),
+		}));
+
+		if (otherTasks.length > 0) {
+			options.push({
+				value: { kind: "clear-other" },
+				label: `🧹 Clear tasks not created here (${otherTasks.length})`,
+			});
 		}
-		options.push("🗑 Clear all");
-		options.push("+ Close");
+
+		options.push({ value: { kind: "clear-all" }, label: "🗑 Clear all" });
+		options.push({ value: { kind: "close" }, label: "+ Close" });
 		return options;
 	}
 
 	private async handleTaskManagerSelection(
 		ctx: ExtensionContext,
-		selected: string | null,
+		selected: TaskManagerSelection | null,
 		list: ScheduleTask[],
 		otherTasks: ScheduleTask[],
-		clearOtherLabel?: string,
-	): Promise<"open-task" | "refresh" | "close"> {
-		if (!selected || selected === "+ Close") {
+	): Promise<{ kind: "task"; taskId: string } | "refresh" | "close"> {
+		if (!selected || selected.kind === "close") {
 			return "close";
 		}
 
-		if (clearOtherLabel && selected === clearOtherLabel) {
+		if (selected.kind === "clear-other") {
 			const ok = await ctx.ui.confirm(
 				"Clear tasks not created here?",
 				this.describeExternalCreatorClear(otherTasks, ctx),
@@ -908,7 +928,7 @@ export class SchedulerRuntime {
 			return "refresh";
 		}
 
-		if (selected === "🗑 Clear all") {
+		if (selected.kind === "clear-all") {
 			const count = list.length;
 			const ok = await ctx.ui.confirm(
 				"Clear all scheduled tasks?",
@@ -922,7 +942,7 @@ export class SchedulerRuntime {
 			return "close";
 		}
 
-		return "open-task";
+		return selected;
 	}
 
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TUI flow with multiple interactive branches.

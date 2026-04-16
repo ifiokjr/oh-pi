@@ -533,6 +533,10 @@ interface SelectResult {
 	api?: string;
 }
 
+export function buildModelSelectionOptions(modelIds: readonly string[]) {
+	return modelIds.map((modelId) => ({ value: modelId, label: modelId }));
+}
+
 /**
  * Select a default model by dynamically fetching available models, falling back to a static list or manual input.
  * @param provider - Provider name
@@ -589,7 +593,7 @@ async function selectModelWithMeta(
 
 	const model = await p.select({
 		message: t("provider.selectModel", { label }),
-		options: modelIds.slice(0, 50).map((m) => ({ value: m, label: m })),
+		options: buildModelSelectionOptions(modelIds),
 	});
 	if (p.isCancel(model)) {
 		p.cancel(t("cancelled"));

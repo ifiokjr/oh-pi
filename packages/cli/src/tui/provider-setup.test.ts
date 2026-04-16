@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	buildModelSelectionOptions,
 	isOpenAICompatibleApi,
 	isUnsafeUrl,
 	normalizeDiscoveryBaseUrl,
@@ -89,6 +90,18 @@ describe("normalizeDiscoveryBaseUrl", () => {
 
 	it("strips trailing /v1/ to avoid /v1/v1 probe", () => {
 		expect(normalizeDiscoveryBaseUrl("http://localhost:11434/v1/")).toBe("http://localhost:11434");
+	});
+});
+
+describe("buildModelSelectionOptions", () => {
+	it("keeps the full discovered model list instead of truncating at 50 entries", () => {
+		const modelIds = Array.from({ length: 75 }, (_, index) => `model-${index + 1}`);
+
+		const options = buildModelSelectionOptions(modelIds);
+
+		expect(options).toHaveLength(75);
+		expect(options[0]).toEqual({ value: "model-1", label: "model-1" });
+		expect(options[74]).toEqual({ value: "model-75", label: "model-75" });
 	});
 });
 

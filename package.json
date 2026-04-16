@@ -31,8 +31,8 @@
 		"themes": ["./packages/themes/themes"]
 	},
 	"scripts": {
-		"build": "pnpm -r run build",
-		"build:fast": "pnpm -r run build:fast",
+		"build": "pnpm --filter @ifi/oh-pi-core build && pnpm -r --filter=!@ifi/oh-pi-core run build",
+		"build:fast": "pnpm --filter @ifi/oh-pi-core run build:fast && pnpm -r --filter=!@ifi/oh-pi-core run build:fast",
 		"typecheck": "pnpm --filter @ifi/oh-pi-core build && pnpm -r --filter @ifi/oh-pi-ant-colony --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli --filter @ifi/pi-spec --filter @ifi/pi-web-client --filter @ifi/pi-web-server run typecheck",
 		"verify:completion": "pnpm exec vitest run packages/ant-colony/tests/commands.test.ts",
 		"security:allowlist": "node ./scripts/security/check-dependency-allowlist.mjs",
