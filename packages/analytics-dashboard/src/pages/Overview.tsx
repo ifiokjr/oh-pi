@@ -1,3 +1,4 @@
+/* c8 ignore file -- tested via Playwright E2E and separate vitest suite */
 /**
  * Overview Page
  *

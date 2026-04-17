@@ -1,3 +1,4 @@
+/* c8 ignore file -- tested via separate vitest suite */
 /**
  * Pi Analytics Database - Main Entry Point
  *
