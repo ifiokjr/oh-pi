@@ -24,12 +24,61 @@ npx @ifi/oh-pi
 ## 30-Second Start
 
 ```bash
-npx @ifi/oh-pi       # install all extensions, themes, prompts, and skills
+npx @ifi/oh-pi       # install the default oh-pi bundle
 pi                    # start coding
 ```
 
 oh-pi installs the full bundle into pi in one command. See [Installer Options](#installer-options)
 for project-scoped installs and version pinning.
+
+## Start Here
+
+<!-- {=repoStartHerePathDocs} -->
+
+Use this reading path depending on what you are trying to do:
+
+- **I just want to use oh-pi** → start in the root `README.md`, then jump into `docs/feature-catalog.md` for package-by-package detail
+- **I want to try the latest local changes** → run `pnpm install`, `pnpm pi:local`, restart `pi`, then exercise the feature in a real session
+- **I want to contribute** → read `CONTRIBUTING.md`, then the package README for the area you are changing
+- **I want to understand ownership** → use `docs/feature-catalog.md` to see which package owns which runtime feature, content pack, or library surface
+
+<!-- {/repoStartHerePathDocs} -->
+
+### Architecture at a glance
+
+<!-- {=repoArchitectureAtAGlanceDocs} -->
+
+```text
+oh-pi repo
+├── installer
+│   └── @ifi/oh-pi
+├── default runtime packages
+│   ├── extensions
+│   ├── diagnostics
+│   ├── ant-colony
+│   ├── subagents
+│   ├── plan
+│   ├── spec
+│   └── web-remote
+├── content packs
+│   ├── themes
+│   ├── prompts
+│   ├── skills
+│   └── agents
+├── opt-in extras
+│   ├── adaptive-routing
+│   ├── provider-catalog
+│   ├── provider-cursor
+│   └── provider-ollama
+└── contributor libraries
+    ├── core
+    ├── cli
+    ├── shared-qna
+    ├── web-client
+    └── web-server
+```
+
+<!-- {/repoArchitectureAtAGlanceDocs} -->
 
 ### Fork-based Git install
 
@@ -48,29 +97,40 @@ Published npm installs remain the better default for stable releases.
 
 This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick individual packages.
 
-| Package                                          | Description                        | Install                                |
-| ------------------------------------------------ | ---------------------------------- | -------------------------------------- |
-| [`@ifi/oh-pi`](./packages/oh-pi)                 | One-command installer for all pkgs | `npx @ifi/oh-pi`                       |
-| [`@ifi/oh-pi-core`](./packages/core)             | Shared types, registries, i18n     | (library, not installed directly)      |
-| [`@ifi/oh-pi-extensions`](./packages/extensions)          | Core extension pack (see below)             | `pi install npm:@ifi/oh-pi-extensions`      |
-| [`@ifi/pi-extension-adaptive-routing`](./packages/adaptive-routing) | Optional adaptive + delegated routing       | `pi install npm:@ifi/pi-extension-adaptive-routing` |
-| [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)          | Multi-agent swarm extension                 | `pi install npm:@ifi/oh-pi-ant-colony`      |
-| [`@ifi/pi-diagnostics`](./packages/diagnostics)           | Prompt completion timing extension          | `pi install npm:@ifi/pi-diagnostics`         |
-| [`@ifi/pi-extension-subagents`](./packages/subagents)     | Full-featured subagent delegation extension | `pi install npm:@ifi/pi-extension-subagents` |
-| [`@ifi/pi-plan`](./packages/plan)                         | Branch-aware planning mode extension        | `pi install npm:@ifi/pi-plan`               |
-| [`@ifi/pi-shared-qna`](./packages/shared-qna)             | Shared Q&A TUI helpers                      | (library, not installed directly)           |
-| [`@ifi/pi-spec`](./packages/spec)                         | Native spec-driven workflow with `/spec`    | `pi install npm:@ifi/pi-spec`               |
-| [`@ifi/pi-provider-catalog`](./packages/providers)        | Experimental OpenCode-backed provider catalog | `pi install npm:@ifi/pi-provider-catalog` |
-| [`@ifi/pi-provider-cursor`](./packages/cursor)            | Experimental Cursor OAuth provider            | `pi install npm:@ifi/pi-provider-cursor`  |
-| [`@ifi/pi-provider-ollama`](./packages/ollama)            | Experimental Ollama local + cloud provider    | `pi install npm:@ifi/pi-provider-ollama`  |
-| [`@ifi/oh-pi-themes`](./packages/themes)                  | 6 color themes                              | `pi install npm:@ifi/oh-pi-themes`          |
-| [`@ifi/oh-pi-prompts`](./packages/prompts)                | 10 prompt templates                         | `pi install npm:@ifi/oh-pi-prompts`         |
-| [`@ifi/oh-pi-skills`](./packages/skills)                  | 12 skill packs                              | `pi install npm:@ifi/oh-pi-skills`          |
-| [`@ifi/oh-pi-agents`](./packages/agents)                  | 5 AGENTS.md templates                       | (used by CLI only)                          |
+| Package | Role | Install |
+| ------- | ---- | ------- |
+| [`@ifi/oh-pi`](./packages/oh-pi) | Meta-installer for the default oh-pi bundle | `npx @ifi/oh-pi` |
+| [`@ifi/oh-pi-cli`](./packages/cli) | Interactive TUI configurator | `npx @ifi/oh-pi-cli` |
+| [`@ifi/oh-pi-core`](./packages/core) | Shared types, registries, icons, i18n, and path helpers | (library, not installed directly) |
+| [`@ifi/oh-pi-extensions`](./packages/extensions) | Core extension pack with 13 session features | `pi install npm:@ifi/oh-pi-extensions` |
+| [`@ifi/pi-background-tasks`](./packages/background-tasks) | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, and `bg_task` | `pi install npm:@ifi/pi-background-tasks` |
+| [`@ifi/pi-diagnostics`](./packages/diagnostics) | Prompt completion timing extension | `pi install npm:@ifi/pi-diagnostics` |
+| [`@ifi/oh-pi-ant-colony`](./packages/ant-colony) | Multi-agent swarm extension | `pi install npm:@ifi/oh-pi-ant-colony` |
+| [`@ifi/pi-extension-subagents`](./packages/subagents) | Full-featured subagent delegation runtime | `pi install npm:@ifi/pi-extension-subagents` |
+| [`@ifi/pi-plan`](./packages/plan) | Branch-aware planning mode extension | `pi install npm:@ifi/pi-plan` |
+| [`@ifi/pi-spec`](./packages/spec) | Native spec-driven workflow with `/spec` | `pi install npm:@ifi/pi-spec` |
+| [`@ifi/pi-web-remote`](./packages/web-remote) | `/remote` session sharing extension | `pi install npm:@ifi/pi-web-remote` |
+| [`@ifi/pi-extension-adaptive-routing`](./packages/adaptive-routing) | Optional adaptive + delegated routing | `pi install npm:@ifi/pi-extension-adaptive-routing` |
+| [`@ifi/pi-provider-catalog`](./packages/providers) | Experimental OpenCode-backed provider catalog | `pi install npm:@ifi/pi-provider-catalog` |
+| [`@ifi/pi-provider-cursor`](./packages/cursor) | Experimental Cursor OAuth provider | `pi install npm:@ifi/pi-provider-cursor` |
+| [`@ifi/pi-provider-ollama`](./packages/ollama) | Experimental Ollama local + cloud provider | `pi install npm:@ifi/pi-provider-ollama` |
+| [`@ifi/oh-pi-themes`](./packages/themes) | 6 color themes | `pi install npm:@ifi/oh-pi-themes` |
+| [`@ifi/oh-pi-prompts`](./packages/prompts) | 10 prompt templates | `pi install npm:@ifi/oh-pi-prompts` |
+| [`@ifi/oh-pi-skills`](./packages/skills) | 17 skill packs | `pi install npm:@ifi/oh-pi-skills` |
+| [`@ifi/oh-pi-agents`](./packages/agents) | 5 AGENTS.md templates | (used by CLI/templates) |
+| [`@ifi/pi-shared-qna`](./packages/shared-qna) | Shared Q&A TUI helpers | (library, not installed directly) |
+| [`@ifi/pi-web-client`](./packages/web-client) | Platform-agnostic remote session client library | `pnpm add @ifi/pi-web-client` |
+| [`@ifi/pi-web-server`](./packages/web-server) | Embeddable remote session server | `pnpm add @ifi/pi-web-server` |
 
 `@ifi/pi-extension-adaptive-routing`, `@ifi/pi-provider-catalog`, `@ifi/pi-provider-cursor`, and
 `@ifi/pi-provider-ollama` stay opt-in for now and are **not** installed by `npx @ifi/oh-pi`.
 They are intentionally shipped as separate optional packages.
+
+### Full Feature Catalog
+
+For a package-by-package inventory of everything in the repo — including every extension, runtime
+package, prompt, skill, theme, AGENTS template, and contributor-facing library — see
+[docs/feature-catalog.md](./docs/feature-catalog.md).
 
 ### Native `/spec` Workflow
 
@@ -242,6 +302,18 @@ how long it took, and how each assistant turn progressed.
 `before_agent_start`, `turn_end`, and `agent_end`, then emits a custom diagnostic message when the
 agent goes idle for that prompt.
 
+### 🧾 Tool Metadata (`tool-metadata`) — **default: on**
+
+Enriches tool results with execution metadata so pi can show when a tool started, when it finished,
+how long it took, and roughly how much text went in or out.
+
+**Adds:** start/end timestamps, duration, approximate input/output sizing, and a context snapshot at
+completion. It also sanitizes oversized tool output/details payloads so the TUI stays stable even
+when tools return huge text blobs.
+
+**How it works:** Hooks tool calls/results centrally and appends structured metadata to tool result
+`details`, which other features like diagnostics can reuse for consistent timing displays.
+
 ### ⚡ Compact Header (`compact-header`) — **default: on**
 
 Replaces the verbose default startup header with a dense one-liner showing model, provider, thinking
@@ -276,6 +348,33 @@ purpose metadata for pi-created worktrees.
 **Behavior:** pi-owned worktrees are created under shared pi storage, namespaced by the canonical
 repo root. Cleanup focuses on pi-owned worktrees only and leaves external/manual worktrees alone
 unless you explicitly intervene.
+
+### 📅 Scheduler (`scheduler`) — **default: on**
+
+Adds first-class reminders, recurring follow-ups, and future check-ins to pi.
+
+**Commands:** `/remind in 45m <prompt>` | `/loop 5m <prompt>` | `/loop cron '*/5 * * * *' <prompt>` |
+`/schedule` | `/schedule:tui` | `/schedule:list` | `/schedule:enable <id>` |
+`/schedule:disable <id>` | `/schedule:delete <id>` | `/schedule:clear` |
+`/schedule:clear-other` | `/schedule:adopt <id|all>` | `/schedule:release <id|all>` |
+`/schedule:clear-foreign`
+
+**Tool:** `schedule_prompt`
+
+**Behavior:** tasks run only while pi is active and idle, persist under shared pi storage, default
+to instance scope, and can opt into workspace scope for shared CI/build/deploy monitors. Use
+`continueUntilComplete` when a follow-up should keep retrying until a success marker appears.
+
+### 💬 BTW / QQ (`btw`) — **default: on**
+
+Creates a side-conversation widget above the editor so you can ask follow-up questions, think in
+parallel, or park a tangent without interrupting the main thread.
+
+**Commands:** `/btw` | `/btw:new` | `/btw:clear` | `/btw:inject` | `/btw:summarize` and the alias
+set `/qq`, `/qq:new`, `/qq:clear`, `/qq:inject`, `/qq:summarize`
+
+**Behavior:** keep a lightweight parallel thread, then either inject the full exchange into the main
+agent or inject a generated summary instead.
 
 ### ⏳ Background Process (`bg-process`) — **default: off**
 
@@ -367,6 +466,18 @@ Key usage-tracker surfaces:
 - `usage_report` so the agent can answer quota and spend questions directly
 
 <!-- {/extensionsUsageTrackerCommandsDocs} -->
+
+### 🛡️ Watchdog + Safe Mode (`watchdog`) — **default: on**
+
+Continuously samples runtime health so heavy sessions stay usable.
+
+**Commands:** `/watchdog` | `/watchdog:status` | `/watchdog:startup` | `/watchdog:overlay` |
+`/watchdog:dashboard` | `/watchdog:config` | `/watchdog:reset` | `/watchdog:on` |
+`/watchdog:off` | `/watchdog:sample` | `/watchdog:blame` | `/safe-mode [on|off|status]`
+
+**Behavior:** tracks CPU, memory, and event-loop lag; records recent samples and alerts; and can
+escalate into safe mode when repeated alerts suggest sustained UI churn. The optional config file
+lives at `~/.pi/agent/extensions/watchdog/config.json`.
 
 ### 🐜 Ant Colony (`ant-colony`) — **default: off**
 
@@ -470,6 +581,10 @@ Anthropic · OpenAI · Google Gemini · Groq · OpenRouter · xAI · Mistral
 
 ## Skills
 
+The tables below highlight the most commonly reached-for skills. For the full list of all 17 skills,
+plus the 5 AGENTS.md templates that ship in this repo, see
+[docs/feature-catalog.md](./docs/feature-catalog.md).
+
 ### 🔧 Tool Skills
 
 | Skill        | What it does                               |
@@ -541,6 +656,14 @@ cd oh-pi
 pnpm install
 ```
 
+<!-- {=repoContributorCompiledPackagesDocs} -->
+
+Most runtime packages in this repo ship raw TypeScript and can be loaded directly by pi. A smaller
+set of contributor-facing packages (`core`, `cli`, `web-client`, `web-server`) emit `dist/` output,
+so build those when you are working on them directly.
+
+<!-- {/repoContributorCompiledPackagesDocs} -->
+
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for contributor workflow, changeset requirements, and PR guidelines.
 
 ### Commands
@@ -572,10 +695,68 @@ That keeps the repo-wide floor honest while still requiring new code paths in a 
 covered. CI uses the same `pnpm test:patch-coverage` command on pull requests, so local results and
 CI results stay aligned.
 
-### Test a local checkout in pi
+### Running locally & local development
 
-Use the repo-local source switcher to flip pi between the published npm packages and the packages in
-whatever checkout or worktree you want to test.
+<!-- {=repoPiLocalSwitcherOverviewDocs} -->
+
+The `pnpm pi:local` workflow points a real pi install at this checkout instead of the published npm
+packages. It is the normal local development loop for testing unpublished oh-pi changes in a real
+interactive pi session.
+
+<!-- {/repoPiLocalSwitcherOverviewDocs} -->
+
+#### Quick start
+
+<!-- {=repoPiLocalQuickstartDocs} -->
+
+```bash
+pnpm install
+pnpm pi:local
+pi
+```
+
+<!-- {/repoPiLocalQuickstartDocs} -->
+
+That is the normal developer loop for oh-pi feature work.
+
+#### What `pnpm pi:local` does
+
+<!-- {=repoPiLocalWhatItDoesDocs} -->
+
+`pnpm pi:local` runs the repo-local source switcher in `local` mode. It:
+
+- rewrites only the managed oh-pi package sources in your pi settings
+- points those package sources at the workspace packages in this checkout
+- preserves package-specific config objects already present in `settings.json`
+- refreshes package manifest paths so newly added extensions/prompts/skills/themes are picked up
+- runs `pi install` for newly added managed packages and `pi update` for packages you already had configured
+- manages the default installer set and the opt-in experimental packages used for local feature development
+- lets you validate unpublished changes from a branch, worktree, or detached checkout before release
+
+<!-- {/repoPiLocalWhatItDoesDocs} -->
+
+<!-- {=repoPiLocalManagedPackagesDocs} -->
+
+Managed local switching covers these packages:
+
+- `@ifi/oh-pi-extensions`
+- `@ifi/oh-pi-ant-colony`
+- `@ifi/pi-diagnostics`
+- `@ifi/pi-extension-subagents`
+- `@ifi/pi-plan`
+- `@ifi/pi-spec`
+- `@ifi/pi-web-remote`
+- `@ifi/oh-pi-themes`
+- `@ifi/oh-pi-prompts`
+- `@ifi/oh-pi-skills`
+- `@ifi/pi-extension-adaptive-routing`
+- `@ifi/pi-provider-catalog`
+- `@ifi/pi-provider-cursor`
+- `@ifi/pi-provider-ollama`
+
+<!-- {/repoPiLocalManagedPackagesDocs} -->
+
+#### Common commands
 
 ```bash
 pnpm pi:local                             # point pi at this checkout
@@ -586,23 +767,38 @@ pnpm pi:switch local -- --pi-local        # write into the current project's .pi
 pnpm pi:switch status                     # show the current managed package sources
 ```
 
-What it does:
+#### Typical local workflow
 
-- rewrites only the managed oh-pi package sources in your pi settings
-- preserves package-specific config objects already in `settings.json`, while refreshing local package manifests so newly added extensions like `worktree` are picked up
-- runs `pi install` for newly added managed packages and `pi update` for packages you already had configured
-- includes the experimental provider packages in addition to the main installer set, including `@ifi/pi-provider-catalog`
-- lets you validate a branch or detached worktree before you publish
+1. `pnpm install`
+2. `pnpm pi:local`
+3. Fully restart `pi`
+4. Exercise the feature in a real pi session
+5. Make changes in this repo
+6. Restart `pi` again when the package source or loaded modules need a clean reload
+7. Switch back with `pnpm pi:published` when you want the published packages again
 
-After switching, fully restart `pi`. Do not rely on `/reload` for source switches because it can
-keep previously loaded package modules alive.
+#### Important restart note
+
+<!-- {=repoPiSourceSwitchRestartDocs} -->
+
+After switching package sources, fully restart `pi`. Do not rely on `/reload` for source switches,
+because it can keep previously loaded package modules alive.
+
+<!-- {/repoPiSourceSwitchRestartDocs} -->
+
+#### When to re-run installs or builds
+
+<!-- {=repoPiLocalInstallFreshnessDocs} -->
 
 If you recently pulled, rebased, or switched branches in the checkout you pointed `pi` at, run
 `pnpm install --frozen-lockfile` there before restarting `pi`. Local source mode loads workspace
 files directly, so stale `node_modules` can surface missing internal `@ifi/*` package errors.
 
-This is intended to be the normal development loop for testing a branch locally before cutting a
-release.
+<!-- {/repoPiLocalInstallFreshnessDocs} -->
+
+If you are changing one of the compiled contributor packages (`@ifi/oh-pi-core`, `@ifi/oh-pi-cli`,
+`@ifi/pi-web-client`, or `@ifi/pi-web-server`), also run the relevant build command or `pnpm build`
+so their emitted `dist/` output stays current.
 
 ### Changesets
 
@@ -651,27 +847,33 @@ calling `knope release`. Use `--dry-run` to preview without making changes.
 ```
 oh-pi/
 ├── packages/
-│   ├── core/                   Shared types, registry, i18n (compiled)
-│   ├── cli/                    TUI configurator binary (compiled)
-│   ├── extensions/             9 pi extensions (raw .ts)
+│   ├── core/                   Shared types, registries, icons, i18n, and path helpers (compiled)
+│   ├── cli/                    Interactive TUI configurator (compiled)
+│   ├── extensions/             13 core pi extensions (raw .ts)
+│   ├── diagnostics/            Prompt completion timing extension (raw .ts)
 │   ├── ant-colony/             Multi-agent swarm extension (raw .ts)
 │   ├── subagents/              Subagent orchestration package (raw .ts)
-│   ├── shared-qna/             Shared Q&A TUI helper library (raw .ts)
 │   ├── plan/                   Planning mode extension (raw .ts)
 │   ├── spec/                   Native spec-driven workflow package (raw .ts)
+│   ├── adaptive-routing/       Optional adaptive/delegated routing package (raw .ts)
+│   ├── providers/              Experimental provider catalog package (raw .ts)
 │   ├── cursor/                 Experimental Cursor OAuth provider package (raw .ts)
 │   ├── ollama/                 Experimental Ollama local + cloud provider package (raw .ts)
+│   ├── web-remote/             `/remote` session sharing extension (raw .ts)
+│   ├── web-client/             Remote session client library (compiled)
+│   ├── web-server/             Remote session server library (compiled)
+│   ├── shared-qna/             Shared Q&A TUI helper library (raw .ts)
 │   ├── themes/                 6 JSON theme files
 │   ├── prompts/                10 markdown prompt templates
-│   ├── skills/                 12 skill directories
+│   ├── skills/                 17 skill directories
 │   ├── agents/                 5 AGENTS.md templates
 │   └── oh-pi/                  Installer CLI (npx @ifi/oh-pi)
-├── docs/                  Full documentation
-├── benchmarks/            Performance benchmarks
-├── .changeset/            Pending changesets (knope)
-├── CHANGELOG.md           Release history
-├── knope.toml             Release automation config
-└── biome.json             Linter + formatter config
+├── docs/                       Full documentation
+├── benchmarks/                 Performance benchmarks
+├── .changeset/                 Pending changesets (knope)
+├── CHANGELOG.md                Release history
+├── knope.toml                  Release automation config
+└── biome.json                  Linter + formatter config
 ```
 
 ## License

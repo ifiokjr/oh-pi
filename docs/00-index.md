@@ -13,6 +13,7 @@
 | 05  | [Skills/Prompts/Themes/Packages](05-skills-prompts-themes-packages.md) | Skill packs, prompt templates, theme customization, package management and distribution        |
 | 06  | [Settings/SDK/RPC/TUI](06-settings-sdk-rpc-tui.md)                     | All settings, SDK programming interface, RPC protocol, TUI component system, custom models     |
 | 07  | [CLI Reference](07-cli-reference.md)                                   | Complete CLI options, directory structure, platform support, key numbers                       |
+| 08  | [oh-pi Feature Catalog](feature-catalog.md)                            | Package-by-package feature inventory, local dev loop, runtime/content package ownership        |
 
 ## Core Concepts Quick Reference
 
@@ -81,6 +82,69 @@ CLI flags > project .pi/settings.json > global ~/.pi/agent/settings.json
 ```
 --api-key > auth.json > environment variables > models.json
 ```
+
+## Start here
+
+<!-- {=repoStartHerePathDocs} -->
+
+Use this reading path depending on what you are trying to do:
+
+- **I just want to use oh-pi** → start in the root `README.md`, then jump into `docs/feature-catalog.md` for package-by-package detail
+- **I want to try the latest local changes** → run `pnpm install`, `pnpm pi:local`, restart `pi`, then exercise the feature in a real session
+- **I want to contribute** → read `CONTRIBUTING.md`, then the package README for the area you are changing
+- **I want to understand ownership** → use `docs/feature-catalog.md` to see which package owns which runtime feature, content pack, or library surface
+
+<!-- {/repoStartHerePathDocs} -->
+
+### Architecture at a glance
+
+<!-- {=repoArchitectureAtAGlanceDocs} -->
+
+```text
+oh-pi repo
+├── installer
+│   └── @ifi/oh-pi
+├── default runtime packages
+│   ├── extensions
+│   ├── diagnostics
+│   ├── ant-colony
+│   ├── subagents
+│   ├── plan
+│   ├── spec
+│   └── web-remote
+├── content packs
+│   ├── themes
+│   ├── prompts
+│   ├── skills
+│   └── agents
+├── opt-in extras
+│   ├── adaptive-routing
+│   ├── provider-catalog
+│   ├── provider-cursor
+│   └── provider-ollama
+└── contributor libraries
+    ├── core
+    ├── cli
+    ├── shared-qna
+    ├── web-client
+    └── web-server
+```
+
+<!-- {/repoArchitectureAtAGlanceDocs} -->
+
+## Suggested contributor reading path
+
+<!-- {=repoContributorReadingPathDocs} -->
+
+Suggested path for a new contributor:
+
+1. skim the root `README.md` for the package map and the local dev loop
+2. read `docs/feature-catalog.md` to understand which package owns which feature
+3. run `pnpm install` and `pnpm pi:local`
+4. restart `pi` and exercise the feature in a real session
+5. open the package README for the area you are changing, then run the relevant build/test commands
+
+<!-- {/repoContributorReadingPathDocs} -->
 
 ## Value for oh-pi
 

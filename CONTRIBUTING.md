@@ -12,6 +12,53 @@ pnpm build
 pnpm test
 ```
 
+<!-- {=repoContributorReadingPathDocs} -->
+
+Suggested path for a new contributor:
+
+1. skim the root `README.md` for the package map and the local dev loop
+2. read `docs/feature-catalog.md` to understand which package owns which feature
+3. run `pnpm install` and `pnpm pi:local`
+4. restart `pi` and exercise the feature in a real session
+5. open the package README for the area you are changing, then run the relevant build/test commands
+
+<!-- {/repoContributorReadingPathDocs} -->
+
+<!-- {=repoContributorCompiledPackagesDocs} -->
+
+Most runtime packages in this repo ship raw TypeScript and can be loaded directly by pi. A smaller
+set of contributor-facing packages (`core`, `cli`, `web-client`, `web-server`) emit `dist/` output,
+so build those when you are working on them directly.
+
+<!-- {/repoContributorCompiledPackagesDocs} -->
+
+### Running the repo in a real pi session
+
+<!-- {=repoPiLocalSwitcherOverviewDocs} -->
+
+The `pnpm pi:local` workflow points a real pi install at this checkout instead of the published npm
+packages. It is the normal local development loop for testing unpublished oh-pi changes in a real
+interactive pi session.
+
+<!-- {/repoPiLocalSwitcherOverviewDocs} -->
+
+<!-- {=repoPiLocalQuickstartDocs} -->
+
+```bash
+pnpm install
+pnpm pi:local
+pi
+```
+
+<!-- {/repoPiLocalQuickstartDocs} -->
+
+<!-- {=repoPiSourceSwitchRestartDocs} -->
+
+After switching package sources, fully restart `pi`. Do not rely on `/reload` for source switches,
+because it can keep previously loaded package modules alive.
+
+<!-- {/repoPiSourceSwitchRestartDocs} -->
+
 ## Commit Convention
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):

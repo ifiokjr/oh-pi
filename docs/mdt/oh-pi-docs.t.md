@@ -317,3 +317,164 @@ kept visible in the status bar and the `/watchdog` overlay instead of repeatedly
 terminal.
 
 <!-- {/extensionsWatchdogAlertBehaviorDocs} -->
+
+<!-- {@repoStartHerePathDocs} -->
+
+Use this reading path depending on what you are trying to do:
+
+- **I just want to use oh-pi** → start in the root `README.md`, then jump into `docs/feature-catalog.md` for package-by-package detail
+- **I want to try the latest local changes** → run `pnpm install`, `pnpm pi:local`, restart `pi`, then exercise the feature in a real session
+- **I want to contribute** → read `CONTRIBUTING.md`, then the package README for the area you are changing
+- **I want to understand ownership** → use `docs/feature-catalog.md` to see which package owns which runtime feature, content pack, or library surface
+
+<!-- {/repoStartHerePathDocs} -->
+
+<!-- {@repoArchitectureAtAGlanceDocs} -->
+
+```text
+oh-pi repo
+├── installer
+│   └── @ifi/oh-pi
+├── default runtime packages
+│   ├── extensions
+│   ├── diagnostics
+│   ├── ant-colony
+│   ├── subagents
+│   ├── plan
+│   ├── spec
+│   └── web-remote
+├── content packs
+│   ├── themes
+│   ├── prompts
+│   ├── skills
+│   └── agents
+├── opt-in extras
+│   ├── adaptive-routing
+│   ├── provider-catalog
+│   ├── provider-cursor
+│   └── provider-ollama
+└── contributor libraries
+    ├── core
+    ├── cli
+    ├── shared-qna
+    ├── web-client
+    └── web-server
+```
+
+<!-- {/repoArchitectureAtAGlanceDocs} -->
+
+<!-- {@repoDefaultInstallerPackagesDocs} -->
+
+Default runtime/content packages installed by `npx @ifi/oh-pi`:
+
+- `@ifi/oh-pi-extensions`
+- `@ifi/oh-pi-ant-colony`
+- `@ifi/pi-diagnostics`
+- `@ifi/pi-extension-subagents`
+- `@ifi/pi-plan`
+- `@ifi/pi-spec`
+- `@ifi/pi-web-remote`
+- `@ifi/oh-pi-themes`
+- `@ifi/oh-pi-prompts`
+- `@ifi/oh-pi-skills`
+
+<!-- {/repoDefaultInstallerPackagesDocs} -->
+
+<!-- {@repoExperimentalPackagesDocs} -->
+
+Opt-in packages that stay separate from the default installer bundle:
+
+- `@ifi/pi-extension-adaptive-routing`
+- `@ifi/pi-provider-catalog`
+- `@ifi/pi-provider-cursor`
+- `@ifi/pi-provider-ollama`
+
+<!-- {/repoExperimentalPackagesDocs} -->
+
+<!-- {@repoContributorCompiledPackagesDocs} -->
+
+Most runtime packages in this repo ship raw TypeScript and can be loaded directly by pi. A smaller
+set of contributor-facing packages (`core`, `cli`, `web-client`, `web-server`) emit `dist/` output,
+so build those when you are working on them directly.
+
+<!-- {/repoContributorCompiledPackagesDocs} -->
+
+<!-- {@repoPiLocalSwitcherOverviewDocs} -->
+
+The `pnpm pi:local` workflow points a real pi install at this checkout instead of the published npm
+packages. It is the normal local development loop for testing unpublished oh-pi changes in a real
+interactive pi session.
+
+<!-- {/repoPiLocalSwitcherOverviewDocs} -->
+
+<!-- {@repoPiLocalQuickstartDocs} -->
+
+```bash
+pnpm install
+pnpm pi:local
+pi
+```
+
+<!-- {/repoPiLocalQuickstartDocs} -->
+
+<!-- {@repoPiLocalWhatItDoesDocs} -->
+
+`pnpm pi:local` runs the repo-local source switcher in `local` mode. It:
+
+- rewrites only the managed oh-pi package sources in your pi settings
+- points those package sources at the workspace packages in this checkout
+- preserves package-specific config objects already present in `settings.json`
+- refreshes package manifest paths so newly added extensions/prompts/skills/themes are picked up
+- runs `pi install` for newly added managed packages and `pi update` for packages you already had configured
+- manages the default installer set and the opt-in experimental packages used for local feature development
+- lets you validate unpublished changes from a branch, worktree, or detached checkout before release
+
+<!-- {/repoPiLocalWhatItDoesDocs} -->
+
+<!-- {@repoPiLocalManagedPackagesDocs} -->
+
+Managed local switching covers these packages:
+
+- `@ifi/oh-pi-extensions`
+- `@ifi/oh-pi-ant-colony`
+- `@ifi/pi-diagnostics`
+- `@ifi/pi-extension-subagents`
+- `@ifi/pi-plan`
+- `@ifi/pi-spec`
+- `@ifi/pi-web-remote`
+- `@ifi/oh-pi-themes`
+- `@ifi/oh-pi-prompts`
+- `@ifi/oh-pi-skills`
+- `@ifi/pi-extension-adaptive-routing`
+- `@ifi/pi-provider-catalog`
+- `@ifi/pi-provider-cursor`
+- `@ifi/pi-provider-ollama`
+
+<!-- {/repoPiLocalManagedPackagesDocs} -->
+
+<!-- {@repoPiSourceSwitchRestartDocs} -->
+
+After switching package sources, fully restart `pi`. Do not rely on `/reload` for source switches,
+because it can keep previously loaded package modules alive.
+
+<!-- {/repoPiSourceSwitchRestartDocs} -->
+
+<!-- {@repoPiLocalInstallFreshnessDocs} -->
+
+If you recently pulled, rebased, or switched branches in the checkout you pointed `pi` at, run
+`pnpm install --frozen-lockfile` there before restarting `pi`. Local source mode loads workspace
+files directly, so stale `node_modules` can surface missing internal `@ifi/*` package errors.
+
+<!-- {/repoPiLocalInstallFreshnessDocs} -->
+
+<!-- {@repoContributorReadingPathDocs} -->
+
+Suggested path for a new contributor:
+
+1. skim the root `README.md` for the package map and the local dev loop
+2. read `docs/feature-catalog.md` to understand which package owns which feature
+3. run `pnpm install` and `pnpm pi:local`
+4. restart `pi` and exercise the feature in a real session
+5. open the package README for the area you are changing, then run the relevant build/test commands
+
+<!-- {/repoContributorReadingPathDocs} -->
