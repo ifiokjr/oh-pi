@@ -1,1 +1,7 @@
-export { createBgProcessShellEnv, default, getBgProcessLogFilePath } from "@ifi/pi-background-tasks";
+import backgroundTasksExtension, {
+	createBgProcessShellEnv,
+	getBgProcessLogFilePath,
+} from "@ifi/pi-background-tasks";
+
+export { createBgProcessShellEnv, getBgProcessLogFilePath };
+export default backgroundTasksExtension;
