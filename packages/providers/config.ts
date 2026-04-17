@@ -1,6 +1,11 @@
 import { SUPPORTED_PROVIDER_DATA } from "./supported-providers.generated.js";
 
-export type ProviderApiKind = "anthropic-messages" | "google-generative-ai" | "openai-completions" | "openai-responses";
+export type ProviderApiKind =
+	| "anthropic-messages"
+	| "google-generative-ai"
+	| "openai-completions"
+	| "openai-responses"
+	| "mistral-conversations";
 
 export interface SupportedProviderDefinition {
 	id: string;
@@ -74,6 +79,10 @@ export function normalizeProviderBaseUrl(baseUrl: string): string {
 function resolveProviderApi(providerId: string, npm: string): ProviderApiKind {
 	if (providerId === "openai") {
 		return "openai-responses";
+	}
+
+	if (providerId === "mistral") {
+		return "mistral-conversations";
 	}
 
 	if (npm === "@ai-sdk/google") {

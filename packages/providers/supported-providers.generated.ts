@@ -318,8 +318,8 @@ export const SUPPORTED_PROVIDER_DATA = [
 		id: "mistral",
 		name: "Mistral",
 		env: ["MISTRAL_API_KEY"],
-		baseUrl: "https://api.mistral.ai/v1",
-		npm: "@ai-sdk/mistral",
+		baseUrl: "https://api.mistral.ai/",
+		npm: "@ai-sdk/mistral/",
 	},
 	{
 		id: "mixlayer",
