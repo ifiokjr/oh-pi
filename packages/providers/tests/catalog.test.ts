@@ -63,6 +63,12 @@ describe("provider catalog", () => {
 		expect(ids.has("ollama-cloud")).toBe(false);
 	});
 
+	it("maps native Mistral to the Mistral conversations API", () => {
+		const provider = getSupportedProvider("mistral");
+		expect(provider.api).toBe("mistral-conversations");
+		expect(provider.baseUrl).toBe("https://api.mistral.ai");
+	});
+
 	it("filters the models.dev catalog down to pi-usable text models", async () => {
 		vi.stubGlobal(
 			"fetch",
