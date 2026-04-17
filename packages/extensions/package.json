@@ -29,6 +29,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@ifi/pi-background-tasks": "workspace:*",
     "@ifi/pi-shared-qna": "0.4.4",
     "croner": "^10.0.1"
   },

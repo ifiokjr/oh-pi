@@ -12,7 +12,7 @@ This package includes extensions such as:
 - compact-header
 - external-editor / /external-editor
 - auto-update
-- bg-process
+- bg-process (powered by `@ifi/pi-background-tasks`)
 - usage-tracker
 - scheduler
 - btw / qq
@@ -37,6 +37,9 @@ These extensions add commands, tools, UI widgets, background process handling,
 usage monitoring, scheduling features, tool execution metadata,
 external-editor integration, git worktree awareness, and runtime performance protection
 (`/watchdog`, `/watchdog:blame`, `/safe-mode`) to pi.
+
+`bg-process` now delegates to the richer `@ifi/pi-background-tasks` runtime, so the core bundle
+also gets `/bg`, `Ctrl+Shift+B`, and the `bg_task` tool.
 
 `git-guard` also blocks git bash invocations that are likely to open an interactive editor in agent environments (for example `git rebase --continue` without non-interactive editor overrides), preventing hangs before they happen.
 

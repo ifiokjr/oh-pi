@@ -22,6 +22,7 @@ describe("pi package extension entrypoints", () => {
 		const extensionPackages = [
 			"packages/extensions/package.json",
 			"packages/adaptive-routing/package.json",
+			"packages/background-tasks/package.json",
 			"packages/spec/package.json",
 			"packages/ant-colony/package.json",
 			"packages/diagnostics/package.json",

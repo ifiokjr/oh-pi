@@ -102,6 +102,24 @@ importers:
         specifier: '*'
         version: 0.34.48
 
+  packages/background-tasks:
+    dependencies:
+      '@mariozechner/pi-agent-core':
+        specifier: '>=0.56.1'
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-ai':
+        specifier: '>=0.56.1'
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-coding-agent':
+        specifier: '>=0.56.1'
+        version: 0.56.1(ws@8.19.0)(zod@3.25.76)
+      '@mariozechner/pi-tui':
+        specifier: '>=0.56.1'
+        version: 0.56.1
+      '@sinclair/typebox':
+        specifier: '*'
+        version: 0.34.48
+
   packages/cli:
     dependencies:
       '@clack/prompts':
@@ -194,6 +212,9 @@ importers:
 
   packages/extensions:
     dependencies:
+      '@ifi/pi-background-tasks':
+        specifier: workspace:*
+        version: link:../background-tasks
       '@ifi/pi-shared-qna':
         specifier: 0.4.4
         version: 0.4.4(@mariozechner/pi-tui@0.56.1)

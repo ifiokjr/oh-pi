@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, 
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { SWITCHER_PACKAGES } from "../packages/oh-pi/bin/package-list.mjs";
+import { SWITCHER_PACKAGES } from "../packages/oh-pi/bin/package-list.mts";
 import {
 	buildPiExecutableCandidates,
 	dedupeManagedPackageEntries,

@@ -3,6 +3,7 @@
 ## Code standards
 
 - Language: TypeScript in strict mode
+- Repo-authored source files should use TypeScript extensions (`.ts`, `.mts`, `.cts`) instead of JavaScript (`.js`, `.mjs`, `.cjs`) whenever possible
 - Formatter/linter: Biome 2 (`biome.json`) using tabs, 120 character width, and double quotes
 - Type checking:
   - `tsgo` (`@typescript/native-preview`) for fast repo type-checking
