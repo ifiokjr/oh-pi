@@ -4,6 +4,7 @@ import {
   FolderCode,
   Network,
   CalendarDays,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ const navItems: NavItem[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "models", label: "Models", icon: Cpu },
   { id: "codebases", label: "Codebases", icon: FolderCode },
+  { id: "insights", label: "Insights", icon: Sparkles },
   { id: "providers", label: "Providers", icon: Network },
   { id: "timeline", label: "Timeline", icon: CalendarDays },
 ];

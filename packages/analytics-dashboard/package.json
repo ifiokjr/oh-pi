@@ -6,6 +6,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "dev:server": "npx tsx src/server/index.ts",
+    "dev:full": "concurrently \"vite\" \"npx tsx src/server/index.ts\"",
     "build": "tsc && vite build",
     "build:fast": "vite build",
     "preview": "vite preview",
@@ -24,10 +26,17 @@
     "react-dom": "^19.1.0",
     "recharts": "^2.15.0",
     "tailwind-merge": "^3.2.0",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "@ifi/pi-analytics-db": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
+    "concurrently": "^9.1.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "tsx": "^4.19.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@tailwindcss/vite": "^4.2.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",

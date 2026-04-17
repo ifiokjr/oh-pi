@@ -1,9 +1,14 @@
 /**
  * Analytics API
  *
- * Client-side API for fetching analytics data from the database layer.
- * This communicates with the main process via IPC in a real Electron app,
- * but for the web dashboard we'll use a mock API that can be swapped.
+ * Client-side API for fetching analytics data.
+ * Supports two modes:
+ * - "mock": Uses generated data (default, for development/testing)
+ * - "api": Fetches from the Express server at /api/*
+ *
+ * Mode is controlled by VITE_API_MODE env var:
+ * - "mock" or unset → mock data
+ * - "api" → real data from the server
  */
 
 import type {
@@ -21,8 +26,22 @@ import type {
 } from "@/types";
 import { stringToColor } from "@/lib/utils";
 
-// In a real implementation, this would be an IPC bridge to the main process
-// For now, we'll create a mock API that simulates the database queries
+// ─── API Mode ─────────────────────────────────────────────────────────────────
+
+const API_MODE = import.meta.env.VITE_API_MODE ?? "mock";
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:31415";
+
+async function fetchApi<T>(path: string, params?: Record<string, string>): Promise<T> {
+  const url = new URL(path, API_BASE);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      url.searchParams.set(k, v);
+    }
+  }
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+  return res.json();
+}
 
 const MOCK_DATA = {
   models: [
@@ -47,7 +66,7 @@ async function simulateNetworkDelay(ms = 100) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export const analyticsApi = {
+const mockApi = {
   // ═══ Summary Stats ═══
   async getSummaryStats() {
     await simulateNetworkDelay(50);
@@ -330,6 +349,49 @@ export const analyticsApi = {
     ];
   },
 
+  // ═══ Words ═══
+  async getTopWords(_modelId: string | undefined, _timeRange: TimeRange) {
+    await simulateNetworkDelay(100);
+    return [
+      { word: "function", count: 342 }, { word: "class", count: 289 },
+      { word: "interface", count: 256 }, { word: "component", count: 234 },
+      { word: "async", count: 198 }, { word: "type", count: 187 },
+      { word: "error", count: 176 }, { word: "test", count: 165 },
+      { word: "import", count: 154 }, { word: "return", count: 143 },
+      { word: "const", count: 132 }, { word: "export", count: 121 },
+      { word: "implement", count: 98 }, { word: "refactor", count: 87 },
+      { word: "config", count: 76 }, { word: "deploy", count: 65 },
+      { word: "database", count: 54 }, { word: "schema", count: 43 },
+    ];
+  },
+
+  // ═══ Misspellings ═══
+  async getMisspellings(_timeRange: TimeRange) {
+    await simulateNetworkDelay(100);
+    return [
+      { misspelled: "refrence", corrected: "reference", count: 23 },
+      { misspelled: "defualt", corrected: "default", count: 18 },
+      { misspelled: "compontent", corrected: "component", count: 15 },
+      { misspelled: "handeler", corrected: "handler", count: 12 },
+      { misspelled: "interace", corrected: "interface", count: 10 },
+      { misspelled: "databse", corrected: "database", count: 8 },
+      { misspelled: "recieve", corrected: "receive", count: 7 },
+      { misspelled: "seperate", corrected: "separate", count: 5 },
+    ];
+  },
+
+  // ═══ Emotional Summary ═══
+  async getEmotionalSummary(_timeRange: TimeRange) {
+    await simulateNetworkDelay(100);
+    return {
+      positive: 45,
+      neutral: 40,
+      frustrated: 15,
+      topLabels: ["curious", "focused", "debugging", "refactoring", "learning", "satisfied", "exploratory", "collaborative"],
+      trend: [0.3, 0.7, 0.5, 0.8, 0.6, 0.9, 0.4, 0.7, 0.8, 0.5, 0.6, 0.7, 0.9, 0.3],
+    };
+  },
+
   // ═══ Export ═══
   async exportData(format: "json" | "csv", timeRange: TimeRange) {
     const data = await this.getTimelineData(timeRange);
@@ -350,3 +412,179 @@ export const analyticsApi = {
     return URL.createObjectURL(blob);
   },
 };
+
+// ─── Real API (fetches from Express server) ─────────────────────────────────────
+
+const realApi = {
+  async getSummaryStats() {
+    return fetchApi<{ totalTurns: number; totalCost: number; totalSessions: number; uniqueModels: number; uniqueCodebases: number }>("/api/overview");
+  },
+
+  async getSummaryForRange(timeRange: TimeRange) {
+    const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", "all": "365" }[timeRange];
+    return fetchApi("/api/overview", { days });
+  },
+
+  async getTimelineData(timeRange: TimeRange, _aggregation: AggregationLevel = "day") {
+    const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", "all": "365" }[timeRange];
+    const data = await fetchApi<{ dailyStats: Array<{ dayBucket: string; totalTokens: number; totalCost: number; totalTurns: number; sessionCount: number }> }>("/api/overview", { days });
+    return (data.dailyStats ?? []).map((d) => ({
+      date: d.dayBucket,
+      tokens: d.totalTokens,
+      cost: d.totalCost,
+      turns: d.totalTurns,
+      sessions: d.sessionCount,
+    }));
+  },
+
+  async getModelUsage(timeRange: TimeRange): Promise<ModelUsageData[]> {
+    const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", "all": "365" }[timeRange];
+    const data = await fetchApi<{ models: Array<{ id: string; displayName: string | null; totalTurns: number; totalCost: number; totalInputTokens: number; totalOutputTokens: number }> }>("/api/models", { days });
+    const _totalTokens = data.models.reduce((s, m) => s + m.totalInputTokens + m.totalOutputTokens, 0) || 1;
+    return data.models.map((m, i) => ({
+      modelId: m.id,
+      modelName: m.displayName ?? m.id,
+      providerId: m.id.split("-")[0] ?? "unknown",
+      providerName: m.id.includes("claude") ? "Anthropic" : m.id.includes("gpt") || m.id.includes("o3") ? "OpenAI" : m.id.includes("gemini") ? "Google" : "Other",
+      tokens: m.totalInputTokens + m.totalOutputTokens,
+      cost: m.totalCost,
+      turns: m.totalTurns,
+      color: stringToColor(m.id, i),
+    }));
+  },
+
+  async getTopModels(timeRange: TimeRange, limit = 5): Promise<TopModelStat[]> {
+    const models = await realApi.getModelUsage(timeRange);
+    const totalTokens = models.reduce((s, m) => s + m.tokens, 0) || 1;
+    return models.slice(0, limit).map((m) => ({
+      modelId: m.modelId,
+      modelName: m.modelName,
+      tokens: m.tokens,
+      cost: m.cost,
+      percentage: Math.round((m.tokens / totalTokens) * 100),
+    }));
+  },
+
+  async getProviderComparison(timeRange: TimeRange): Promise<ProviderComparisonData[]> {
+    const models = await realApi.getModelUsage(timeRange);
+    const byProvider = new Map<string, { tokens: number; cost: number; turns: number; avgTime: number }>();
+    for (const m of models) {
+      const existing = byProvider.get(m.providerId) ?? { tokens: 0, cost: 0, turns: 0, avgTime: 0 };
+      byProvider.set(m.providerId, {
+        tokens: existing.tokens + m.tokens,
+        cost: existing.cost + m.cost,
+        turns: existing.turns + m.turns,
+        avgTime: existing.avgTime + 3000, // placeholder
+      });
+    }
+    return Array.from(byProvider.entries()).map(([id, data], i) => ({
+      providerId: id,
+      providerName: id === "anthropic" ? "Anthropic" : id === "openai" ? "OpenAI" : id === "google" ? "Google" : id,
+      tokens: data.tokens,
+      cost: data.cost,
+      turns: data.turns,
+      avgResponseTime: data.avgTime,
+      color: stringToColor(id, i),
+    }));
+  },
+
+  async getCodebaseContributions(timeRange: TimeRange): Promise<CodebaseContribution[]> {
+    const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", "all": "365" }[timeRange];
+    const data = await fetchApi<{ codebases: Array<{ id: string; name: string; absolutePath: string; totalTurns: number; totalCost: number; lastSeenAt: string }> }>("/api/codebases", { days });
+    return data.codebases.map((cb) => ({
+      codebaseId: cb.id,
+      codebaseName: cb.name,
+      path: cb.absolutePath,
+      tokens: Math.floor(cb.totalCost * 180000),
+      cost: cb.totalCost,
+      turns: cb.totalTurns,
+      lastActivity: new Date(cb.lastSeenAt),
+    }));
+  },
+
+  async getTopCodebases(timeRange: TimeRange, limit = 5): Promise<CodebaseContribution[]> {
+    const codebases = await realApi.getCodebaseContributions(timeRange);
+    return codebases.sort((a, b) => b.cost - a.cost).slice(0, limit);
+  },
+
+  async getActivityHeatmap(_days = 90): Promise<HeatmapDataPoint[]> {
+    // Real heatmap data isn't available yet, fall back to mock
+    return mockApi.getActivityHeatmap(_days);
+  },
+
+  async getCostBreakdown(_timeRange: TimeRange): Promise<CostBreakdown[]> {
+    // Cost breakdown by token type isn't in the API yet
+    const data = await fetchApi<{ totalCost: number; totalInputTokens: number; totalOutputTokens: number }>("/api/overview");
+    const total = data.totalCost || 1;
+    const categories = [
+      { name: "Input Tokens", share: (data.totalInputTokens ?? 0) / ((data.totalInputTokens ?? 0) + (data.totalOutputTokens ?? 0) || 1) * 0.7 },
+      { name: "Output Tokens", share: (data.totalOutputTokens ?? 0) / ((data.totalInputTokens ?? 0) + (data.totalOutputTokens ?? 0) || 1) * 0.3 },
+      { name: "Cache Read", share: 0.12 },
+      { name: "Cache Write", share: 0.08 },
+    ];
+    return categories.map((c, i) => ({
+      category: c.name,
+      cost: Math.round(total * c.share * 100) / 100,
+      percentage: Math.round(c.share * 100),
+      color: stringToColor(c.name, i),
+    }));
+  },
+
+  async getRateLimitTrend(provider?: string): Promise<RateLimitTrend[]> {
+    // Rate limit data from API
+    const params: Record<string, string> = {};
+    if (provider) params.provider = provider;
+    return fetchApi<RateLimitTrend[]>("/api/rate-limits", params);
+  },
+
+  async getInsights(_timeRange: TimeRange): Promise<UsageInsight[]> {
+    // Insights are computed client-side for now
+    return mockApi.getInsights(_timeRange);
+  },
+
+  async getTopWords(modelId: string | undefined, timeRange: TimeRange) {
+    const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", "all": "365" }[timeRange];
+    const params: Record<string, string> = { days };
+    if (modelId) params.model_id = modelId;
+    const data = await fetchApi<{ words: Array<{ word: string; count: number }> }>("/api/words", params);
+    return data.words ?? [];
+  },
+
+  async getMisspellings(timeRange: TimeRange) {
+    const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", "all": "365" }[timeRange];
+    const data = await fetchApi<{ misspellings: Array<{ misspelledWord: string; correctedWord: string; occurrenceCount: number }> }>("/api/misspellings", { days });
+    return (data.misspellings ?? []).map((m) => ({
+      misspelled: m.misspelledWord,
+      corrected: m.correctedWord,
+      count: m.occurrenceCount,
+    }));
+  },
+
+  async getEmotionalSummary(timeRange: TimeRange) {
+    // Emotional data not yet in the API
+    return mockApi.getEmotionalSummary(timeRange);
+  },
+
+  async exportData(format: "json" | "csv", timeRange: TimeRange) {
+    const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", "all": "365" }[timeRange];
+    const data = await fetchApi("/api/overview", { days });
+
+    if (format === "json") {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      return URL.createObjectURL(blob);
+    }
+
+    const headers = "Date,Tokens,Cost,Turns,Sessions\n";
+    const rows = (data.dailyStats ?? []).map((d: { dayBucket: string; totalTokens: number; totalCost: number; totalTurns: number; sessionCount: number }) =>
+      `${d.dayBucket},${d.totalTokens},${d.totalCost},${d.totalTurns},${d.sessionCount}`
+    ).join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv" });
+    return URL.createObjectURL(blob);
+  },
+};
+
+// ─── Export: Choose API mode ───────────────────────────────────────────────────
+
+export const api = API_MODE === "api" ? realApi : mockApi;
+// Re-export as analyticsApi for backward compatibility with existing hooks
+export const analyticsApi = api;

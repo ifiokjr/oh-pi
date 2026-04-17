@@ -2,3 +2,4 @@
 export { Overview } from "./Overview";
 export { Models } from "./Models";
 export { Codebases } from "./Codebases";
+export { Insights } from "./Insights";

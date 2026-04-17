@@ -111,7 +111,7 @@ export interface CostBreakdown {
   color: string;
 }
 
-export type ViewType = "overview" | "models" | "codebases" | "providers" | "timeline" | "settings";
+export type ViewType = "overview" | "models" | "codebases" | "insights" | "providers" | "timeline" | "settings";
 
 export interface UserPreferences {
   defaultTimeRange: TimeRange;

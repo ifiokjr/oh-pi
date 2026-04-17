@@ -29,7 +29,17 @@ type DbType = BetterSQLite3Database<typeof schema>;
 let dbInstance: DbType | null = null;
 let sqliteInstance: Database.Database | null = null;
 
-export function getDatabase(): DbType {
+export function getDatabase(customPath?: string): DbType {
+  if (customPath) {
+    // If a custom path is provided, create a new connection
+    mkdirSync(dirname(customPath), { recursive: true });
+    const sqlite = new Database(customPath);
+    sqlite.pragma("journal_mode = WAL");
+    sqlite.pragma("foreign_keys = ON");
+    const customDb = drizzle(sqlite, { schema });
+    return customDb;
+  }
+
   if (dbInstance) {
     return dbInstance;
   }

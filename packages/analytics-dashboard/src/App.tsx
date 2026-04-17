@@ -3,7 +3,7 @@
  *
  * Main application wrapper with routing.
  */
-import { Overview, Models, Codebases } from "@/pages";
+import { Overview, Models, Codebases, Insights } from "@/pages";
 import { SidebarLayout } from "@/components/SidebarLayout";
 import useDashboardStore from "@/stores/dashboard";
 import type { ViewType } from "@/types";
@@ -20,6 +20,8 @@ function App() {
         return <Models />;
       case "codebases":
         return <Codebases />;
+      case "insights":
+        return <Insights timeRange={useDashboardStore.getState().timeRange} />;
       default:
         return <Overview />;
     }
