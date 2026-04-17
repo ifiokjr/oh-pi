@@ -54,6 +54,7 @@ oh-pi repo
 │   └── @ifi/oh-pi
 ├── default runtime packages
 │   ├── extensions
+│   ├── background-tasks
 │   ├── diagnostics
 │   ├── ant-colony
 │   ├── subagents
@@ -740,6 +741,7 @@ That is the normal developer loop for oh-pi feature work.
 Managed local switching covers these packages:
 
 - `@ifi/oh-pi-extensions`
+- `@ifi/pi-background-tasks`
 - `@ifi/oh-pi-ant-colony`
 - `@ifi/pi-diagnostics`
 - `@ifi/pi-extension-subagents`
@@ -850,6 +852,7 @@ oh-pi/
 │   ├── core/                   Shared types, registries, icons, i18n, and path helpers (compiled)
 │   ├── cli/                    Interactive TUI configurator (compiled)
 │   ├── extensions/             13 core pi extensions (raw .ts)
+│   ├── background-tasks/       Reactive background shell task package (raw .ts)
 │   ├── diagnostics/            Prompt completion timing extension (raw .ts)
 │   ├── ant-colony/             Multi-agent swarm extension (raw .ts)
 │   ├── subagents/              Subagent orchestration package (raw .ts)

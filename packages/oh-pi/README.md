@@ -43,6 +43,7 @@ oh-pi repo
 │   └── @ifi/oh-pi
 ├── default runtime packages
 │   ├── extensions
+│   ├── background-tasks
 │   ├── diagnostics
 │   ├── ant-colony
 │   ├── subagents

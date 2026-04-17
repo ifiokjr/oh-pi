@@ -32,6 +32,7 @@ oh-pi repo
 │   └── @ifi/oh-pi
 ├── default runtime packages
 │   ├── extensions
+│   ├── background-tasks
 │   ├── diagnostics
 │   ├── ant-colony
 │   ├── subagents
@@ -79,6 +80,7 @@ Suggested path for a new contributor:
 Default runtime/content packages installed by `npx @ifi/oh-pi`:
 
 - `@ifi/oh-pi-extensions`
+- `@ifi/pi-background-tasks`
 - `@ifi/oh-pi-ant-colony`
 - `@ifi/pi-diagnostics`
 - `@ifi/pi-extension-subagents`
@@ -128,7 +130,8 @@ so build those when you are working on them directly.
 
 | Package | Installs by default | Primary surfaces | What it gives you |
 | --- | --- | --- | --- |
-| [`@ifi/oh-pi-extensions`](../packages/extensions) | Yes | commands, tools, widgets, footer, tool interception | The core QoL extension pack: git safety, session naming, status UI, backgrounding, scheduling, usage, watchdog, worktrees, side-conversations, and more |
+| [`@ifi/oh-pi-extensions`](../packages/extensions) | Yes | commands, tools, widgets, footer, tool interception | The core QoL extension pack: git safety, session naming, status UI, scheduling, usage, watchdog, worktrees, side-conversations, and more |
+| [`@ifi/pi-background-tasks`](../packages/background-tasks) | Yes | `bg_task`, `bg_status`, `/bg`, `Ctrl+Shift+B` | Reactive background shell task management with log tails, watches, wakeups, and a richer tracked-task model |
 | [`@ifi/pi-diagnostics`](../packages/diagnostics) | Yes | widget, session messages, `/diagnostics`, `Ctrl+Shift+D` | Prompt start/end timestamps, total duration, and per-turn timing |
 | [`@ifi/oh-pi-ant-colony`](../packages/ant-colony) | Yes | `ant_colony` tool, `/colony*`, `Ctrl+Shift+A` | Multi-agent swarm with scouts/workers/soldiers, isolated worktrees, pheromones, adaptive concurrency, and review passes |
 | [`@ifi/pi-extension-subagents`](../packages/subagents) | Yes | `subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`, `/agents`, `Ctrl+Shift+A` | Rich delegated execution with built-in agents, reusable chains, background runs, and a TUI manager |
@@ -204,6 +207,26 @@ It includes:
 - startup breakdown reporting
 - blame reporting to understand recent pressure
 - safe-mode toggles to reduce nonessential UI churn when repeated alerts occur
+
+## `@ifi/pi-background-tasks`: reactive background shell tasks
+
+This package promotes long-running shell commands from an implementation detail into a first-class pi workflow.
+
+### Primary surfaces
+
+- `bg_task`
+- `bg_status`
+- `/bg`
+- `Ctrl+Shift+B`
+- `/bg watch --follow <id>`
+
+### What it adds beyond the older `bg-process` shim
+
+- tracked tasks with stable ids in addition to PID-based compatibility status
+- persistent log files for every spawned task
+- reactive follow-ups so pi can wake itself up when watched tasks emit new output or exit
+- richer manual management through `/bg` and the dashboard overlay
+- compatibility with the old `bg_status` flow while offering a more capable `bg_task` tool for the agent
 
 ## `@ifi/pi-diagnostics`: prompt timing
 
@@ -533,6 +556,7 @@ The AGENTS template pack currently ships 5 templates.
 ## Which feature should I reach for?
 
 - **Safer day-to-day pi sessions** → `@ifi/oh-pi-extensions`
+- **Long-running shell commands, watches, and log tails** → `@ifi/pi-background-tasks`
 - **Timing and completion visibility** → `@ifi/pi-diagnostics`
 - **Large parallel work** → `@ifi/oh-pi-ant-colony`
 - **Named specialists and reusable pipelines** → `@ifi/pi-extension-subagents`
