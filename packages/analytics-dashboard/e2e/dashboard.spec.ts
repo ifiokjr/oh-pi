@@ -1,4 +1,4 @@
-/* c8 ignore file -- Playwright E2E tests */
+/* c8 ignore file */
 /**
  * Pi Analytics Dashboard — Playwright Test Suite
  *

@@ -1,4 +1,4 @@
-/* c8 ignore file -- tested via Playwright E2E and separate vitest suite */
+/* c8 ignore file */
 import { TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import { cn, formatCurrency, formatNumber } from "@/lib/utils";
 

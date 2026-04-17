@@ -1,4 +1,4 @@
-/* c8 ignore file -- tested via Playwright E2E and separate vitest suite */
+/* c8 ignore file */
 import { cn } from "@/lib/utils";
 import type { TimeRange } from "@/types";
 

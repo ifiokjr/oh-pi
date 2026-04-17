@@ -1,4 +1,4 @@
-/* c8 ignore file -- tested via Playwright E2E and separate vitest suite */
+/* c8 ignore file */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { analyticsApi } from "@/api/analytics";

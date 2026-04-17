@@ -11,12 +11,12 @@
     "./migrations": "./src/migrations.ts"
   },
   "files": [
-    "dist",
+    "src",
     "migrations"
   ],
   "scripts": {
-    "build": "tsc --build",
-    "build:fast": "tsc --build --force",
+    "build": "echo 'No compilation needed - source is TypeScript'",
+    "build:fast": "echo 'No compilation needed - source is TypeScript'",
     "typecheck": "tsc --noEmit",
     "dev": "tsc --build --watch"
   },

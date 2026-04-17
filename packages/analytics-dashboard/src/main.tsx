@@ -1,4 +1,4 @@
-/* c8 ignore file -- tested via Playwright E2E and separate vitest suite */
+/* c8 ignore file */
 /**
  * Pi Analytics Dashboard Entry Point
  */

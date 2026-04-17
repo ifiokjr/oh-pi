@@ -1,4 +1,4 @@
-/* c8 ignore file -- tested via separate vitest suite */
+/* c8 ignore file */
 /**
  * Pi Analytics Database Migrations
  *
