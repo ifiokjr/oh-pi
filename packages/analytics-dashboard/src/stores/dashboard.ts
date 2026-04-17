@@ -1,4 +1,3 @@
-/* c8 ignore file */
 /**
  * Dashboard State Store (Zustand)
  *

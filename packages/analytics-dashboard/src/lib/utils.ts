@@ -1,4 +1,3 @@
-/* c8 ignore file */
 /**
  * Utility Functions
  *

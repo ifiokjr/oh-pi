@@ -10,10 +10,16 @@ import {
   formatTokens,
   formatDuration,
   formatDate,
+  formatTimeRange,
   truncate,
   stringToColor,
   getChartColors,
   calculatePercentage,
+  getProviderDisplayName,
+  getModelShortName,
+  debounce,
+  isEqual,
+  safeJsonParse,
 } from "../lib/utils";
 
 describe("utils", () => {
@@ -147,6 +153,233 @@ describe("utils", () => {
 
     it("should handle zero total", () => {
       expect(calculatePercentage(50, 0)).toBe(0);
+    });
+  });
+
+  describe("formatNumber", () => {
+    it("should handle NaN", () => {
+      expect(formatNumber(Number.NaN)).toBe("—");
+    });
+
+    it("should handle negative numbers", () => {
+      expect(formatNumber(-5000)).toBe("-5k");
+      expect(formatNumber(-1000000)).toBe("-1M");
+    });
+
+    it("should format millions with M suffix", () => {
+      expect(formatNumber(2500000, 1)).toBe("2.5M");
+    });
+
+    it("should format with decimals for thousands", () => {
+      expect(formatNumber(1234, 2)).toBe("1.23k");
+    });
+  });
+
+  describe("formatCurrency", () => {
+    it("should handle negative amounts", () => {
+      expect(formatCurrency(-1500, "USD", true)).toBe("-$1.5k");
+    });
+
+    it("should handle NaN", () => {
+      expect(formatCurrency(Number.NaN)).toBe("—");
+    });
+
+    it("should format small amounts in compact mode", () => {
+      // Compact mode for amounts $1+$
+      expect(formatCurrency(5, "USD", true)).toBe("$5.00");
+    });
+
+    it("should format sub-dollar amounts", () => {
+      expect(formatCurrency(0.003, "USD")).toBe("$0.0030");
+    });
+  });
+
+  describe("formatTokens", () => {
+    it("should handle zero", () => {
+      expect(formatTokens(0)).toBe("0");
+    });
+
+    it("should handle NaN", () => {
+      expect(formatTokens(Number.NaN)).toBe("—");
+    });
+
+    it("should format millions", () => {
+      expect(formatTokens(2500000)).toBe("2.50M");
+    });
+
+    it("should format less than 1000 normally", () => {
+      expect(formatTokens(500)).toBe("500");
+    });
+  });
+
+  describe("formatDuration", () => {
+    it("should format hours", () => {
+      expect(formatDuration(3600000)).toBe("1.0h");
+    });
+
+    it("should format exact minute boundary", () => {
+      expect(formatDuration(60000)).toBe("1.0m");
+    });
+  });
+
+  describe("formatDate short/medium/long", () => {
+    it("should format recent dates", () => {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      expect(formatDate(threeDaysAgo)).toBe("3 days ago");
+    });
+
+    it("should format older dates with medium format", () => {
+      const date = new Date(2024, 0, 15); // Jan 15 2024
+      const result = formatDate(date, "medium");
+      expect(result).toContain("Jan");
+    });
+
+    it("should format dates with short format", () => {
+      const date = new Date(2024, 5, 15);
+      const result = formatDate(date, "short");
+      expect(result).toContain("Jun");
+    });
+
+    it("should format dates with long format", () => {
+      const date = new Date(2024, 0, 15);
+      const result = formatDate(date, "long");
+      expect(result).toContain("January");
+      expect(result).toContain("2024");
+    });
+
+    it("should handle string date input", () => {
+      const result = formatDate("2024-06-15");
+      expect(typeof result).toBe("string");
+    });
+
+    it("should handle numeric date input", () => {
+      const timestamp = new Date(2024, 0, 15).getTime();
+      const result = formatDate(timestamp);
+      expect(typeof result).toBe("string");
+    });
+  });
+
+  describe("formatTimeRange", () => {
+    it("should format short session", () => {
+      const start = new Date(2024, 0, 15, 10, 0, 0);
+      const end = new Date(start.getTime() + 500); // 500ms later
+      const result = formatTimeRange(start.toISOString(), end.toISOString());
+      // Durations < 60s formatted as "Nms session" or "N.Ns session"
+      expect(result).toContain("session");
+    });
+
+    it("should format longer session with time range", () => {
+      const start = new Date(2024, 0, 15, 10, 0, 0);
+      const end = new Date(2024, 0, 15, 11, 30, 0);
+      const result = formatTimeRange(start, end);
+      expect(result).toContain("10:00");
+      expect(result).toContain("11:30");
+    });
+  });
+
+  describe("getProviderDisplayName", () => {
+    it("should map known providers", () => {
+      expect(getProviderDisplayName("anthropic")).toBe("Anthropic");
+      expect(getProviderDisplayName("openai")).toBe("OpenAI");
+      expect(getProviderDisplayName("google")).toBe("Google");
+      expect(getProviderDisplayName("ollama")).toBe("Ollama");
+    });
+
+    it("should capitalize unknown providers", () => {
+      expect(getProviderDisplayName("mistral")).toBe("Mistral");
+      expect(getProviderDisplayName("x")).toBe("X");
+    });
+  });
+
+  describe("getModelShortName", () => {
+    it("should remove organization prefix", () => {
+      expect(getModelShortName("anthropic/claude-3")).toBe("claude-3");
+      expect(getModelShortName("openai/gpt-4")).toBe("gpt-4");
+    });
+
+    it("should remove date suffix", () => {
+      expect(getModelShortName("model-2024-01-15")).toBe("model");
+    });
+
+    it("should remove -latest suffix", () => {
+      expect(getModelShortName("gpt-4-latest")).toBe("gpt-4");
+    });
+
+    it("should truncate long names", () => {
+      const longName = "a".repeat(30);
+      expect(getModelShortName(longName).length).toBeLessThanOrEqual(25);
+    });
+  });
+
+  describe("stringToColor with index", () => {
+    it("should use index when provided", () => {
+      const color0 = stringToColor("test", 0);
+      const color1 = stringToColor("test", 1);
+      const color2 = stringToColor("test", 2);
+      expect(color0).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(color1).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(color2).toMatch(/^#[0-9a-f]{6}$/i);
+      // Different indices should give different colors
+      expect(color0).not.toBe(color1);
+    });
+  });
+
+  describe("getChartColors extended", () => {
+    it("should generate more colors than base palette", () => {
+      const colors = getChartColors(20);
+      expect(colors).toHaveLength(20);
+    });
+
+    it("should return exactly base colors when count matches", () => {
+      const colors = getChartColors(8);
+      expect(colors).toHaveLength(8);
+    });
+  });
+
+  describe("debounce", () => {
+    it("should delay function execution", async () => {
+      let count = 0;
+      const fn = debounce(() => { count++; }, 10);
+      fn();
+      fn();
+      fn();
+      expect(count).toBe(0); // Not yet called
+      await new Promise((r) => setTimeout(r, 50));
+      expect(count).toBe(1); // Called only once
+    });
+  });
+
+  describe("isEqual", () => {
+    it("should compare equal objects", () => {
+      expect(isEqual({ a: 1 }, { a: 1 })).toBe(true);
+    });
+
+    it("should compare different objects", () => {
+      expect(isEqual({ a: 1 }, { a: 2 })).toBe(false);
+    });
+
+    it("should compare primitives", () => {
+      expect(isEqual(1, 1)).toBe(true);
+      expect(isEqual("a", "a")).toBe(true);
+    });
+  });
+
+  describe("safeJsonParse", () => {
+    it("should parse valid JSON", () => {
+      expect(safeJsonParse('{"a":1}', {})).toEqual({ a: 1 });
+    });
+
+    it("should return fallback for null", () => {
+      expect(safeJsonParse(null, { default: true })).toEqual({ default: true });
+    });
+
+    it("should return fallback for invalid JSON", () => {
+      expect(safeJsonParse("not json", { default: true })).toEqual({ default: true });
+    });
+
+    it("should return fallback for empty string", () => {
+      expect(safeJsonParse("", [])).toEqual([]);
     });
   });
 });

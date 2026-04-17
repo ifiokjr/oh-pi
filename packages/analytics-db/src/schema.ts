@@ -1,4 +1,3 @@
-/* c8 ignore file */
 /**
  * Pi Analytics Database Schema
  *
@@ -20,6 +19,7 @@ import { relations } from "drizzle-orm";
 /**
  * Pi sessions - each time Pi starts, a new session is created
  */
+/* c8 ignore start -- Drizzle schema definitions are declarative; column presence tested via schema.test.ts */
 export const sessions = sqliteTable(
   "sessions",
   {
@@ -524,6 +524,8 @@ export const sessionEventsRelations = relations(sessionEvents, ({ one }) => ({
     references: [providers.id],
   }),
 }));
+
+/* c8 ignore stop */
 
 // ─── Type Exports ─────────────────────────────────────────────────────────────
 

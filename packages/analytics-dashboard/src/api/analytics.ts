@@ -1,4 +1,3 @@
-/* c8 ignore file */
 /**
  * Analytics API
  *
@@ -32,6 +31,7 @@ import { stringToColor } from "@/lib/utils";
 const API_MODE = import.meta.env.VITE_API_MODE ?? "mock";
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:31415";
 
+/* c8 ignore start -- fetchApi requires running Express server, tested via Playwright E2E */
 async function fetchApi<T>(path: string, params?: Record<string, string>): Promise<T> {
   const url = new URL(path, API_BASE);
   if (params) {
@@ -43,6 +43,7 @@ async function fetchApi<T>(path: string, params?: Record<string, string>): Promi
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
   return res.json();
 }
+/* c8 ignore stop */
 
 const MOCK_DATA = {
   models: [
@@ -415,6 +416,7 @@ const mockApi = {
 };
 
 // ─── Real API (fetches from Express server) ─────────────────────────────────────
+/* c8 ignore start -- Real API requires running Express server, tested via Playwright E2E */
 
 const realApi = {
   async getSummaryStats() {
@@ -589,3 +591,4 @@ const realApi = {
 export const api = API_MODE === "api" ? realApi : mockApi;
 // Re-export as analyticsApi for backward compatibility with existing hooks
 export const analyticsApi = api;
+/* c8 ignore stop */

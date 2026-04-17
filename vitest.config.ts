@@ -15,10 +15,6 @@ const coverageExclude = [
 	"**/vitest*.config.*",
 	"packages/cursor/proto/**",
 	"packages/providers/supported-providers.generated.ts",
-	// Analytics packages have their own test suites — exclude from root coverage
-	"packages/analytics-dashboard/**",
-	"packages/analytics-db/**",
-	"packages/analytics-extension/**",
 ];
 
 export default defineConfig({
@@ -50,6 +46,7 @@ export default defineConfig({
 			"packages/web-server/tests/**/*.test.ts",
 			"packages/web-client/tests/**/*.test.ts",
 			"packages/web-remote/tests/**/*.test.ts",
+			"packages/analytics-db/src/tests/**/*.test.ts",
 		],
 		coverage: {
 			provider: "v8",

@@ -226,4 +226,76 @@ describe("analyticsApi", () => {
       expect(result).toContain("blob:");
     });
   });
+
+  describe("getTopCodebases", () => {
+    it("should return top codebases by cost", async () => {
+      const top3 = await analyticsApi.getTopCodebases("30d", 3);
+      expect(top3).toHaveLength(3);
+      top3.forEach((cb) => {
+        expect(cb).toHaveProperty("codebaseId");
+        expect(cb).toHaveProperty("codebaseName");
+        expect(cb).toHaveProperty("cost");
+      });
+    });
+
+    it("should respect the limit parameter", async () => {
+      const top5 = await analyticsApi.getTopCodebases("30d", 5);
+      expect(top5.length).toBeLessThanOrEqual(5);
+    });
+  });
+
+  describe("getRateLimitTrends", () => {
+    it("should return rate limit data", async () => {
+      const trends = await analyticsApi.getRateLimitTrend();
+      expect(Array.isArray(trends)).toBe(true);
+      expect(trends.length).toBeGreaterThan(0);
+      trends.forEach((t) => {
+        expect(t).toHaveProperty("provider");
+        expect(t).toHaveProperty("history");
+      });
+    });
+
+    it("should return data for specific provider", async () => {
+      const anthropicTrends = await analyticsApi.getRateLimitTrend("anthropic");
+      expect(Array.isArray(anthropicTrends)).toBe(true);
+      expect(anthropicTrends).toHaveLength(1);
+      expect(anthropicTrends[0].provider).toBe("anthropic");
+    });
+  });
+
+  describe("getTopWords", () => {
+    it("should return word frequency data", async () => {
+      const words = await analyticsApi.getTopWords(undefined, "30d");
+      expect(Array.isArray(words)).toBe(true);
+      expect(words.length).toBeGreaterThan(0);
+      words.forEach((w) => {
+        expect(w).toHaveProperty("word");
+        expect(w).toHaveProperty("count");
+      });
+    });
+  });
+
+  describe("getMisspellings", () => {
+    it("should return misspelling corrections", async () => {
+      const misspells = await analyticsApi.getMisspellings("30d");
+      expect(Array.isArray(misspells)).toBe(true);
+      expect(misspells.length).toBeGreaterThan(0);
+      misspells.forEach((m) => {
+        expect(m).toHaveProperty("misspelled");
+        expect(m).toHaveProperty("corrected");
+        expect(m).toHaveProperty("count");
+      });
+    });
+  });
+
+  describe("getEmotionalSummary", () => {
+    it("should return emotional summary data", async () => {
+      const summary = await analyticsApi.getEmotionalSummary("30d");
+      expect(summary).toHaveProperty("positive");
+      expect(summary).toHaveProperty("neutral");
+      expect(summary).toHaveProperty("frustrated");
+      expect(summary).toHaveProperty("topLabels");
+      expect(summary).toHaveProperty("trend");
+    });
+  });
 });
