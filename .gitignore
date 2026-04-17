@@ -3,6 +3,7 @@ dist/
 coverage/
 .ant-colony/
 *.tmp
+*.tsbuildinfo
 .ace-tool/
 .mdt/
 
