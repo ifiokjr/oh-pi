@@ -20,6 +20,7 @@ export const SMOKE_TESTS = [
 	"packages/cursor/tests/smoke.test.ts",
 	"packages/ollama/tests/smoke.test.ts",
 ];
+export const WORKSPACE_INSTALL_ARGS = ["install", "--no-frozen-lockfile", "--link-workspace-packages"];
 
 export function parseArgs(argv, env = process.env) {
 	const parsed = { version: env.PI_COMPAT_VERSION, restore: false };
@@ -95,7 +96,7 @@ export function main(argv = process.argv.slice(2)) {
 
 	try {
 		patchRootManifest(version);
-		run("pnpm", ["install", "--no-frozen-lockfile"]);
+		run("pnpm", WORKSPACE_INSTALL_ARGS);
 		console.log("\nInstalled pi package versions:");
 		readInstalledVersions();
 		run("pnpm", ["--filter", "@ifi/oh-pi-core", "build"]);

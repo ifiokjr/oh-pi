@@ -31,6 +31,7 @@ export default defineConfig({
 			"scripts/**/*.test.ts",
 			"packages/core/src/**/*.test.ts",
 			"packages/adaptive-routing/**/*.test.ts",
+			"packages/background-tasks/tests/**/*.test.ts",
 			"packages/cli/src/**/*.test.ts",
 			"packages/diagnostics/tests/**/*.test.ts",
 			"packages/extensions/extensions/**/*.test.ts",

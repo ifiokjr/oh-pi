@@ -24,11 +24,14 @@ vi.mock("@mariozechner/pi-ai", () => ({
 	}),
 }));
 
+vi.mock("@ifi/pi-background-tasks", async () => await import("../../background-tasks/index.ts"));
+
 vi.mock("@sinclair/typebox", () => ({
 	Type: {
 		Object: (schema: unknown) => schema,
 		String: (options?: Record<string, unknown>) => ({ type: "string", ...options }),
 		Number: (options?: Record<string, unknown>) => ({ type: "number", ...options }),
+		Boolean: (options?: Record<string, unknown>) => ({ type: "boolean", ...options }),
 		Optional: (value: unknown) => ({ optional: true, ...((value as object | undefined) ?? {}) }),
 	},
 }));
@@ -41,6 +44,9 @@ function createMockPi() {
 		registerTool(tool: any) {
 			tools.set(tool.name, tool);
 		},
+		registerMessageRenderer() {},
+		registerCommand() {},
+		registerShortcut() {},
 		on() {},
 		sendMessage() {},
 		tools,
