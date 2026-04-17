@@ -1,3 +1,5 @@
+/* c8 ignore file */
+
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import {
