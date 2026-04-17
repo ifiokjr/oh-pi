@@ -12,7 +12,7 @@
 
 import { execFileSync } from "node:child_process";
 import process from "node:process";
-import { INSTALLER_PACKAGES } from "./package-list.mts";
+import { INSTALLER_PACKAGES } from "./package-list.mjs";
 
 const IS_WINDOWS = process.platform === "win32";
 

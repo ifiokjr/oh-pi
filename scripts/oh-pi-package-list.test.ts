@@ -7,6 +7,11 @@ import {
 	INSTALLER_PACKAGES,
 	SWITCHER_PACKAGES,
 } from "../packages/oh-pi/bin/package-list.mts";
+import {
+	EXPERIMENTAL_PACKAGES as RUNTIME_EXPERIMENTAL_PACKAGES,
+	INSTALLER_PACKAGES as RUNTIME_INSTALLER_PACKAGES,
+	SWITCHER_PACKAGES as RUNTIME_SWITCHER_PACKAGES,
+} from "../packages/oh-pi/bin/package-list.mjs";
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptsDir, "..");
@@ -24,6 +29,9 @@ describe("oh-pi package list", () => {
 		);
 		expect(EXPERIMENTAL_PACKAGES).not.toContain("@ifi/pi-background-tasks");
 		expect(SWITCHER_PACKAGES).toEqual([...INSTALLER_PACKAGES, ...EXPERIMENTAL_PACKAGES]);
+		expect(RUNTIME_INSTALLER_PACKAGES).toEqual(INSTALLER_PACKAGES);
+		expect(RUNTIME_EXPERIMENTAL_PACKAGES).toEqual(EXPERIMENTAL_PACKAGES);
+		expect(RUNTIME_SWITCHER_PACKAGES).toEqual(SWITCHER_PACKAGES);
 	});
 
 	it("prints the installer package list in --help output", () => {
