@@ -27,7 +27,7 @@
     "recharts": "^2.15.0",
     "tailwind-merge": "^3.2.0",
     "zustand": "^5.0.3",
-    "@ifi/pi-analytics-db": "workspace:*"
+    "@ifi/pi-analytics-db": "0.2.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",

@@ -1,21 +1,14 @@
 {
   "name": "@ifi/pi-analytics-db",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SQLite database layer for Pi analytics with migrations",
   "type": "module",
+  "main": "./src/index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./schema": {
-      "types": "./dist/schema.d.ts",
-      "import": "./dist/schema.js"
-    },
-    "./migrations": {
-      "types": "./dist/migrations.d.ts",
-      "import": "./dist/migrations.js"
-    }
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./db": "./src/db.ts",
+    "./migrations": "./src/migrations.ts"
   },
   "files": [
     "dist",
