@@ -1,6 +1,11 @@
 import { SUPPORTED_PROVIDER_DATA } from "./supported-providers.generated.js";
 
-export type ProviderApiKind = "anthropic-messages" | "google-generative-ai" | "openai-completions" | "openai-responses";
+export type ProviderApiKind =
+	| "anthropic-messages"
+	| "google-generative-ai"
+	| "openai-completions"
+	| "openai-responses"
+	| "mistral-conversations";
 
 export interface SupportedProviderDefinition {
 	id: string;
@@ -34,7 +39,7 @@ export const SUPPORTED_PROVIDERS: SupportedProviderDefinition[] = SUPPORTED_PROV
 	id: provider.id,
 	name: provider.name,
 	env: [...provider.env],
-	baseUrl: normalizeProviderBaseUrl(provider.baseUrl),
+	baseUrl: resolveProviderBaseUrl(provider.id, provider.baseUrl),
 	npm: provider.npm,
 	api: resolveProviderApi(provider.id, provider.npm),
 	authUrl: resolveProviderAuthUrl(provider.id, provider.baseUrl),
@@ -71,9 +76,21 @@ export function normalizeProviderBaseUrl(baseUrl: string): string {
 		.replace(/\/(?:chat\/completions|responses|messages|completions|models)$/i, "");
 }
 
+function resolveProviderBaseUrl(providerId: string, baseUrl: string): string {
+	const normalized = normalizeProviderBaseUrl(baseUrl);
+	if (providerId === "mistral") {
+		return normalized.replace(/\/v\d+(?:beta)?$/i, "");
+	}
+	return normalized;
+}
+
 function resolveProviderApi(providerId: string, npm: string): ProviderApiKind {
 	if (providerId === "openai") {
 		return "openai-responses";
+	}
+
+	if (providerId === "mistral") {
+		return "mistral-conversations";
 	}
 
 	if (npm === "@ai-sdk/google") {
