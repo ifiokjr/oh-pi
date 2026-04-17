@@ -15,6 +15,10 @@ const coverageExclude = [
 	"**/vitest*.config.*",
 	"packages/cursor/proto/**",
 	"packages/providers/supported-providers.generated.ts",
+	// Analytics packages have their own test suites — exclude from root coverage
+	"packages/analytics-dashboard/**",
+	"packages/analytics-db/**",
+	"packages/analytics-extension/**",
 ];
 
 export default defineConfig({
