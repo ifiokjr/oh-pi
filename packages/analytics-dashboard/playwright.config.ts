@@ -1,3 +1,4 @@
+/* c8 ignore file */
 import { defineConfig, devices } from "@playwright/test";
 
 // Playwright configuration for Pi Analytics Dashboard E2E tests
