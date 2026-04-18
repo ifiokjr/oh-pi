@@ -333,6 +333,32 @@ describe("runSync", () => {
 		expect(executionMocks.rmSync).toHaveBeenCalledWith("/tmp/pi-prompt", { recursive: true, force: true });
 	});
 
+	it("resolves skills against task cwd, not runtime cwd", async () => {
+		const runPromise = runSync(
+			"/runtime-dir",
+			[
+				{
+					name: "reviewer",
+					model: "anthropic/claude-sonnet-4",
+					skills: ["ecsc-reviewer"],
+				},
+			],
+			"reviewer",
+			"Inspect",
+			{
+				cwd: "/legal/project",
+				share: false,
+			},
+		);
+
+		const proc = executionMocks.procs[0];
+		proc.emit("close", 0);
+		await runPromise;
+
+		// resolveSkills must be called with the task's cwd, not runtimeCwd
+		expect(executionMocks.resolveSkills).toHaveBeenCalledWith(["ecsc-reviewer"], "/legal/project");
+	});
+
 	it("captures parse errors, surfaces detected internal failures, and handles abort signals", async () => {
 		vi.useFakeTimers();
 		executionMocks.detectSubagentError.mockReturnValue({
