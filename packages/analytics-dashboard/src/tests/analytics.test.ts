@@ -4,9 +4,31 @@
  * Comprehensive unit tests for the analytics API layer.
  */
 
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { analyticsApi } from "../api/analytics";
 import type { TimeRange } from "../types";
+
+const originalApiMode = process.env.VITE_API_MODE;
+const originalApiBase = process.env.VITE_API_BASE;
+const originalFetch = globalThis.fetch;
+
+afterEach(() => {
+  if (originalApiMode === undefined) {
+    delete process.env.VITE_API_MODE;
+  } else {
+    process.env.VITE_API_MODE = originalApiMode;
+  }
+
+  if (originalApiBase === undefined) {
+    delete process.env.VITE_API_BASE;
+  } else {
+    process.env.VITE_API_BASE = originalApiBase;
+  }
+
+  globalThis.fetch = originalFetch;
+  vi.restoreAllMocks();
+  vi.resetModules();
+});
 
 describe("analyticsApi", () => {
   describe("getSummaryStats", () => {
@@ -296,6 +318,53 @@ describe("analyticsApi", () => {
       expect(summary).toHaveProperty("frustrated");
       expect(summary).toHaveProperty("topLabels");
       expect(summary).toHaveProperty("trend");
+    });
+  });
+
+  describe("API mode selection", () => {
+    it("should default to the mock API when VITE_API_MODE is unset", async () => {
+      delete process.env.VITE_API_MODE;
+      delete process.env.VITE_API_BASE;
+
+      const fetchMock = vi.fn();
+      globalThis.fetch = fetchMock as typeof fetch;
+
+      const { api } = await import("../api/analytics");
+      const insights = await api.getInsights("30d");
+
+      expect(insights).toHaveLength(3);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("should use the real API when VITE_API_MODE is api", async () => {
+      process.env.VITE_API_MODE = "api";
+      process.env.VITE_API_BASE = "http://localhost:4010";
+
+      const fetchMock = vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => [
+          {
+            provider: "anthropic",
+            windowLabel: "1 hour",
+            history: [],
+          },
+        ],
+      }));
+      globalThis.fetch = fetchMock as typeof fetch;
+
+      const { api } = await import("../api/analytics");
+      const trends = await api.getRateLimitTrend("anthropic");
+
+      expect(fetchMock).toHaveBeenCalledWith("http://localhost:4010/api/rate-limits?provider=anthropic");
+      expect(trends).toEqual([
+        {
+          provider: "anthropic",
+          windowLabel: "1 hour",
+          history: [],
+        },
+      ]);
     });
   });
 });
