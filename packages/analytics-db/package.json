@@ -1,0 +1,32 @@
+{
+  "name": "@ifi/pi-analytics-db",
+  "version": "0.2.0",
+  "description": "SQLite database layer for Pi analytics with migrations",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./db": "./src/db.ts",
+    "./migrations": "./src/migrations.ts"
+  },
+  "files": [
+    "src",
+    "migrations"
+  ],
+  "scripts": {
+    "build": "echo 'No compilation needed - source is TypeScript'",
+    "build:fast": "echo 'No compilation needed - source is TypeScript'",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsc --build --watch"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.0.0",
+    "drizzle-orm": "^0.41.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "drizzle-kit": "^0.30.0",
+    "typescript": "^5.7.0"
+  }
+}

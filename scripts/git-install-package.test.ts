@@ -44,6 +44,7 @@ describe("git-install package manifest", () => {
 			"packages/web-remote/package.json",
 			"packages/cursor/package.json",
 			"packages/ollama/package.json",
+			"packages/analytics-extension/package.json",
 		];
 		const expectedExtensionEntries = extensionPackages.flatMap((packageJsonPath) => {
 			const manifest = readPackageJson(packageJsonPath);
