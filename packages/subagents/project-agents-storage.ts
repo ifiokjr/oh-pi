@@ -185,3 +185,27 @@ export function findNearestProjectAgentsDir(cwd: string, options?: ProjectAgentS
 
 	return resolved.mode === "project" ? getLegacyProjectAgentsDir(cwd) : getSharedProjectAgentsDir(cwd, resolved);
 }
+
+/**
+<!-- {=subagentsFindAllProjectAgentsDirsDocs} -->
+
+Find all project-agent directories from cwd upward, enabling cascading agent discovery.
+Parent directories closer to cwd take precedence when agents share the same name.
+Works in both "project" (.pi/agents) and "shared" storage modes.
+
+<!-- {/subagentsFindAllProjectAgentsDirsDocs} -->
+*/
+export function findAllProjectAgentsDirs(cwd: string, options?: ProjectAgentStorageOptions): string[] {
+	const resolved = resolveProjectAgentStorageOptions(options);
+
+	const results: string[] = [];
+	for (const dir of parentDirs(cwd)) {
+		const candidate =
+			resolved.mode === "project" ? getLegacyProjectAgentsDir(dir) : getSharedProjectAgentsDir(dir, resolved);
+		if (isDirectory(candidate)) {
+			results.push(candidate);
+		}
+	}
+
+	return results;
+}

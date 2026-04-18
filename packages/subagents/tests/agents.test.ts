@@ -3,7 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { discoverAgents, discoverAgentsAll } from "../agents.js";
-import { getSharedProjectAgentsDir } from "../project-agents-storage.js";
+import { findAllProjectAgentsDirs, getSharedProjectAgentsDir } from "../project-agents-storage.js";
 
 const tempDirs: string[] = [];
 let savedHome: string | undefined;
@@ -198,5 +198,98 @@ describe("discoverAgentsAll", () => {
 		const result = discoverAgentsAll(projectDir);
 		expect(result.project.map((agent) => agent.name)).toContain("custom-project");
 		expect(result.projectDir).toBe(path.join(projectDir, ".pi", "agents"));
+	});
+
+	it("discovers agents from multiple ancestor directories", () => {
+		const homeDir = createTempDir("subagents-cascade-home-");
+		const rootDir = createTempDir("subagents-cascade-root-");
+		const childDir = path.join(rootDir, "child");
+		process.env.HOME = homeDir;
+		process.env.USERPROFILE = homeDir;
+		process.env.PI_SUBAGENT_PROJECT_AGENTS_MODE = "project";
+		fs.mkdirSync(childDir, { recursive: true });
+
+		writeAgentFile(
+			rootDir,
+			".pi/agents/root-agent.md",
+			"---\nname: root-agent\ndescription: Root level agent\n---\n\nRoot prompt\n",
+		);
+		writeAgentFile(
+			childDir,
+			".pi/agents/child-agent.md",
+			"---\nname: child-agent\ndescription: Child level agent\n---\n\nChild prompt\n",
+		);
+
+		const result = discoverAgents(childDir, "both");
+		const names = result.agents.map((a) => a.name);
+		expect(names).toContain("root-agent");
+		expect(names).toContain("child-agent");
+	});
+
+	it("nearest ancestor agent wins when names collide", () => {
+		const homeDir = createTempDir("subagents-collision-home-");
+		const rootDir = createTempDir("subagents-collision-root-");
+		const childDir = path.join(rootDir, "child");
+		process.env.HOME = homeDir;
+		process.env.USERPROFILE = homeDir;
+		process.env.PI_SUBAGENT_PROJECT_AGENTS_MODE = "project";
+		fs.mkdirSync(childDir, { recursive: true });
+
+		writeAgentFile(
+			rootDir,
+			".pi/agents/scout.md",
+			"---\nname: scout\ndescription: Root scout\n---\n\nRoot scout\n",
+		);
+		writeAgentFile(
+			childDir,
+			".pi/agents/scout.md",
+			"---\nname: scout\ndescription: Child scout\n---\n\nChild scout\n",
+		);
+
+		const result = discoverAgents(childDir, "both");
+		const scout = result.agents.find((a) => a.name === "scout");
+		expect(scout?.source).toBe("project");
+		expect(scout?.description).toBe("Child scout");
+	});
+});
+
+describe("findAllProjectAgentsDirs", () => {
+	it("returns all ancestor project agent directories in project mode", () => {
+		const homeDir = createTempDir("subagents-findall-home-");
+		const rootDir = createTempDir("subagents-findall-root-");
+		const childDir = path.join(rootDir, "child");
+		const deepDir = path.join(childDir, "deep");
+		process.env.HOME = homeDir;
+		process.env.USERPROFILE = homeDir;
+		process.env.PI_SUBAGENT_PROJECT_AGENTS_MODE = "project";
+		fs.mkdirSync(deepDir, { recursive: true });
+		fs.mkdirSync(path.join(rootDir, ".pi", "agents"), { recursive: true });
+		fs.mkdirSync(path.join(childDir, ".pi", "agents"), { recursive: true });
+		fs.mkdirSync(path.join(deepDir, ".pi", "agents"), { recursive: true });
+
+		const dirs = findAllProjectAgentsDirs(deepDir);
+		expect(dirs).toHaveLength(3);
+		expect(dirs[0]).toBe(path.join(deepDir, ".pi", "agents"));
+		expect(dirs[1]).toBe(path.join(childDir, ".pi", "agents"));
+		expect(dirs[2]).toBe(path.join(rootDir, ".pi", "agents"));
+	});
+
+	it("skips ancestors without agent directories", () => {
+		const homeDir = createTempDir("subagents-findall-skip-home-");
+		const rootDir = createTempDir("subagents-findall-skip-root-");
+		const childDir = path.join(rootDir, "child");
+		const deepDir = path.join(childDir, "deep");
+		process.env.HOME = homeDir;
+		process.env.USERPROFILE = homeDir;
+		process.env.PI_SUBAGENT_PROJECT_AGENTS_MODE = "project";
+		fs.mkdirSync(deepDir, { recursive: true });
+		// Only root and deep have agents, child does not
+		fs.mkdirSync(path.join(rootDir, ".pi", "agents"), { recursive: true });
+		fs.mkdirSync(path.join(deepDir, ".pi", "agents"), { recursive: true });
+
+		const dirs = findAllProjectAgentsDirs(deepDir);
+		expect(dirs).toHaveLength(2);
+		expect(dirs[0]).toBe(path.join(deepDir, ".pi", "agents"));
+		expect(dirs[1]).toBe(path.join(rootDir, ".pi", "agents"));
 	});
 });
