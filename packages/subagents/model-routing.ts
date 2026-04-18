@@ -342,10 +342,13 @@ export function resolveSubagentModelResolution(
 	options: { currentModel?: string; taskText?: string } = {},
 ): SubagentModelResolution {
 	const category = categoryForAgent(agent);
+	console.error(`[subagents] MODEL resolveSubagentModelResolution: agent=${agent.name}, runtimeOverride=${runtimeOverride}, agent.model=${agent.model}, options.currentModel=${options.currentModel}`);
 	if (runtimeOverride) {
+		console.error(`[subagents] MODEL -> runtime-override: ${runtimeOverride}`);
 		return { model: runtimeOverride, source: "runtime-override", category };
 	}
 	if (agent.model) {
+		console.error(`[subagents] MODEL -> frontmatter: ${agent.model}`);
 		return { model: agent.model, source: "frontmatter-model", category };
 	}
 
@@ -353,11 +356,14 @@ export function resolveSubagentModelResolution(
 	// the user's active provider/model unless the agent frontmatter or
 	// an explicit override specifies otherwise.
 	if (options.currentModel) {
+		console.error(`[subagents] MODEL -> session-default: ${options.currentModel}`);
 		return { model: options.currentModel, source: "session-default", category };
 	}
 
+	console.error(`[subagents] MODEL -> falling through to delegated router`);
 	const delegatedModel = resolveDelegatedAgentModel(agent, availableModels, options);
 	if (delegatedModel) {
+		console.error(`[subagents] MODEL -> delegated: ${delegatedModel}`);
 		return { model: delegatedModel, source: "delegated-category", category };
 	}
 

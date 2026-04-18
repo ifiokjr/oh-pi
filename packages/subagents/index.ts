@@ -66,9 +66,19 @@ const STARTUP_CLEANUP_DELAY_MS = 250;
 
 // ExtensionConfig is now imported from ./types.js
 
+// Debug logging controlled by PI_SUBAGENTS_DEBUG env var
+const DEBUG_ENABLED = process.env.PI_SUBAGENTS_DEBUG === "1";
+const debug = (...args: unknown[]) => {
+	if (DEBUG_ENABLED) {
+		console.error(`[subagents] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`);
+	}
+};
+
 export default function registerSubagentExtension(pi: ExtensionAPI): void {
+	debug("EXTENSION LOADED from:", __filename);
 	ensureAccessibleDir(RESULTS_DIR);
 	ensureAccessibleDir(ASYNC_DIR);
+	debug("Extension initialized, cwd:", process.cwd());
 
 	let config: ExtensionConfig | null = null;
 	const getConfig = (): ExtensionConfig => {
@@ -140,6 +150,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 		async execute(_id, params, signal, onUpdate, ctx) {
 			baseCwd = ctx.cwd;
+			debug("EXECUTE called: ctx.cwd=", ctx.cwd, "baseCwd=", baseCwd, "session.model=", ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "none");
 			const config = getConfig();
 			const asyncByDefault = config.asyncByDefault === true;
 			if (params.action) {
@@ -663,10 +674,13 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 				let task = params.task!;
 				const availableModels = getAvailableRoutingModels(ctx);
+				const sessionModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
+				debug("SINGLE agent:", params.agent, "sessionModel=", sessionModel, "params.model=", params.model, "agent.model=", agentConfig.model);
 				let modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, params.model as string | undefined, {
-					currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+					currentModel: sessionModel,
 					taskText: task,
 				});
+				debug("Model result:", JSON.stringify(modelResolution));
 				if (!modelResolution.model && ctx.model) {
 					modelResolution = {
 						...modelResolution,
