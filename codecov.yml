@@ -35,6 +35,7 @@ ignore:
   - "packages/providers/supported-providers.generated.ts"
   # Analytics files intentionally kept under file-level c8 ignore because they are exercised via E2E or runtime-only paths
   - "packages/analytics-dashboard/playwright.config.ts"
+  - "packages/analytics-dashboard/vite.config.ts"
   - "packages/analytics-dashboard/src/App.tsx"
   - "packages/analytics-dashboard/src/main.tsx"
   - "packages/analytics-dashboard/src/components/**"

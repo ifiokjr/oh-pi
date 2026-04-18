@@ -17,6 +17,7 @@ const coverageExclude = [
 	"packages/providers/supported-providers.generated.ts",
 	// Analytics files that remain intentionally file-ignored and are covered via E2E or runtime-only paths
 	"packages/analytics-dashboard/playwright.config.ts",
+	"packages/analytics-dashboard/vite.config.ts",
 	"packages/analytics-dashboard/src/App.tsx",
 	"packages/analytics-dashboard/src/main.tsx",
 	"packages/analytics-dashboard/src/components/**",
