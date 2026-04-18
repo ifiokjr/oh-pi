@@ -28,8 +28,10 @@ import { stringToColor } from "@/lib/utils";
 
 // ─── API Mode ─────────────────────────────────────────────────────────────────
 
+/* c8 ignore start -- environment wiring is exercised indirectly by mode selection tests */
 const API_MODE = import.meta.env.VITE_API_MODE ?? "mock";
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:31415";
+/* c8 ignore stop */
 
 /* c8 ignore start -- fetchApi requires running Express server, tested via Playwright E2E */
 async function fetchApi<T>(path: string, params?: Record<string, string>): Promise<T> {

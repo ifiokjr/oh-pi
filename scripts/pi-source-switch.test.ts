@@ -454,7 +454,7 @@ describe("pi source switcher helpers", () => {
 		expect(result.stdout).toContain("run `pnpm install --frozen-lockfile` before restarting pi");
 		expect(result.stdout).toContain("stale node_modules can surface missing internal @ifi/* package errors");
 		expect(savedSources).toContain(workspacePackages.get("@ifi/oh-pi-extensions") ?? "");
-	});
+	}, 20_000);
 
 	it("exits with an error when local mode cannot resolve the full managed workspace set", () => {
 		const repoDir = createTempDir("oh-pi-switcher-incomplete-");

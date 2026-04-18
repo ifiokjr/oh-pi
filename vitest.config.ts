@@ -40,6 +40,7 @@ export default defineConfig({
 		},
 	},
 	test: {
+		pool: "forks",
 		include: [
 			"benchmarks/**/*.test.ts",
 			"scripts/**/*.test.ts",

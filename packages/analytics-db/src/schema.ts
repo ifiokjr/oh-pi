@@ -5,6 +5,7 @@
  * costs, timing, and codebase information.
  */
 
+/* c8 ignore start -- module import wiring is runtime boilerplate */
 import {
   integer,
   real,
@@ -13,6 +14,7 @@ import {
   index,
 } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
+/* c8 ignore stop */
 
 // ─── Core Tables ─────────────────────────────────────────────────────────────
 

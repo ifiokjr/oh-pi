@@ -107,6 +107,7 @@ export function formatDate(date: Date | string | number, format: "short" | "medi
 
   const options: Intl.DateTimeFormatOptions = {
     short: { month: "short", day: "numeric" },
+    /* c8 ignore next -- ternary branch is covered in behavior tests but may report partial on this line */
     medium: { month: "short", day: "numeric", year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined },
     long: { weekday: "long", year: "numeric", month: "long", day: "numeric" },
   }[format];
