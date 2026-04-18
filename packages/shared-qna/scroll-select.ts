@@ -77,6 +77,7 @@ type ScrollSelectUi = {
 
 type ScrollSelectTheme = {
 	fg: (color: string, text: string) => string;
+	bg?: (color: string, text: string) => string;
 	bold: (text: string) => string;
 };
 
@@ -128,12 +129,13 @@ class ScrollSelectComponent<T> {
 	render(width: number): string[] {
 		const { truncateToWidth, visibleWidth, wrapTextWithAnsi } = getPiTui();
 		const safeWidth = Math.max(20, width);
+		const contentWidth = Math.max(12, safeWidth - 2);
 		const lines: string[] = [];
-		const bodyWidth = Math.max(12, safeWidth - 2);
+		const selectedLineIndexes = new Set<number>();
 
 		for (const line of this.title.split("\n")) {
-			for (const wrapped of wrapTextWithAnsi(line, bodyWidth)) {
-				lines.push(truncateToWidth(wrapped, bodyWidth));
+			for (const wrapped of wrapTextWithAnsi(line, contentWidth)) {
+				lines.push(truncateToWidth(wrapped, contentWidth));
 			}
 		}
 
@@ -141,17 +143,17 @@ class ScrollSelectComponent<T> {
 
 		if (this.search) {
 			const filterText = this.searchQuery.trim().length > 0 ? `Filter: ${this.searchQuery}` : "Filter: all";
-			lines.push(truncateToWidth(this.theme.fg("dim", filterText), bodyWidth));
+			lines.push(truncateToWidth(this.theme.fg("dim", filterText), contentWidth));
 			lines.push("");
 		}
 
 		if (this.options.length === 0) {
-			lines.push(truncateToWidth(this.theme.fg("dim", this.emptyMessage), bodyWidth));
+			lines.push(truncateToWidth(this.theme.fg("dim", this.emptyMessage), contentWidth));
 		} else {
 			const { start, end } = this.getVisibleRange();
 
 			if (start > 0) {
-				lines.push(truncateToWidth(this.theme.fg("dim", `↑ ${start} more`), bodyWidth));
+				lines.push(truncateToWidth(this.theme.fg("dim", `↑ ${start} more`), contentWidth));
 			}
 
 			for (let index = start; index < end; index++) {
@@ -161,21 +163,28 @@ class ScrollSelectComponent<T> {
 				}
 
 				const prefix = index === this.cursorIndex ? this.theme.fg("accent", "→ ") : "  ";
-				const availableWidth = Math.max(4, bodyWidth - visibleWidth(prefix));
+				const availableWidth = Math.max(4, contentWidth - visibleWidth(prefix));
 				const label = truncateToWidth(option.label, availableWidth);
 				const line = `${prefix}${index === this.cursorIndex ? this.theme.fg("accent", label) : label}`;
-				lines.push(truncateToWidth(line, bodyWidth));
+				lines.push(truncateToWidth(line, contentWidth));
+				if (index === this.cursorIndex) {
+					selectedLineIndexes.add(lines.length - 1);
+				}
 			}
 
 			const hiddenBelow = this.options.length - end;
 			if (hiddenBelow > 0) {
-				lines.push(truncateToWidth(this.theme.fg("dim", `↓ ${hiddenBelow} more`), bodyWidth));
+				lines.push(truncateToWidth(this.theme.fg("dim", `↓ ${hiddenBelow} more`), contentWidth));
 			}
 		}
 
 		lines.push("");
-		lines.push(truncateToWidth(this.footerText(), bodyWidth));
-		return lines;
+		lines.push(truncateToWidth(this.footerText(), contentWidth));
+		return lines.map((line, index) =>
+			this.renderSurfaceLine(line, contentWidth, {
+				selected: selectedLineIndexes.has(index),
+			}),
+		);
 	}
 
 	handleInput(data: string): void {
@@ -209,6 +218,16 @@ class ScrollSelectComponent<T> {
 	invalidate(): void {}
 
 	dispose(): void {}
+
+	private renderSurfaceLine(line: string, contentWidth: number, options: { selected?: boolean } = {}): string {
+		const { visibleWidth } = getPiTui();
+		const paddedLine = `${line}${" ".repeat(Math.max(0, contentWidth - visibleWidth(line)))}`;
+		const boxedLine = ` ${paddedLine} `;
+		if (typeof this.theme.bg !== "function") {
+			return boxedLine;
+		}
+		return this.theme.bg(options.selected ? "selectedBg" : "customMessageBg", boxedLine);
+	}
 
 	private footerText(): string {
 		const parts = ["[↑↓/j/k] scroll", "[enter] select", "[esc] cancel"];
