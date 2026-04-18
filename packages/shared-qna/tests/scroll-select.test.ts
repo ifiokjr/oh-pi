@@ -25,10 +25,17 @@ type CustomFactory = (...args: any[]) => {
 	focused?: boolean;
 };
 
-function createTheme() {
+type TestTheme = {
+	fg: (color: string, text: string) => string;
+	bg?: (color: string, text: string) => string;
+	bold: (text: string) => string;
+};
+
+function createTheme(overrides: Partial<TestTheme> = {}): TestTheme {
 	return {
 		fg: (_color: string, text: string) => text,
 		bold: (text: string) => text,
+		...overrides,
 	};
 }
 
@@ -38,7 +45,7 @@ async function flushAsyncWork(turns = 4) {
 	}
 }
 
-function createFactoryRunner() {
+function createFactoryRunner(theme = createTheme()) {
 	const factories: CustomFactory[] = [];
 	const resolvers: Array<((value: unknown) => void) | undefined> = [];
 	const ui = {
@@ -60,7 +67,7 @@ function createFactoryRunner() {
 		if (!factory) {
 			throw new Error(`Expected custom factory at index ${index}.`);
 		}
-		return factory({ requestRender: vi.fn() }, createTheme(), {}, done ?? resolvers[index] ?? vi.fn());
+		return factory({ requestRender: vi.fn() }, theme, {}, done ?? resolvers[index] ?? vi.fn());
 	}
 
 	return { ui, buildComponent };
@@ -167,6 +174,47 @@ describe("openScrollableSelect", () => {
 		const later = component.render(60).join("\n");
 		expect(later).toContain("Option 10");
 		expect(later).toContain("↑ 7 more");
+	});
+
+	it("renders a contrasting surface background when background colors are available", async () => {
+		const { ui, buildComponent } = createFactoryRunner(
+			createTheme({
+				bg: (color: string, text: string) => `<${color}>${text}</${color}>`,
+			}),
+		);
+		await openScrollableSelect(ui, {
+			title: "Scheduled tasks",
+			options: [
+				{ value: "first", label: "First task" },
+				{ value: "second", label: "Second task" },
+			],
+		});
+
+		const lines = buildComponent().render(40);
+		expect(lines[0]).toContain("<customMessageBg>");
+		expect(lines.some((line) => line.includes("<selectedBg>"))).toBe(true);
+		expect(lines.every((line) => line.startsWith("<") && line.endsWith(">"))).toBe(true);
+	});
+
+	it("renders the empty message on the popup surface when options disappear", async () => {
+		const { ui, buildComponent } = createFactoryRunner(
+			createTheme({
+				bg: (color: string, text: string) => `<${color}>${text}</${color}>`,
+			}),
+		);
+		await openScrollableSelect(ui, {
+			title: "Scheduled tasks",
+			options: [
+				{ value: "first", label: "First task" },
+				{ value: "second", label: "Second task" },
+			],
+		});
+
+		const component = buildComponent() as any;
+		component.options = [];
+		const rendered = component.render(40).join("\n");
+		expect(rendered).toContain("No options available.");
+		expect(rendered).toContain("<customMessageBg>");
 	});
 
 	it("supports in-picker search without pager actions", async () => {
