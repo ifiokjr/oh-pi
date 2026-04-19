@@ -340,4 +340,37 @@ describe("resolveSubagentModelResolution", () => {
 			rmSync(tempAgentDir, { recursive: true, force: true });
 		}
 	});
+
+	it("falls back to session currentModel when no override or frontmatter model", () => {
+		const result = resolveSubagentModelResolution(
+			{ name: "reviewer", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/reviewer.md" },
+			sampleModels,
+			undefined,
+			{ currentModel: "kilocode/qwen3.6-plus" },
+		);
+		expect(result.model).toBe("kilocode/qwen3.6-plus");
+		expect(result.source).toBe("session-default");
+	});
+
+	it("prefers runtime override over session currentModel", () => {
+		const result = resolveSubagentModelResolution(
+			{ name: "reviewer", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/reviewer.md" },
+			sampleModels,
+			"openai/gpt-4o",
+			{ currentModel: "kilocode/qwen3.6-plus" },
+		);
+		expect(result.model).toBe("openai/gpt-4o");
+		expect(result.source).toBe("runtime-override");
+	});
+
+	it("prefers frontmatter model over session currentModel", () => {
+		const result = resolveSubagentModelResolution(
+			{ name: "reviewer", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/reviewer.md", model: "anthropic/claude-sonnet-4" },
+			sampleModels,
+			undefined,
+			{ currentModel: "kilocode/qwen3.6-plus" },
+		);
+		expect(result.model).toBe("anthropic/claude-sonnet-4");
+		expect(result.source).toBe("frontmatter-model");
+	});
 });

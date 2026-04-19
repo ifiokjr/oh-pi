@@ -66,9 +66,48 @@ const STARTUP_CLEANUP_DELAY_MS = 250;
 
 // ExtensionConfig is now imported from ./types.js
 
+// Debug logging controlled by PI_SUBAGENTS_DEBUG env var
+const DEBUG_ENABLED = process.env.PI_SUBAGENTS_DEBUG === "1";
+const debug = (...args: unknown[]) => {
+	if (DEBUG_ENABLED) {
+		console.error(`[subagents] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`);
+	}
+};
+
+/**
+ * Build a verbose call-detail block showing what the main agent asked the subagent tool to do.
+ * Rendered as a markdown code block — pi auto-truncates long output, user can ctrl+o to expand.
+ * Wrapped in HTML comment so LLM ignores it but TUI still renders the markdown.
+ */
+function buildCallDetailBlock(params: Record<string, unknown>): string {
+	const slim: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(params)) {
+		if (k === "chain" || k === "tasks") {
+			slim[k] = (v as Array<unknown>).map(s => {
+				if (typeof s === "object" && s !== null) {
+					const entry: Record<string, unknown> = {};
+					for (const [sk, sv] of Object.entries(s as Record<string, unknown>)) {
+						if (["agent", "task", "model", "skill", "cwd"].includes(sk)) entry[sk] = sv;
+					}
+					return entry;
+				}
+				return s;
+			});
+		} else if (typeof v === "string" && v.length > 200) {
+			slim[k] = v.slice(0, 200) + "…";
+		} else if (v !== undefined && v !== null && v !== false && v !== "") {
+			slim[k] = v;
+		}
+	}
+	const json = JSON.stringify(slim, null, 2);
+	return `\n<!-- subagent call params (ctrl+o to expand) -->\n\n\`\`\`json subagent-call\n${json}\n\`\`\`\n`;
+}
+
 export default function registerSubagentExtension(pi: ExtensionAPI): void {
+	debug("EXTENSION LOADED from:", __filename);
 	ensureAccessibleDir(RESULTS_DIR);
 	ensureAccessibleDir(ASYNC_DIR);
+	debug("Extension initialized, cwd:", process.cwd());
 
 	let config: ExtensionConfig | null = null;
 	const getConfig = (): ExtensionConfig => {
@@ -140,6 +179,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 		async execute(_id, params, signal, onUpdate, ctx) {
 			baseCwd = ctx.cwd;
+			debug("EXECUTE called: ctx.cwd=", ctx.cwd, "baseCwd=", baseCwd, "session.model=", ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "none");
 			const config = getConfig();
 			const asyncByDefault = config.asyncByDefault === true;
 			if (params.action) {
@@ -663,10 +703,13 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 				let task = params.task!;
 				const availableModels = getAvailableRoutingModels(ctx);
+				const sessionModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
+				debug("SINGLE agent:", params.agent, "sessionModel=", sessionModel, "params.model=", params.model, "agent.model=", agentConfig.model);
 				let modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, params.model as string | undefined, {
-					currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+					currentModel: sessionModel,
 					taskText: task,
 				});
+				debug("Model result:", JSON.stringify(modelResolution));
 				if (!modelResolution.model && ctx.model) {
 					modelResolution = {
 						...modelResolution,
@@ -843,16 +886,36 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			}
 			const isParallel = (args.tasks?.length ?? 0) > 0;
 			const asyncLabel = args.async === true && !isParallel ? theme.fg("warning", " [async]") : "";
-			if (args.chain?.length)
+			if (args.chain?.length) {
+				const agents = args.chain.map((s: any) => {
+					if (s.parallel) return `[${s.parallel.map((p: any) => p.agent).join("+")}]`;
+					return s.agent || "?";
+				}).join(" → ");
 				return new Text(
-					`${theme.fg("toolTitle", theme.bold("subagent "))}chain (${args.chain.length})${asyncLabel}`,
+					`${theme.fg("toolTitle", theme.bold("subagent "))}chain: ${agents}${asyncLabel}`,
 					0,
 					0,
 				);
-			if (isParallel)
-				return new Text(`${theme.fg("toolTitle", theme.bold("subagent "))}parallel (${args.tasks!.length})`, 0, 0);
+			}
+			if (isParallel) {
+				const agents = args.tasks!.map((t: any) => t.agent).join(", ");
+				return new Text(`${theme.fg("toolTitle", theme.bold("subagent "))}parallel: ${agents}`, 0, 0);
+			}
+			// Single: show agent + task preview + model + skills + cwd
+			const parts: string[] = [];
+			if (args.agent) parts.push(theme.fg("accent", args.agent));
+			if (args.task) {
+				const preview = args.task.length > 50 ? args.task.slice(0, 50) + "…" : args.task;
+				parts.push(theme.fg("muted", `"${preview}"`));
+			}
+			if (args.model) parts.push(theme.fg("dim", args.model));
+			if (args.cwd) parts.push(theme.fg("dim", args.cwd));
+			if (args.skill) {
+				const skillStr = Array.isArray(args.skill) ? args.skill.join(", ") : args.skill;
+				parts.push(theme.fg("dim", `skills: ${skillStr}`));
+			}
 			return new Text(
-				`${theme.fg("toolTitle", theme.bold("subagent "))}${theme.fg("accent", args.agent || "?")}${asyncLabel}`,
+				`${theme.fg("toolTitle", theme.bold("subagent "))}${parts.join(" · ")}${asyncLabel}`,
 				0,
 				0,
 			);

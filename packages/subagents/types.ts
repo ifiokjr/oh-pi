@@ -124,6 +124,8 @@ export interface Details {
 	chainAgents?: string[]; // Agent names in order, e.g., ["scout", "planner"]
 	totalSteps?: number; // Total steps in chain
 	currentStepIndex?: number; // 0-indexed current step (for running chains)
+	// Original tool call params — exposed for user visibility in TUI
+	callParams?: Record<string, unknown>;
 }
 
 // ============================================================================
