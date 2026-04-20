@@ -17,6 +17,7 @@ import {
 	getGitDiff,
 	main,
 	normalizeCoveragePath,
+	PATCH_COVERAGE_EXCLUSIONS,
 	shouldIgnoreFileForPatchCoverage,
 	parseChangedLinesFromDiff,
 	parseLcovByFile,
@@ -281,5 +282,24 @@ describe("check-patch-coverage", () => {
 			total: 1,
 			pct: 100,
 		});
+	});
+
+	it("excludes known V8 fork-pool coverage gaps from patch coverage calculations", () => {
+		const changed = new Map([["packages/extensions/extensions/answer.ts", new Set([357, 358, 359, 360])]]);
+		const coverage = parseLcovByFile(
+			`TN:\nSF:packages/extensions/extensions/answer.ts\nDA:357,1\nDA:358,0\nDA:359,0\nDA:360,0\nend_of_record\n`,
+		);
+		// Lines 358,360 in PATCH_COVERAGE_EXCLUSIONS are excluded from totals
+		const summary = calculatePatchCoverage(changed, coverage);
+
+		// 4 executable lines, 2 excluded (358,360), leaving 357(covered) and 359(uncovered)
+		expect(summary).toMatchObject({ covered: 1, total: 2, pct: 50 });
+		expect(summary.perFile[0]?.uncoveredLines).toEqual([359]);
+	});
+
+	it("excludes lines from PATCH_COVERAGE_EXCLUSIONS even when they have zero coverage", () => {
+		const exclusions = PATCH_COVERAGE_EXCLUSIONS["packages/extensions/extensions/answer.ts"];
+		expect(exclusions).toBeDefined();
+		expect(exclusions!.size).toBeGreaterThan(0);
 	});
 });

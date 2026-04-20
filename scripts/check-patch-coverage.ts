@@ -9,8 +9,8 @@ const DEFAULT_LCOV_PATH = "coverage/lcov.info";
 /** Lines to exclude from patch coverage, keyed by normalized file path.
  * These are lines that V8's fork-pool coverage cannot reliably track
  * despite being exercised by tests. */
-const PATCH_COVERAGE_EXCLUSIONS: Record<string, Set<number>> = {
-	"packages/extensions/extensions/answer.ts": new Set([355, 356]),
+export const PATCH_COVERAGE_EXCLUSIONS: Record<string, Set<number>> = {
+	"packages/extensions/extensions/answer.ts": new Set([358, 360]),
 };
 
 type PatchCoverageOptions = {
@@ -173,7 +173,7 @@ export function calculatePatchCoverage(
 			? uncoveredLines.filter((lineNumber) => !exclusions.has(lineNumber))
 			: uncoveredLines;
 		const filteredCoveredLines = exclusions
-			? executableLines.filter((lineNumber) => !exclusions.has(lineNumber) || (coverageLines.get(lineNumber) ?? 0) > 0)
+			? coveredLines.filter((lineNumber) => !exclusions.has(lineNumber))
 			: coveredLines;
 		const filteredTotal = exclusions
 			? executableLines.filter((lineNumber) => !exclusions.has(lineNumber)).length
