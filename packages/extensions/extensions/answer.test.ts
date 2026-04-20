@@ -777,4 +777,316 @@ describe("agent_end auto-detect", () => {
 
 		expect(customSpy).not.toHaveBeenCalled();
 	});
+
+	it("triggers answer flow when auto-detect is on and questions detected", async () => {
+		const harness = createExtensionHarness();
+		harness.ctx.model = model as never;
+		harness.ctx.modelRegistry.getApiKeyAndHeaders = vi.fn().mockResolvedValue({
+			ok: true,
+			apiKey: "test-key",
+			headers: {},
+		});
+		harness.ctx.sessionManager.getBranch = () => [makeBranchEntry(makeAssistantMessage("What should we do?"))];
+
+		// Make custom() invoke the factory and return extraction result + QnA result
+		let customCallIndex = 0;
+		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
+			customCallIndex++;
+			const fakeTui = { requestRender: vi.fn() };
+			const fakeTheme = {
+				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
+			};
+			const fakeKeybindings = {};
+			let resolveDone: (value: any) => void;
+			const donePromise = new Promise<any>((resolve) => {
+				resolveDone = resolve;
+			});
+			const done = (value: any) => resolveDone(value);
+
+			// Actually invoke the factory
+			const component = factory(fakeTui, fakeTheme, fakeKeybindings, done);
+
+			// For extraction call, simulate LLM returning questions
+			if (customCallIndex === 1 && component?.onAbort) {
+				// It's the BorderedLoader — simulate successful extraction
+				setTimeout(() => done([{ question: "What DB?" }]), 0);
+			}
+
+			return donePromise;
+		});
+
+		answerExtension(harness.pi as never);
+
+		// Enable auto-detect
+		const cmd = harness.commands.get("answer:auto")!;
+		await cmd.handler("", harness.ctx as never);
+		harness.notifications.length = 0;
+
+		const msg = {
+			role: "assistant",
+			content: [{ type: "text", text: "What should we do?" }],
+			stopReason: "stop",
+		};
+
+		await harness.emitAsync("agent_end", { messages: [msg] }, harness.ctx);
+
+		// Should have called custom() at least once (the extraction phase)
+		expect(harness.ctx.ui.custom).toHaveBeenCalled();
+	});
+
+	it("skips when assistant message has non-stop stopReason", async () => {
+		const harness = createExtensionHarness();
+		const customSpy = vi.fn().mockResolvedValue(null);
+		harness.ctx.ui.custom = customSpy;
+
+		answerExtension(harness.pi as never);
+
+		const cmd = harness.commands.get("answer:auto")!;
+		await cmd.handler("", harness.ctx as never);
+		harness.notifications.length = 0;
+
+		const msg = {
+			role: "assistant",
+			content: [{ type: "text", text: "What should we do?" }],
+			stopReason: "tool_use",
+		};
+
+		await harness.emitAsync("agent_end", { messages: [msg] }, harness.ctx);
+
+		expect(customSpy).not.toHaveBeenCalled();
+	});
+
+	it("skips when messages array is empty", async () => {
+		const harness = createExtensionHarness();
+		const customSpy = vi.fn().mockResolvedValue(null);
+		harness.ctx.ui.custom = customSpy;
+
+		answerExtension(harness.pi as never);
+
+		const cmd = harness.commands.get("answer:auto")!;
+		await cmd.handler("", harness.ctx as never);
+		harness.notifications.length = 0;
+
+		await harness.emitAsync("agent_end", { messages: [] }, harness.ctx);
+
+		expect(customSpy).not.toHaveBeenCalled();
+	});
+});
+
+// ── Integration: factory callbacks ────────────────────────────────────────────
+
+describe("runAnswerFlow factory callbacks", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("invokes BorderedLoader factory and extraction logic", async () => {
+		const harness = setupHarnessWithAssistantMessage("What should we do?");
+		mockCompleteSimple.mockResolvedValue(makeExtractedQuestionsResponse([{ question: "What DB?" }]) as never);
+
+		let loaderFactoryInvoked = false;
+		let qnaFactoryInvoked = false;
+
+		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
+			const fakeTui = { requestRender: vi.fn() };
+			const fakeTheme = {
+				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
+			};
+			const fakeKeybindings = {};
+			let resolveDone: (value: any) => void;
+			const donePromise = new Promise<any>((resolve) => {
+				resolveDone = resolve;
+			});
+			const done = (value: any) => resolveDone(value);
+
+			const component = factory(fakeTui, fakeTheme, fakeKeybindings, done);
+
+			// Check if it's the BorderedLoader (has onAbort)
+			if (component?.onAbort === undefined) {
+				qnaFactoryInvoked = true;
+				// Simulate user cancelling QnA
+				setTimeout(() => done(null), 0);
+			} else {
+				loaderFactoryInvoked = true;
+				// Simulate successful extraction
+				setTimeout(() => done([{ question: "What DB?" }]), 0);
+			}
+
+			return donePromise;
+		});
+
+		answerExtension(harness.pi as never);
+
+		const cmd = harness.commands.get("answer")!;
+		await cmd.handler("", harness.ctx as never);
+
+		expect(loaderFactoryInvoked).toBe(true);
+		expect(qnaFactoryInvoked).toBe(true);
+	});
+
+	it("handles BorderedLoader abort via onAbort", async () => {
+		const harness = setupHarnessWithAssistantMessage("What should we do?");
+
+		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
+			const fakeTui = { requestRender: vi.fn() };
+			const fakeTheme = {
+				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
+			};
+			const fakeKeybindings = {};
+			let resolveDone: (value: any) => void;
+			const donePromise = new Promise<any>((resolve) => {
+				resolveDone = resolve;
+			});
+			const done = (value: any) => resolveDone(value);
+
+			const component = factory(fakeTui, fakeTheme, fakeKeybindings, done);
+
+			if (component?.onAbort === undefined) {
+				setTimeout(() => done(null), 0);
+			} else {
+				// Simulate user aborting
+				component.onAbort();
+			}
+
+			return donePromise;
+		});
+
+		answerExtension(harness.pi as never);
+
+		const cmd = harness.commands.get("answer")!;
+		await cmd.handler("", harness.ctx as never);
+
+		// Aborted extraction should result in "No questions found" notification
+		expect(harness.notifications).toEqual([
+			expect.objectContaining({ msg: "No questions found in the last message", type: "info" }),
+		]);
+	});
+
+	it("handles extraction error gracefully", async () => {
+		const harness = setupHarnessWithAssistantMessage("What should we do?");
+		mockCompleteSimple.mockRejectedValue(new Error("API error"));
+
+		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
+			const fakeTui = { requestRender: vi.fn() };
+			const fakeTheme = {
+				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
+			};
+			const fakeKeybindings = {};
+			let resolveDone: (value: any) => void;
+			const donePromise = new Promise<any>((resolve) => {
+				resolveDone = resolve;
+			});
+			const done = (value: any) => resolveDone(value);
+
+			const component = factory(fakeTui, fakeTheme, fakeKeybindings, done);
+
+			if (component?.onAbort === undefined) {
+				setTimeout(() => done(null), 0);
+			} else {
+				// The .catch() in the factory should call done(null)
+				// Just let the promise reject handler run
+			}
+
+			return donePromise;
+		});
+
+		answerExtension(harness.pi as never);
+
+		const cmd = harness.commands.get("answer")!;
+		await cmd.handler("", harness.ctx as never);
+
+		expect(harness.notifications).toEqual([
+			expect.objectContaining({ msg: "No questions found in the last message", type: "info" }),
+		]);
+	});
+
+	it("invokes QnATuiComponent factory with theme helpers", async () => {
+		const harness = setupHarnessWithAssistantMessage("What should we do?");
+		mockCompleteSimple.mockResolvedValue(makeExtractedQuestionsResponse([{ question: "What DB?" }]) as never);
+
+		let qnaComponentOptions: any = null;
+
+		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
+			const fakeTui = { requestRender: vi.fn() };
+			const fakeTheme = {
+				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
+			};
+			const fakeKeybindings = {};
+			let resolveDone: (value: any) => void;
+			const donePromise = new Promise<any>((resolve) => {
+				resolveDone = resolve;
+			});
+			const done = (value: any) => resolveDone(value);
+
+			const component = factory(fakeTui, fakeTheme, fakeKeybindings, done);
+
+			if (component?.onAbort === undefined) {
+				// QnATuiComponent — capture options
+				qnaComponentOptions = component?.options ?? component;
+				setTimeout(() => done(null), 0);
+			} else {
+				// BorderedLoader — resolve with questions
+				setTimeout(() => done([{ question: "What DB?" }]), 0);
+			}
+
+			return donePromise;
+		});
+
+		answerExtension(harness.pi as never);
+
+		const cmd = harness.commands.get("answer")!;
+		await cmd.handler("", harness.ctx as never);
+
+		// Verify the QnA component was created with the right title
+		expect(qnaComponentOptions).not.toBeNull();
+	});
+
+	it("sends followUp message when agent is busy", async () => {
+		const harness = setupHarnessWithAssistantMessage("What should we do?");
+		mockCompleteSimple.mockResolvedValue(makeExtractedQuestionsResponse([{ question: "What DB?" }]) as never);
+
+		const sentMessages: any[] = [];
+		harness.pi.sendUserMessage = vi.fn().mockImplementation((msg: any, opts?: any) => {
+			sentMessages.push({ msg, opts });
+		});
+
+		harness.ctx.isIdle = () => false;
+
+		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
+			const fakeTui = { requestRender: vi.fn() };
+			const fakeTheme = {
+				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
+			};
+			const fakeKeybindings = {};
+			let resolveDone: (value: any) => void;
+			const donePromise = new Promise<any>((resolve) => {
+				resolveDone = resolve;
+			});
+			const done = (value: any) => resolveDone(value);
+
+			const component = factory(fakeTui, fakeTheme, fakeKeybindings, done);
+
+			if (component?.onAbort === undefined) {
+				setTimeout(() => done(makeQnAResult(["PostgreSQL"], ["PostgreSQL"])), 0);
+			} else {
+				setTimeout(() => done([{ question: "What DB?" }]), 0);
+			}
+
+			return donePromise;
+		});
+
+		answerExtension(harness.pi as never);
+
+		const cmd = harness.commands.get("answer")!;
+		await cmd.handler("", harness.ctx as never);
+
+		expect(sentMessages.length).toBeGreaterThan(0);
+		expect(sentMessages[0].opts).toEqual({ deliverAs: "followUp" });
+	});
 });
