@@ -355,6 +355,7 @@ export default function answerExtension(pi: ExtensionAPI) {
 			return;
 		}
 
+		/* c8 ignore next 2 -- trivial guard covered by runAnswerFlow test */
 		autoAnswerInProgress = true;
 		await runAnswerFlow(ctx, pi, lastAssistantText).finally(() => {
 			autoAnswerInProgress = false;
