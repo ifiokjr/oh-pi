@@ -238,7 +238,11 @@ function hasQuestionMarkers(text: string): boolean {
 
 // ── Core answer flow ───────────────────────────────────────────────────────
 
-async function runAnswerFlow(ctx: ExtensionContext | ExtensionCommandContext, pi: ExtensionAPI): Promise<void> {
+async function runAnswerFlow(
+	ctx: ExtensionContext | ExtensionCommandContext,
+	pi: ExtensionAPI,
+	preextractedText?: string,
+): Promise<void> {
 	if (!ctx.hasUI) {
 		ctx.ui.notify("/answer requires interactive mode", "error");
 		return;
@@ -249,7 +253,7 @@ async function runAnswerFlow(ctx: ExtensionContext | ExtensionCommandContext, pi
 		return;
 	}
 
-	const lastText = extractLastAssistantText(ctx);
+	const lastText = preextractedText ?? extractLastAssistantText(ctx);
 	if (!lastText) {
 		ctx.ui.notify("No assistant messages found to extract questions from", "warning");
 		return;
@@ -320,8 +324,11 @@ export default function answerExtension(pi: ExtensionAPI) {
 	});
 
 	// Auto-detect: after each agent turn, check if questions exist
+	// We track whether the overlay is already showing to avoid stacking
+	let autoAnswerInProgress = false;
+
 	pi.on("agent_end", async (event, ctx) => {
-		if (!autoDetectEnabled) {
+		if (!autoDetectEnabled || autoAnswerInProgress) {
 			return;
 		}
 
@@ -348,8 +355,12 @@ export default function answerExtension(pi: ExtensionAPI) {
 			return;
 		}
 
-		// Run the answer flow automatically
-		await runAnswerFlow(ctx, pi);
+		autoAnswerInProgress = true;
+		try {
+			await runAnswerFlow(ctx, pi, lastAssistantText);
+		} finally {
+			autoAnswerInProgress = false;
+		}
 	});
 
 	// ── /answer command ───────────────────────────────────────────────────
@@ -382,4 +393,5 @@ export {
 	extractQuestions,
 	hasQuestionMarkers,
 	normalizeExtractedQuestions,
+	runAnswerFlow,
 };

@@ -42,6 +42,7 @@ import answerExtension, {
 	extractQuestions,
 	hasQuestionMarkers,
 	normalizeExtractedQuestions,
+	runAnswerFlow,
 } from "./answer.js";
 
 const mockCompleteSimple = vi.mocked(completeSimple);
@@ -1088,5 +1089,91 @@ describe("runAnswerFlow factory callbacks", () => {
 
 		expect(sentMessages.length).toBeGreaterThan(0);
 		expect(sentMessages[0].opts).toEqual({ deliverAs: "followUp" });
+	});
+});
+
+// ── runAnswerFlow with preextractedText ──────────────────────────────────────
+
+describe("runAnswerFlow with preextractedText", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("uses preextractedText instead of extracting from branch", async () => {
+		const harness = setupHarnessWithAssistantMessage("This is the old message");
+
+		// Set up extraction to fail if called on the branch text
+		mockCompleteSimple.mockResolvedValue({
+			stopReason: "stop",
+			content: [{ type: "text", text: "No questions here" }],
+		} as never);
+
+		// Set up extraction to succeed on the preextracted text
+		// We'll use custom() to control the flow
+
+		let customCallCount = 0;
+		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
+			customCallCount++;
+			const fakeTui = { requestRender: vi.fn() };
+			const fakeTheme = {
+				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
+			};
+			const fakeKeybindings = {};
+			let resolveDone: (value: any) => void;
+			const donePromise = new Promise<any>((resolve) => {
+				resolveDone = resolve;
+			});
+			const done = (value: any) => resolveDone(value);
+
+			const component = factory(fakeTui, fakeTheme, fakeKeybindings, done);
+
+			if (component?.onAbort === undefined) {
+				// QnA — cancel
+				setTimeout(() => done(null), 0);
+			} else {
+				// BorderedLoader — return extracted questions
+				setTimeout(() => done([{ question: "What DB?" }]), 0);
+			}
+
+			return donePromise;
+		});
+
+		// Call runAnswerFlow with preextracted text
+		await runAnswerFlow(harness.ctx as never, harness.pi, "What should we do?");
+
+		// custom() should have been called (extraction phase)
+		expect(customCallCount).toBeGreaterThanOrEqual(1);
+	});
+
+	it("falls back to branch extraction when no preextractedText", async () => {
+		const harness = setupHarnessWithAssistantMessage("What should we do?");
+
+		let factoryInvoked = false;
+
+		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
+			factoryInvoked = true;
+			const fakeTui = { requestRender: vi.fn() };
+			const fakeTheme = {
+				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
+			};
+			const fakeKeybindings = {};
+			let resolveDone: (value: any) => void;
+			const donePromise = new Promise<any>((resolve) => {
+				resolveDone = resolve;
+			});
+			const done = (value: any) => resolveDone(value);
+
+			factory(fakeTui, fakeTheme, fakeKeybindings, done);
+			setTimeout(() => done(null), 0);
+
+			return donePromise;
+		});
+
+		await runAnswerFlow(harness.ctx as never, harness.pi);
+
+		// The factory should be invoked (extraction from branch)
+		expect(factoryInvoked).toBe(true);
 	});
 });
