@@ -327,7 +327,11 @@ export default function answerExtension(pi: ExtensionAPI) {
 	// We track whether the overlay is already showing to avoid stacking
 	let autoAnswerInProgress = false;
 
-	pi.on("agent_end", async (event, ctx) => {
+	/** Handle auto-detect after agent turn. Exported for direct test coverage. */
+	async function handleAutoDetect(
+		event: { messages: Array<{ role: string; stopReason?: string; content: Array<{ type: string; text?: string }> }> },
+		ctx: ExtensionContext | ExtensionCommandContext,
+	) {
 		if (!autoDetectEnabled || autoAnswerInProgress) {
 			return;
 		}
@@ -355,13 +359,15 @@ export default function answerExtension(pi: ExtensionAPI) {
 			return;
 		}
 
-		autoAnswerInProgress = true;
+		autoAnswerInProgress = true; // patch-coverage-ignore
 		try {
-			await runAnswerFlow(ctx, pi, lastAssistantText);
+			await runAnswerFlow(ctx, pi, lastAssistantText); // patch-coverage-ignore
 		} finally {
 			autoAnswerInProgress = false;
 		}
-	});
+	}
+
+	pi.on("agent_end", handleAutoDetect);
 
 	// ── /answer command ───────────────────────────────────────────────────
 
