@@ -314,6 +314,21 @@ async function runAnswerFlow(
 
 // ── Extension entry point ──────────────────────────────────────────────────
 
+/** Run auto-detect answer flow with in-progress guard. Standalone for V8 coverage tracking. */
+export async function runAutoDetectFlow(
+	ctx: ExtensionContext | ExtensionCommandContext,
+	pi: ExtensionAPI,
+	preextractedText: string,
+	inProgressRef: { value: boolean },
+) {
+	inProgressRef.value = true;
+	try {
+		await runAnswerFlow(ctx, pi, preextractedText);
+	} finally {
+		inProgressRef.value = false;
+	}
+}
+
 export default function answerExtension(pi: ExtensionAPI) {
 	let autoDetectEnabled = false;
 
@@ -325,14 +340,14 @@ export default function answerExtension(pi: ExtensionAPI) {
 
 	// Auto-detect: after each agent turn, check if questions exist
 	// We track whether the overlay is already showing to avoid stacking
-	let autoAnswerInProgress = false;
+	const inProgressRef = { value: false };
 
 	/** Handle auto-detect after agent turn. Exported for direct test coverage. */
 	async function handleAutoDetect(
 		event: { messages: Array<{ role: string; stopReason?: string; content: Array<{ type: string; text?: string }> }> },
 		ctx: ExtensionContext | ExtensionCommandContext,
 	) {
-		if (!autoDetectEnabled || autoAnswerInProgress) {
+		if (!autoDetectEnabled || inProgressRef.value) {
 			return;
 		}
 
@@ -359,12 +374,7 @@ export default function answerExtension(pi: ExtensionAPI) {
 			return;
 		}
 
-		autoAnswerInProgress = true; // patch-coverage-ignore
-		try {
-			await runAnswerFlow(ctx, pi, lastAssistantText); // patch-coverage-ignore
-		} finally {
-			autoAnswerInProgress = false;
-		}
+		await runAutoDetectFlow(ctx, pi, lastAssistantText, inProgressRef);
 	}
 
 	pi.on("agent_end", handleAutoDetect);

@@ -43,6 +43,7 @@ import answerExtension, {
 	hasQuestionMarkers,
 	normalizeExtractedQuestions,
 	runAnswerFlow,
+	runAutoDetectFlow,
 } from "./answer.js";
 
 const mockCompleteSimple = vi.mocked(completeSimple);
@@ -1155,5 +1156,26 @@ describe("runAnswerFlow with preextractedText", () => {
 
 		// The factory should be invoked (extraction from branch)
 		expect(factoryInvoked).toBe(true);
+	});
+
+	// Direct test of runAutoDetectFlow for V8 fork-pool coverage
+	it("runAutoDetectFlow sets in-progress flag around answer flow", async () => {
+		const harness = createExtensionHarness();
+		harness.ctx.model = model as never;
+		harness.ctx.modelRegistry.getApiKeyAndHeaders = vi.fn().mockResolvedValue({
+			ok: true,
+			apiKey: "test-key",
+			headers: {},
+		});
+		harness.ctx.sessionManager.getBranch = () => [makeBranchEntry(makeAssistantMessage("What?"))];
+		harness.ctx.ui.custom = vi.fn().mockResolvedValue(null);
+
+		const pi = harness.pi as never;
+		const inProgressRef = { value: false };
+
+		await runAutoDetectFlow(harness.ctx as never, pi, "What should we do?", inProgressRef);
+
+		// After completion, in-progress should be reset to false
+		expect(inProgressRef.value).toBe(false);
 	});
 });

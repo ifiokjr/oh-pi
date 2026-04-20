@@ -231,49 +231,7 @@ export function runPatchCoverageCheck({ base, head, lcovPath, threshold }: Patch
 	const filteredChangedLines = new Map(
 		[...changedLines.entries()].filter(([file]) => !shouldIgnoreFileForPatchCoverage(file)),
 	);
-
-	// Find lines marked with // patch-coverage-ignore in source files
-	const patchIgnoreLines = new Map<string, Set<number>>();
-	for (const file of filteredChangedLines.keys()) {
-		if (!fs.existsSync(file)) continue;
-		const sourceLines = fs.readFileSync(file, "utf8").split(/\r?\n/);
-		const ignored = new Set<number>();
-		for (let i = 0; i < sourceLines.length; i++) {
-			const line = sourceLines[i]!;
-			if (/\/\/\s*patch-coverage-ignore/.test(line) && !line.includes('PATCH_COVERAGE_IGNORE')) {
-				ignored.add(i + 1);
-			}
-		}
-		if (ignored.size > 0) patchIgnoreLines.set(file, ignored);
-	}
-
 	const summary = calculatePatchCoverage(filteredChangedLines, coverageByFile);
-
-	// Remove lines marked with // patch-coverage-ignore from uncovered counts
-	// Tolerance of ±3 lines accounts for source-map offsets between V8 coverage and source
-	const TOLERANCE = 3;
-	if (patchIgnoreLines.size > 0) {
-		for (const entry of summary.perFile) {
-			const ignoreSet = patchIgnoreLines.get(entry.file);
-			if (!ignoreSet) continue;
-			const isNearIgnore = (line: number) => {
-				for (const ig of ignoreSet) {
-					if (Math.abs(line - ig) <= TOLERANCE) return true;
-				}
-				return false;
-			};
-			const filteredUncovered = entry.uncoveredLines.filter((line) => !isNearIgnore(line));
-			const removedCount = entry.uncoveredLines.length - filteredUncovered.length;
-			if (removedCount > 0) {
-				entry.uncoveredLines = filteredUncovered;
-				entry.total -= removedCount;
-				entry.pct = entry.total === 0 ? 100 : (entry.covered / entry.total) * 100;
-			}
-		}
-		summary.covered = summary.perFile.reduce((sum, e) => sum + e.covered, 0);
-		summary.total = summary.perFile.reduce((sum, e) => sum + e.total, 0);
-		summary.pct = summary.total === 0 ? 100 : (summary.covered / summary.total) * 100;
-	}
 
 	if (summary.total === 0) {
 		console.log("Patch coverage: 100.00% (no changed executable lines found)");
