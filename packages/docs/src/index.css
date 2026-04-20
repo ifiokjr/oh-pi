@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+	--color-pi-emerald: #10b981;
+	--color-pi-emerald-dim: #059669;
+	--color-pi-emerald-glow: #34d399;
+	--color-sidebar-bg: #09090b;
+	--color-sidebar-border: #27272a;
+	--color-content-bg: #0a0a0f;
+	--color-content-card: #18181b;
+	--font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+}
+
+/* Prose styles for MDX content */
+.prose-doc h1 {
+	@apply text-3xl font-bold text-zinc-50 mt-0 mb-4;
+}
+.prose-doc h2 {
+	@apply text-2xl font-semibold text-zinc-100 mt-10 mb-3 border-b border-zinc-800 pb-2;
+}
+.prose-doc h3 {
+	@apply text-xl font-semibold text-zinc-200 mt-8 mb-2;
+}
+.prose-doc h4 {
+	@apply text-lg font-medium text-zinc-300 mt-6 mb-2;
+}
+.prose-doc p {
+	@apply text-zinc-300 leading-relaxed mb-4;
+}
+.prose-doc a {
+	@apply text-pi-emerald hover:text-pi-emerald-glow underline underline-offset-4 transition-colors;
+}
+.prose-doc ul {
+	@apply list-disc list-outside ml-6 mb-4 space-y-1 text-zinc-300;
+}
+.prose-doc ol {
+	@apply list-decimal list-outside ml-6 mb-4 space-y-1 text-zinc-300;
+}
+.prose-doc li {
+	@apply leading-relaxed;
+}
+.prose-doc code {
+	@apply bg-zinc-800 text-pi-emerald-glow rounded px-1.5 py-0.5 text-sm font-mono;
+}
+.prose-doc pre {
+	@apply bg-zinc-900 border border-zinc-800 rounded-lg p-4 overflow-x-auto mb-4;
+}
+.prose-doc pre code {
+	@apply bg-transparent p-0 text-sm;
+}
+.prose-doc blockquote {
+	@apply border-l-4 border-pi-emerald pl-4 my-4 text-zinc-400 italic;
+}
+.prose-doc table {
+	@apply w-full border-collapse mb-4;
+}
+.prose-doc th {
+	@apply bg-zinc-800 text-left px-4 py-2 text-sm font-semibold text-zinc-200 border border-zinc-700;
+}
+.prose-doc td {
+	@apply px-4 py-2 text-sm text-zinc-300 border border-zinc-700;
+}
+.prose-doc img {
+	@apply rounded-lg border border-zinc-800 my-4;
+}
+.prose-doc hr {
+	@apply border-zinc-800 my-8;
+}

@@ -1,0 +1,147 @@
+---
+title: "Interactive Mode"
+order: 2
+---
+
+
+## 1. UI Layout (Top to Bottom)
+
+1. **Startup Header** — Keybindings, loaded AGENTS.md, Prompt Templates, Skills, Extensions
+2. **Messages** — User messages, assistant replies, tool calls/results, notifications, errors,
+   extension UI
+3. **Editor** — Input area, border color indicates thinking level
+4. **Footer** — Working directory, session name, token/cache usage, cost, context utilization,
+   current model
+
+## 2. Editor Features
+
+| Feature          | Operation                                                                  |
+| ---------------- | -------------------------------------------------------------------------- |
+| File reference   | Type `@` to fuzzy-search project files                                     |
+| Path completion  | Tab to complete paths                                                      |
+| Multi-line input | Shift+Enter (Windows Terminal: Ctrl+Enter)                                 |
+| Paste image      | Ctrl+V or drag into terminal                                               |
+| Bash commands    | `!command` runs and sends output to LLM, `!!command` runs but doesn't send |
+
+## 3. Command System
+
+Type `/` to trigger commands. Extensions can register custom commands, Skills are invoked via
+`/skill:name`, Prompt Templates expand via `/templatename`.
+
+### Built-in Commands
+
+| Command             | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| `/login`, `/logout` | OAuth authentication                               |
+| `/model`            | Switch model                                       |
+| `/scoped-models`    | Enable/disable models for Ctrl+P cycling           |
+| `/settings`         | Thinking level, theme, message delivery, transport |
+| `/resume`           | Resume from session history                        |
+| `/new`              | New session                                        |
+| `/name <name>`      | Set session display name                           |
+| `/session`          | Show session info (path, tokens, cost)             |
+| `/tree`             | Jump to any node in the session tree               |
+| `/fork`             | Create new session file from current branch        |
+| `/compact [prompt]` | Manually compact context                           |
+| `/copy`             | Copy last assistant message to clipboard           |
+| `/export [file]`    | Export session as HTML                             |
+| `/share`            | Upload as GitHub Gist                              |
+| `/reload`           | Reload Extensions, Skills, Prompts, Context Files  |
+| `/hotkeys`          | Show all keybindings                               |
+| `/changelog`        | Show version history                               |
+| `/quit`, `/exit`    | Exit                                               |
+
+## 4. Common Keybindings
+
+| Key                   | Action                            |
+| --------------------- | --------------------------------- |
+| Ctrl+C                | Clear editor                      |
+| Ctrl+C twice          | Exit                              |
+| Escape                | Cancel/abort                      |
+| Escape twice          | Open `/tree`                      |
+| Ctrl+L                | Open model selector               |
+| Ctrl+P / Shift+Ctrl+P | Cycle models                      |
+| Shift+Tab             | Cycle thinking level              |
+| Ctrl+O                | Collapse/expand tool output       |
+| Ctrl+T                | Collapse/expand thinking blocks   |
+| Alt+Enter             | Queue follow-up message           |
+| Alt+Up                | Retrieve queued message to editor |
+
+### Custom Keybindings
+
+Edit `~/.pi/agent/keybindings.json`:
+
+```json
+{
+  "cursorUp": ["up", "ctrl+p"],
+  "cursorDown": ["down", "ctrl+n"],
+  "selectModel": "ctrl+l"
+}
+```
+
+Each action can be bound to a single key or array of keys. Supports `ctrl`, `shift`, `alt` modifier
+combinations.
+
+### Complete Action List
+
+**Cursor movement**: cursorUp, cursorDown, cursorLeft, cursorRight, cursorWordLeft, cursorWordRight,
+cursorLineStart, cursorLineEnd, jumpForward, jumpBackward, pageUp, pageDown
+
+**Deletion**: deleteCharBackward, deleteCharForward, deleteWordBackward, deleteWordForward,
+deleteToLineStart, deleteToLineEnd
+
+**Input**: newLine, submit, tab
+
+**Kill ring**: yank, yankPop, undo
+
+**Clipboard**: copy, pasteImage
+
+**Application**: interrupt, clear, exit, suspend, externalEditor
+
+**Session**: newSession, tree, fork, resume
+
+**Model**: selectModel, cycleModelForward, cycleModelBackward, cycleThinkingLevel
+
+**Display**: expandTools, toggleThinking
+
+**Message queue**: followUp, dequeue
+
+## 5. Message Queue
+
+You can submit messages while the agent is working:
+
+- **Enter** — Queue a steering message, delivered after current tool finishes (interrupts remaining
+  tools)
+- **Alt+Enter** — Queue a follow-up message, delivered only after agent completes all work
+- **Escape** — Abort and restore queued message to editor
+- **Alt+Up** — Retrieve queued message to editor
+
+### Delivery Mode Configuration
+
+| Setting        | Default           | Description                                            |
+| -------------- | ----------------- | ------------------------------------------------------ |
+| `steeringMode` | `"one-at-a-time"` | Steering message delivery mode                         |
+| `followUpMode` | `"one-at-a-time"` | Follow-up message delivery mode                        |
+| `transport`    | `"sse"`           | Transport preference: `"sse"`, `"websocket"`, `"auto"` |
+
+## 6. Terminal Compatibility
+
+### Works Out of the Box
+
+- Kitty, iTerm2
+
+### Requires Configuration
+
+- **Ghostty**: Needs keybind configuration
+- **WezTerm**: Enable `enable_kitty_keyboard`
+- **VS Code Terminal**: Add Shift+Enter keybinding
+- **Windows Terminal**: Add Shift+Enter action
+- **IntelliJ IDEA**: Limited support, recommend standalone terminal
+
+### Image Support
+
+Kitty, iTerm2, Ghostty, WezTerm support in-terminal image display.
+
+### Colors
+
+Uses 24-bit RGB colors. Legacy terminals auto-degrade to 256-color approximation.

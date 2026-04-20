@@ -1,0 +1,229 @@
+---
+title: "CLI Reference"
+order: 7
+---
+
+
+## 1. CLI Usage
+
+```bash
+pi [options] [@files...] [messages...]
+```
+
+### File Arguments
+
+```bash
+pi @prompt.md "Answer this"           # Include file content
+pi -p @screenshot.png "What's in this image?"  # Image
+pi @code.ts @test.ts "Review these files"      # Multiple files
+```
+
+### Package Management Commands
+
+```bash
+pi install <source> [-l]    # Install package, -l for project-level
+pi remove <source> [-l]     # Remove package
+pi update [source]          # Update (skips locked versions)
+pi list                     # List installed packages
+pi config                   # Enable/disable package resources
+```
+
+### Mode Options
+
+| Flag                  | Description              |
+| --------------------- | ------------------------ |
+| (default)             | Interactive mode         |
+| `-p`, `--print`       | Output response and exit |
+| `--mode json`         | JSON Lines event stream  |
+| `--mode rpc`          | RPC process integration  |
+| `--export <in> [out]` | Export session as HTML   |
+
+### Model Options
+
+| Option                   | Description                                      |
+| ------------------------ | ------------------------------------------------ |
+| `--provider <name>`      | Provider                                         |
+| `--model <pattern>`      | Model (supports `provider/id` and `:<thinking>`) |
+| `--api-key <key>`        | API key                                          |
+| `--thinking <level>`     | off/minimal/low/medium/high/xhigh                |
+| `--models <patterns>`    | Ctrl+P cycle models (comma-separated)            |
+| `--list-models [search]` | List available models                            |
+
+### Session Options
+
+| Option                | Description                          |
+| --------------------- | ------------------------------------ |
+| `-c`, `--continue`    | Continue most recent session         |
+| `-r`, `--resume`      | Browse and select session            |
+| `--session <path>`    | Specify session file or partial UUID |
+| `--session-dir <dir>` | Custom session storage directory     |
+| `--no-session`        | Ephemeral mode                       |
+
+### Tool Options
+
+| Option           | Description                                                     |
+| ---------------- | --------------------------------------------------------------- |
+| `--tools <list>` | Enable specified built-in tools (default: read,bash,edit,write) |
+| `--no-tools`     | Disable all built-in tools                                      |
+
+Available built-in tools: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`
+
+### Resource Options
+
+| Option                       | Description                 |
+| ---------------------------- | --------------------------- |
+| `-e`, `--extension <source>` | Load extension (repeatable) |
+| `--no-extensions`            | Disable extension discovery |
+| `--skill <path>`             | Load skill (repeatable)     |
+| `--no-skills`                | Disable skill discovery     |
+| `--prompt-template <path>`   | Load template (repeatable)  |
+| `--no-prompt-templates`      | Disable template discovery  |
+| `--theme <path>`             | Load theme (repeatable)     |
+| `--no-themes`                | Disable theme discovery     |
+
+`--no-*` flags can be combined with explicit flags for precise control.
+
+### Other Options
+
+| Option                          | Description                   |
+| ------------------------------- | ----------------------------- |
+| `--system-prompt <text>`        | Replace default system prompt |
+| `--append-system-prompt <text>` | Append to system prompt       |
+| `--verbose`                     | Force verbose startup         |
+| `-h`, `--help`                  | Help                          |
+| `-v`, `--version`               | Version                       |
+
+### Ant Colony Workspace Behavior (Worktree Default)
+
+Ant-colony executions use an **isolated git worktree by default**.
+
+- Default: run colony work in a separate workspace/worktree instead of directly editing your current cwd.
+- Fallback: when a worktree cannot be created (for example, unsupported repo state/environment limitations), colony execution falls back to shared cwd behavior so runs can still proceed.
+- Workspace metadata: colony runs persist/report workspace information so you can see where edits were made.
+- Resume/re-attach: resumed colony runs use saved workspace hints and re-attach to an existing worktree when possible.
+
+For behavior rationale and release intent, see `.changeset/ant-colony-worktree-usage.md`.
+
+### Common Examples
+
+```bash
+pi "List all .ts files in src/"              # Interactive + initial prompt
+pi -p "Summarize this codebase"              # Non-interactive
+pi --model openai/gpt-4o "Help me refactor"  # Specify model
+pi --model sonnet:high "Solve this"          # Model + thinking
+pi --models "claude-*,gpt-4o"                # Restrict cycle models
+pi --tools read,grep,find,ls -p "Review"     # Read-only mode
+pi --thinking high "Complex problem"         # High thinking
+```
+
+### Completion Verification Harness
+
+Use the deterministic harness below to verify slash-command argument completion behavior:
+
+```bash
+pnpm verify:completion
+```
+
+What it does:
+- Runs a focused Vitest suite at `packages/ant-colony/tests/commands.test.ts`
+- Verifies `/colony-status`, `/colony-stop`, and `/colony-resume` completion wiring
+- Avoids interactive/TUI startup and shell-specific behavior
+
+Note: `oh-pi` itself does not provide shell completion generation; this harness validates in-product command completion callbacks.
+
+---
+
+## 2. Directory Structure Overview
+
+### Global Config (`~/.pi/agent/`)
+
+```
+~/.pi/agent/
+├── settings.json          # Global settings
+├── auth.json              # API keys & OAuth tokens (0600)
+├── models.json            # Custom models/providers
+├── keybindings.json       # Custom keybindings
+├── AGENTS.md              # Global context file
+├── SYSTEM.md              # Replace default system prompt (optional)
+├── APPEND_SYSTEM.md       # Append to system prompt (optional)
+├── extensions/            # Global extensions
+│   ├── my-ext.ts
+│   └── my-ext-dir/
+│       └── index.ts
+├── skills/                # Global skills
+│   └── my-skill/
+│       └── SKILL.md
+├── prompts/               # Global templates
+│   └── review.md
+├── themes/                # Global themes
+│   └── my-theme.json
+├── sessions/              # Session storage
+│   └── --path--/
+│       └── <timestamp>_<uuid>.jsonl
+├── git/                   # Git package install directory
+└── npm/                   # npm package install directory (project-level uses .pi/npm/)
+```
+
+### Project Config (`.pi/`)
+
+```
+<project>/.pi/
+├── settings.json          # Project settings (overrides global)
+├── SYSTEM.md              # Project system prompt
+├── APPEND_SYSTEM.md       # Project append prompt
+├── extensions/            # Project extensions
+├── skills/                # Project skills
+├── prompts/               # Project templates
+├── themes/                # Project themes
+├── git/                   # Project-level git packages
+└── npm/                   # Project-level npm packages
+```
+
+### Context File Load Order
+
+1. `~/.pi/agent/AGENTS.md` (global)
+2. Traverse up from cwd, loading `AGENTS.md` from each parent directory
+3. Current directory's `AGENTS.md`
+
+All matching files are concatenated. `CLAUDE.md` filenames are also supported.
+
+---
+
+## 3. Pi Package Structure
+
+```
+my-pi-package/
+├── package.json           # With "pi" manifest and "pi-package" keyword
+├── extensions/            # Extensions (.ts/.js)
+├── skills/                # Skills (SKILL.md subdirectories)
+├── prompts/               # Templates (.md)
+└── themes/                # Themes (.json)
+```
+
+---
+
+## 4. Platform Support
+
+| Platform         | Notes                                   |
+| ---------------- | --------------------------------------- |
+| macOS / Linux    | Native support                          |
+| Windows          | Requires bash (Git Bash / Cygwin / WSL) |
+| Android (Termux) | Runs via Termux, no image clipboard     |
+
+---
+
+## 5. Key Numbers
+
+| Metric                    | Value                                       |
+| ------------------------- | ------------------------------------------- |
+| Built-in tools            | 7 (read, bash, edit, write, grep, find, ls) |
+| Default enabled           | 4 (read, bash, edit, write)                 |
+| Theme color tokens        | 51                                          |
+| Supported API providers   | 17+                                         |
+| Subscription providers    | 5                                           |
+| Tool output truncation    | 50KB / 2000 lines                           |
+| Session format            | JSONL tree v3                               |
+| Compaction keep tokens    | 20000 (default)                             |
+| Compaction reserve tokens | 16384 (default)                             |
+| Retry count               | 3 (default)                                 |
+| Node.js requirement       | >= 20.0.0                                   |

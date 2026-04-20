@@ -1,0 +1,174 @@
+---
+title: "Sessions"
+order: 3
+---
+
+
+## 1. Session Storage
+
+Sessions are stored as JSONL (JSON Lines) files using a tree structure. Each entry has an `id` and
+`parentId`, supporting in-place branching.
+
+### File Location
+
+```
+~/.pi/agent/sessions/--<path>--/<timestamp>_<uuid>.jsonl
+```
+
+`<path>` is the working directory with `/` replaced by `-`.
+
+### Session Versions
+
+- **v1**: Linear sequence (legacy, auto-migrated)
+- **v2**: Tree structure with id/parentId
+- **v3**: Current version, `hookMessage` renamed to `custom`
+
+### Management Commands
+
+```bash
+pi -c                  # Continue most recent session
+pi -r                  # Browse and select from session history
+pi --no-session        # Ephemeral mode (not saved)
+pi --session <path>    # Use specific session file or ID
+```
+
+## 2. Entry Types
+
+### SessionHeader (first line, not part of tree)
+
+```json
+{
+  "type": "session",
+  "version": 3,
+  "id": "uuid",
+  "timestamp": "...",
+  "cwd": "/path"
+}
+```
+
+### SessionMessageEntry (conversation messages)
+
+Contains an `AgentMessage`, types include:
+
+- `UserMessage` — User message
+- `AssistantMessage` — Assistant reply (with text/thinking/toolCall content blocks)
+- `ToolResultMessage` — Tool execution result
+- `BashExecutionMessage` — User `!` command execution result
+- `CustomMessage` — Extension-injected message (participates in LLM context)
+- `BranchSummaryMessage` — Branch summary
+- `CompactionSummaryMessage` — Compaction summary
+
+### ModelChangeEntry — Model switch record
+
+### ThinkingLevelChangeEntry — Thinking level change record
+
+### CompactionEntry — Context compaction record
+
+### BranchSummaryEntry — Branch switch summary
+
+### CustomEntry — Extension state persistence (not in LLM context)
+
+### CustomMessageEntry — Extension message (participates in LLM context)
+
+### LabelEntry — Bookmark/label
+
+### SessionInfoEntry — Session metadata (display name, etc.)
+
+## 3. Tree Structure & Branching
+
+```
+[user msg] ─── [assistant] ─── [user msg] ─── [assistant] ─┬─ [user msg] ← current leaf
+                                                            │
+                                                            └─ [branch_summary] ─── [user msg] ← alternate branch
+```
+
+### /tree — In-Place Navigation
+
+Switch branches within the same file, optionally generating summaries.
+
+| Key    | Action                     |
+| ------ | -------------------------- |
+| ↑/↓    | Navigate (depth-first)     |
+| Enter  | Select node                |
+| Escape | Cancel                     |
+| Ctrl+U | Toggle: user messages only |
+| Ctrl+O | Toggle: show all           |
+
+Selection behavior:
+
+- Select a user message → leaf set to its parent, message text placed in editor
+- Select a non-user message → leaf set to selected node, editor empty
+- Select root user message → leaf reset to null, start from beginning
+
+### /fork — Create New Session File
+
+Extract the current branch path into a new file.
+
+| Feature | /fork                  | /tree                        |
+| ------- | ---------------------- | ---------------------------- |
+| View    | Flat user message list | Full tree structure          |
+| Action  | Extract to new file    | Switch leaf within same file |
+| Summary | None                   | Optional                     |
+
+## 4. Context Compaction
+
+### Trigger Condition
+
+```
+contextTokens > contextWindow - reserveTokens (default 16384)
+```
+
+Or manually: `/compact [instructions]`
+
+### Workflow
+
+1. Walk backward from latest message, accumulate tokens up to `keepRecentTokens` (default 20000)
+2. Collect messages that need summarization
+3. Call LLM to generate structured summary
+4. Append CompactionEntry
+5. Session reloads using summary + messages after firstKeptEntryId
+
+### Summary Format
+
+```markdown
+## Goal
+
+[User's goal]
+
+## Constraints & Preferences
+
+- [User requirements]
+
+## Progress
+
+### Done / In Progress / Blocked
+
+## Key Decisions
+
+## Next Steps
+
+## Critical Context
+
+<read-files>...</read-files> <modified-files>...</modified-files>
+```
+
+### Configuration
+
+```json
+{
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 16384,
+    "keepRecentTokens": 20000
+  }
+}
+```
+
+## 5. Branch Summarization
+
+When switching branches via `/tree`, you can optionally summarize the abandoned branch.
+
+Flow: find common ancestor → collect entries from old leaf to ancestor → LLM generates summary →
+append BranchSummaryEntry.
+
+File operation tracking accumulates across multiple compaction/branch summary cycles.

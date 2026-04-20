@@ -1,0 +1,135 @@
+---
+title: "Overview"
+order: 1
+---
+
+
+## 1. Project Overview
+
+- **Name**: `@mariozechner/pi-coding-agent`
+- **Version**: 0.52.12
+- **Author**: Mario Zechner
+- **License**: MIT
+- **Repository**: https://github.com/badlogic/pi-mono (packages/coding-agent)
+- **Website**: https://shittycodingagent.ai / https://pi.dev
+- **Node requirement**: >= 20.0.0
+
+### Positioning
+
+Pi is a **minimalist terminal coding agent harness**. Core philosophy: "adapts to your workflow, not
+the other way around." Extends via TypeScript Extensions, Skills, Prompt Templates, and Themes — no
+need to fork or modify internals.
+
+### Design Philosophy
+
+- **No MCP** — Use Skills or Extensions instead
+- **No Sub-agents** — Use Extensions to build or install third-party packages
+- **No Permission Popups** — Use Extensions to build confirmation flows
+- **No Plan Mode** — Use Extensions to build
+- **No Built-in Todos** — Use TODO.md files
+- **No Background Bash** — Use tmux
+
+### Package Architecture
+
+```
+@mariozechner/pi-ai          → LLM provider abstraction layer
+@mariozechner/pi-agent-core  → Agent loop and message types
+@mariozechner/pi-tui         → Terminal UI component library
+@mariozechner/pi-coding-agent → CLI and interactive mode (main package)
+```
+
+## 2. Installation & Setup
+
+```bash
+npm install -g @mariozechner/pi-coding-agent
+```
+
+### Authentication
+
+**API Key:**
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+pi
+```
+
+**Subscription OAuth:**
+
+```bash
+pi
+/login  # Select provider
+```
+
+### Run Modes
+
+| Mode        | Launch                    | Use Case                                        |
+| ----------- | ------------------------- | ----------------------------------------------- |
+| Interactive | `pi` (default)            | Full TUI interaction                            |
+| Print       | `pi -p "prompt"`          | Single output, then exit                        |
+| JSON        | `pi --mode json "prompt"` | JSON Lines event stream                         |
+| RPC         | `pi --mode rpc`           | stdin/stdout JSON protocol, embed in other apps |
+| SDK         | TypeScript import         | Programmatic embedding                          |
+
+## 3. Built-in Tools
+
+Default 4 tools: `read`, `bash`, `edit`, `write`
+
+Optional tools: `grep`, `find`, `ls`
+
+```bash
+pi --tools read,bash,edit,write    # Default
+pi --tools read,grep,find,ls       # Read-only mode
+pi --no-tools                      # Disable all built-in tools
+```
+
+## 4. Supported Providers
+
+### Subscription (OAuth /login)
+
+| Provider                 | Description                 |
+| ------------------------ | --------------------------- |
+| Anthropic Claude Pro/Max | Claude series               |
+| OpenAI ChatGPT Plus/Pro  | GPT + Codex                 |
+| GitHub Copilot           | VS Code integration         |
+| Google Gemini CLI        | Cloud Code Assist           |
+| Google Antigravity       | Gemini 3 + Claude + GPT-OSS |
+
+### API Key
+
+| Provider          | Environment Variable                |
+| ----------------- | ----------------------------------- |
+| Anthropic         | `ANTHROPIC_API_KEY`                 |
+| OpenAI            | `OPENAI_API_KEY`                    |
+| Azure OpenAI      | `AZURE_OPENAI_API_KEY`              |
+| Google Gemini     | `GEMINI_API_KEY`                    |
+| Google Vertex     | Application Default Credentials     |
+| Amazon Bedrock    | `AWS_PROFILE` / `AWS_ACCESS_KEY_ID` |
+| Mistral           | `MISTRAL_API_KEY`                   |
+| Groq              | `GROQ_API_KEY`                      |
+| Cerebras          | `CEREBRAS_API_KEY`                  |
+| xAI               | `XAI_API_KEY`                       |
+| OpenRouter        | `OPENROUTER_API_KEY`                |
+| Vercel AI Gateway | `AI_GATEWAY_API_KEY`                |
+| ZAI               | `ZAI_API_KEY`                       |
+| OpenCode Zen      | `OPENCODE_API_KEY`                  |
+| Hugging Face      | `HF_TOKEN`                          |
+| Kimi For Coding   | `KIMI_API_KEY`                      |
+| MiniMax           | `MINIMAX_API_KEY`                   |
+
+### Custom Providers
+
+- **models.json**: `~/.pi/agent/models.json` for Ollama/vLLM/LM Studio etc.
+- **Extensions**: Use `pi.registerProvider()` for custom API/OAuth
+
+### API Key Resolution Priority
+
+1. CLI `--api-key`
+2. `auth.json` (API key or OAuth token)
+3. Environment variables
+4. `models.json` custom key
+
+### auth.json Key Formats
+
+- Shell command: `"!security find-generic-password -ws 'anthropic'"`
+- Environment variable name: `"MY_ANTHROPIC_KEY"`
+- Literal value: `"sk-ant-..."`
