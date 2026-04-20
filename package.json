@@ -9,7 +9,7 @@
       "./packages/extensions/extensions/watchdog.ts",
       "./packages/extensions/extensions/auto-session-name.ts",
       "./packages/extensions/extensions/auto-update.ts",
-      "./packages/extensions/extensions/bg-process.ts",
+      "./packages/background-tasks/index.ts",
       "./packages/extensions/extensions/btw.ts",
       "./packages/extensions/extensions/compact-header.ts",
       "./packages/extensions/extensions/custom-footer.ts",
