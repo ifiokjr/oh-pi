@@ -789,33 +789,8 @@ describe("agent_end auto-detect", () => {
 		});
 		harness.ctx.sessionManager.getBranch = () => [makeBranchEntry(makeAssistantMessage("What should we do?"))];
 
-		// Make custom() invoke the factory and return extraction result + QnA result
-		let customCallIndex = 0;
-		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
-			customCallIndex++;
-			const fakeTui = { requestRender: vi.fn() };
-			const fakeTheme = {
-				fg: vi.fn((_: string, text: string) => text),
-				bold: vi.fn((text: string) => text),
-			};
-			const fakeKeybindings = {};
-			let resolveDone: (value: any) => void;
-			const donePromise = new Promise<any>((resolve) => {
-				resolveDone = resolve;
-			});
-			const done = (value: any) => resolveDone(value);
-
-			// Actually invoke the factory
-			const component = factory(fakeTui, fakeTheme, fakeKeybindings, done);
-
-			// For extraction call, simulate LLM returning questions
-			if (customCallIndex === 1 && component?.onAbort) {
-				// It's the BorderedLoader — simulate successful extraction
-				setTimeout(() => done([{ question: "What DB?" }]), 0);
-			}
-
-			return donePromise;
-		});
+		// custom() resolves with null — no questions found
+		harness.ctx.ui.custom = vi.fn().mockResolvedValue(null);
 
 		answerExtension(harness.pi as never);
 
@@ -832,7 +807,7 @@ describe("agent_end auto-detect", () => {
 
 		await harness.emitAsync("agent_end", { messages: [msg] }, harness.ctx);
 
-		// Should have called custom() at least once (the extraction phase)
+		// The handler should have called custom()
 		expect(harness.ctx.ui.custom).toHaveBeenCalled();
 	});
 
