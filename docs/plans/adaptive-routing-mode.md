@@ -1,6 +1,8 @@
 # Adaptive Routing Mode Spec
 
 > Goal: let pi operate in a model-agnostic mode where each user prompt is routed to the most appropriate available model and thinking level based on task complexity, task type, user preferences, and remaining provider headroom.
+>
+> Future planning follow-up: `docs/plans/benchmark-informed-adaptive-routing.md`
 
 ## 1. Problem Statement
 

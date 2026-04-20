@@ -147,6 +147,12 @@ Suggested path for a new contributor:
 
 <!-- {/repoContributorReadingPathDocs} -->
 
+## Selected design specs and future plans
+
+- `docs/plans/adaptive-routing-mode.md` — main adaptive-routing spec
+- `docs/plans/subagent-and-colony-adaptive-routing.md` — delegated routing for subagents and ant-colony
+- `docs/plans/benchmark-informed-adaptive-routing.md` — benchmark platform and strategy-routing future plan
+
 ## Value for oh-pi
 
 This documentation provides the knowledge base for oh-pi (one-click pi-coding-agent configuration):
