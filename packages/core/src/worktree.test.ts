@@ -169,7 +169,7 @@ describe("worktree helpers", () => {
 		expect((context as any).worktrees).toBeUndefined();
 	}, 10_000);
 
-	it("caches context and snapshot probes", async () => {
+	it("caches context and snapshot probes", () => {
 		const { repoDir, sharedRoot } = createSandbox();
 
 		expect(getCachedRepoWorktreeContext(repoDir, sharedRoot)).toBeNull();

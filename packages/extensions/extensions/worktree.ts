@@ -549,7 +549,7 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 		return snapshot;
 	}
 
-	function currentStatusText(snapshot: RepoWorktreeContext | null): string | undefined {
+	function _currentStatusText(snapshot: RepoWorktreeContext | null): string | undefined {
 		if (!snapshot) {
 			return undefined;
 		}
@@ -573,7 +573,9 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 		lines.push(`- Repo root: ${context.repoRoot}`);
 		lines.push(`- Current worktree root: ${context.currentWorktreeRoot}`);
 		lines.push(`- Branch: ${context.currentBranch ?? "(detached)"}`);
-		lines.push(`- Kind: ${context.isLinkedWorktree ? formatWorktreeKind(context.current ?? { isMain: false, isManaged: false }) : "main"}`);
+		lines.push(
+			`- Kind: ${context.isLinkedWorktree ? formatWorktreeKind(context.current ?? { isMain: false, isManaged: false }) : "main"}`,
+		);
 		if (context.current?.isManaged && context.current.metadata) {
 			lines.push("- Owned by pi: yes");
 			lines.push(`- Purpose: ${context.current.metadata.purpose}`);
@@ -608,9 +610,13 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 		return lines.join("\n");
 	}
 
-	function formatToolCreateResult(
-		result: { repoRoot: string; worktreePath: string; branch: string; createdBranch: boolean; metadata: ManagedWorktreeMetadata },
-	): string {
+	function formatToolCreateResult(result: {
+		repoRoot: string;
+		worktreePath: string;
+		branch: string;
+		createdBranch: boolean;
+		metadata: ManagedWorktreeMetadata;
+	}): string {
 		const lines = ["# Worktree created"];
 		lines.push(`- Branch: ${result.branch}`);
 		lines.push(`- Path: ${result.worktreePath}`);
@@ -638,6 +644,7 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 			target: Type.Optional(Type.String({ description: "Branch name, path, or worktree id for cleanup" })),
 			baseRef: Type.Optional(Type.String({ description: "Base ref for the new branch (default: HEAD)" })),
 		}),
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: tool handler dispatching to sub-functions
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const { action } = params;
 
@@ -645,10 +652,16 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 				const branch = params.branch?.trim();
 				const purpose = params.purpose?.trim();
 				if (!branch) {
-					return { content: [{ type: "text" as const, text: "Error: branch is required for create action." }], isError: true };
+					return {
+						content: [{ type: "text" as const, text: "Error: branch is required for create action." }],
+						isError: true,
+					};
 				}
 				if (!purpose) {
-					return { content: [{ type: "text" as const, text: "Error: purpose is required for create action." }], isError: true };
+					return {
+						content: [{ type: "text" as const, text: "Error: purpose is required for create action." }],
+						isError: true,
+					};
 				}
 
 				try {
@@ -668,7 +681,15 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 					toolRefreshStatus(ctx);
 					return { content: [{ type: "text" as const, text: formatToolCreateResult(result) }] };
 				} catch (error) {
-					return { content: [{ type: "text" as const, text: `Error creating worktree: ${error instanceof Error ? error.message : String(error)}` }], isError: true };
+					return {
+						content: [
+							{
+								type: "text" as const,
+								text: `Error creating worktree: ${error instanceof Error ? error.message : String(error)}`,
+							},
+						],
+						isError: true,
+					};
 				}
 			}
 
@@ -692,7 +713,15 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 			if (action === "cleanup") {
 				const target = params.target?.trim();
 				if (!target) {
-					return { content: [{ type: "text" as const, text: "Error: target is required for cleanup action. Use a branch name, path, or worktree id." }], isError: true };
+					return {
+						content: [
+							{
+								type: "text" as const,
+								text: "Error: target is required for cleanup action. Use a branch name, path, or worktree id.",
+							},
+						],
+						isError: true,
+					};
 				}
 
 				toolRefreshStatus(ctx);
@@ -706,23 +735,46 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 					const externalMatch = findWorktreeEntry(snapshot, target);
 					if (externalMatch && !externalMatch.isManaged) {
 						return {
-							content: [{ type: "text" as const, text: `Matched external worktree ${externalMatch.path}. pi only cleans pi-owned worktrees by default.` }],
+							content: [
+								{
+									type: "text" as const,
+									text: `Matched external worktree ${externalMatch.path}. pi only cleans pi-owned worktrees by default.`,
+								},
+							],
 							isError: true,
 						};
 					}
-					return { content: [{ type: "text" as const, text: `No pi-owned worktree matched: ${target}` }], isError: true };
+					return {
+						content: [{ type: "text" as const, text: `No pi-owned worktree matched: ${target}` }],
+						isError: true,
+					};
 				}
 
 				const removable = managedTargets.filter((entry) => entry.worktreePath !== snapshot.currentWorktreeRoot);
 				const skipped = managedTargets.filter((entry) => entry.worktreePath === snapshot.currentWorktreeRoot);
 				if (removable.length === 0) {
-					return { content: [{ type: "text" as const, text: "Refusing to clean up the current worktree. Switch to another checkout first." }], isError: true };
+					return {
+						content: [
+							{
+								type: "text" as const,
+								text: "Refusing to clean up the current worktree. Switch to another checkout first.",
+							},
+						],
+						isError: true,
+					};
 				}
 
 				try {
 					const results = removable.map((entry) => removeManagedWorktree(entry));
 					toolRefreshStatus(ctx);
-					const lines = ["# Worktree cleanup", "", `Removed: ${results.length}`, `Skipped current: ${skipped.length}`, "", "## Removed"];
+					const lines = [
+						"# Worktree cleanup",
+						"",
+						`Removed: ${results.length}`,
+						`Skipped current: ${skipped.length}`,
+						"",
+						"## Removed",
+					];
 					for (const result of results) {
 						lines.push(`- ${result.metadata.branch}`);
 						lines.push(`  path: ${result.metadata.worktreePath}`);
@@ -730,21 +782,35 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 					}
 					return { content: [{ type: "text" as const, text: lines.join("\n") }] };
 				} catch (error) {
-					return { content: [{ type: "text" as const, text: `Error cleaning up worktree: ${error instanceof Error ? error.message : String(error)}` }], isError: true };
+					return {
+						content: [
+							{
+								type: "text" as const,
+								text: `Error cleaning up worktree: ${error instanceof Error ? error.message : String(error)}`,
+							},
+						],
+						isError: true,
+					};
 				}
 			}
 
-			return { content: [{ type: "text" as const, text: "Unknown action. Use: create, status, list, or cleanup." }], isError: true };
+			return {
+				content: [{ type: "text" as const, text: "Unknown action. Use: create, status, list, or cleanup." }],
+				isError: true,
+			};
 		},
 
 		renderCall(args, theme) {
 			const action = args.action ?? "?";
-			const detail = action === "create" ? `${args.branch ?? "?"}` : action === "cleanup" ? `${args.target ?? "?"}` : "";
-			return `${theme.fg("toolTitle", theme.bold(`⌥ worktree`))} ${action} ${detail}`;
+			const detail =
+				action === "create" ? `${args.branch ?? "?"}` : action === "cleanup" ? `${args.target ?? "?"}` : "";
+			return `${theme.fg("toolTitle", theme.bold("⌥ worktree"))} ${action} ${detail}`;
 		},
 
 		renderResult(result, _options, theme) {
-			const text = result.content?.find((e): e is { type: "text"; text: string } => typeof e === "object" && e?.type === "text")?.text ?? "";
+			const text =
+				result.content?.find((e): e is { type: "text"; text: string } => typeof e === "object" && e?.type === "text")
+					?.text ?? "";
 			if (result.isError) {
 				return `${theme.fg("error", text)}`;
 			}

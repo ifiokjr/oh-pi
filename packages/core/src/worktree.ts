@@ -151,7 +151,7 @@ function gitOk(cwd: string, args: string[]): boolean {
 	}
 }
 
-function resolveGitPath(cwd: string, value: string): string {
+function _resolveGitPath(cwd: string, value: string): string {
 	return normalizePath(path.resolve(cwd, value));
 }
 
@@ -621,7 +621,7 @@ export function getRepoWorktreeContext(cwd: string, sharedRoot = DEFAULT_WORKTRE
 	}
 }
 
-export async function refreshRepoWorktreeContext(
+export function refreshRepoWorktreeContext(
 	cwd: string,
 	sharedRoot = DEFAULT_WORKTREE_ROOT,
 ): Promise<RepoWorktreeContext | null> {
@@ -661,7 +661,7 @@ export function getRepoWorktreeSnapshot(cwd: string, sharedRoot = DEFAULT_WORKTR
 	}
 }
 
-export async function refreshRepoWorktreeSnapshot(
+export function refreshRepoWorktreeSnapshot(
 	cwd: string,
 	sharedRoot = DEFAULT_WORKTREE_ROOT,
 ): Promise<RepoWorktreeSnapshot | null> {

@@ -1,3 +1,14 @@
+export type {
+	CreateManagedWorktreeOptions,
+	CreateManagedWorktreeResult,
+	GitWorktreeEntry,
+	ManagedWorktreeMetadata,
+	ManagedWorktreeOwner,
+	RemoveManagedWorktreeResult,
+	RepoWorktreeContext,
+	RepoWorktreeSnapshot,
+	WorktreeRegistry,
+} from "@ifi/oh-pi-core";
 export {
 	buildPaiInstanceId,
 	clearRepoWorktreeSnapshotCache,
@@ -19,15 +30,4 @@ export {
 	removeManagedWorktree,
 	saveWorktreeRegistry,
 	touchManagedWorktreeSeen,
-} from "@ifi/oh-pi-core";
-export type {
-	CreateManagedWorktreeOptions,
-	CreateManagedWorktreeResult,
-	GitWorktreeEntry,
-	ManagedWorktreeMetadata,
-	ManagedWorktreeOwner,
-	RemoveManagedWorktreeResult,
-	RepoWorktreeContext,
-	RepoWorktreeSnapshot,
-	WorktreeRegistry,
 } from "@ifi/oh-pi-core";
