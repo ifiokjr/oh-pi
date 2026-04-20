@@ -29,6 +29,10 @@ const coverageExclude = [
 	"packages/analytics-db/src/index.ts",
 	"packages/analytics-db/src/migrations.ts",
 	"packages/analytics-extension/index.ts",
+	// Docs site — no tests needed for a static documentation site
+	"packages/docs/vite.config.ts",
+	"packages/docs/src/**/*.tsx",
+	"packages/docs/src/**/*.ts",
 ];
 
 export default defineConfig({
