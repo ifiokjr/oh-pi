@@ -5,6 +5,7 @@ Core first-party extensions for pi.
 ## Included extensions
 
 This package includes extensions such as:
+- answer / /answer:auto
 - git-guard
 - auto-session-name
 - custom-footer
@@ -42,6 +43,15 @@ external-editor integration, git worktree awareness, and runtime performance pro
 also gets `/bg`, `Ctrl+Shift+B`, and the `bg_task` tool.
 
 `git-guard` also blocks git bash invocations that are likely to open an interactive editor in agent environments (for example `git rebase --continue` without non-interactive editor overrides), preventing hangs before they happen.
+
+## Answer
+
+The `answer` extension extracts questions from the last LLM response and presents them in an interactive Q&A overlay powered by `@ifi/pi-shared-qna`.
+
+- `/answer` — scan the last assistant message for questions, then show a Q&A overlay to fill in answers
+- `/answer:auto` — toggle auto-detection: when enabled, questions in the final LLM response automatically trigger the Q&A overlay
+
+Answers are injected back into the session as a follow-up user message. The extension uses an LLM call to extract structured questions (with optional multiple-choice options) from the response text, then renders them with the same QnA TUI component used by plan mode's `request_user_input` tool.
 
 ## External editor
 
