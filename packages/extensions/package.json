@@ -10,7 +10,6 @@
       "./extensions/watchdog.ts",
       "./extensions/auto-session-name.ts",
       "./extensions/auto-update.ts",
-      "./extensions/bg-process.ts",
       "./extensions/btw.ts",
       "./extensions/compact-header.ts",
       "./extensions/custom-footer.ts",
