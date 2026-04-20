@@ -199,4 +199,39 @@ describe("discoverAgentsAll", () => {
 		expect(result.project.map((agent) => agent.name)).toContain("custom-project");
 		expect(result.projectDir).toBe(path.join(projectDir, ".pi", "agents"));
 	});
+
+	it("loads only agents from explicit paths in .pi/settings.json", () => {
+		const homeDir = createTempDir("subagents-explicit-home-");
+		const projectDir = createTempDir("subagents-explicit-project-");
+		process.env.HOME = homeDir;
+		process.env.USERPROFILE = homeDir;
+
+		// Create explicit agents dir
+		const explicitAgentsDir = path.join(projectDir, ".pi", "agents");
+		writeAgentFile(
+			explicitAgentsDir,
+			"explicit-agent.md",
+			"---\nname: explicit-agent\ndescription: From explicit config\n---\n\nExplicit prompt\n",
+		);
+
+		// Also create a "normal" shared project agent (should be ignored)
+		writeAgentFile(
+			getSharedProjectAgentsDir(projectDir),
+			"shared-agent.md",
+			"---\nname: shared-agent\ndescription: From shared store\n---\n\nShared prompt\n",
+		);
+
+		// Write .pi/settings.json with explicit agents array
+		const settingsPath = path.join(projectDir, ".pi", "settings.json");
+		fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+		fs.writeFileSync(settingsPath, JSON.stringify({ agents: [".pi/agents"] }), "utf-8");
+
+		const result = discoverAgents(projectDir, "both");
+		// Should ONLY have the explicit agent, no builtins, no shared
+		const names = result.agents.map((a) => a.name);
+		expect(names).toContain("explicit-agent");
+		expect(names).not.toContain("shared-agent");
+		// No builtins when explicit config is present
+		expect(names).not.toContain("artist");
+	});
 });
