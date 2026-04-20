@@ -359,9 +359,13 @@ export default function answerExtension(pi: ExtensionAPI) {
 		}
 
 		autoAnswerInProgress = true;
-		await runAnswerFlow(ctx, pi, lastAssistantText).finally(() => {
-			autoAnswerInProgress = false;
-		});
+		runAnswerFlow(ctx, pi, lastAssistantText)
+			.then(() => {
+				autoAnswerInProgress = false;
+			})
+			.catch(() => {
+				autoAnswerInProgress = false;
+			});
 	}
 
 	pi.on("agent_end", handleAutoDetect);
