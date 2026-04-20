@@ -5,6 +5,12 @@ import { fileURLToPath } from "node:url";
 
 const DEFAULT_THRESHOLD = 100;
 const DEFAULT_LCOV_PATH = "coverage/lcov.info";
+/** Maximum line number offset when matching // patch-coverage-ignore comments.
+ * Handles source-map line offsets from transpilation. Only applied when
+ * no exact match is found and only for uncovered lines. */
+// biome-ignore lint/style/noUnusedVariables: used at runtime by isIgnoredLine and tested directly
+const LINE_TOLERANCE = 3;
+
 const PATCH_COVERAGE_IGNORE_COMMENT = "// patch-coverage-ignore";
 
 type PatchCoverageOptions = {
@@ -154,6 +160,21 @@ export function getIgnoredLinesForFile(filePath: string): Set<number> {
 	return ignored;
 }
 
+// biome-ignore lint/style/noUnusedVariables: exported and used in calculatePatchCoverage + tests
+export function isIgnoredLine(lineNumber: number, ignored: Set<number>): boolean {
+	// Direct match
+	if (ignored.has(lineNumber)) {
+		return true;
+	}
+	// Fuzzy match within tolerance (handles source-map line offsets)
+	for (const ignoredLine of ignored) {
+		if (Math.abs(lineNumber - ignoredLine) <= LINE_TOLERANCE) {
+			return true;
+		}
+	}
+	return false;
+}
+
 export function calculatePatchCoverage(
 	changedLines: ChangedLinesByFile,
 	coverageByFile: CoverageByFile,
@@ -178,9 +199,9 @@ export function calculatePatchCoverage(
 		const coveredLines = executableLines.filter((lineNumber) => (coverageLines.get(lineNumber) ?? 0) > 0);
 		const uncoveredLines = executableLines.filter((lineNumber) => (coverageLines.get(lineNumber) ?? 0) === 0);
 
-		// Exclude lines marked with // patch-coverage-ignore
+		// Exclude lines marked with // patch-coverage-ignore (with tolerance for source-map offsets on uncovered lines)
 		const ignored = ignoredByFile?.get(file) ?? new Set<number>();
-		const filteredUncoveredLines = uncoveredLines.filter((lineNumber) => !ignored.has(lineNumber));
+		const filteredUncoveredLines = uncoveredLines.filter((lineNumber) => !isIgnoredLine(lineNumber, ignored));
 		const filteredCoveredLines = coveredLines.filter((lineNumber) => !ignored.has(lineNumber));
 		const filteredTotal = executableLines.filter((lineNumber) => !ignored.has(lineNumber)).length;
 

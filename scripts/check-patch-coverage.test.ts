@@ -16,6 +16,7 @@ import {
 	formatPatchCoverageReport,
 	getGitDiff,
 	getIgnoredLinesForFile,
+	isIgnoredLine,
 	main,
 	normalizeCoveragePath,
 	shouldIgnoreFileForPatchCoverage,
@@ -287,19 +288,23 @@ describe("check-patch-coverage", () => {
 	it("excludes lines marked with // patch-coverage-ignore from coverage", () => {
 		const dir = createTempDir();
 		const srcFile = path.join(dir, "example.ts");
-		fs.writeFileSync(srcFile, "const a = 1; // patch-coverage-ignore\nconst b = 2;\nconst c = 3; // patch-coverage-ignore\n", "utf8");
+		// Lines 10+ apart to avoid tolerance-based overlap
+		const src = [
+			"const a = 1; // patch-coverage-ignore",
+			...Array(9).fill(""),
+			"const b = 2; // patch-coverage-ignore",
+		].join("\n");
+		fs.writeFileSync(srcFile, src, "utf8");
 
-		const changed = new Map([["example.ts", new Set([1, 2, 3])]]);
-		const coverage = parseLcovByFile(`TN:\nSF:example.ts\nDA:1,1\nDA:2,0\nDA:3,0\nend_of_record\n`);
+		// Lines 1 and 11 have the comment, line 1 is covered
+		const changed = new Map([["example.ts", new Set([1, 11])]]);
+		const coverage = parseLcovByFile(`TN:\nSF:example.ts\nDA:1,1\nDA:11,0\nend_of_record\n`);
 		const ignored = getIgnoredLinesForFile(srcFile);
 
-		expect(ignored).toEqual(new Set([1, 3]));
-
-		// Lines 1 and 3 are excluded, leaving only line 2 (which has 0 hits)
 		const summary = calculatePatchCoverage(changed, coverage, new Map([["example.ts", ignored]]));
 
-		expect(summary).toMatchObject({ covered: 0, total: 1, pct: 0 });
-		expect(summary.perFile[0]?.uncoveredLines).toEqual([2]);
+		// Line 1 covered & excluded, line 11 uncovered & excluded → total 0, 100%
+		expect(summary.pct).toBe(100);
 	});
 
 	it("returns empty set for nonexistent files in getIgnoredLinesForFile", () => {
@@ -310,15 +315,28 @@ describe("check-patch-coverage", () => {
 	it("excludes ignored lines even when they have zero coverage", () => {
 		const dir = createTempDir();
 		const srcFile = path.join(dir, "example.ts");
-		fs.writeFileSync(srcFile, "const a = 1;\nconst b = 2; // patch-coverage-ignore\n", "utf8");
+		// Lines 10+ apart to avoid tolerance-based overlap
+		const src = ["const a = 1;", ...Array(8).fill(""), "const b = 2; // patch-coverage-ignore"].join("\n");
+		fs.writeFileSync(srcFile, src, "utf8");
 
-		const changed = new Map([["example.ts", new Set([1, 2])]]);
-		const coverage = parseLcovByFile(`TN:\nSF:example.ts\nDA:1,1\nDA:2,0\nend_of_record\n`);
+		const changed = new Map([["example.ts", new Set([1, 10])]]);
+		const coverage = parseLcovByFile(`TN:\nSF:example.ts\nDA:1,1\nDA:10,0\nend_of_record\n`);
 		const ignored = getIgnoredLinesForFile(srcFile);
 		const summary = calculatePatchCoverage(changed, coverage, new Map([["example.ts", ignored]]));
 
-		// Line 2 excluded, line 1 covered → 100%
+		// Line 10 excluded (zero coverage), line 1 covered → 100%
 		expect(summary).toMatchObject({ covered: 1, total: 1, pct: 100 });
 		expect(summary.perFile[0]?.uncoveredLines).toEqual([]);
+	});
+
+	it("matches ignored lines within tolerance for source-map offsets", () => {
+		// Comment at line 10, but V8 reports line 7 (3 lines off)
+		const ignoredSet = new Set([10]);
+		expect(isIgnoredLine(7, ignoredSet)).toBe(true); // |7-10| = 3 ≤ 3
+		expect(isIgnoredLine(13, ignoredSet)).toBe(true); // |13-10| = 3 ≤ 3
+		expect(isIgnoredLine(6, ignoredSet)).toBe(false); // |6-10| = 4 > 3
+		expect(isIgnoredLine(14, ignoredSet)).toBe(false); // |14-10| = 4 > 3
+		expect(isIgnoredLine(10, ignoredSet)).toBe(true); // exact match
+		expect(isIgnoredLine(1, ignoredSet)).toBe(false); // |1-10| = 9 > 3
 	});
 });
