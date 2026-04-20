@@ -789,8 +789,11 @@ describe("agent_end auto-detect", () => {
 		});
 		harness.ctx.sessionManager.getBranch = () => [makeBranchEntry(makeAssistantMessage("What should we do?"))];
 
-		// custom() resolves with null — no questions found
-		harness.ctx.ui.custom = vi.fn().mockResolvedValue(null);
+		let customCallCount = 0;
+		harness.ctx.ui.custom = vi.fn().mockImplementation(() => {
+			customCallCount++;
+			return Promise.resolve(null);
+		});
 
 		answerExtension(harness.pi as never);
 
@@ -807,8 +810,10 @@ describe("agent_end auto-detect", () => {
 
 		await harness.emitAsync("agent_end", { messages: [msg] }, harness.ctx);
 
-		// The handler should have called custom()
-		expect(harness.ctx.ui.custom).toHaveBeenCalled();
+		// Allow microtasks to fully drain
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		expect(customCallCount).toBeGreaterThanOrEqual(1);
 	});
 
 	it("skips when assistant message has non-stop stopReason", async () => {
