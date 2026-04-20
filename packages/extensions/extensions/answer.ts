@@ -374,7 +374,9 @@ export default function answerExtension(pi: ExtensionAPI) {
 			return;
 		}
 
-		await runAutoDetectFlow(ctx, pi, lastAssistantText, inProgressRef);
+		runAutoDetectFlow(ctx, pi, lastAssistantText, inProgressRef).catch(() => {
+			// Error already handled inside runAnswerFlow
+		});
 	}
 
 	pi.on("agent_end", handleAutoDetect);
