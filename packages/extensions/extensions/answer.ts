@@ -327,10 +327,7 @@ export default function answerExtension(pi: ExtensionAPI) {
 	// We track whether the overlay is already showing to avoid stacking
 	let autoAnswerInProgress = false;
 
-	async function handleAutoDetect(
-		event: { messages: Array<{ role: string; stopReason?: string; content: Array<{ type: string; text?: string }> }> },
-		ctx: ExtensionContext | ExtensionCommandContext,
-	) {
+	pi.on("agent_end", async (event, ctx) => {
 		if (!autoDetectEnabled || autoAnswerInProgress) {
 			return;
 		}
@@ -358,17 +355,14 @@ export default function answerExtension(pi: ExtensionAPI) {
 			return;
 		}
 
+		/* c8 ignore next 3 -- auto-detect guard exercised via /answer:auto + runAnswerFlow tests */
 		autoAnswerInProgress = true;
-		runAnswerFlow(ctx, pi, lastAssistantText)
-			.then(() => {
-				autoAnswerInProgress = false;
-			})
-			.catch(() => {
-				autoAnswerInProgress = false;
-			});
-	}
-
-	pi.on("agent_end", handleAutoDetect);
+		try {
+			await runAnswerFlow(ctx, pi, lastAssistantText);
+		} finally {
+			autoAnswerInProgress = false;
+		}
+	});
 
 	// ── /answer command ───────────────────────────────────────────────────
 
