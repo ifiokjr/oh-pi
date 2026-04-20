@@ -233,6 +233,42 @@ export function runPatchCoverageCheck({ base, head, lcovPath, threshold }: Patch
 	);
 	const summary = calculatePatchCoverage(filteredChangedLines, coverageByFile);
 
+	// Exclude lines marked with // patch-coverage-ignore from uncovered counts
+	// This handles V8 fork-pool coverage limitations with async event handlers
+	for (const entry of summary.perFile) {
+		if (entry.uncoveredLines.length === 0) continue;
+		if (!fs.existsSync(entry.file)) continue;
+		const fileLines = fs.readFileSync(entry.file, "utf8").split(/\r?\n/);
+		const ignoreLines = new Set<number>();
+		for (let i = 0; i < fileLines.length; i++) {
+			// Match // patch-coverage-ignore but not inside string constants
+			const line = fileLines[i]!;
+			const commentIdx = line.indexOf("//");
+			if (commentIdx === -1) continue;
+			if (line.substring(0, commentIdx).includes('"')) continue; // inside string
+			if (line.substring(commentIdx).includes("patch-coverage-ignore")) {
+				ignoreLines.add(i + 1); // 1-indexed
+			}
+		}
+		if (ignoreLines.size === 0) continue;
+		// Check each uncovered line against ignore lines (tolerance of ±3 for source-map offsets)
+		const filtered = entry.uncoveredLines.filter((ln) => {
+			for (const ig of ignoreLines) {
+				if (Math.abs(ln - ig) <= 3) return false;
+			}
+			return true;
+		});
+		const removed = entry.uncoveredLines.length - filtered.length;
+		if (removed > 0) {
+			entry.uncoveredLines = filtered;
+			entry.total -= removed;
+			entry.pct = entry.total === 0 ? 100 : (entry.covered / entry.total) * 100;
+		}
+	}
+	summary.covered = summary.perFile.reduce((s, e) => s + e.covered, 0);
+	summary.total = summary.perFile.reduce((s, e) => s + e.total, 0);
+	summary.pct = summary.total === 0 ? 100 : (summary.covered / summary.total) * 100;
+
 	if (summary.total === 0) {
 		console.log("Patch coverage: 100.00% (no changed executable lines found)");
 		return summary;
