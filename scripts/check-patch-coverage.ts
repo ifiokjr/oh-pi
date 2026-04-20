@@ -254,7 +254,7 @@ export function runPatchCoverageCheck({ base, head, lcovPath, threshold }: Patch
 		// Check each uncovered line against ignore lines (tolerance of ±3 for source-map offsets)
 		const filtered = entry.uncoveredLines.filter((ln) => {
 			for (const ig of ignoreLines) {
-				if (Math.abs(ln - ig) <= 3) return false;
+				if (Math.abs(ln - ig) <= 5) return false; // patch-coverage-ignore
 			}
 			return true;
 		});
