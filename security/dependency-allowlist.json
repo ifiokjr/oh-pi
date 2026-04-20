@@ -2,6 +2,7 @@
 	"policyVersion": 1,
 	"description": "Approved external direct dependencies. Additions require manual review for maintenance quality, security posture, and project fit.",
 	"packages": [
+		"@mdx-js/rollup",
 		"@biomejs/biome",
 		"@bufbuild/protobuf",
 		"@clack/prompts",
@@ -48,7 +49,9 @@
 		"@playwright/test",
 		"postcss",
 		"react",
+		"react-router",
 		"react-dom",
+		"remark-gfm",
 		"recharts",
 		"tailwind-merge",
 		"tailwindcss",

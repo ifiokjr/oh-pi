@@ -15,7 +15,7 @@ one place that answers:
 - which content packs ship in the repo
 - which packages are mainly contributor-facing libraries
 
-<!-- {=repoStartHerePathDocs} -->
+{/* MDT: {repoStartHerePathDocs} */}
 
 Use this reading path depending on what you are trying to do:
 
@@ -24,11 +24,11 @@ Use this reading path depending on what you are trying to do:
 - **I want to contribute** → read `CONTRIBUTING.md`, then the package README for the area you are changing
 - **I want to understand ownership** → use `docs/feature-catalog.md` to see which package owns which runtime feature, content pack, or library surface
 
-<!-- {/repoStartHerePathDocs} -->
+{/* MDT: {/repoStartHerePathDocs} */}
 
 ### Architecture at a glance
 
-<!-- {=repoArchitectureAtAGlanceDocs} -->
+{/* MDT: {repoArchitectureAtAGlanceDocs} */}
 
 ```text
 oh-pi repo
@@ -61,9 +61,9 @@ oh-pi repo
     └── web-server
 ```
 
-<!-- {/repoArchitectureAtAGlanceDocs} -->
+{/* MDT: {/repoArchitectureAtAGlanceDocs} */}
 
-<!-- {=repoContributorReadingPathDocs} -->
+{/* MDT: {repoContributorReadingPathDocs} */}
 
 Suggested path for a new contributor:
 
@@ -73,13 +73,13 @@ Suggested path for a new contributor:
 4. restart `pi` and exercise the feature in a real session
 5. open the package README for the area you are changing, then run the relevant build/test commands
 
-<!-- {/repoContributorReadingPathDocs} -->
+{/* MDT: {/repoContributorReadingPathDocs} */}
 
 ## Install tiers at a glance
 
 ### Installed by `npx @ifi/oh-pi`
 
-<!-- {=repoDefaultInstallerPackagesDocs} -->
+{/* MDT: {repoDefaultInstallerPackagesDocs} */}
 
 Default runtime/content packages installed by `npx @ifi/oh-pi`:
 
@@ -95,11 +95,11 @@ Default runtime/content packages installed by `npx @ifi/oh-pi`:
 - `@ifi/oh-pi-prompts`
 - `@ifi/oh-pi-skills`
 
-<!-- {/repoDefaultInstallerPackagesDocs} -->
+{/* MDT: {/repoDefaultInstallerPackagesDocs} */}
 
 ### Opt-in packages
 
-<!-- {=repoExperimentalPackagesDocs} -->
+{/* MDT: {repoExperimentalPackagesDocs} */}
 
 Opt-in packages that stay separate from the default installer bundle:
 
@@ -108,20 +108,20 @@ Opt-in packages that stay separate from the default installer bundle:
 - `@ifi/pi-provider-cursor`
 - `@ifi/pi-provider-ollama`
 
-<!-- {/repoExperimentalPackagesDocs} -->
+{/* MDT: {/repoExperimentalPackagesDocs} */}
 
 ### Contributor-facing/internal packages
 
 These are important parts of the codebase, but they are primarily consumed by other packages or by
 people extending oh-pi:
 
-<!-- {=repoContributorCompiledPackagesDocs} -->
+{/* MDT: {repoContributorCompiledPackagesDocs} */}
 
 Most runtime packages in this repo ship raw TypeScript and can be loaded directly by pi. A smaller
 set of contributor-facing packages (`core`, `cli`, `web-client`, `web-server`) emit `dist/` output,
 so build those when you are working on them directly.
 
-<!-- {/repoContributorCompiledPackagesDocs} -->
+{/* MDT: {/repoContributorCompiledPackagesDocs} */}
 
 - [`@ifi/oh-pi-cli`](../packages/cli)
 - [`@ifi/oh-pi-core`](../packages/core)
