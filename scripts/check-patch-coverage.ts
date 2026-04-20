@@ -5,13 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const DEFAULT_THRESHOLD = 100;
 const DEFAULT_LCOV_PATH = "coverage/lcov.info";
-
-/** Lines to exclude from patch coverage, keyed by normalized file path.
- * These are lines that V8's fork-pool coverage cannot reliably track
- * despite being exercised by tests. */
-export const PATCH_COVERAGE_EXCLUSIONS: Record<string, Set<number>> = {
-	"packages/extensions/extensions/answer.ts": new Set([358, 360]),
-};
+const PATCH_COVERAGE_IGNORE_COMMENT = "// patch-coverage-ignore";
 
 type PatchCoverageOptions = {
 	threshold: number;
@@ -144,9 +138,26 @@ export function parseChangedLinesFromDiff(diffText: string): ChangedLinesByFile 
 	return changedLines;
 }
 
+/** Read source file and find lines containing the patch-coverage-ignore comment. */
+export function getIgnoredLinesForFile(filePath: string): Set<number> {
+	if (!fs.existsSync(filePath)) {
+		return new Set();
+	}
+	const source = fs.readFileSync(filePath, "utf8");
+	const lines = source.split(/\r?\n/);
+	const ignored = new Set<number>();
+	for (let i = 0; i < lines.length; i++) {
+		if (lines[i]!.includes(PATCH_COVERAGE_IGNORE_COMMENT)) {
+			ignored.add(i + 1); // 1-indexed line numbers
+		}
+	}
+	return ignored;
+}
+
 export function calculatePatchCoverage(
 	changedLines: ChangedLinesByFile,
 	coverageByFile: CoverageByFile,
+	ignoredByFile?: Map<string, Set<number>>,
 ): PatchCoverageSummary {
 	const perFile: PatchCoverageFileSummary[] = [];
 	let covered = 0;
@@ -167,17 +178,11 @@ export function calculatePatchCoverage(
 		const coveredLines = executableLines.filter((lineNumber) => (coverageLines.get(lineNumber) ?? 0) > 0);
 		const uncoveredLines = executableLines.filter((lineNumber) => (coverageLines.get(lineNumber) ?? 0) === 0);
 
-		// Exclude known V8 coverage gaps from the patch coverage check
-		const exclusions = PATCH_COVERAGE_EXCLUSIONS[file];
-		const filteredUncoveredLines = exclusions
-			? uncoveredLines.filter((lineNumber) => !exclusions.has(lineNumber))
-			: uncoveredLines;
-		const filteredCoveredLines = exclusions
-			? coveredLines.filter((lineNumber) => !exclusions.has(lineNumber))
-			: coveredLines;
-		const filteredTotal = exclusions
-			? executableLines.filter((lineNumber) => !exclusions.has(lineNumber)).length
-			: executableLines.length;
+		// Exclude lines marked with // patch-coverage-ignore
+		const ignored = ignoredByFile?.get(file) ?? new Set<number>();
+		const filteredUncoveredLines = uncoveredLines.filter((lineNumber) => !ignored.has(lineNumber));
+		const filteredCoveredLines = coveredLines.filter((lineNumber) => !ignored.has(lineNumber));
+		const filteredTotal = executableLines.filter((lineNumber) => !ignored.has(lineNumber)).length;
 
 		covered += filteredCoveredLines.length;
 		total += filteredTotal;
@@ -251,7 +256,17 @@ export function runPatchCoverageCheck({ base, head, lcovPath, threshold }: Patch
 	const filteredChangedLines = new Map(
 		[...changedLines.entries()].filter(([file]) => !shouldIgnoreFileForPatchCoverage(file)),
 	);
-	const summary = calculatePatchCoverage(filteredChangedLines, coverageByFile);
+
+	// Build the ignored-lines map from // patch-coverage-ignore comments in source files
+	const ignoredByFile = new Map<string, Set<number>>();
+	for (const file of filteredChangedLines.keys()) {
+		const ignored = getIgnoredLinesForFile(file);
+		if (ignored.size > 0) {
+			ignoredByFile.set(file, ignored);
+		}
+	}
+
+	const summary = calculatePatchCoverage(filteredChangedLines, coverageByFile, ignoredByFile);
 
 	if (summary.total === 0) {
 		console.log("Patch coverage: 100.00% (no changed executable lines found)");
