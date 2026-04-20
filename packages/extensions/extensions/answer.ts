@@ -355,7 +355,6 @@ export default function answerExtension(pi: ExtensionAPI) {
 			return;
 		}
 
-		/* c8 ignore next 3 -- auto-detect guard exercised via /answer:auto + runAnswerFlow tests */
 		autoAnswerInProgress = true;
 		try {
 			await runAnswerFlow(ctx, pi, lastAssistantText);
