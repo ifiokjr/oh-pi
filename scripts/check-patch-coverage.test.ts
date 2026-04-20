@@ -282,4 +282,22 @@ describe("check-patch-coverage", () => {
 			pct: 100,
 		});
 	});
+
+	it("excludes lines marked with // patch-coverage-ignore from uncovered counts", () => {
+		const dir = createTempDir();
+		const lcovPath = path.join(dir, "lcov.info");
+		const srcFile = path.join(dir, "example.ts");
+		// Write a source file with // patch-coverage-ignore on some lines
+		fs.writeFileSync(srcFile, "const a = 1;\nconst b = 2; // patch-coverage-ignore\nconst c = 3;\n", "utf8");
+		fs.writeFileSync(lcovPath, `TN:\nSF:${srcFile}\nDA:1,1\nDA:2,0\nDA:3,0\nend_of_record\n`, "utf8");
+		childProcessMocks.execFileSync.mockReturnValueOnce(
+			`diff --git a/${srcFile} b/${srcFile}\n+++ b/${srcFile}\n@@ -1,0 +1,3 @@\n+const a = 1;\n+const b = 2;\n+const c = 3;\n`,
+		);
+
+		const summary = runPatchCoverageCheck({ base: "base", head: "head", lcovPath, threshold: 100 });
+
+		// Line 2 (0 coverage) should be excluded due to // patch-coverage-ignore
+		expect(summary.perFile[0]?.uncoveredLines).not.toContain(2);
+		expect(summary.pct).toBe(100);
+	});
 });

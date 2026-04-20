@@ -374,7 +374,8 @@ export default function answerExtension(pi: ExtensionAPI) {
 			return;
 		}
 
-		runAutoDetectFlow(ctx, pi, lastAssistantText, inProgressRef).catch(() => { // patch-coverage-ignore
+		runAutoDetectFlow(ctx, pi, lastAssistantText, inProgressRef).catch(() => {
+			// patch-coverage-ignore
 			// Error already handled inside runAnswerFlow
 		});
 	}
