@@ -5,14 +5,20 @@ import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
 	buildPaiInstanceId,
+	clearRepoWorktreeSnapshotCache,
 	createManagedWorktree,
 	createOwnerMetadata,
 	formatOwnerLabel,
 	formatWorktreeKind,
+	getCachedRepoWorktreeContext,
+	getCachedRepoWorktreeSnapshot,
 	getManagedWorktreeParentDir,
+	getRepoWorktreeContext,
 	getRepoWorktreeSnapshot,
 	getWorktreeRegistryPath,
 	loadWorktreeRegistry,
+	refreshRepoWorktreeContext,
+	refreshRepoWorktreeSnapshot,
 	removeManagedWorktree,
 	touchManagedWorktreeSeen,
 } from "./worktree.js";
@@ -49,6 +55,7 @@ function createSandbox() {
 }
 
 afterEach(() => {
+	clearRepoWorktreeSnapshotCache();
 	for (const tempRoot of tempRoots.splice(0)) {
 		fs.rmSync(tempRoot, { recursive: true, force: true });
 	}
@@ -147,6 +154,53 @@ describe("worktree helpers", () => {
 		expect(fs.existsSync(result.worktreePath)).toBe(false);
 		expect(loadWorktreeRegistry(normalizedRepoDir, sharedRoot).managedWorktrees).toEqual([]);
 	}, 20_000);
+
+	it("reads lightweight context probe without git worktree list", () => {
+		const { repoDir, sharedRoot } = createSandbox();
+		const normalizedRepoDir = fs.realpathSync.native(repoDir);
+
+		const context = getRepoWorktreeContext(repoDir, sharedRoot);
+		expect(context).not.toBeNull();
+		expect(context!.repoRoot).toBe(normalizedRepoDir);
+		expect(context!.isLinkedWorktree).toBe(false);
+		expect(context!.currentBranch).toBe("main");
+		expect(context!.current?.isMain).toBe(true);
+		// Context does not include the worktrees array
+		expect((context as any).worktrees).toBeUndefined();
+	}, 10_000);
+
+	it("caches context and snapshot probes", async () => {
+		const { repoDir, sharedRoot } = createSandbox();
+
+		expect(getCachedRepoWorktreeContext(repoDir, sharedRoot)).toBeNull();
+		expect(getCachedRepoWorktreeSnapshot(repoDir, sharedRoot)).toBeNull();
+
+		getRepoWorktreeContext(repoDir, sharedRoot);
+		expect(getCachedRepoWorktreeContext(repoDir, sharedRoot)).not.toBeNull();
+
+		getRepoWorktreeSnapshot(repoDir, sharedRoot);
+		expect(getCachedRepoWorktreeSnapshot(repoDir, sharedRoot)).not.toBeNull();
+
+		clearRepoWorktreeSnapshotCache();
+		expect(getCachedRepoWorktreeContext(repoDir, sharedRoot)).toBeNull();
+		expect(getCachedRepoWorktreeSnapshot(repoDir, sharedRoot)).toBeNull();
+	}, 10_000);
+
+	it("refreshes context and snapshot async without blocking", async () => {
+		const { repoDir, sharedRoot } = createSandbox();
+		const normalizedRepoDir = fs.realpathSync.native(repoDir);
+
+		expect(getCachedRepoWorktreeContext(repoDir, sharedRoot)).toBeNull();
+		expect(getCachedRepoWorktreeSnapshot(repoDir, sharedRoot)).toBeNull();
+
+		const context = await refreshRepoWorktreeContext(repoDir, sharedRoot);
+		expect(context?.repoRoot).toBe(normalizedRepoDir);
+		expect(getCachedRepoWorktreeContext(repoDir, sharedRoot)?.repoRoot).toBe(normalizedRepoDir);
+
+		const snapshot = await refreshRepoWorktreeSnapshot(repoDir, sharedRoot);
+		expect(snapshot?.repoRoot).toBe(normalizedRepoDir);
+		expect(getCachedRepoWorktreeSnapshot(repoDir, sharedRoot)?.repoRoot).toBe(normalizedRepoDir);
+	}, 10_000);
 
 	it("removes stale registry entries when the worktree is already gone", () => {
 		const { repoDir, sharedRoot } = createSandbox();
