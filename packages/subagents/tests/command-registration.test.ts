@@ -8,6 +8,7 @@ vi.mock("../agents.js", () => ({
 
 vi.mock("../types.js", () => ({
 	MAX_PARALLEL: 2,
+	resolveSubagentLimits: () => ({ maxParallel: 2, maxConcurrency: 4 }),
 }));
 
 import { registerSubagentCommands } from "../command-registration.js";

@@ -106,6 +106,7 @@ vi.mock("../types.js", () => ({
 	DEFAULT_MAX_OUTPUT: { bytes: 200 * 1024, lines: 5000 },
 	MAX_CONCURRENCY: 4,
 	MAX_PARALLEL: 3,
+	resolveSubagentLimits: () => ({ maxParallel: 3, maxConcurrency: 4 }),
 	WIDGET_KEY: "subagent-async",
 	checkSubagentDepth: mocks.checkSubagentDepth,
 }));

@@ -40,11 +40,10 @@ import {
 	ASYNC_DIR,
 	DEFAULT_ARTIFACT_CONFIG,
 	DEFAULT_MAX_OUTPUT,
-	MAX_CONCURRENCY,
-	MAX_PARALLEL,
 	RESULTS_DIR,
 	WIDGET_KEY,
 	checkSubagentDepth,
+	resolveSubagentLimits,
 } from "./types.js";
 import { findByPrefix, getFinalOutput, mapConcurrent, readStatus } from "./utils.js";
 import { runSync } from "./execution.js";
@@ -426,9 +425,10 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 			if (hasTasks && params.tasks) {
 				// MAX_PARALLEL check first (fail fast before TUI)
-				if (params.tasks.length > MAX_PARALLEL)
+				const limits = resolveSubagentLimits(ctx.cwd);
+				if (params.tasks.length > limits.maxParallel)
 					return {
-						content: [{ type: "text", text: `Max ${MAX_PARALLEL} tasks` }],
+						content: [{ type: "text", text: `Max ${limits.maxParallel} tasks` }],
 						isError: true,
 						details: { mode: "parallel" as const, results: [] },
 					};
@@ -566,7 +566,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				const behaviors = agentConfigs.map((c) => resolveStepBehavior(c, {}));
 				const liveResults: (SingleResult | undefined)[] = new Array(params.tasks.length).fill(undefined);
 				const liveProgress: (AgentProgress | undefined)[] = new Array(params.tasks.length).fill(undefined);
-				const results = await mapConcurrent(params.tasks, MAX_CONCURRENCY, async (t, i) => {
+				const results = await mapConcurrent(params.tasks, limits.maxConcurrency, async (t, i) => {
 					const overrideSkills = skillOverrides[i];
 					const effectiveSkills = overrideSkills === undefined ? behaviors[i]?.skills : overrideSkills;
 					return runSync(ctx.cwd, agents, t.agent, tasks[i]!, {

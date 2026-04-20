@@ -2,6 +2,7 @@
  * Type definitions for the subagent extension
  */
 
+import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { Message } from "@mariozechner/pi-ai";
@@ -221,6 +222,9 @@ export interface RunSyncOptions {
 	modelCategory?: string;
 	/** Skills to inject (overrides agent default if provided) */
 	skills?: string[];
+	/** Idle timeout in ms — kill the agent if it produces no output for this long.
+	 *  Default: 15 min. Set to 0 to disable. Override per-agent via frontmatter: `idleTimeoutMs: 1800000`. */
+	idleTimeoutMs?: number;
 }
 
 export interface ExtensionConfig {
@@ -248,14 +252,80 @@ export const DEFAULT_ARTIFACT_CONFIG: ArtifactConfig = {
 	cleanupDays: 7,
 };
 
-export const MAX_PARALLEL = 8;
-export const MAX_CONCURRENCY = 4;
+export const DEFAULT_MAX_PARALLEL = 8;
+export const DEFAULT_MAX_CONCURRENCY = 4;
 export const RESULTS_DIR = path.join(os.tmpdir(), "pi-async-subagent-results");
 export const ASYNC_DIR = path.join(os.tmpdir(), "pi-async-subagent-runs");
 export const WIDGET_KEY = "subagent-async";
 export const POLL_INTERVAL_MS = 250;
 export const MAX_WIDGET_JOBS = 4;
 export const DEFAULT_SUBAGENT_MAX_DEPTH = 2;
+
+// ============================================================================
+// Subagent Limits Configuration
+// ============================================================================
+
+export interface SubagentLimits {
+	maxParallel: number;
+	maxConcurrency: number;
+}
+
+/**
+ * Resolve subagent parallel/concurrency limits from:
+ * 1. Env vars: PI_SUBAGENT_MAX_PARALLEL, PI_SUBAGENT_MAX_CONCURRENCY
+ * 2. Project settings: .pi/settings.json -> { subagent: { maxParallel, maxConcurrency } }
+ * 3. User settings: ~/.pi/agent/settings.json -> { subagent: { maxParallel, maxConcurrency } }
+ * 4. Defaults: DEFAULT_MAX_PARALLEL (8), DEFAULT_MAX_CONCURRENCY (4)
+ *
+ * Results are cached per cwd to avoid repeated filesystem reads.
+ */
+export function resolveSubagentLimits(cwd: string): SubagentLimits {
+	// Resolve from settings first (env vars take priority per-field)
+	const settings = _resolveLimitsFromSettings(cwd);
+
+	const envParallel = process.env.PI_SUBAGENT_MAX_PARALLEL;
+	const envConcurrency = process.env.PI_SUBAGENT_MAX_CONCURRENCY;
+
+	return {
+		maxParallel: envParallel ? Math.max(1, parseInt(envParallel, 10) || settings.maxParallel) : settings.maxParallel,
+		maxConcurrency: envConcurrency ? Math.max(1, parseInt(envConcurrency, 10) || settings.maxConcurrency) : settings.maxConcurrency,
+	};
+}
+
+function _resolveLimitsFromSettings(cwd: string): SubagentLimits {
+	const settingsFiles = [
+		{ file: path.resolve(cwd, ".pi", "settings.json"), base: path.resolve(cwd, ".pi") },
+		{ file: path.resolve(os.homedir(), ".pi", "agent", "settings.json"), base: path.resolve(os.homedir(), ".pi", "agent") },
+	];
+
+	for (const { file, base } of settingsFiles) {
+		try {
+			const raw = fs.readFileSync(file, "utf-8");
+			const settings = JSON.parse(raw);
+			const subagent = settings?.subagent;
+			if (typeof subagent !== "object" || subagent === null) continue;
+
+			const maxParallel = typeof subagent.maxParallel === "number" && subagent.maxParallel > 0
+				? subagent.maxParallel
+				: DEFAULT_MAX_PARALLEL;
+			const maxConcurrency = typeof subagent.maxConcurrency === "number" && subagent.maxConcurrency > 0
+				? subagent.maxConcurrency
+				: DEFAULT_MAX_CONCURRENCY;
+
+			return { maxParallel, maxConcurrency };
+		} catch {
+			// File doesn't exist or invalid JSON — try next
+		}
+	}
+
+	return { maxParallel: DEFAULT_MAX_PARALLEL, maxConcurrency: DEFAULT_MAX_CONCURRENCY };
+}
+
+// Backwards-compatible aliases (use resolveSubagentLimits() for configurable behavior)
+/** @deprecated Use resolveSubagentLimits(cwd).maxParallel instead */
+export const MAX_PARALLEL = DEFAULT_MAX_PARALLEL;
+/** @deprecated Use resolveSubagentLimits(cwd).maxConcurrency instead */
+export const MAX_CONCURRENCY = DEFAULT_MAX_CONCURRENCY;
 
 // ============================================================================
 // Recursion Depth Guard

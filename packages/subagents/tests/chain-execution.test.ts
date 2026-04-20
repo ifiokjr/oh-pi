@@ -95,6 +95,8 @@ vi.mock("../model-routing.js", () => ({
 }));
 vi.mock("../types.js", () => ({
 	MAX_CONCURRENCY: 4,
+	MAX_PARALLEL: 8,
+	resolveSubagentLimits: () => ({ maxParallel: 8, maxConcurrency: 4 }),
 }));
 
 import { executeChain } from "../chain-execution.js";
