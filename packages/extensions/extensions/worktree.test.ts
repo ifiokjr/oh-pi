@@ -240,6 +240,15 @@ describe("worktree extension", () => {
 		expect(String(harness.messages.at(-1)?.content)).toContain("/worktree open");
 	});
 
+	it("registers the worktree tool alongside commands", () => {
+		const harness = createExtensionHarness();
+		worktreeExtension(harness.pi as never);
+		expect(harness.tools.has("worktree")).toBe(true);
+		const tool = harness.tools.get("worktree");
+		expect(tool?.name).toBe("worktree");
+		expect(tool?.parameters).toBeDefined();
+	});
+
 	it("refuses to clean external worktrees by default", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.cwd = "/repo";

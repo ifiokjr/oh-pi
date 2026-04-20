@@ -1,6 +1,7 @@
 import path from "node:path";
 import process from "node:process";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { Type } from "@sinclair/typebox";
 import { recordRuntimeSample } from "./watchdog-runtime-diagnostics";
 import {
 	buildPaiInstanceId,
@@ -527,4 +528,228 @@ export default function worktreeExtension(pi: ExtensionAPI) {
 	for (const name of COMMAND_ALIASES) {
 		pi.registerCommand(name, spec);
 	}
+
+	registerWorktreeTool(pi);
+}
+
+// ═══ Tool: worktree ═══
+
+function registerWorktreeTool(pi: ExtensionAPI) {
+	const toolInstance = buildPaiInstanceId();
+
+	function toolRefreshStatus(ctx: ExtensionContext): RepoWorktreeContext | null {
+		const startedAt = Date.now();
+		const snapshot = getRepoWorktreeContext(ctx.cwd);
+		if (snapshot?.current?.isManaged) {
+			touchManagedWorktreeSeen(snapshot.repoRoot, snapshot.current.path);
+		}
+		const statusText = currentStatusText(snapshot);
+		ctx.ui.setStatus("pi-worktree", statusText);
+		recordRuntimeSample("worktree", "event", "tool_status_refresh", Date.now() - startedAt, "worktree");
+		return snapshot;
+	}
+
+	function currentStatusText(snapshot: RepoWorktreeContext | null): string | undefined {
+		if (!snapshot) {
+			return undefined;
+		}
+		const repo = path.basename(snapshot.repoRoot);
+		const branch = snapshot.current?.branch ?? snapshot.currentBranch ?? "detached";
+		if (!snapshot.isLinkedWorktree) {
+			return undefined;
+		}
+		if (snapshot.current?.isManaged && snapshot.current.metadata) {
+			return `${repo} · pi wt ${branch} · ${snapshot.current.metadata.purpose}`;
+		}
+		return `${repo} · external wt ${branch}`;
+	}
+
+	function formatToolStatus(context: RepoWorktreeContext | null): string {
+		if (!context) {
+			return "Not inside a git repository.";
+		}
+		const lines = ["# Worktree status"];
+		lines.push(`- Repo: ${path.basename(context.repoRoot)}`);
+		lines.push(`- Repo root: ${context.repoRoot}`);
+		lines.push(`- Current worktree root: ${context.currentWorktreeRoot}`);
+		lines.push(`- Branch: ${context.currentBranch ?? "(detached)"}`);
+		lines.push(`- Kind: ${context.isLinkedWorktree ? formatWorktreeKind(context.current ?? { isMain: false, isManaged: false }) : "main"}`);
+		if (context.current?.isManaged && context.current.metadata) {
+			lines.push("- Owned by pi: yes");
+			lines.push(`- Purpose: ${context.current.metadata.purpose}`);
+			lines.push(`- Owner: ${formatOwnerLabel(context.current.metadata.owner)}`);
+		}
+		return lines.join("\n");
+	}
+
+	function formatToolList(snapshot: RepoWorktreeSnapshot): string {
+		const lines = ["# Worktree list"];
+		lines.push(`- Repo: ${path.basename(snapshot.repoRoot)}`);
+		lines.push(`- Current: ${snapshot.current?.branch ?? snapshot.currentBranch ?? "(detached)"}`);
+		lines.push("");
+		lines.push("## Worktrees");
+		for (const entry of snapshot.worktrees) {
+			const kind = entry.isMain ? "[main]" : entry.isManaged ? "[pi-owned]" : "[external]";
+			const current = entry.isCurrent ? "[current] " : "";
+			lines.push(`- ${current}${kind} ${entry.branch ?? "(detached)"}`);
+			lines.push(`  path: ${entry.path}`);
+			if (entry.metadata) {
+				lines.push(`  purpose: ${entry.metadata.purpose}`);
+			}
+		}
+		if (snapshot.staleManagedWorktrees.length > 0) {
+			lines.push("");
+			lines.push("## Stale pi metadata");
+			for (const entry of snapshot.staleManagedWorktrees) {
+				lines.push(`- [stale] ${entry.branch}`);
+				lines.push(`  path: ${entry.worktreePath}`);
+			}
+		}
+		return lines.join("\n");
+	}
+
+	function formatToolCreateResult(
+		result: { repoRoot: string; worktreePath: string; branch: string; createdBranch: boolean; metadata: ManagedWorktreeMetadata },
+	): string {
+		const lines = ["# Worktree created"];
+		lines.push(`- Branch: ${result.branch}`);
+		lines.push(`- Path: ${result.worktreePath}`);
+		lines.push(`- Repo root: ${result.repoRoot}`);
+		lines.push(`- New branch: ${result.createdBranch ? "yes" : "no (attached existing branch)"}`);
+		lines.push(`- Purpose: ${result.metadata.purpose}`);
+		lines.push(`- Owner: ${formatOwnerLabel(result.metadata.owner)}`);
+		return lines.join("\n");
+	}
+
+	pi.registerTool({
+		name: "worktree",
+		label: "Worktree",
+		description:
+			"Manage git worktrees: create, list, check status, and clean up pi-owned worktrees. Use this tool when you need to create an isolated worktree for parallel work, check which worktree you are in, list available worktrees, or clean up completed worktrees.",
+		parameters: Type.Object({
+			action: Type.Union([
+				Type.Literal("create"),
+				Type.Literal("status"),
+				Type.Literal("list"),
+				Type.Literal("cleanup"),
+			]),
+			branch: Type.Optional(Type.String({ description: "Branch name for the worktree (required for create)" })),
+			purpose: Type.Optional(Type.String({ description: "Why this worktree exists (required for create)" })),
+			target: Type.Optional(Type.String({ description: "Branch name, path, or worktree id for cleanup" })),
+			baseRef: Type.Optional(Type.String({ description: "Base ref for the new branch (default: HEAD)" })),
+		}),
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+			const { action } = params;
+
+			if (action === "create") {
+				const branch = params.branch?.trim();
+				const purpose = params.purpose?.trim();
+				if (!branch) {
+					return { content: [{ type: "text" as const, text: "Error: branch is required for create action." }], isError: true };
+				}
+				if (!purpose) {
+					return { content: [{ type: "text" as const, text: "Error: purpose is required for create action." }], isError: true };
+				}
+
+				try {
+					const owner = createOwnerMetadata({
+						instanceId: toolInstance,
+						cwd: ctx.cwd,
+						sessionFile: ctx.sessionManager?.getSessionFile?.() ?? undefined,
+						sessionName: typeof pi.getSessionName === "function" ? (pi.getSessionName() ?? undefined) : undefined,
+					});
+					const result = createManagedWorktree({
+						cwd: ctx.cwd,
+						branch,
+						purpose,
+						owner,
+						baseRef: params.baseRef?.trim() || undefined,
+					});
+					toolRefreshStatus(ctx);
+					return { content: [{ type: "text" as const, text: formatToolCreateResult(result) }] };
+				} catch (error) {
+					return { content: [{ type: "text" as const, text: `Error creating worktree: ${error instanceof Error ? error.message : String(error)}` }], isError: true };
+				}
+			}
+
+			if (action === "status") {
+				const context = toolRefreshStatus(ctx);
+				if (!context) {
+					return { content: [{ type: "text" as const, text: "Not inside a git repository." }], isError: true };
+				}
+				return { content: [{ type: "text" as const, text: formatToolStatus(context) }] };
+			}
+
+			if (action === "list") {
+				toolRefreshStatus(ctx);
+				const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
+				if (!snapshot) {
+					return { content: [{ type: "text" as const, text: "Not inside a git repository." }], isError: true };
+				}
+				return { content: [{ type: "text" as const, text: formatToolList(snapshot) }] };
+			}
+
+			if (action === "cleanup") {
+				const target = params.target?.trim();
+				if (!target) {
+					return { content: [{ type: "text" as const, text: "Error: target is required for cleanup action. Use a branch name, path, or worktree id." }], isError: true };
+				}
+
+				toolRefreshStatus(ctx);
+				const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
+				if (!snapshot) {
+					return { content: [{ type: "text" as const, text: "Not inside a git repository." }], isError: true };
+				}
+
+				const managedTargets = findManagedTargets(snapshot, target);
+				if (managedTargets.length === 0) {
+					const externalMatch = findWorktreeEntry(snapshot, target);
+					if (externalMatch && !externalMatch.isManaged) {
+						return {
+							content: [{ type: "text" as const, text: `Matched external worktree ${externalMatch.path}. pi only cleans pi-owned worktrees by default.` }],
+							isError: true,
+						};
+					}
+					return { content: [{ type: "text" as const, text: `No pi-owned worktree matched: ${target}` }], isError: true };
+				}
+
+				const removable = managedTargets.filter((entry) => entry.worktreePath !== snapshot.currentWorktreeRoot);
+				const skipped = managedTargets.filter((entry) => entry.worktreePath === snapshot.currentWorktreeRoot);
+				if (removable.length === 0) {
+					return { content: [{ type: "text" as const, text: "Refusing to clean up the current worktree. Switch to another checkout first." }], isError: true };
+				}
+
+				try {
+					const results = removable.map((entry) => removeManagedWorktree(entry));
+					toolRefreshStatus(ctx);
+					const lines = ["# Worktree cleanup", "", `Removed: ${results.length}`, `Skipped current: ${skipped.length}`, "", "## Removed"];
+					for (const result of results) {
+						lines.push(`- ${result.metadata.branch}`);
+						lines.push(`  path: ${result.metadata.worktreePath}`);
+						lines.push(`  purpose: ${result.metadata.purpose}`);
+					}
+					return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+				} catch (error) {
+					return { content: [{ type: "text" as const, text: `Error cleaning up worktree: ${error instanceof Error ? error.message : String(error)}` }], isError: true };
+				}
+			}
+
+			return { content: [{ type: "text" as const, text: "Unknown action. Use: create, status, list, or cleanup." }], isError: true };
+		},
+
+		renderCall(args, theme) {
+			const action = args.action ?? "?";
+			const detail = action === "create" ? `${args.branch ?? "?"}` : action === "cleanup" ? `${args.target ?? "?"}` : "";
+			return `${theme.fg("toolTitle", theme.bold(`⌥ worktree`))} ${action} ${detail}`;
+		},
+
+		renderResult(result, _options, theme) {
+			const text = result.content?.find((e): e is { type: "text"; text: string } => typeof e === "object" && e?.type === "text")?.text ?? "";
+			if (result.isError) {
+				return `${theme.fg("error", text)}`;
+			}
+			const firstLine = text.split("\n")[0] ?? "";
+			return `${theme.fg("success", "✓ ")}${theme.fg("muted", firstLine)}`;
+		},
+	});
 }

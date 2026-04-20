@@ -374,6 +374,9 @@ importers:
 
   packages/extensions:
     dependencies:
+      '@ifi/oh-pi-core':
+        specifier: 0.4.4
+        version: 0.4.4
       '@ifi/pi-background-tasks':
         specifier: workspace:*
         version: link:../background-tasks
