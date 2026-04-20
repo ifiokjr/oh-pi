@@ -582,6 +582,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 						modelOverride: modelResolutions[i]?.model,
 						modelSource: modelResolutions[i]?.source,
 						modelCategory: modelResolutions[i]?.category,
+						idleTimeoutMs: agentConfigs[i]?.idleTimeoutMs,
 						skills: effectiveSkills === false ? [] : effectiveSkills,
 						onUpdate: onUpdate
 							? (p) => {
@@ -786,6 +787,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					modelOverride,
 					modelSource: modelResolution.source,
 					modelCategory: modelResolution.category,
+					idleTimeoutMs: agentConfig?.idleTimeoutMs,
 					skills: effectiveSkills,
 				});
 				recordRun(params.agent!, cleanTask, r.exitCode, r.progressSummary?.durationMs ?? 0);

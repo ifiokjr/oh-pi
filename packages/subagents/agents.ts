@@ -23,6 +23,9 @@ export interface AgentConfig {
 	mcpDirectTools?: string[];
 	model?: string;
 	thinking?: string;
+	/** Idle timeout in ms — kill the agent if it produces no output for this long.
+	 *  Default: 15 min (from DEFAULT_IDLE_TIMEOUT_MS). Set to 0 to disable. */
+	idleTimeoutMs?: number;
 	systemPrompt: string;
 	source: AgentSource;
 	filePath: string;
@@ -172,6 +175,7 @@ function loadAgentsFromDir(dir: string, source: AgentSource): AgentConfig[] {
 			mcpDirectTools: mcpDirectTools.length > 0 ? mcpDirectTools : undefined,
 			model: frontmatter.model,
 			thinking: frontmatter.thinking,
+			idleTimeoutMs: frontmatter.idleTimeoutMs ? Number(frontmatter.idleTimeoutMs) : undefined,
 			systemPrompt: body,
 			source,
 			filePath,
