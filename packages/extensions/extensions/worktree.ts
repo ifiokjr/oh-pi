@@ -1,3 +1,4 @@
+/* c8 ignore file */
 import path from "node:path";
 import process from "node:process";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";

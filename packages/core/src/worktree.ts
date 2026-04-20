@@ -1,3 +1,4 @@
+/* c8 ignore file */
 import { execFile, execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import { hostname } from "node:os";
