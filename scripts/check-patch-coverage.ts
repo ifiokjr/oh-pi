@@ -262,6 +262,7 @@ export function runPatchCoverageCheck({ base, head, lcovPath, threshold }: Patch
 	for (const file of filteredChangedLines.keys()) {
 		const ignored = getIgnoredLinesForFile(file);
 		if (ignored.size > 0) {
+			console.log(`[patch-coverage] Found ${ignored.size} ignored lines in ${file}: ${[...ignored].join(", ")}`);
 			ignoredByFile.set(file, ignored);
 		}
 	}
