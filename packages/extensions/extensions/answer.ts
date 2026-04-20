@@ -356,11 +356,9 @@ export default function answerExtension(pi: ExtensionAPI) {
 		}
 
 		autoAnswerInProgress = true;
-		try {
-			await runAnswerFlow(ctx, pi, lastAssistantText);
-		} finally {
+		await runAnswerFlow(ctx, pi, lastAssistantText).finally(() => {
 			autoAnswerInProgress = false;
-		}
+		});
 	});
 
 	// ── /answer command ───────────────────────────────────────────────────
