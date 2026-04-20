@@ -304,4 +304,47 @@ describe("async execution helpers", () => {
 			asyncDir: "/tmp/pi-async-subagent-runs/chain-2",
 		});
 	});
+
+	it("resolves async single-agent skills against task cwd, not context cwd", () => {
+		const ctx = createCtx();
+		executeAsyncSingle("run-ctx", {
+			agent: "reviewer",
+			task: "Inspect",
+			agentConfig: { name: "reviewer", skills: ["ecsc-reviewer"] },
+			ctx,
+			cwd: "/legal/project",
+			shareEnabled: false,
+			sessionRoot: undefined,
+			artifactConfig: { enabled: false },
+		});
+
+		expect(asyncMocks.resolveSkills).toHaveBeenCalledWith(["ecsc-reviewer"], "/legal/project");
+	});
+
+	it("resolves async chain step skills against step cwd, then chain cwd, then context cwd", () => {
+		const ctx = createCtx();
+		asyncMocks.resolveSubagentModelResolution
+			.mockReturnValueOnce({ model: undefined, source: "agent-default", category: undefined })
+			.mockReturnValueOnce({ model: undefined, source: "agent-default", category: undefined });
+
+		executeAsyncChain("chain-cwd", {
+			chain: [
+				{ agent: "scout", task: "Inspect", cwd: "/legal/project", skill: ["ecsc-reviewer"] },
+				{ agent: "planner", task: "Plan", skill: ["planning"] },
+			],
+			agents: [
+				{ name: "scout" },
+				{ name: "planner" },
+			],
+			ctx,
+			cwd: "/default/workspace",
+			shareEnabled: false,
+			artifactConfig: { enabled: false },
+		});
+
+		// First step uses its own cwd
+		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(1, ["ecsc-reviewer"], "/legal/project");
+		// Second step falls back to chain-level cwd
+		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(2, ["planning"], "/default/workspace");
+	});
 });

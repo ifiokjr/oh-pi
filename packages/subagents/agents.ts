@@ -10,7 +10,7 @@ import { KNOWN_FIELDS } from "./agent-serializer.js";
 import { mergeAgentsForScope } from "./agent-selection.js";
 import { parseChain } from "./chain-serializer.js";
 import { getUserAgentsDir } from "./paths.js";
-import { findNearestProjectAgentsDir } from "./project-agents-storage.js";
+import { findAllProjectAgentsDirs, findNearestProjectAgentsDir } from "./project-agents-storage.js";
 
 export type AgentScope = "user" | "project" | "both";
 
@@ -227,16 +227,52 @@ function loadChainsFromDir(dir: string, source: AgentSource): ChainConfig[] {
 
 const BUILTIN_AGENTS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "agents");
 
+/**
+ * Deduplicate agents by name. Nearest parent directory wins when the same
+ * agent name exists in multiple ancestor agent dirs.
+ */
+function deduplicateAgents(agents: AgentConfig[]): AgentConfig[] {
+	const seen = new Map<string, AgentConfig>();
+	for (const agent of agents) {
+		if (!seen.has(agent.name)) {
+			seen.set(agent.name, agent);
+		}
+	}
+	return Array.from(seen.values());
+}
+
 export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryResult {
 	const userDir = getUserAgentsDir();
 	const projectAgentsDir = findNearestProjectAgentsDir(cwd);
+	const allProjectDirs = scope === "user" ? [] : findAllProjectAgentsDirs(cwd);
 
 	const builtinAgents = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
 	const userAgents = scope === "project" ? [] : loadAgentsFromDir(userDir, "user");
-	const projectAgents = scope === "user" || !projectAgentsDir ? [] : loadAgentsFromDir(projectAgentsDir, "project");
+
+	// Load agents from all ancestor project dirs (nearest first for priority)
+	let projectAgents: AgentConfig[] = [];
+	for (const dir of allProjectDirs) {
+		const loaded = loadAgentsFromDir(dir, "project");
+		projectAgents = deduplicateAgents([...projectAgents, ...loaded]);
+	}
+
 	const agents = mergeAgentsForScope(scope, userAgents, projectAgents, builtinAgents);
 
 	return { agents, projectAgentsDir };
+}
+
+/**
+ * Deduplicate chains by name. Nearest parent directory wins when the same
+ * chain name exists in multiple ancestor agent dirs.
+ */
+function deduplicateChains(chains: ChainConfig[]): ChainConfig[] {
+	const seen = new Map<string, ChainConfig>();
+	for (const chain of chains) {
+		if (!seen.has(chain.name)) {
+			seen.set(chain.name, chain);
+		}
+	}
+	return Array.from(seen.values());
 }
 
 export function discoverAgentsAll(cwd: string): {
@@ -249,14 +285,23 @@ export function discoverAgentsAll(cwd: string): {
 } {
 	const userDir = getUserAgentsDir();
 	const projectDir = findNearestProjectAgentsDir(cwd);
+	const allProjectDirs = findAllProjectAgentsDirs(cwd);
 
 	const builtin = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
 	const user = loadAgentsFromDir(userDir, "user");
-	const project = projectDir ? loadAgentsFromDir(projectDir, "project") : [];
-	const chains = [
-		...loadChainsFromDir(userDir, "user"),
-		...(projectDir ? loadChainsFromDir(projectDir, "project") : []),
-	];
 
-	return { builtin, user, project, chains, userDir, projectDir };
+	// Load agents from all ancestor project dirs (nearest first for priority)
+	let project: AgentConfig[] = [];
+	for (const dir of allProjectDirs) {
+		const loaded = loadAgentsFromDir(dir, "project");
+		project = deduplicateAgents([...project, ...loaded]);
+	}
+
+	const chains: ChainConfig[] = [];
+	for (const dir of [userDir, ...allProjectDirs]) {
+		const loaded = loadChainsFromDir(dir, dir === userDir ? "user" : "project");
+		chains.push(...loaded);
+	}
+
+	return { builtin, user, project, chains: deduplicateChains(chains), userDir, projectDir };
 }
