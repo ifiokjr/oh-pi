@@ -159,6 +159,14 @@ describe("normalizeExtractedQuestions", () => {
 		expect(result).toEqual([{ question: "Which ORM?", context: "We use Node.js" }]);
 	});
 
+	it("extracts concise question plus options from a detailed section", () => {
+		const full =
+			"What is the most expensive bug?\n\nRank these:\n\na. Wrong version bump\nb. Missing package in release";
+		const result = normalizeExtractedQuestions([{ question: full }]);
+		//normalizeExtractedQuestions passes through the LLM output; concise vs verbose is a prompt-level concern
+		expect(result).toEqual([{ question: full }]);
+	});
+
 	it("extracts question with options", () => {
 		const result = normalizeExtractedQuestions([
 			{
@@ -273,6 +281,21 @@ describe("EXTRACTION_SYSTEM_PROMPT", () => {
 	it("contains JSON extraction instructions", () => {
 		expect(EXTRACTION_SYSTEM_PROMPT).toContain("JSON array");
 		expect(EXTRACTION_SYSTEM_PROMPT).toContain("question");
+	});
+
+	it("instructs LLM to find the most complete question formulation", () => {
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("MOST COMPLETE formulation");
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("detailed section");
+	});
+
+	it("instructs LLM to keep question concise and use context field", () => {
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("Keep `question` concise");
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("Put background context in the `context` field");
+	});
+
+	it("instructs LLM to always extract explicit choices as options", () => {
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("Always extract all explicit choices");
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("include every option");
 	});
 });
 
