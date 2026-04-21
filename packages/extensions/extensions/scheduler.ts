@@ -1285,6 +1285,10 @@ export class SchedulerRuntime {
 		return "";
 	}
 
+	// Cache compiled completion-signal regexes keyed by the raw signal string
+	// to avoid re-parsing and re-compiling the same pattern on every call.
+	private completionSignalRegexCache = new Map<string, RegExp | null>();
+
 	private isCompletionDetected(task: ScheduleTask, assistantText: string): boolean {
 		const text = assistantText.trim();
 		if (!text) {
@@ -1293,13 +1297,22 @@ export class SchedulerRuntime {
 
 		const signal = task.completionSignal?.trim();
 		if (signal) {
-			const regexMatch = signal.match(/^\/(.*)\/([gimsuy]*)$/);
-			if (regexMatch) {
-				try {
-					return new RegExp(regexMatch[1], regexMatch[2]).test(text);
+			let cached = this.completionSignalRegexCache.get(signal);
+			if (cached === undefined) {
+				const regexMatch = signal.match(/^\/(.*)\/([gimsuy]*)$/);
+				if (regexMatch) {
+					try {
+					cached = new RegExp(regexMatch[1], regexMatch[2]);
 				} catch {
-					// Ignore invalid regex and fall back to substring matching.
+					cached = null; // invalid regex — fall back to substring matching
+					}
+				} else {
+					cached = null;
 				}
+				this.completionSignalRegexCache.set(signal, cached);
+			}
+			if (cached) {
+				return cached.test(text);
 			}
 			if (text.toLowerCase().includes(signal.toLowerCase())) {
 				return true;

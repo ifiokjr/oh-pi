@@ -247,13 +247,18 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	function pruneRollingHistory(now = Date.now()): void {
 		const cutoff = now - ROLLING_COST_WINDOW_MS;
-		for (let i = rollingHistory.length - 1; i >= 0; i--) {
-			if (!Number.isFinite(rollingHistory[i].timestamp) || rollingHistory[i].timestamp < cutoff) {
-				rollingHistory.splice(i, 1);
+		let write = 0;
+		for (let read = 0; read < rollingHistory.length; read++) {
+			const entry = rollingHistory[read];
+			if (Number.isFinite(entry.timestamp) && entry.timestamp >= cutoff) {
+				rollingHistory[write++] = entry;
 			}
 		}
+		rollingHistory.length = write;
 		if (rollingHistory.length > ROLLING_HISTORY_MAX_POINTS) {
-			rollingHistory.splice(0, rollingHistory.length - ROLLING_HISTORY_MAX_POINTS);
+			const excess = rollingHistory.length - ROLLING_HISTORY_MAX_POINTS;
+			rollingHistory.copyWithin(0, excess);
+			rollingHistory.length = ROLLING_HISTORY_MAX_POINTS;
 		}
 	}
 
@@ -288,6 +293,26 @@ export default function usageTracker(pi: ExtensionAPI) {
 		} catch {
 			// Non-critical. If history cannot be read, continue with in-memory tracking.
 		}
+	}
+
+	const PERSIST_DEBOUNCE_MS = 10_000;
+	let rollingHistoryDirty = false;
+	let rollingHistorySaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+	/** Mark rolling history as dirty and schedule a debounced save. */
+	function scheduleRollingHistorySave(): void {
+		rollingHistoryDirty = true;
+		if (rollingHistorySaveTimer) {
+			return;
+		}
+		rollingHistorySaveTimer = setTimeout(() => {
+			rollingHistorySaveTimer = null;
+			if (rollingHistoryDirty) {
+				rollingHistoryDirty = false;
+				saveRollingHistory();
+			}
+		}, PERSIST_DEBOUNCE_MS);
+		rollingHistorySaveTimer.unref?.();
 	}
 
 	function saveRollingHistory(): void {
@@ -392,6 +417,25 @@ export default function usageTracker(pi: ExtensionAPI) {
 		} catch {
 			// Non-critical. The next live probe will repopulate provider data.
 		}
+	}
+
+	let rateLimitCacheDirty = false;
+	let rateLimitCacheSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+	/** Mark rate limit cache as dirty and schedule a debounced save. */
+	function scheduleRateLimitCacheSave(): void {
+		rateLimitCacheDirty = true;
+		if (rateLimitCacheSaveTimer) {
+			return;
+		}
+		rateLimitCacheSaveTimer = setTimeout(() => {
+			rateLimitCacheSaveTimer = null;
+			if (rateLimitCacheDirty) {
+				rateLimitCacheDirty = false;
+				saveRateLimitCache();
+			}
+		}, PERSIST_DEBOUNCE_MS);
+		rateLimitCacheSaveTimer.unref?.();
 	}
 
 	function saveRateLimitCache(): void {
@@ -780,7 +824,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		if (options.persist !== false && Number.isFinite(cost) && cost >= 0) {
 			rollingHistory.push({ timestamp: now, cost });
 			pruneRollingHistory(now);
-			saveRollingHistory();
+			scheduleRollingHistorySave();
 		}
 
 		requestUsageWidgetRender();
@@ -888,6 +932,17 @@ export default function usageTracker(pi: ExtensionAPI) {
 		turnHistory.length = 0;
 		lastThresholdIndex = -1;
 		sessionStart = Date.now();
+		// Flush any pending persisted state before clearing.
+		if (rollingHistorySaveTimer) {
+			clearTimeout(rollingHistorySaveTimer);
+			rollingHistorySaveTimer = null;
+		}
+		if (rateLimitCacheSaveTimer) {
+			clearTimeout(rateLimitCacheSaveTimer);
+			rateLimitCacheSaveTimer = null;
+		}
+		rollingHistoryDirty = false;
+		rateLimitCacheDirty = false;
 	}
 
 	function hydrateFromSessionEntries(entries: ReturnType<ExtensionContext["sessionManager"]["getBranch"]>): void {
@@ -955,7 +1010,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 						: null;
 				const limits = await probeOllamaDirect(fresh?.token ?? null);
 				rateLimits.set(provider, limits);
-				saveRateLimitCache();
+				scheduleRateLimitCacheSave();
 				lastProbeTime.set(provider, Date.now());
 				requestUsageWidgetRender();
 				return;
@@ -984,7 +1039,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 					probedAt: now,
 					error: null,
 				});
-				saveRateLimitCache();
+				scheduleRateLimitCacheSave();
 				lastProbeTime.set(provider, now);
 				requestUsageWidgetRender();
 				return;
@@ -1003,7 +1058,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 					probedAt: now,
 					error: `${providerDisplayName(provider)} token refresh failed — re-authenticate with pi login.`,
 				});
-				saveRateLimitCache();
+				scheduleRateLimitCacheSave();
 				lastProbeTime.set(provider, now);
 				requestUsageWidgetRender();
 				return;
@@ -1034,7 +1089,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 			}
 
 			rateLimits.set(provider, limits);
-			saveRateLimitCache();
+			scheduleRateLimitCacheSave();
 			lastProbeTime.set(provider, Date.now());
 			requestUsageWidgetRender();
 		} catch {

@@ -4,6 +4,12 @@ import type { AntCaste, Pheromone, PheromoneType } from "./types.js";
 const VALID_CASTES = new Set(["scout", "worker", "soldier", "drone"]);
 const TASK_HEADER_RE = /^\s*#{2,6}\s*task\s*:\s*(.+?)\s*$/i;
 
+// Pre-compiled pheromone section regexes — avoid new RegExp() per call in extractPheromones.
+const PHEROMONE_SECTION_NAMES = ["Discoveries", "Pheromone", "Files Changed", "Warnings", "Review"] as const;
+const PHEROMONE_SECTION_REGEXES = PHEROMONE_SECTION_NAMES.map(
+	(section) => new RegExp(`#{1,2} ${section}\\n([\\s\\S]*?)(?=\\n#{1,2} |$)`, "i"),
+);
+
 export interface ParsedSubTask {
 	title: string;
 	description: string;
@@ -230,10 +236,9 @@ export function extractPheromones(
 ): Pheromone[] {
 	const pheromones: Pheromone[] = [];
 	const now = Date.now();
-	const sections = ["Discoveries", "Pheromone", "Files Changed", "Warnings", "Review"];
-	for (const section of sections) {
-		const regex = new RegExp(`#{1,2} ${section}\\n([\\s\\S]*?)(?=\\n#{1,2} |$)`, "i");
-		const match = output.match(regex);
+	for (let i = 0; i < PHEROMONE_SECTION_NAMES.length; i++) {
+		const section = PHEROMONE_SECTION_NAMES[i];
+		const match = output.match(PHEROMONE_SECTION_REGEXES[i]);
 		if (match?.[1]?.trim()) {
 			const type: PheromoneType =
 				section === "Discoveries"

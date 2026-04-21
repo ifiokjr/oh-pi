@@ -70,6 +70,8 @@ import {
 const REJECT_REASON = "Tool not available in this environment. Use the MCP tools provided by pi instead.";
 const THINKING_TAG_NAMES = ["think", "thinking", "reasoning", "thought", "think_intent"];
 const MAX_THINKING_TAG_LEN = 16;
+// Pre-compiled thinking tag pattern — avoid new RegExp() per stream chunk.
+const THINKING_TAG_PATTERN = new RegExp(`<(/?)(?:${THINKING_TAG_NAMES.join("|")})\\s*>`, "gi");
 
 type StreamState = {
 	outputTokens: number;
@@ -619,7 +621,9 @@ function createThinkingTagFilter(): {
 			let content = "";
 			let reasoning = "";
 			let lastIndex = 0;
-			const pattern = new RegExp(`<(/?)(?:${THINKING_TAG_NAMES.join("|")})\\s*>`, "gi");
+			// Reuse the pre-compiled THINKING_TAG_PATTERN; reset lastIndex for fresh scan.
+			const pattern = THINKING_TAG_PATTERN;
+			pattern.lastIndex = 0;
 			let match: RegExpExecArray | null;
 			while ((match = pattern.exec(input)) !== null) {
 				const before = input.slice(lastIndex, match.index);
