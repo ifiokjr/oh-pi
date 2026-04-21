@@ -12,7 +12,7 @@ vi.mock("@ifi/oh-pi-core", async () => {
 	return await import("../../core/src/model-intelligence.ts");
 });
 
-import { resolveSubagentModelResolution, toAvailableModelRefs } from "../model-routing.js";
+import { findAvailableModel, resolveSubagentModelResolution, toAvailableModelRefs } from "../model-routing.js";
 
 const sampleModels = [
 	{
@@ -339,5 +339,96 @@ describe("resolveSubagentModelResolution", () => {
 		} finally {
 			rmSync(tempAgentDir, { recursive: true, force: true });
 		}
+	});
+
+	describe("findAvailableModel", () => {
+		it("resolves full IDs that exist in available models", () => {
+			expect(findAvailableModel("openai/gpt-5-mini", sampleModels)).toBe("openai/gpt-5-mini");
+		});
+
+		it("resolves bare IDs to full IDs when available", () => {
+			expect(findAvailableModel("gpt-5-mini", sampleModels)).toBe("openai/gpt-5-mini");
+		});
+
+		it("preserves thinking suffixes when resolving", () => {
+			expect(findAvailableModel("gpt-5-mini:high", sampleModels)).toBe("openai/gpt-5-mini:high");
+		});
+
+		it("returns undefined for unavailable models", () => {
+			expect(findAvailableModel("github-models/openai/gpt-4o-mini", sampleModels)).toBeUndefined();
+			expect(findAvailableModel("nonexistent-model", sampleModels)).toBeUndefined();
+		});
+
+		it("returns undefined for undefined input", () => {
+			expect(findAvailableModel(undefined, sampleModels)).toBeUndefined();
+		});
+	});
+
+	describe("model validation in resolution", () => {
+		it("rejects unavailable runtime overrides and falls through", () => {
+			const result = resolveSubagentModelResolution(
+				{
+					name: "scout",
+					description: "Scout",
+					systemPrompt: "Prompt",
+					source: "builtin",
+					filePath: "/tmp/scout.md",
+				},
+				[],
+				"github-models/openai/gpt-4o-mini",
+			);
+			expect(result.source).toBe("session-default");
+			expect(result.model).toBeUndefined();
+		});
+
+		it("rejects unavailable frontmatter models and falls through", () => {
+			const result = resolveSubagentModelResolution(
+				{
+					name: "scout",
+					description: "Scout",
+					systemPrompt: "Prompt",
+					source: "builtin",
+					filePath: "/tmp/scout.md",
+					model: "github-models/openai/gpt-4o-mini",
+				},
+				[],
+			);
+			expect(result.source).not.toBe("frontmatter-model");
+			expect(result.model).toBeUndefined();
+		});
+
+		it("falls back to available session-default currentModel", () => {
+			const result = resolveSubagentModelResolution(
+				{
+					name: "scout",
+					description: "Scout",
+					systemPrompt: "Prompt",
+					source: "builtin",
+					filePath: "/tmp/scout.md",
+				},
+				sampleModels,
+				undefined,
+				{ currentModel: "google/gemini-2.5-flash" },
+			);
+			expect(result.model).toBe("google/gemini-2.5-flash");
+			expect(result.category).toBeUndefined();
+		});
+
+		it("rejects unavailable session-default currentModel", () => {
+			const result = resolveSubagentModelResolution(
+				{
+					name: "scout",
+					description: "Scout",
+					systemPrompt: "Prompt",
+					source: "builtin",
+					filePath: "/tmp/scout.md",
+				},
+				[],
+				undefined,
+				{ currentModel: "github-models/openai/gpt-4o-mini" },
+			);
+			expect(result.source).toBe("session-default");
+			expect(result.model).toBeUndefined();
+		});
 	});
 });

@@ -451,18 +451,14 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				let tasks = params.tasks.map((t) => t.task);
 				const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
 				const availableModels = getAvailableRoutingModels(ctx);
-				const modelResolutions = agentConfigs.map((config, i) => {
-					const resolution = resolveSubagentModelResolution(
+				const modelResolutions = agentConfigs.map((config, i) =>
+					resolveSubagentModelResolution(
 						config,
 						availableModels,
 						(params.tasks?.[i] as { model?: string } | undefined)?.model,
 						{ currentModel: inheritedModel, taskText: tasks[i] },
-					);
-					if (!resolution.model && inheritedModel) {
-						return { ...resolution, model: inheritedModel, source: "session-default" as const };
-					}
-					return resolution;
-				});
+					),
+				);
 				// Initialize skill overrides from task-level skill params (may be overridden by TUI)
 				const skillOverrides: (string[] | false | undefined)[] = params.tasks.map((t) =>
 					normalizeSkillInput((t as { skill?: string | string[] | boolean }).skill),
@@ -663,17 +659,15 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 				let task = params.task!;
 				const availableModels = getAvailableRoutingModels(ctx);
-				let modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, params.model as string | undefined, {
-					currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
-					taskText: task,
-				});
-				if (!modelResolution.model && ctx.model) {
-					modelResolution = {
-						...modelResolution,
-						model: `${ctx.model.provider}/${ctx.model.id}`,
-						source: "session-default",
-					};
-				}
+				let modelResolution = resolveSubagentModelResolution(
+					agentConfig,
+					availableModels,
+					params.model as string | undefined,
+					{
+						currentModel: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+						taskText: task,
+					},
+				);
 				let modelOverride: string | undefined = modelResolution.model;
 				let skillOverride: string[] | false | undefined = normalizeSkillInput(params.skill);
 				// Normalize output: true means "use default" (same as undefined), false means disable

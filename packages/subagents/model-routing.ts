@@ -335,6 +335,37 @@ export function toAvailableModelRefs(models: DelegatedAvailableModel[]): Availab
 	}));
 }
 
+/**
+ * Check whether a model string is available in the given models list.
+ * Accepts fullId (provider/id), bare id, or id with thinking suffix.
+ * Returns the canonical fullId if available, otherwise undefined.
+ */
+export function findAvailableModel(
+	modelName: string | undefined,
+	availableModels: AvailableModelRef[],
+): string | undefined {
+	if (!modelName) return undefined;
+
+	// Strip thinking suffix for lookup
+	const colonIdx = modelName.lastIndexOf(":");
+	const baseName = colonIdx !== -1 ? modelName.substring(0, colonIdx) : modelName;
+	const thinkingSuffix = colonIdx !== -1 ? modelName.substring(colonIdx) : "";
+
+	// Try exact fullId match first
+	const exactMatch = availableModels.find((m) => m.fullId === baseName);
+	if (exactMatch) {
+		return thinkingSuffix ? `${exactMatch.fullId}${thinkingSuffix}` : exactMatch.fullId;
+	}
+
+	// Try bare id match
+	const idMatch = availableModels.find((m) => m.id === baseName);
+	if (idMatch) {
+		return thinkingSuffix ? `${idMatch.fullId}${thinkingSuffix}` : idMatch.fullId;
+	}
+
+	return undefined;
+}
+
 export function resolveSubagentModelResolution(
 	agent: AgentConfig,
 	availableModels: AvailableModelRef[],
@@ -343,15 +374,27 @@ export function resolveSubagentModelResolution(
 ): SubagentModelResolution {
 	const category = categoryForAgent(agent);
 	if (runtimeOverride) {
-		return { model: runtimeOverride, source: "runtime-override", category };
+		const validated = findAvailableModel(runtimeOverride, availableModels);
+		if (validated) {
+			return { model: validated, source: "runtime-override", category };
+		}
 	}
 	if (agent.model) {
-		return { model: agent.model, source: "frontmatter-model", category };
+		const validated = findAvailableModel(agent.model, availableModels);
+		if (validated) {
+			return { model: validated, source: "frontmatter-model", category };
+		}
 	}
 
 	const delegatedModel = resolveDelegatedAgentModel(agent, availableModels, options);
 	if (delegatedModel) {
 		return { model: delegatedModel, source: "delegated-category", category };
+	}
+
+	// Fall back to current session model if it's available
+	const sessionModel = findAvailableModel(options.currentModel, availableModels);
+	if (sessionModel) {
+		return { model: sessionModel, source: "session-default", category };
 	}
 
 	return { source: "session-default", category };

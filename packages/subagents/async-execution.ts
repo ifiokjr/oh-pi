@@ -167,9 +167,6 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 			currentModel: ctx.currentModel,
 			taskText: s.task,
 		});
-		if (!modelResolution.model && ctx.currentModel) {
-			modelResolution = { ...modelResolution, model: ctx.currentModel, source: "session-default" };
-		}
 
 		return {
 			agent: s.agent,
@@ -285,9 +282,6 @@ export function executeAsyncSingle(id: string, params: AsyncSingleParams): Async
 		currentModel: ctx.currentModel,
 		taskText: params.task,
 	});
-	if (!modelResolution.model && ctx.currentModel) {
-		modelResolution = { ...modelResolution, model: ctx.currentModel, source: "session-default" };
-	}
 	const pid = spawnRunner(
 		{
 			id,
