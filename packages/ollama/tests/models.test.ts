@@ -25,6 +25,7 @@ describe("ollama models", () => {
 		expect(models.some((model) => model.id === "gpt-oss:120b")).toBe(true);
 		expect(models.some((model) => model.id === "qwen3-vl:235b")).toBe(true);
 		expect(models.some((model) => model.id === "glm-5.1")).toBe(true);
+		expect(models.some((model) => model.id === "kimi-k2.6")).toBe(true);
 	});
 
 	it("normalizes model defaults", () => {

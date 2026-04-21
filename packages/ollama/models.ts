@@ -88,6 +88,7 @@ const FALLBACK_OLLAMA_CLOUD_MODELS: OllamaProviderModel[] = [
 	toOllamaModel({ id: "gpt-oss:20b", source: "cloud", reasoning: true, input: ["text"], contextWindow: 131_072, maxTokens: 16_384 }),
 	toOllamaModel({ id: "kimi-k2-thinking", source: "cloud", reasoning: true, input: ["text"], contextWindow: 262_144, maxTokens: 32_768 }),
 	toOllamaModel({ id: "kimi-k2.5", source: "cloud", reasoning: true, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
+	toOllamaModel({ id: "kimi-k2.6", source: "cloud", reasoning: true, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
 	toOllamaModel({ id: "kimi-k2:1t", source: "cloud", reasoning: false, input: ["text"], contextWindow: 262_144, maxTokens: 32_768 }),
 	toOllamaModel({ id: "minimax-m2", source: "cloud", reasoning: false, input: ["text"], contextWindow: 204_800, maxTokens: 25_600 }),
 	toOllamaModel({ id: "minimax-m2.1", source: "cloud", reasoning: true, input: ["text"], contextWindow: 204_800, maxTokens: 25_600 }),
