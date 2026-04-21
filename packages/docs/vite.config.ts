@@ -1,9 +1,24 @@
-import { defineConfig } from "vite";
+import { copyFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import mdx from "@mdx-js/rollup";
 import remarkGfm from "remark-gfm";
-import { resolve } from "node:path";
+
+/** Copy index.html as 404.html after build so GitHub Pages SPA routing works. */
+function ghPages404(): Plugin {
+	let outDir: string;
+	return {
+		name: "gh-pages-404",
+		configResolved(config) {
+			outDir = config.build.outDir;
+		},
+		closeBundle() {
+			copyFileSync(resolve(outDir, "index.html"), resolve(outDir, "404.html"));
+		},
+	};
+}
 
 export default defineConfig({
 	base: "/oh-pi/",
@@ -11,6 +26,7 @@ export default defineConfig({
 		mdx({ remarkPlugins: [remarkGfm] }),
 		react(),
 		tailwindcss(),
+		ghPages404(),
 	],
 	resolve: {
 		alias: {
