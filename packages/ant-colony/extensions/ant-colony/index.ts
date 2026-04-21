@@ -24,6 +24,7 @@ const COLONY_SIGNAL_RE = /\[COLONY_SIGNAL:([A-Z_]+)\]/;
 const COLONY_SIGNAL_STRIP_RE = /\[COLONY_SIGNAL:[A-Z_]+\]\s*/;
 const REPORT_STATUS_RE = /\*\*Status:\*\* (.+)/;
 const REPORT_DURATION_RE = /\*\*Duration:\*\* (.+)/;
+
 import type {
 	AntStreamEvent,
 	AntUsageEvent,

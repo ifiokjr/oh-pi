@@ -542,6 +542,11 @@ export default function usageTracker(pi: ExtensionAPI) {
 		}
 	}
 
+	const ANTHROPIC_MODEL_RE = /claude|sonnet|opus|haiku/;
+	const OPENAI_MODEL_RE = /gpt|o1|o3|o4|codex/;
+	const GOOGLE_MODEL_RE = /gemini|flash|pro-exp|antigravity/;
+	const OLLAMA_MODEL_RE = /ollama/;
+
 	function inferProviderFromModel(model: { id?: unknown; provider?: unknown } | null | undefined): ProviderKey | null {
 		const explicitProvider = normalizeProviderKey(model?.provider);
 		if (explicitProvider) {
@@ -553,19 +558,19 @@ export default function usageTracker(pi: ExtensionAPI) {
 			return null;
 		}
 
-		if (id.includes("claude") || id.includes("sonnet") || id.includes("opus") || id.includes("haiku")) {
+		if (ANTHROPIC_MODEL_RE.test(id)) {
 			return "anthropic";
 		}
 
-		if (id.includes("gpt") || id.includes("o1") || id.includes("o3") || id.includes("o4") || id.includes("codex")) {
+		if (OPENAI_MODEL_RE.test(id)) {
 			return "openai";
 		}
 
-		if (id.includes("gemini") || id.includes("flash") || id.includes("pro-exp") || id.includes("antigravity")) {
+		if (GOOGLE_MODEL_RE.test(id)) {
 			return "google";
 		}
 
-		if (id.includes("ollama")) {
+		if (OLLAMA_MODEL_RE.test(id)) {
 			return "ollama";
 		}
 

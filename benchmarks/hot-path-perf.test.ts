@@ -64,7 +64,7 @@ describe("hot path micro benchmarks", () => {
 							items.splice(0, firstValid);
 						} else {
 							items.copyWithin(0, firstValid);
-							items.length = items.length - firstValid;
+							items.length -= firstValid;
 						}
 					}
 				},
@@ -92,8 +92,7 @@ describe("hot path micro benchmarks", () => {
 						cache.push({ strength: 1.0, createdAt: now - Math.floor(Math.random() * 600_000) });
 					}
 					let write = 0;
-					for (let read = 0; read < cache.length; read++) {
-						const p = cache[read];
+					for (const p of cache) {
 						p.strength = 0.5 ** ((now - p.createdAt) / (10 * 60 * 1000));
 						if (p.strength > 0.05) {
 							cache[write++] = p;
@@ -123,8 +122,7 @@ describe("hot path micro benchmarks", () => {
 				run() {
 					for (let i = 0; i < 1000; i++) {
 						HOISTED_RE.lastIndex = 0;
-						// biome-ignore lint/correctness/noUnusedVariables: benchmark side effect
-						const _ = [...text.matchAll(HOISTED_RE)];
+						const _m = [...text.matchAll(HOISTED_RE)];
 					}
 				},
 			});
@@ -156,7 +154,6 @@ describe("hot path micro benchmarks", () => {
 							out.push(String(n * 2));
 						}
 					}
-					// biome-ignore lint/correctness/noUnusedVariables: benchmark side effect
 					const _sum = out.reduce((a, b) => a + Number(b), 0);
 				},
 			});
@@ -186,8 +183,7 @@ describe("hot path micro benchmarks", () => {
 					for (const v of map.values()) {
 						sum += v;
 					}
-					// biome-ignore lint/correctness/noUnusedVariables: benchmark side effect
-					const _ = sum;
+					const _sum = sum;
 				},
 			});
 			expect(result.budgetFailures).toEqual([]);

@@ -91,7 +91,7 @@ function pruneTimestamps(items: number[], now: number): void {
 		return;
 	}
 	items.copyWithin(0, firstValid);
-	items.length = items.length - firstValid;
+	items.length -= firstValid;
 }
 
 function profileSourceToId(source: string): string {

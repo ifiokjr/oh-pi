@@ -345,8 +345,7 @@ export class Nest {
 
 		// Apply exponential decay and filter out faded pheromones (single-pass write-pointer)
 		let write = 0;
-		for (let read = 0; read < this.pheromoneCache.length; read++) {
-			const pheromone = this.pheromoneCache[read];
+		for (const pheromone of this.pheromoneCache) {
 			pheromone.strength = 0.5 ** ((now - pheromone.createdAt) / PHEROMONE_HALF_LIFE_MS);
 			if (pheromone.strength > PHEROMONE_MIN_STRENGTH) {
 				this.pheromoneCache[write++] = pheromone;

@@ -228,7 +228,6 @@ export function stripAnsi(text: string): string {
 	return text.replace(ANSI_RE, "");
 }
 
-// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes use control chars by definition
 export function truncateAnsi(line: string, width: number): string {
 	const visibleLength = stripAnsi(line).length;
 	if (visibleLength <= width) {

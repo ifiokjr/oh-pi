@@ -111,7 +111,8 @@ function normalizeJsonTasks(parsed: unknown): ParsedSubTask[] {
 }
 
 // Pre-compiled field matcher for parseTasksFromStructuredLines — avoid new RegExp() per call.
-const STRUCTURED_FIELD_RE = /^\s*(?:[-*]|\d+\.)?\s*(?:\*\*|__)?\s*(description|desc|files?|caste|role|priority|prio|context)\s*(?:\*\*|__)?\s*:\s*(.*)$/i;
+const STRUCTURED_FIELD_RE =
+	/^\s*(?:[-*]|\d+\.)?\s*(?:\*\*|__)?\s*(description|desc|files?|caste|role|priority|prio|context)\s*(?:\*\*|__)?\s*:\s*(.*)$/i;
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Parser must handle many field variants (en/zh) and edge cases
 function parseTasksFromStructuredLines(output: string): ParsedSubTask[] {

@@ -252,7 +252,13 @@ export function buildBudgetSummary(
 		parts.push(
 			`Routing: ${routingTelemetry.totalRoutes} outcomes, avg latency ${routingTelemetry.avgLatencyMs}ms, escalations ${routingTelemetry.outcomeCounts.escalated}.`,
 		);
-		const topEscalation = Object.entries(routingTelemetry.escalationReasonCounts).sort((a, b) => b[1] - a[1])[0];
+		// Single-pass max-finder instead of sorting entire array for just the top entry
+		let topEscalation: [string, number] | undefined;
+		for (const entry of Object.entries(routingTelemetry.escalationReasonCounts)) {
+			if (!topEscalation || entry[1] > topEscalation[1]) {
+				topEscalation = entry;
+			}
+		}
 		if (topEscalation) {
 			parts.push(`Top escalation reason: ${topEscalation[0]} (${topEscalation[1]}).`);
 		}
