@@ -92,6 +92,9 @@ function createMockPi() {
 		registerCommand(name: string, opts: any) {
 			commands.set(name, opts);
 		},
+		registerMessageRenderer(_customType: string, _renderer: any) {
+			// No-op in tests
+		},
 		sendMessage(msg: any) {
 			messages.push(msg);
 		},
@@ -182,6 +185,7 @@ import schedulerExtension, {
 	parseDuration,
 	parseLoopScheduleArgs,
 	parseRemindScheduleArgs,
+	SCHEDULER_DISPATCHED_MESSAGE_TYPE,
 	SCHEDULER_SAFE_MODE_HEARTBEAT_MS,
 	SchedulerRuntime,
 	THREE_DAYS,
@@ -189,6 +193,12 @@ import schedulerExtension, {
 } from "./scheduler.js";
 
 // ─── Duration parsing ────────────────────────────────────────────────────────
+
+// Helper to extract dispatched scheduler prompt content from mocked messages.
+const getDispatchedPrompts = (pi: ReturnType<typeof createPi>) =>
+	pi._messages
+		.filter((m: any) => m.customType === SCHEDULER_DISPATCHED_MESSAGE_TYPE)
+		.map((m: any) => m.content as string);
 
 describe("parseDuration", () => {
 	it("parses seconds with short unit", () => {
@@ -1048,7 +1058,7 @@ describe("SchedulerRuntime", () => {
 			task.pending = true;
 			runtime.dispatchTask(task);
 
-			expect(pi._userMessages).toEqual(["check ci"]);
+			expect(getDispatchedPrompts(pi)).toEqual(["check ci"]);
 			expect(task.runCount).toBe(1);
 			expect(task.lastStatus).toBe("success");
 			expect(task.pending).toBe(false);
@@ -1062,7 +1072,7 @@ describe("SchedulerRuntime", () => {
 			task.pending = true;
 			runtime.dispatchTask(task);
 
-			expect(pi._userMessages).toEqual(["remind me"]);
+			expect(getDispatchedPrompts(pi)).toEqual(["remind me"]);
 			expect(runtime.taskCount).toBe(0);
 		});
 
@@ -1126,7 +1136,7 @@ describe("SchedulerRuntime", () => {
 				runtime.dispatchTask(task);
 			}
 
-			expect(pi._userMessages).toHaveLength(MAX_DISPATCHES_PER_WINDOW);
+			expect(getDispatchedPrompts(pi)).toHaveLength(MAX_DISPATCHES_PER_WINDOW);
 			expect(tasks[MAX_DISPATCHES_PER_WINDOW].pending).toBe(true);
 			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduler throttled"))).toBe(true);
 		});
@@ -1140,7 +1150,7 @@ describe("SchedulerRuntime", () => {
 				task.pending = true;
 				runtime.dispatchTask(task);
 			}
-			expect(pi._userMessages).toHaveLength(MAX_DISPATCHES_PER_WINDOW);
+			expect(getDispatchedPrompts(pi)).toHaveLength(MAX_DISPATCHES_PER_WINDOW);
 
 			vi.advanceTimersByTime(DISPATCH_RATE_LIMIT_WINDOW_MS + 1_000);
 
@@ -1148,7 +1158,7 @@ describe("SchedulerRuntime", () => {
 			nextTask.pending = true;
 			runtime.dispatchTask(nextTask);
 
-			expect(pi._userMessages).toHaveLength(MAX_DISPATCHES_PER_WINDOW + 1);
+			expect(getDispatchedPrompts(pi)).toHaveLength(MAX_DISPATCHES_PER_WINDOW + 1);
 		});
 
 		it("does not dispatch disabled task", () => {
@@ -1160,14 +1170,14 @@ describe("SchedulerRuntime", () => {
 			task.pending = true;
 			runtime.dispatchTask(task);
 
-			expect(pi._userMessages).toHaveLength(0);
+			expect(getDispatchedPrompts(pi)).toHaveLength(0);
 		});
 
-		it("marks task as error if sendUserMessage throws", () => {
+		it("marks task as error if sendMessage throws", () => {
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
 
-			pi.sendUserMessage = () => {
+			pi.sendMessage = () => {
 				throw new Error("send failed");
 			};
 
@@ -1195,7 +1205,7 @@ describe("SchedulerRuntime", () => {
 			vi.advanceTimersByTime(150);
 			await Promise.resolve();
 
-			expect(pi._userMessages).toEqual(["check ci"]);
+			expect(getDispatchedPrompts(pi)).toEqual(["check ci"]);
 			expect(runtime.getTask(task.id)).toBeUndefined();
 		});
 	});
@@ -1423,7 +1433,7 @@ describe("SchedulerRuntime", () => {
 			runtime.setTaskEnabled("overdue2", true);
 			await runtime.tickScheduler();
 
-			expect(pi._userMessages).toEqual(["check build"]);
+			expect(getDispatchedPrompts(pi)).toEqual(["check build"]);
 		});
 
 		it("skips expired tasks when loading from disk", () => {
@@ -2456,7 +2466,7 @@ describe("event wiring", () => {
 		pi._emit("session_shutdown", { type: "session_shutdown" }, otherCtx);
 		await vi.advanceTimersByTimeAsync(ONE_MINUTE + 2_000);
 
-		expect(pi._userMessages).toContain("check build");
+		expect(getDispatchedPrompts(pi)).toContain("check build");
 	});
 
 	it("stops scheduler and clears status when the last session shuts down", () => {
@@ -2518,8 +2528,8 @@ describe("safe mode", () => {
 		vi.advanceTimersByTime(SCHEDULER_SAFE_MODE_HEARTBEAT_MS + 1_000 + 100);
 		await runtime.tickScheduler();
 
-		expect(pi._userMessages.length).toBe(1);
-		expect(pi._userMessages[0]).toBe("run this");
+		expect(getDispatchedPrompts(pi).length).toBe(1);
+		expect(getDispatchedPrompts(pi)[0]).toBe("run this");
 	});
 
 	it("suppresses rate limit notifications in safe mode", () => {
@@ -2938,7 +2948,7 @@ describe("edge cases", () => {
 		});
 
 		runtime.dispatchTask(task);
-		expect(pi._userMessages.at(-1)).toBe("check build status");
+		expect(getDispatchedPrompts(pi).at(-1)).toBe("check build status");
 		expect(runtime.getTask(task.id)?.awaitingCompletion).toBe(true);
 		expect(runtime.getTask(task.id)?.lastStatus).toBe("pending");
 

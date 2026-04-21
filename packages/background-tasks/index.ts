@@ -16,6 +16,7 @@ import {
 	BG_COMMAND,
 	BG_DASHBOARD_MAX_HEIGHT,
 	BG_DASHBOARD_WIDTH,
+	BG_DEFAULT_TIMEOUT_MS,
 	BG_INSTALL_SYMBOL,
 	BG_LOG_TAIL_MAX_CHARS,
 	BG_MESSAGE_TYPE,
@@ -60,6 +61,7 @@ type SpawnTaskOptions = {
 	initialOutput?: string;
 	initialLastAlertLength?: number;
 	logFile?: string;
+	expiresAt?: number | null;
 };
 
 type ThemeLike = Theme;
@@ -77,6 +79,7 @@ function taskSnapshot(task: ManagedTask): BackgroundTaskSnapshot {
 		startedAt: task.startedAt,
 		updatedAt: task.updatedAt,
 		lastOutputAt: task.lastOutputAt,
+		expiresAt: task.expiresAt,
 		status: task.status,
 		exitCode: task.exitCode,
 		reactToOutput: task.reactToOutput,
@@ -99,9 +102,16 @@ function buildTaskEventLines(details: BackgroundTaskEventDetails, theme: ThemeLi
 		`${theme.fg("muted", "Task")}: ${details.task.id} · ${taskDisplayName(details.task)}`,
 		`${theme.fg("muted", "Status")}: ${summarizeTaskStatus(details.task.status, details.task.exitCode)} · pid ${details.task.pid}`,
 		`${theme.fg("muted", "Started")}: ${formatRelativeTime(details.task.startedAt, details.eventAt)} · ${formatDuration(details.eventAt - details.task.startedAt)} elapsed`,
+	];
+
+	if (details.task.expiresAt != null) {
+		lines.push(`${theme.fg("muted", "Expiry")}: ${formatRelativeTime(details.task.expiresAt, details.eventAt)} (${formatDuration(details.task.expiresAt - details.eventAt)} remaining)`);
+	}
+
+	lines.push(
 		`${theme.fg("muted", "Command")}: ${details.task.command}`,
 		`${theme.fg("muted", "Log")}: ${details.task.logFile}`,
-	];
+	);
 
 	if (details.matchedPattern) {
 		lines.push(`${theme.fg("muted", "Pattern")}: ${details.matchedPattern}`);
@@ -185,6 +195,23 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 		}
 		clearTimeout(task.outputTimer);
 		task.outputTimer = null;
+	};
+
+	const checkExpiredTasks = () => {
+		const now = Date.now();
+		for (const task of tasks.values()) {
+			if (task.status !== "running") {
+				continue;
+			}
+			if (task.expiresAt != null && now >= task.expiresAt) {
+				const remaining = getTaskOutput(task);
+				if (remaining.trim()) {
+					appendFileSync(task.logFile, `\n[expired] Background task timed out after ${formatDuration(task.expiresAt! - task.startedAt)}.\n`);
+				}
+				finalizeTask(task, task.exitCode, "stopped");
+				sendTaskEvent("exit", task);
+			}
+		}
 	};
 
 	const clearFinishedTasks = (): number => {
@@ -274,6 +301,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 	};
 
 	const refreshUi = () => {
+		checkExpiredTasks();
 		if (activeCtx) {
 			syncWidget(activeCtx);
 		}
@@ -305,7 +333,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 				display: true,
 				details,
 			},
-			{ triggerTurn: true, deliverAs: "followUp" },
+			eventType === "exit" ? { triggerTurn: true, deliverAs: "followUp" } : { triggerTurn: false },
 		);
 	};
 
@@ -399,6 +427,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 		const title = options.title?.trim() || command;
 		const reactToOutput = options.reactToOutput ?? true;
 		const notifyPattern = options.notifyPattern?.trim() || undefined;
+		const expiresAt = options.expiresAt !== undefined ? options.expiresAt : Date.now() + BG_DEFAULT_TIMEOUT_MS;
 		const child =
 			options.child ??
 			(() => {
@@ -424,6 +453,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			startedAt: Date.now(),
 			updatedAt: Date.now(),
 			lastOutputAt: initialOutput.trim().length > 0 ? Date.now() : null,
+			expiresAt,
 			status: "running",
 			exitCode: null,
 			reactToOutput,
@@ -656,6 +686,9 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 						);
 						right.push(`${theme.fg("muted", "Status")}: ${summarizeTaskStatus(selected.status, selected.exitCode)} · pid ${selected.pid}`);
 						right.push(`${theme.fg("muted", "Started")}: ${formatRelativeTime(selected.startedAt)} · ${formatDuration(Date.now() - selected.startedAt)} elapsed`);
+						if (selected.expiresAt != null) {
+							right.push(`${theme.fg("muted", "Expiry")}: ${formatRelativeTime(selected.expiresAt)} (${formatDuration(selected.expiresAt - Date.now())} remaining)`);
+						}
 						right.push(`${theme.fg("muted", "Command")}: ${selected.command}`);
 						right.push(`${theme.fg("muted", "Cwd")}: ${selected.cwd}`);
 						right.push(`${theme.fg("muted", "Log")}: ${selected.logFile}`);
@@ -875,7 +908,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "bash",
 		label: "Bash",
-		description: `Execute a bash command. Output is truncated to 2000 lines or 50KB. If a command runs longer than ${BG_TIMEOUT_MS / 1000}s, it is automatically moved into the background task runtime and you get the task id, PID, and log file. Use bg_status or bg_task to inspect it later.`,
+		description: `Execute a bash command. Output is truncated to 2000 lines or 50KB. If a command runs longer than ${BG_TIMEOUT_MS / 1000}s, it is automatically moved into the background task runtime and you get the task id, PID, and log file. Background tasks expire after 10 minutes by default. Use bg_status or bg_task to inspect it later.`,
 		parameters: Type.Object({
 			command: Type.String({ description: "Bash command to execute" }),
 			timeout: Type.Optional(Type.Number({ description: "Timeout in seconds before auto-backgrounding" })),
@@ -922,7 +955,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 					});
 					const preview = tailText((stdout + stderr).trim(), 500) || "(no output yet)";
 					finish({
-						text: `Command still running after ${timeoutMs / 1000}s, moved to the background.\nTask: ${task.id}\nPID: ${task.pid}\nLog: ${task.logFile}\n\nOutput so far:\n${preview}\n\nPi will watch for new output and notify you when the task exits.`,
+						text: `Command still running after ${timeoutMs / 1000}s, moved to the background.\nTask: ${task.id}\nPID: ${task.pid}\nLog: ${task.logFile}\nExpiry: ${task.expiresAt != null ? formatRelativeTime(task.expiresAt) : "none"}\n\nOutput so far:\n${preview}\n\nPi will watch for new output and notify you when the task exits.`,
 						details: { task: taskSnapshot(task) },
 					});
 				}, timeoutMs);
@@ -996,7 +1029,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 		name: "bg_task",
 		label: "Background Task",
 		description:
-			"Spawn, inspect, and stop background shell tasks. Tasks keep running after the tool returns, append output to a log file, and can wake the agent up when new output arrives or when the task exits.",
+			"Spawn, inspect, and stop background shell tasks. Tasks keep running after the tool returns, append output to a log file, and can wake the agent up when new output arrives or when the task exits. Background tasks expire after 10 minutes by default to prevent indefinite runs. Pass expiresAt=null to disable the expiry.",
 		parameters: Type.Object({
 			action: StringEnum(["spawn", "list", "log", "stop", "clear"] as const, {
 				description: "spawn=start a new task, list=show tasks, log=view task output, stop=terminate, clear=remove finished tasks",
@@ -1041,7 +1074,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 				});
 
 				return makeToolResult(
-					`Started ${task.id} (pid ${task.pid}) in the background.\nCommand: ${task.command}\nCwd: ${task.cwd}\nLog: ${task.logFile}\nWakeups: ${task.reactToOutput ? task.notifyPattern ?? "on output" : "exit only"}`,
+					`Started ${task.id} (pid ${task.pid}) in the background.\nCommand: ${task.command}\nCwd: ${task.cwd}\nLog: ${task.logFile}\nExpiry: ${task.expiresAt != null ? formatRelativeTime(task.expiresAt) : "none"}\nWakeups: ${task.reactToOutput ? task.notifyPattern ?? "on output" : "exit only"}`,
 					{ details: { task: taskSnapshot(task) } },
 				);
 			}

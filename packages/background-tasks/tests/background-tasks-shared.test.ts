@@ -89,6 +89,7 @@ describe("background task shared helpers", () => {
 				startedAt: Date.now() - 10_000,
 				updatedAt: Date.now() - 1_000,
 				lastOutputAt: Date.now() - 2_000,
+				expiresAt: Date.now() + 590_000,
 				status: "running",
 				exitCode: null,
 				reactToOutput: true,

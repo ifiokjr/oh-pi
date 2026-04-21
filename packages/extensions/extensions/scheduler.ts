@@ -28,6 +28,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { openScrollableSelect, type ScrollSelectOption } from "@ifi/pi-shared-qna";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { Text } from "@mariozechner/pi-tui";
 import {
 	computeNextCronRunAt,
 	formatDurationShort,
@@ -53,6 +54,7 @@ import {
 	ONE_HOUR,
 	ONE_MINUTE,
 	type ResumeReason,
+	SCHEDULER_DISPATCHED_MESSAGE_TYPE,
 	SCHEDULER_LEASE_HEARTBEAT_MS,
 	SCHEDULER_LEASE_STALE_AFTER_MS,
 	SCHEDULER_SAFE_MODE_HEARTBEAT_MS,
@@ -103,6 +105,7 @@ export {
 	MIN_RECURRING_INTERVAL,
 	ONE_HOUR,
 	ONE_MINUTE,
+	SCHEDULER_DISPATCHED_MESSAGE_TYPE,
 	SCHEDULER_LEASE_HEARTBEAT_MS,
 	SCHEDULER_LEASE_STALE_AFTER_MS,
 	SCHEDULER_SAFE_MODE_HEARTBEAT_MS,
@@ -1173,7 +1176,15 @@ export class SchedulerRuntime {
 		}
 
 		try {
-			this.pi.sendUserMessage(task.prompt);
+			this.pi.sendMessage(
+				{
+					customType: SCHEDULER_DISPATCHED_MESSAGE_TYPE,
+					content: task.prompt,
+					display: true,
+					details: { taskId: task.id, taskMode: this.taskMode(task), runCount: task.runCount + 1 },
+				},
+				{ triggerTurn: true },
+			);
 			this.recordDispatch(now);
 		} catch {
 			task.pending = true;
@@ -1997,6 +2008,20 @@ storage using a workspace-mirrored path.
 */
 export default function schedulerExtension(pi: ExtensionAPI) {
 	const runtime = new SchedulerRuntime(pi);
+
+	pi.registerMessageRenderer(SCHEDULER_DISPATCHED_MESSAGE_TYPE, (message, _options, theme) => {
+		const details = message.details as { taskId?: string; taskMode?: string; runCount?: number } | undefined;
+		const prefix = theme.bold(theme.fg("accent", "⏰ Scheduled run"));
+		const taskInfo = details?.taskId ? ` \u00B7 ${details.taskId}` : "";
+		const modeInfo = details?.taskMode ? ` \u00B7 ${details.taskMode}` : "";
+		const runInfo = details?.runCount ? ` \u00B7 run #${details.runCount}` : "";
+		const label = `${prefix}${taskInfo}${modeInfo}${runInfo}`;
+		const body = typeof message.content === "string" ? message.content : "";
+		return new Text(`${label}\n${theme.fg("dim", body)}`, 1, 0, (segment: string) =>
+			theme.bg("customMessageBg", segment),
+		);
+	});
+
 	registerEvents(pi, runtime);
 	registerCommands(pi, runtime);
 	registerTools(pi, runtime);

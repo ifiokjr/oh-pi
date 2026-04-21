@@ -12,6 +12,7 @@ export const BG_OUTPUT_ALERT_MAX_CHARS = 3_000;
 export const BG_LOG_TAIL_MAX_CHARS = 5_000;
 export const BG_DASHBOARD_WIDTH = 96;
 export const BG_DASHBOARD_MAX_HEIGHT = "80%";
+export const BG_DEFAULT_TIMEOUT_MS = 10 * 60_000;
 export const BG_INSTALL_SYMBOL = Symbol.for("oh-pi.background-tasks.installed");
 
 export type BackgroundTaskStatus = "running" | "completed" | "failed" | "stopped";
@@ -26,6 +27,7 @@ export interface BackgroundTaskSnapshot {
 	startedAt: number;
 	updatedAt: number;
 	lastOutputAt: number | null;
+	expiresAt: number | null;
 	status: BackgroundTaskStatus;
 	exitCode: number | null;
 	reactToOutput: boolean;

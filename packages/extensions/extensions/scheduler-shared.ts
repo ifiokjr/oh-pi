@@ -16,6 +16,7 @@ export const MAX_DISPATCHES_PER_WINDOW = 6;
 export const SCHEDULER_LEASE_HEARTBEAT_MS = 1_000;
 export const SCHEDULER_SAFE_MODE_HEARTBEAT_MS = 5_000;
 export const SCHEDULER_LEASE_STALE_AFTER_MS = 10_000;
+export const SCHEDULER_DISPATCHED_MESSAGE_TYPE = "pi-scheduler:dispatched";
 export const MAX_DISPATCH_TIMESTAMPS = 64;
 
 export type TaskKind = "recurring" | "once";
