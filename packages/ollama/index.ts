@@ -165,7 +165,14 @@ function registerOllamaCommands(pi: ExtensionAPI): void {
 				const cloudStatus = hasCloudAuth(credential)
 					? `${cloudModels.length} cloud available`
 					: `${cloudModels.length} public cloud discovered; run /login ollama-cloud to use them`;
-				ctx.ui.notify(`Refreshed Ollama models (${localModels.length} local installed, ${cloudStatus}).`, "info");
+				const parts = [`Refreshed Ollama models (${localModels.length} local installed, ${cloudStatus}).`];
+				if (cloudEnvDiscoveryState.lastError) {
+					parts.push(`Cloud discovery error: ${cloudEnvDiscoveryState.lastError}`);
+				}
+				if (localDiscoveryState.lastError) {
+					parts.push(`Local discovery error: ${localDiscoveryState.lastError}`);
+				}
+				ctx.ui.notify(parts.join(" "), parts.length > 1 ? "warning" : "info");
 				return;
 			}
 
@@ -245,7 +252,11 @@ function registerOllamaCommands(pi: ExtensionAPI): void {
 				const suffix = hasCloudAuth(credential)
 					? `${cloudModels.length} available`
 					: `${cloudModels.length} public models discovered; run /login ollama-cloud to use them`;
-				ctx.ui.notify(`Refreshed Ollama Cloud models (${suffix}).`, "info");
+				const parts = [`Refreshed Ollama Cloud models (${suffix}).`];
+				if (cloudEnvDiscoveryState.lastError) {
+					parts.push(`Discovery error: ${cloudEnvDiscoveryState.lastError}`);
+				}
+				ctx.ui.notify(parts.join(" "), parts.length > 1 ? "warning" : "info");
 				return;
 			}
 
@@ -503,39 +514,59 @@ function streamSimpleOllamaLocal(model: Model<any>, context: Context, options?: 
 	return streamSimpleOpenAICompletions(model as Model<"openai-completions">, context, options);
 }
 
+function getCloudModels(credential: OllamaCloudCredentials | null): OllamaProviderModel[] {
+	return cloudEnvDiscoveryState.models.length > 0
+		? cloudEnvDiscoveryState.models
+		: (credential ? getCredentialModels(credential) : getFallbackOllamaCloudModels());
+}
+
+function getCloudRefreshAge(credential: OllamaCloudCredentials | null): string {
+	return formatRefreshAge(cloudEnvDiscoveryState.lastRefresh ?? credential?.lastModelRefresh);
+}
+
 function renderUnifiedStatus(credential: OllamaCloudCredentials | null): string {
 	const localConfig = getOllamaLocalRuntimeConfig();
 	const cloudConfig = getOllamaCloudRuntimeConfig();
 	const localModels = getRegisteredLocalModels();
 	const downloadableLocalModels = localModels.filter((model) => model.localAvailability === "downloadable");
-	const cloudModels = credential ? getCredentialModels(credential) : cloudEnvDiscoveryState.models;
-	return [
+	const cloudModels = getCloudModels(credential);
+	const lines = [
 		`Ollama CLI: ${describeLocalCliStatus()}`,
 		`Ollama local: ${describeLocalRuntime()}`,
 		`Local installed: ${localDiscoveryState.models.length}${formatRefreshAge(localDiscoveryState.lastRefresh)}`,
 		`Local download candidates: ${downloadableLocalModels.length}`,
 		`Local base URL: ${localConfig.apiUrl}`,
 		`Ollama cloud auth: ${describeCloudAuth(credential)}`,
-		`Cloud models: ${cloudModels.length}${formatRefreshAge(credential?.lastModelRefresh ?? cloudEnvDiscoveryState.lastRefresh)}`,
+		`Cloud models: ${cloudModels.length}${getCloudRefreshAge(credential)}`,
+	];
+	if (cloudEnvDiscoveryState.lastError) {
+		lines.push(`Cloud discovery error: ${cloudEnvDiscoveryState.lastError}`);
+	}
+	lines.push(
 		`Cloud base URL: ${cloudConfig.apiUrl}`,
 		`Tip: prefer ollama-cloud/... for speed, and use /ollama pull <model> only when you need a local copy.`,
-	].join("\n");
+	);
+	return lines.join("\n");
 }
 
 function renderCloudStatus(credential: OllamaCloudCredentials | null): string {
 	const config = getOllamaCloudRuntimeConfig();
-	const cloudModels = credential ? getCredentialModels(credential) : cloudEnvDiscoveryState.models;
-	return [
+	const cloudModels = getCloudModels(credential);
+	const lines = [
 		`Ollama cloud auth: ${describeCloudAuth(credential)}`,
-		`Cloud models: ${cloudModels.length}${formatRefreshAge(credential?.lastModelRefresh ?? cloudEnvDiscoveryState.lastRefresh)}`,
-		`Cloud base URL: ${config.apiUrl}`,
-	].join("\n");
+		`Cloud models: ${cloudModels.length}${getCloudRefreshAge(credential)}`,
+	];
+	if (cloudEnvDiscoveryState.lastError) {
+		lines.push(`Discovery error: ${cloudEnvDiscoveryState.lastError}`);
+	}
+	lines.push(`Cloud base URL: ${config.apiUrl}`);
+	return lines.join("\n");
 }
 
 function collectOllamaModels(credential: OllamaCloudCredentials | null): CollectedOllamaModel[] {
 	const localConfig = getOllamaLocalRuntimeConfig();
 	const cloudConfig = getOllamaCloudRuntimeConfig();
-	const cloudModels = credential ? getCredentialModels(credential) : cloudEnvDiscoveryState.models;
+	const cloudModels = getCloudModels(credential);
 	return [
 		...cloudModels.map((model) => ({ ...model, provider: OLLAMA_CLOUD_PROVIDER, baseUrl: cloudConfig.apiUrl })),
 		...getRegisteredLocalModels().map((model) => ({ ...model, provider: OLLAMA_LOCAL_PROVIDER, baseUrl: localConfig.apiUrl })),
