@@ -288,11 +288,17 @@ beforeEach(() => {
 		truncation: undefined,
 		progressSummary: { durationMs: 12 },
 	});
-	mocks.resolveSubagentModelResolution.mockReturnValue({
-		model: undefined,
-		source: "agent-default",
-		category: undefined,
-	});
+	mocks.resolveSubagentModelResolution.mockImplementation(
+		(_agent: any, _models: any[], explicitModel?: string, options?: { currentModel?: string }) => {
+			if (explicitModel) {
+				return { model: explicitModel, source: "runtime-override", category: "explicit" };
+			}
+			if (options?.currentModel) {
+				return { model: options.currentModel, source: "session-default", category: undefined };
+			}
+			return { model: undefined, source: "agent-default", category: undefined };
+		},
+	);
 	mocks.finalizeSingleOutput.mockImplementation(({ truncatedOutput, fullOutput }: any) => ({
 		displayOutput: truncatedOutput || fullOutput || "(no output)",
 	}));

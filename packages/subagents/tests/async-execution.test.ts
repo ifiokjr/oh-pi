@@ -137,11 +137,15 @@ beforeEach(() => {
 		missing: [],
 	}));
 	asyncMocks.resolveSubagentModelResolution.mockImplementation(
-		(_agent: any, _models: any[], explicitModel?: string) => ({
-			model: explicitModel,
-			source: explicitModel ? "runtime-override" : "agent-default",
-			category: explicitModel ? "explicit" : undefined,
-		}),
+		(_agent: any, _models: any[], explicitModel?: string, options?: { currentModel?: string }) => {
+			if (explicitModel) {
+				return { model: explicitModel, source: "runtime-override", category: "explicit" };
+			}
+			if (options?.currentModel) {
+				return { model: options.currentModel, source: "session-default", category: undefined };
+			}
+			return { model: undefined, source: "agent-default", category: undefined };
+		},
 	);
 });
 
@@ -240,7 +244,7 @@ describe("async execution helpers", () => {
 		const ctx = createCtx();
 		asyncMocks.resolveSubagentModelResolution
 			.mockReturnValueOnce({ model: "openai/gpt-5", source: "runtime-override", category: "explicit" })
-			.mockReturnValue({ model: undefined, source: "agent-default", category: undefined });
+			.mockReturnValue({ model: "anthropic/claude-sonnet-4", source: "session-default", category: undefined });
 
 		const result = executeAsyncChain("chain-2", {
 			chain: [

@@ -47,8 +47,6 @@ import {
 /** Resolve a model name to its full provider/model format */
 function resolveModelFullId(modelName: string | undefined, availableModels: ModelInfo[]): string | undefined {
 	if (!modelName) return undefined;
-	// If already in provider/model format, return as-is
-	if (modelName.includes("/")) return modelName;
 
 	// Handle thinking level suffixes (e.g., "claude-sonnet-4-5:high")
 	// Strip the suffix for lookup, then add it back
@@ -57,13 +55,12 @@ function resolveModelFullId(modelName: string | undefined, availableModels: Mode
 	const thinkingSuffix = colonIdx !== -1 ? modelName.substring(colonIdx) : "";
 
 	// Look up base model in available models to find provider
-	const match = availableModels.find((m) => m.id === baseModel);
+	const match = availableModels.find((m) => m.id === baseModel || m.fullId === baseModel);
 	if (match) {
 		return thinkingSuffix ? `${match.fullId}${thinkingSuffix}` : match.fullId;
 	}
 
-	// Fallback: return as-is
-	return modelName;
+	return undefined;
 }
 
 export interface ChainExecutionParams {
@@ -341,13 +338,6 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 						taskText: taskStr,
 					})
 					: { model: explicitModel, source: explicitModel ? ("runtime-override" as const) : ("session-default" as const) };
-				if (!modelResolution.model && inheritedModel) {
-					modelResolution = {
-						...modelResolution,
-						model: resolveModelFullId(inheritedModel, availableModels),
-						source: "session-default",
-					};
-				}
 
 				const r = await runSync(ctx.cwd, agents, task.agent, taskStr, {
 					cwd: task.cwd ?? cwd,
@@ -505,13 +495,6 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				currentModel: inheritedModel,
 				taskText: stepTask,
 			});
-			if (!modelResolution.model && inheritedModel) {
-				modelResolution = {
-					...modelResolution,
-					model: resolveModelFullId(inheritedModel, availableModels),
-					source: "session-default",
-				};
-			}
 
 			// Run step
 			const r = await runSync(ctx.cwd, agents, seqStep.agent, stepTask, {
