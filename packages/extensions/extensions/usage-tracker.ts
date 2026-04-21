@@ -445,9 +445,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 			if (!existsSync(dir)) {
 				mkdirSync(dir, { recursive: true });
 			}
-			const providers = Object.fromEntries(
-				Array.from(rateLimits.entries()).map(([provider, value]) => [provider, value]),
-			);
+			const providers = Object.fromEntries(rateLimits);
 			writeFileSync(rateLimitCachePath, `${JSON.stringify({ version: 1, providers }, null, 2)}\n`, "utf-8");
 		} catch {
 			// Non-critical. We can still rely on in-memory provider data.
@@ -1431,9 +1429,14 @@ export default function usageTracker(pi: ExtensionAPI) {
 		if (!provider) {
 			const externalSources = getExternalSources();
 			if (externalSources.length > 0) {
-				const externalTotalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
-				const externalTurns = externalSources.reduce((sum, source) => sum + source.turns, 0);
-				const externalTokens = externalSources.reduce((sum, source) => sum + source.input + source.output, 0);
+				let externalTotalCost = 0;
+				let externalTurns = 0;
+				let externalTokens = 0;
+				for (const source of externalSources) {
+					externalTotalCost += source.costTotal;
+					externalTurns += source.turns;
+					externalTokens += source.input + source.output;
+				}
 				lines.push(
 					`External inference: ${fmtCost(externalTotalCost)} across ${externalTurns} turns (${fmtTokens(externalTokens)} tokens)`,
 				);
@@ -1558,9 +1561,14 @@ export default function usageTracker(pi: ExtensionAPI) {
 		if (!provider) {
 			const externalSources = getExternalSources();
 			if (externalSources.length > 0) {
-				const externalTotalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
-				const externalTurns = externalSources.reduce((sum, source) => sum + source.turns, 0);
-				const externalTokens = externalSources.reduce((sum, source) => sum + source.input + source.output, 0);
+				let externalTotalCost = 0;
+				let externalTurns = 0;
+				let externalTokens = 0;
+				for (const source of externalSources) {
+					externalTotalCost += source.costTotal;
+					externalTurns += source.turns;
+					externalTokens += source.input + source.output;
+				}
 				lines.push(
 					`  ${theme.fg("accent", "External")}${sep}${theme.fg("warning", fmtCost(externalTotalCost))}${sep}${externalTurns} turns${sep}${fmtTokens(externalTokens)} tokens`,
 				);

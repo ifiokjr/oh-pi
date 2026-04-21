@@ -188,8 +188,9 @@ function sanitizeDetailsValue(
 
 	let changed = false;
 	const nextEntries: Array<[string, unknown]> = [];
-	const entries = Object.entries(value as Record<string, unknown>).slice(0, MAX_DETAIL_FIELDS);
-	if (entries.length !== Object.keys(value as Record<string, unknown>).length) {
+	const allEntries = Object.entries(value as Record<string, unknown>);
+	const entries = allEntries.slice(0, MAX_DETAIL_FIELDS);
+	if (entries.length !== allEntries.length) {
 		changed = true;
 	}
 	for (const [key, entryValue] of entries) {

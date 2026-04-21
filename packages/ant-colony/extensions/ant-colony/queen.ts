@@ -553,18 +553,22 @@ function updateMetrics(nest: Nest): ColonyMetrics {
 	const now = Date.now();
 	const elapsed = (now - state.metrics.startTime) / 60000; // minutes
 
+	let totalCost = 0;
+	let totalTokens = 0;
+	for (const ant of state.ants) {
+		totalCost += ant.usage.cost;
+		totalTokens += ant.usage.input + ant.usage.output;
+	}
+	const doneCount = tasks.filter((t) => t.status === "done").length;
 	const metrics: ColonyMetrics = {
 		tasksTotal: tasks.length,
-		tasksDone: tasks.filter((t) => t.status === "done").length,
+		tasksDone: doneCount,
 		tasksFailed: tasks.filter((t) => t.status === "failed").length,
 		antsSpawned: state.ants.length,
-		totalCost: state.ants.reduce((s, a) => s + a.usage.cost, 0),
-		totalTokens: state.ants.reduce((s, a) => s + a.usage.input + a.usage.output, 0),
+		totalCost,
+		totalTokens,
 		startTime: state.metrics.startTime,
-		throughputHistory: [
-			...state.metrics.throughputHistory,
-			elapsed > 0 ? tasks.filter((t) => t.status === "done").length / elapsed : 0,
-		].slice(-20),
+		throughputHistory: [...state.metrics.throughputHistory, elapsed > 0 ? doneCount / elapsed : 0].slice(-20),
 	};
 
 	nest.updateState({ metrics });
