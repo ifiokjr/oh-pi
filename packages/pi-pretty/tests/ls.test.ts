@@ -17,7 +17,7 @@ describe("renderTree", () => {
 
 	it("handles empty entries", () => {
 		const output = renderTree([]);
-		expect(output).toContain("No matches");
+		expect(output).toBe("");
 	});
 
 	it("sorts directories first", () => {

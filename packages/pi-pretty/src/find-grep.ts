@@ -168,4 +168,37 @@ function execMultiGrep(patterns: string[], glob: string, basePath: string): Mult
 	};
 }
 
-export { execMultiGrep as multiGrep };
+async function multiGrep(patterns: string[], glob: string, basePath: string): Promise<MultiGrepResult> {
+	if (patterns.length === 0) {
+		return { ok: false, message: "No patterns provided", matches: 0, results: [] };
+	}
+	try {
+		const { CursorStore } = await import("@ff-labs/fff-node");
+		const store = new CursorStore(basePath);
+		await store.init();
+		const results: MultiGrepResult["results"] = [];
+		let totalMatches = 0;
+		for (const pattern of patterns) {
+			const fffMatches = await store.grep(pattern, { glob });
+			for (const m of fffMatches) {
+				const existing = results.find((r) => r.file === m.file);
+				if (existing) {
+					existing.matches.push({ line: m.line, text: m.text, pattern });
+				} else {
+					results.push({ file: m.file, matches: [{ line: m.line, text: m.text, pattern }] });
+				}
+				totalMatches++;
+			}
+		}
+		return {
+			ok: totalMatches > 0,
+			message: totalMatches > 0 ? `Found ${totalMatches} matches` : "No matches",
+			matches: totalMatches,
+			results,
+		};
+	} catch {
+		return execMultiGrep(patterns, glob, basePath);
+	}
+}
+
+export { multiGrep, execMultiGrep };

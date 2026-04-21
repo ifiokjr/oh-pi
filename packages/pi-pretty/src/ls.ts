@@ -38,6 +38,8 @@ function renderTree(entries: FileEntry[], prefix = ""): string {
 	return lines.join("\n");
 }
 
+export { renderTree };
+
 export function enhanceLsTool(pi: ExtensionAPI): void {
 	const original = createLsTool(process.cwd());
 

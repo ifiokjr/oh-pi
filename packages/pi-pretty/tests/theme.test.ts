@@ -10,6 +10,7 @@ import {
 	termW,
 	resolveBaseBackground,
 	parseAnsiRgb,
+	FG_MUTED,
 } from "../src/theme.js";
 
 describe("strip", () => {

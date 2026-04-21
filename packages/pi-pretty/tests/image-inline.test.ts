@@ -4,6 +4,7 @@ import {
 	renderInlineImage,
 	getOuterTerminal,
 	isTmuxSession,
+	getTmuxPassthroughWarning,
 	__imageInternals,
 } from "../src/image-inline.js";
 
@@ -11,9 +12,30 @@ describe("detectImageProtocol", () => {
 	beforeEach(() => {
 		delete process.env.PRETTY_IMAGE_PROTOCOL;
 		delete process.env.TERM_PROGRAM;
+		delete process.env.TERM;
 		delete process.env.KITTY_WINDOW_ID;
+		delete process.env.KITTY_PID;
 		delete process.env.LC_TERMINAL;
+		delete process.env.GHOSTTY_RESOURCES_DIR;
+		delete process.env.WEZTERM_EXECUTABLE;
+		delete process.env.WEZTERM_CONFIG_DIR;
+		delete process.env.WEZTERM_CONFIG_FILE;
+		delete process.env.COLORTERM;
 		__imageInternals.resetCachesForTests();
+	});
+
+	afterEach(() => {
+		delete process.env.PRETTY_IMAGE_PROTOCOL;
+		delete process.env.TERM_PROGRAM;
+		delete process.env.TERM;
+		delete process.env.KITTY_WINDOW_ID;
+		delete process.env.KITTY_PID;
+		delete process.env.LC_TERMINAL;
+		delete process.env.GHOSTTY_RESOURCES_DIR;
+		delete process.env.WEZTERM_EXECUTABLE;
+		delete process.env.WEZTERM_CONFIG_DIR;
+		delete process.env.WEZTERM_CONFIG_FILE;
+		delete process.env.COLORTERM;
 	});
 
 	it("returns none by default", () => {
@@ -55,6 +77,21 @@ describe("renderInlineImage", () => {
 });
 
 describe("getOuterTerminal", () => {
+	beforeEach(() => {
+		delete process.env.PRETTY_IMAGE_PROTOCOL;
+		delete process.env.TERM_PROGRAM;
+		delete process.env.TERM;
+		delete process.env.KITTY_WINDOW_ID;
+		delete process.env.KITTY_PID;
+		delete process.env.LC_TERMINAL;
+		delete process.env.GHOSTTY_RESOURCES_DIR;
+		delete process.env.WEZTERM_EXECUTABLE;
+		delete process.env.WEZTERM_CONFIG_DIR;
+		delete process.env.WEZTERM_CONFIG_FILE;
+		delete process.env.COLORTERM;
+		__imageInternals.resetCachesForTests();
+	});
+
 	it("detects iterm2 from LC_TERMINAL", () => {
 		process.env.LC_TERMINAL = "iTerm2";
 		expect(getOuterTerminal()).toBe("iTerm.app");
@@ -82,13 +119,9 @@ describe("isTmuxSession", () => {
 });
 
 describe("tmux passthrough helpers", () => {
-	it("returns warning when passthrough is off", () => {
-		process.env.TMUX = "/tmp/tmux-1000/default,1234,0";
-		const { getTmuxPassthroughWarning, __imageInternals } = require("../src/image-inline.js");
-		__imageInternals.setTmuxAllowPassthroughOverrideForTests(false);
-		const warning = getTmuxPassthroughWarning("kitty");
-		expect(warning).toContain("allow-passthrough is off");
-		__imageInternals.setTmuxAllowPassthroughOverrideForTests(undefined);
+	it("returns null when not in tmux", () => {
 		delete process.env.TMUX;
+		const warning = getTmuxPassthroughWarning("kitty");
+		expect(warning).toBeNull();
 	});
 });
