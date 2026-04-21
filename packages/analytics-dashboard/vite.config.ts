@@ -24,8 +24,8 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          recharts: ["recharts"],
+        manualChunks(id) {
+          if (id.includes("recharts")) return "recharts";
         },
       },
     },

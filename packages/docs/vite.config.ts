@@ -1,10 +1,13 @@
 import { copyFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import mdx from "@mdx-js/rollup";
 import remarkGfm from "remark-gfm";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Copy index.html as 404.html after build so GitHub Pages SPA routing works. */
 function ghPages404(): Plugin {
