@@ -248,6 +248,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	function pruneRollingHistory(now = Date.now()): void {
 		const cutoff = now - ROLLING_COST_WINDOW_MS;
 		let write = 0;
+		// biome-ignore lint/style/useForOf: C-style loop needed for write-pointer in-place filter algorithm
 		for (let read = 0; read < rollingHistory.length; read++) {
 			const entry = rollingHistory[read];
 			if (Number.isFinite(entry.timestamp) && entry.timestamp >= cutoff) {
@@ -1798,7 +1799,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	});
 
 	// Wire up test-only flush function
-	_flushPendingWritesFn = () => {
+	flushPendingWritesFn = () => {
 		if (rollingHistorySaveTimer) {
 			clearTimeout(rollingHistorySaveTimer);
 			rollingHistorySaveTimer = null;
@@ -1819,11 +1820,11 @@ export default function usageTracker(pi: ExtensionAPI) {
 }
 
 // Module-level flush function — set by usageTracker() for test access.
-let _flushPendingWritesFn: (() => void) | null = null;
+let flushPendingWritesFn: (() => void) | null = null;
 
 /** Flush any pending debounced writes to disk. For use in tests only. */
-export function _flushPendingWrites(): void {
-	if (_flushPendingWritesFn) {
-		_flushPendingWritesFn();
+export function flushPendingWrites(): void {
+	if (flushPendingWritesFn) {
+		flushPendingWritesFn();
 	}
 }
