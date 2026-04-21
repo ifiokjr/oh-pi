@@ -201,3 +201,63 @@ Never allow unbounded maps from user-controlled keys to grow indefinitely.
 ### 10. Use `Array.from(map.values())` sparingly in hot paths
 
 `Array.from(map.values())` allocates a new array on every call. In hot paths (per-message, per-tick), cache or reuse the array. In setup or infrequent paths it's fine.
+
+### 11. Replace multi-pass filter+sort with single-pass loops
+
+In tick handlers and render methods, avoid chaining `.filter().filter().map()` on the same collection. Instead, do a single `for...of` loop with counters:
+
+```ts
+// ❌ Three allocations + three full iterations
+const enabled = Array.from(tasks.values()).filter((t) => t.enabled);
+const due = enabled.filter((t) => t.resumeRequired);
+const scheduled = enabled.filter((t) => !t.resumeRequired);
+const nextRunAt = Math.min(...scheduled.map((t) => t.nextRunAt));
+
+// ✅ One iteration, zero allocations
+let enabledCount = 0;
+let dueCount = 0;
+let scheduledCount = 0;
+let nextRunAt = Infinity;
+for (const task of tasks.values()) {
+  if (!task.enabled) continue;
+  enabledCount++;
+  if (task.resumeRequired) { dueCount++; }
+  else { scheduledCount++; nextRunAt = Math.min(nextRunAt, task.nextRunAt); }
+}
+```
+
+### 12. Use single-pass min-finding instead of filter+sort+index[0]
+
+To find the minimum element by a key, do a single-pass scan instead of allocating, filtering, sorting, and indexing:
+
+```ts
+// ❌ Allocates array + sorts entire collection
+const nextTask = Array.from(tasks.values())
+  .filter((t) => t.enabled && t.pending)
+  .sort((a, b) => a.nextRunAt - b.nextRunAt)[0];
+
+// ✅ Single-pass with early-exit, zero allocation
+let best: ScheduleTask | undefined;
+for (const task of tasks.values()) {
+  if (!task.enabled || !task.pending) continue;
+  if (!best || task.nextRunAt < best.nextRunAt) best = task;
+}
+```
+
+### 13. Use collect-then-delete pattern for Map iteration with deletion
+
+Never delete from a Map during `for...of map.values()` iteration. Instead of creating a snapshot with `Array.from(map.values())`, collect IDs in a temporary array and delete after the loop:
+
+```ts
+// ❌ Allocates full snapshot just to safely delete
+for (const task of Array.from(tasks.values())) {
+  if (shouldDelete(task)) tasks.delete(task.id);
+}
+
+// ✅ No snapshot — collect then delete
+const deleteIds: string[] = [];
+for (const task of tasks.values()) {
+  if (shouldDelete(task)) deleteIds.push(task.id);
+}
+for (const id of deleteIds) tasks.delete(id);
+```
