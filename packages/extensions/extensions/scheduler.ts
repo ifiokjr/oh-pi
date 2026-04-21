@@ -757,6 +757,7 @@ export class SchedulerRuntime {
 		);
 	}
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: tick scheduler has multiple early-return guard paths for correctness
 	async tickScheduler() {
 		if (!this.runtimeCtx) {
 			return;

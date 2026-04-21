@@ -574,7 +574,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	function hasOllamaModel(models: Map<string, ModelUsage>): boolean {
 		for (const model of models.values()) {
-			if (normalizeProviderKey(model.provider) === "ollama") return true;
+			if (normalizeProviderKey(model.provider) === "ollama") {
+				return true;
+			}
 		}
 		return false;
 	}
