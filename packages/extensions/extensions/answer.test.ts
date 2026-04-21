@@ -207,6 +207,26 @@ describe("normalizeExtractedQuestions", () => {
 		expect(result).toEqual([{ question: "Q?" }]);
 	});
 
+	it("extracts fullContext when present", () => {
+		const result = normalizeExtractedQuestions([
+			{
+				question: "Most expensive bug?",
+				fullContext: "What is the most expensive bug?\\n\\na. Wrong version bump\\nb. Missing package in release",
+			},
+		]);
+		expect(result).toEqual([
+			{
+				question: "Most expensive bug?",
+				fullContext: "What is the most expensive bug?\\n\\na. Wrong version bump\\nb. Missing package in release",
+			},
+		]);
+	});
+
+	it("ignores empty fullContext strings", () => {
+		const result = normalizeExtractedQuestions([{ question: "Q?", fullContext: "   " }]);
+		expect(result).toEqual([{ question: "Q?" }]);
+	});
+
 	it("ignores empty options arrays", () => {
 		const result = normalizeExtractedQuestions([{ question: "Q?", options: [] }]);
 		expect(result).toEqual([{ question: "Q?" }]);
@@ -367,6 +387,11 @@ describe("EXTRACTION_SYSTEM_PROMPT", () => {
 
 	it("instructs LLM to synthesize recommended option when no multiple options exist", () => {
 		expect(EXTRACTION_SYSTEM_PROMPT).toContain("recommendation marked `recommended: true`");
+	});
+
+	it("instructs LLM to extract fullContext for expandable detail", () => {
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("fullContext");
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("expand for detail");
 	});
 });
 

@@ -25,7 +25,8 @@ const ANSWER_ENTRY_TYPE = "answer-state";
 const EXTRACTION_SYSTEM_PROMPT = [
 	"You are a question extractor. Given text from a conversation, extract any questions that need answering.",
 	"",
-	"Output a JSON array of objects, each with a `question` field (required) and optional `context`, `options`, and `recommendation` fields.",
+	"Output a JSON array of objects, each with a `question` field (required) and optional `context`, `fullContext`, `options`, and `recommendation` fields.",
+	"Use `fullContext` to preserve the original verbatim question text when you summarize or shorten it for the `question` field. This lets the user expand for more detail.",
 	"If a question has known options (e.g. yes/no, A/B/C, a numbered list of choices), include them as an `options` array where each option has `label`, `description`, and optional `recommended` fields.",
 	'If an option is clearly recommended (e.g. "I recommend X", "I\'d suggest Y"), mark it with `recommended: true`.',
 	'If there is a recommendation but no multiple options, create a single option array with the recommendation marked `recommended: true`. The user will see the one recommended option and an "Other" choice to describe what they actually want.',
@@ -40,7 +41,7 @@ const EXTRACTION_SYSTEM_PROMPT = [
 	"",
 	"Example output — question with choices found in a detailed section:",
 	"```json",
-	'[{"question": "What is the most expensive bug this system could ship?", "context": "Rank the options below by impact.", "options": [{"label": "a. Wrong version bump", "description": "e.g. patch instead of major"}, {"label": "b. Missing package in release", "description": "e.g. dependency not propagated"}, {"label": "c. Breaking dependency graph", "description": "e.g. circular propagation"}, {"label": "d. Config parsing silently ignores invalid input"}, {"label": "e. Adapter produces wrong manifest edits", "description": "e.g. corrupts Cargo.toml"}]}]',
+	'[{"question": "What is the most expensive bug this system could ship?", "context": "Rank the options below by impact.", "fullContext": "What is the most expensive bug this system could ship?\\n\\nRank these:\\n\\na. Wrong version bump (e.g. patch instead of major)\\nb. Missing package in release (e.g. dependency not propagated)\\nc. Breaking dependency graph (e.g. circular propagation, non-termination)\\nd. Config parsing silently ignores invalid input\\ne. Adapter produces wrong manifest edits (e.g. corrupts Cargo.toml)", "options": [{"label": "a. Wrong version bump", "description": "e.g. patch instead of major"}, {"label": "b. Missing package in release", "description": "e.g. dependency not propagated"}, {"label": "c. Breaking dependency graph", "description": "e.g. circular propagation"}, {"label": "d. Config parsing silently ignores invalid input"}, {"label": "e. Adapter produces wrong manifest edits", "description": "e.g. corrupts Cargo.toml"}]}]',
 	"```",
 	"",
 	"Example output — single recommendation without explicit choices:",
@@ -50,7 +51,7 @@ const EXTRACTION_SYSTEM_PROMPT = [
 	"",
 	"Guidelines:",
 	"- Find the MOST COMPLETE formulation of each question. If a question appears both as a detailed section (with choices, rankings, or examples) and as a short summary later (e.g. 'please answer the six questions above'), extract from the detailed section.",
-	"- Keep `question` concise — one sentence with the core question. Put background context in the `context` field.",
+	"- Keep `question` concise — one sentence with the core question. Put the full original text in `fullContext` so users can expand for detail. Put background context in the `context` field.",
 	"- Always extract all explicit choices as `options`. For example, if a question lists options a-e, include every option in the `options` array.",
 	"- Mark any clearly recommended option with `recommended: true`. Do not add a `recommended` field to non-recommended options.",
 	"- When there is a recommendation without multiple options, create a single option array with the recommendation marked `recommended: true`. The user will see the one recommended option and an 'Other' choice to describe what they actually want.",
@@ -75,6 +76,7 @@ const DEFAULT_TEMPLATES: QnATemplate[] = [
 interface ExtractedQuestion {
 	question: string;
 	context?: string;
+	fullContext?: string;
 	options?: Array<{ label: string; description: string; recommended?: boolean }>;
 }
 
@@ -147,6 +149,10 @@ function normalizeExtractedQuestions(raw: unknown): ExtractedQuestion[] {
 				question.context = (item.context as string).trim();
 			}
 
+			if (typeof item.fullContext === "string" && item.fullContext.trim().length > 0) {
+				question.fullContext = (item.fullContext as string).trim();
+			}
+
 			if (Array.isArray(item.options) && item.options.length > 0) {
 				const options = item.options
 					.filter(
@@ -184,6 +190,7 @@ function toQnAQuestions(extracted: ExtractedQuestion[]): QnAQuestion[] {
 	return extracted.map((q) => ({
 		question: q.question,
 		context: q.context,
+		fullContext: q.fullContext,
 		options: q.options,
 	}));
 }

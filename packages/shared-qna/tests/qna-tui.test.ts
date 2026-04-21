@@ -309,6 +309,68 @@ describe("QnATuiComponent", () => {
 		expect(rendered).toContain("Other");
 	});
 
+	it("opens context popup with Ctrl+O and closes with Escape", () => {
+		const done = vi.fn();
+		const component = new QnATuiComponent(
+			[
+				{
+					question: "Most expensive bug?",
+					fullContext: "What is the most expensive bug?\n\na. Wrong version bump\nb. Missing package in release",
+				},
+			],
+			createTui(),
+			done,
+		);
+
+		// Normal render does not show full context
+		const normalRender = component.render(80).join("\n");
+		expect(normalRender).toContain("Most expensive bug?");
+		expect(normalRender).not.toContain("Wrong version bump");
+
+		// Ctrl+O opens popup
+		component.handleInput("<ctrl-o>");
+		const popupRender = component.render(80).join("\n");
+		expect(popupRender).toContain("Question Details");
+		expect(popupRender).toContain("Wrong version bump");
+
+		// Escape closes popup
+		component.handleInput("<escape>");
+		const afterClose = component.render(80).join("\n");
+		expect(afterClose).not.toContain("Question Details");
+	});
+
+	it("toggles context popup closed with Ctrl+O", () => {
+		const done = vi.fn();
+		const component = new QnATuiComponent(
+			[
+				{
+					question: "Most expensive bug?",
+					fullContext: "What is the most expensive bug?\\n\\na. Wrong version bump\\nb. Missing package",
+				},
+			],
+			createTui(),
+			done,
+		);
+
+		// Open with Ctrl+O
+		component.handleInput("<ctrl-o>");
+		expect(component.render(80).join("\n")).toContain("Question Details");
+
+		// Close with Ctrl+O again
+		component.handleInput("<ctrl-o>");
+		expect(component.render(80).join("\n")).not.toContain("Question Details");
+	});
+
+	it("does nothing on Ctrl+O when fullContext is absent", () => {
+		const done = vi.fn();
+		const component = new QnATuiComponent([{ question: "Any notes?" }], createTui(), done);
+
+		component.handleInput("<ctrl-o>");
+		// Should not crash, just no-op
+		const rendered = component.render(80).join("\n");
+		expect(rendered).toContain("Any notes?");
+	});
+
 	it("supports escape from confirmation and ctrl+c cancellation", () => {
 		const done = vi.fn();
 		const component = new QnATuiComponent([{ question: "Any notes?" }], createTui(), done, {
