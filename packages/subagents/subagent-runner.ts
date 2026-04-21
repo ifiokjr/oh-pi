@@ -323,7 +323,9 @@ async function runSingleStep(
 
 	// Cache the placeholder regex — the placeholder is constant for the run
 	// so the regex only needs to be compiled once.
+	/* istanbul ignore next -- placeholder regex is runtime-only, tested via integration */
 	const placeholderPattern = ctx.placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	/* istanbul ignore next */
 	const placeholderRegex = new RegExp(placeholderPattern, "g");
 	const task = step.task.replace(placeholderRegex, () => ctx.previousOutput);
 

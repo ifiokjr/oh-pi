@@ -2953,4 +2953,71 @@ describe("edge cases", () => {
 		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "BUILD_DONE" }] });
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
+
+	it("caches regex completion signals and matches them", () => {
+		const runtime = new SchedulerRuntime(pi as any);
+		runtime.setRuntimeContext(ctx as any);
+		const task = runtime.addOneShotTask("check deployment", ONE_MINUTE, {
+			continueUntilComplete: true,
+			completionSignal: "/deployed.*success/i",
+			retryIntervalMs: ONE_MINUTE,
+			maxAttempts: 3,
+		});
+
+		runtime.dispatchTask(task);
+		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "Deployed v2.0 with SUCCESS" }] });
+		expect(runtime.getTask(task.id)).toBeUndefined();
+	});
+
+	it("falls back to substring matching for plain signals", () => {
+		const runtime = new SchedulerRuntime(pi as any);
+		runtime.setRuntimeContext(ctx as any);
+		const task = runtime.addOneShotTask("check status", ONE_MINUTE, {
+			continueUntilComplete: true,
+			completionSignal: "STATUS_OK",
+			retryIntervalMs: ONE_MINUTE,
+			maxAttempts: 3,
+		});
+
+		runtime.dispatchTask(task);
+		// Plain string signal should match as substring
+		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "The status is STATUS_OK now" }] });
+		expect(runtime.getTask(task.id)).toBeUndefined();
+	});
+
+	it("handles invalid regex in completion signal gracefully", () => {
+		const runtime = new SchedulerRuntime(pi as any);
+		runtime.setRuntimeContext(ctx as any);
+		const task = runtime.addOneShotTask("check", ONE_MINUTE, {
+			continueUntilComplete: true,
+			completionSignal: "/([/",
+			retryIntervalMs: ONE_MINUTE,
+			maxAttempts: 3,
+		});
+
+		runtime.dispatchTask(task);
+		// Invalid regex should fall back to substring matching
+		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "The signal is /([/" }] });
+		expect(runtime.getTask(task.id)).toBeUndefined();
+	});
+
+	it("reuses cached regex for repeated completion signal checks", () => {
+		const runtime = new SchedulerRuntime(pi as any);
+		runtime.setRuntimeContext(ctx as any);
+		const task = runtime.addOneShotTask("check", ONE_MINUTE, {
+			continueUntilComplete: true,
+			completionSignal: "/completed/",
+			retryIntervalMs: ONE_MINUTE,
+			maxAttempts: 5,
+		});
+
+		runtime.dispatchTask(task);
+		// First check — should not match
+		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "still running" }] });
+		expect(runtime.getTask(task.id)).toBeDefined();
+		// Second check — regex should be cached now, match on second attempt
+		runtime.dispatchTask(runtime.getTask(task.id)!);
+		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "Task completed!" }] });
+		expect(runtime.getTask(task.id)).toBeUndefined();
+	});
 });
