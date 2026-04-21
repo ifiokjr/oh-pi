@@ -281,7 +281,7 @@ function stripAnsiForTest(text: string): string {
 
 import { existsSync, promises as fsPromises, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resetSafeModeStateForTests, setSafeModeState } from "./runtime-mode";
-import usageTracker from "./usage-tracker.js";
+import usageTracker, { _flushPendingWrites } from "./usage-tracker.js";
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
@@ -503,6 +503,9 @@ describe("usage-tracker extension", () => {
 				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.45 }), toolResults: [] },
 				ctx,
 			);
+
+			// Flush the debounced write so the test can observe it
+			_flushPendingWrites();
 
 			const writes = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls.filter(
 				(call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("usage-tracker-history.json"),

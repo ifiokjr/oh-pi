@@ -1796,4 +1796,34 @@ export default function usageTracker(pi: ExtensionAPI) {
 			await openUsageOverlay(ctx, provider);
 		},
 	});
+
+	// Wire up test-only flush function
+	_flushPendingWritesFn = () => {
+		if (rollingHistorySaveTimer) {
+			clearTimeout(rollingHistorySaveTimer);
+			rollingHistorySaveTimer = null;
+		}
+		if (rollingHistoryDirty) {
+			rollingHistoryDirty = false;
+			saveRollingHistory();
+		}
+		if (rateLimitCacheSaveTimer) {
+			clearTimeout(rateLimitCacheSaveTimer);
+			rateLimitCacheSaveTimer = null;
+		}
+		if (rateLimitCacheDirty) {
+			rateLimitCacheDirty = false;
+			saveRateLimitCache();
+		}
+	};
+}
+
+// Module-level flush function — set by usageTracker() for test access.
+let _flushPendingWritesFn: (() => void) | null = null;
+
+/** Flush any pending debounced writes to disk. For use in tests only. */
+export function _flushPendingWrites(): void {
+	if (_flushPendingWritesFn) {
+		_flushPendingWritesFn();
+	}
 }
