@@ -2,6 +2,7 @@
 import path from "node:path";
 import process from "node:process";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { recordRuntimeSample } from "./watchdog-runtime-diagnostics";
 import {
@@ -805,7 +806,7 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 			const action = args.action ?? "?";
 			const detail =
 				action === "create" ? `${args.branch ?? "?"}` : action === "cleanup" ? `${args.target ?? "?"}` : "";
-			return `${theme.fg("toolTitle", theme.bold("⌥ worktree"))} ${action} ${detail}`;
+			return new Text(`${theme.fg("toolTitle", theme.bold("⌥ worktree"))} ${action} ${detail}`, 0, 0);
 		},
 
 		renderResult(result, _options, theme) {
@@ -813,10 +814,10 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 				result.content?.find((e): e is { type: "text"; text: string } => typeof e === "object" && e?.type === "text")
 					?.text ?? "";
 			if (result.isError) {
-				return `${theme.fg("error", text)}`;
+				return new Text(theme.fg("error", text), 0, 0);
 			}
 			const firstLine = text.split("\n")[0] ?? "";
-			return `${theme.fg("success", "✓ ")}${theme.fg("muted", firstLine)}`;
+			return new Text(`${theme.fg("success", "✓ ")}${theme.fg("muted", firstLine)}`, 0, 0);
 		},
 	});
 }
