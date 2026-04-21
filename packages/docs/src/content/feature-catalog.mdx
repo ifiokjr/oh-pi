@@ -1,9 +1,8 @@
 ---
 title: "Feature Catalog"
 order: 8
+description: "Package-by-package feature inventory."
 ---
-
-
 A package-by-package inventory of the features currently shipped in this repo.
 
 This document is the long-form companion to the root [README](../README.md). Use it when you want
@@ -15,7 +14,7 @@ one place that answers:
 - which content packs ship in the repo
 - which packages are mainly contributor-facing libraries
 
-{/* MDT: {repoStartHerePathDocs} */}
+{/* MDT: {=repoStartHerePathDocs} */}
 
 Use this reading path depending on what you are trying to do:
 
@@ -28,7 +27,7 @@ Use this reading path depending on what you are trying to do:
 
 ### Architecture at a glance
 
-{/* MDT: {repoArchitectureAtAGlanceDocs} */}
+{/* MDT: {=repoArchitectureAtAGlanceDocs} */}
 
 ```text
 oh-pi repo
@@ -63,7 +62,7 @@ oh-pi repo
 
 {/* MDT: {/repoArchitectureAtAGlanceDocs} */}
 
-{/* MDT: {repoContributorReadingPathDocs} */}
+{/* MDT: {=repoContributorReadingPathDocs} */}
 
 Suggested path for a new contributor:
 
@@ -79,7 +78,7 @@ Suggested path for a new contributor:
 
 ### Installed by `npx @ifi/oh-pi`
 
-{/* MDT: {repoDefaultInstallerPackagesDocs} */}
+{/* MDT: {=repoDefaultInstallerPackagesDocs} */}
 
 Default runtime/content packages installed by `npx @ifi/oh-pi`:
 
@@ -99,7 +98,7 @@ Default runtime/content packages installed by `npx @ifi/oh-pi`:
 
 ### Opt-in packages
 
-{/* MDT: {repoExperimentalPackagesDocs} */}
+{/* MDT: {=repoExperimentalPackagesDocs} */}
 
 Opt-in packages that stay separate from the default installer bundle:
 
@@ -115,7 +114,7 @@ Opt-in packages that stay separate from the default installer bundle:
 These are important parts of the codebase, but they are primarily consumed by other packages or by
 people extending oh-pi:
 
-{/* MDT: {repoContributorCompiledPackagesDocs} */}
+{/* MDT: {=repoContributorCompiledPackagesDocs} */}
 
 Most runtime packages in this repo ship raw TypeScript and can be loaded directly by pi. A smaller
 set of contributor-facing packages (`core`, `cli`, `web-client`, `web-server`) emit `dist/` output,

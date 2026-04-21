@@ -68,6 +68,7 @@
     "mdt": "mdt",
     "docs:dev": "pnpm --filter @ifi/oh-pi-docs dev",
     "docs:build": "pnpm --filter @ifi/oh-pi-docs build",
+    "docs:sync": "pnpm --filter @ifi/oh-pi-docs docs:sync",
     "docs:list": "pnpm mdt list",
     "docs:update": "pnpm mdt update",
     "docs:check": "pnpm mdt check",

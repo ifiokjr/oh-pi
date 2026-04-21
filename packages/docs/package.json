@@ -1,7 +1,7 @@
 {
   "name": "@ifi/oh-pi-docs",
   "version": "0.4.4",
-  "description": "Documentation site for oh-pi — Pi Coding Agent extensions and tools",
+  "description": "Documentation site for oh-pi \u2014 Pi Coding Agent extensions and tools",
   "type": "module",
   "private": true,
   "scripts": {
@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check src/"
+    "lint": "biome check src/",
+    "docs:sync": "node scripts/sync-content.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
