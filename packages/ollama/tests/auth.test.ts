@@ -54,8 +54,28 @@ describe("ollama cloud auth", () => {
 		await backend.close();
 	});
 
-	it("modifies provider models from credential-discovered models", () => {
-		const provider = createOllamaCloudOAuthProvider();
+	it("modifies provider models using runtime cloud models when available", () => {
+		const runtimeModels = [
+			{ id: "kimi-k2.6", name: "Kimi K2.6", reasoning: true, input: ["text", "image"] as const, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 262144, maxTokens: 32768, source: "cloud" as const },
+		];
+		const provider = createOllamaCloudOAuthProvider(() => runtimeModels as never);
+		const modified = provider.modifyModels?.(
+			[
+				{ id: "placeholder", name: "Placeholder", api: "openai-completions", provider: "ollama-cloud", baseUrl: "https://example.com/v1", reasoning: false, input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 1, maxTokens: 1 },
+			],
+			{
+				refresh: "r",
+				access: "a",
+				expires: Date.now() + 1000,
+				models: [{ id: "gpt-oss:120b", name: "GPT OSS 120B", reasoning: true, input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 131072, maxTokens: 16384, source: "cloud" }],
+			} as never,
+		);
+
+		expect(modified?.map((model) => model.id)).toEqual(["kimi-k2.6"]);
+	});
+
+	it("falls back to credential models when runtime state is empty", () => {
+		const provider = createOllamaCloudOAuthProvider(() => []);
 		const modified = provider.modifyModels?.(
 			[
 				{ id: "placeholder", name: "Placeholder", api: "openai-completions", provider: "ollama-cloud", baseUrl: "https://example.com/v1", reasoning: false, input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 1, maxTokens: 1 },

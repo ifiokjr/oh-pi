@@ -8,6 +8,7 @@ import {
 } from "@mariozechner/pi-ai";
 import {
 	createOllamaCloudOAuthProvider,
+	type CloudModelsGetter,
 	loginOllamaCloud,
 	refreshOllamaCloudCredential,
 	refreshOllamaCloudCredentialModels,
@@ -102,7 +103,7 @@ function registerOllamaCloudProvider(pi: ExtensionAPI): void {
 		api: OLLAMA_API,
 		apiKey: OLLAMA_CLOUD_API_KEY_ENV,
 		baseUrl: getOllamaCloudRuntimeConfig().apiUrl,
-		oauth: createOllamaCloudOAuthProvider(),
+		oauth: createOllamaCloudOAuthProvider(() => cloudEnvDiscoveryState.models),
 		models: toProviderModels(cloudEnvDiscoveryState.models),
 		streamSimple: streamSimpleOllama,
 	});
@@ -581,7 +582,7 @@ function findLocalModelForQuery(query: string, credential: OllamaCloudCredential
 		return localMatch;
 	}
 
-	const cloudModels = (credential ? getCredentialModels(credential) : cloudEnvDiscoveryState.models).map((model) => ({
+	const cloudModels = getCloudModels(credential).map((model) => ({
 		...model,
 		provider: OLLAMA_CLOUD_PROVIDER,
 		baseUrl: getOllamaCloudRuntimeConfig().apiUrl,
@@ -842,6 +843,7 @@ export {
 	getFallbackOllamaCloudModels,
 	loginOllamaCloud,
 	refreshOllamaCloudCredential,
+	type CloudModelsGetter,
 };
 export { toOllamaModel, toOllamaCloudModel, type OllamaCloudCredentials, type OllamaProviderModel } from "./models.js";
 

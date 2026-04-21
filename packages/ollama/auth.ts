@@ -6,7 +6,7 @@ import {
 	OLLAMA_CLOUD_PROVIDER,
 	getOllamaCloudRuntimeConfig,
 } from "./config.js";
-import { enrichOllamaCloudCredentials, getCredentialModels, type OllamaCloudCredentials } from "./models.js";
+import { enrichOllamaCloudCredentials, getCredentialModels, type OllamaCloudCredentials, type OllamaProviderModel } from "./models.js";
 
 const STATIC_CREDENTIAL_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -44,7 +44,11 @@ export async function refreshOllamaCloudCredentialModels(credentials: OllamaClou
 	return enrichOllamaCloudCredentials(createStaticCredential(credentials.access), { previous: credentials });
 }
 
-export function createOllamaCloudOAuthProvider(): Omit<OAuthProviderInterface, "id"> {
+export type CloudModelsGetter = () => OllamaProviderModel[];
+
+export function createOllamaCloudOAuthProvider(
+	getActiveCloudModels: CloudModelsGetter,
+): Omit<OAuthProviderInterface, "id"> {
 	return {
 		name: "Ollama Cloud",
 		async login(callbacks) {
@@ -58,7 +62,10 @@ export function createOllamaCloudOAuthProvider(): Omit<OAuthProviderInterface, "
 		},
 		modifyModels(models, credentials) {
 			const config = getOllamaCloudRuntimeConfig();
-			const current = getCredentialModels(credentials as OllamaCloudCredentials);
+			const runtimeModels = getActiveCloudModels();
+			const current = runtimeModels.length > 0
+				? runtimeModels
+				: getCredentialModels(credentials as OllamaCloudCredentials);
 			return [
 				...models.filter((model) => model.provider !== OLLAMA_CLOUD_PROVIDER),
 				...current.map((model) => ({
