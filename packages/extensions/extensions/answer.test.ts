@@ -181,8 +181,8 @@ describe("normalizeExtractedQuestions", () => {
 			{
 				question: "Database?",
 				options: [
-					{ label: "PostgreSQL", description: "Relational" },
-					{ label: "MongoDB", description: "Document" },
+					{ label: "PostgreSQL", description: "Relational", recommended: false },
+					{ label: "MongoDB", description: "Document", recommended: false },
 				],
 			},
 		]);
@@ -192,7 +192,9 @@ describe("normalizeExtractedQuestions", () => {
 		const result = normalizeExtractedQuestions([
 			{ question: "Pick one?", options: [{ label: "A", description: "First" }, { description: "No label" }] },
 		]);
-		expect(result).toEqual([{ question: "Pick one?", options: [{ label: "A", description: "First" }] }]);
+		expect(result).toEqual([
+			{ question: "Pick one?", options: [{ label: "A", description: "First", recommended: false }] },
+		]);
 	});
 
 	it("strips options entirely when none remain after filtering", () => {
@@ -214,12 +216,67 @@ describe("normalizeExtractedQuestions", () => {
 		const result = normalizeExtractedQuestions([
 			{ question: "Q?", options: [{ label: "  A  ", description: "  desc  " }] },
 		]);
-		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "desc" }] }]);
+		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "desc", recommended: false }] }]);
 	});
 
 	it("uses empty string for non-string description in options", () => {
 		const result = normalizeExtractedQuestions([{ question: "Q?", options: [{ label: "A", description: 123 }] }]);
-		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "" }] }]);
+		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "", recommended: false }] }]);
+	});
+
+	it("preserves recommended flag on options", () => {
+		const result = normalizeExtractedQuestions([
+			{
+				question: "Pick one?",
+				options: [
+					{ label: "A", description: "First", recommended: true },
+					{ label: "B", description: "Second" },
+				],
+			},
+		]);
+		expect(result).toEqual([
+			{
+				question: "Pick one?",
+				options: [
+					{ label: "A", description: "First", recommended: true },
+					{ label: "B", description: "Second", recommended: false },
+				],
+			},
+		]);
+	});
+
+	it("defaults recommended to false when omitted", () => {
+		const result = normalizeExtractedQuestions([{ question: "Q?", options: [{ label: "A", description: "Only" }] }]);
+		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "Only", recommended: false }] }]);
+	});
+
+	it("synthesizes recommended option from recommendation string", () => {
+		const result = normalizeExtractedQuestions([
+			{ question: "Which tool?", context: "I recommend Kani.", recommendation: "Start with Kani" },
+		]);
+		expect(result).toEqual([
+			{
+				question: "Which tool?",
+				context: "I recommend Kani.",
+				options: [{ label: "Start with Kani", description: "", recommended: true }],
+			},
+		]);
+	});
+
+	it("prefers explicit options over recommendation string", () => {
+		const result = normalizeExtractedQuestions([
+			{
+				question: "Which tool?",
+				options: [{ label: "Kani", description: "Verifier", recommended: true }],
+				recommendation: "Use Kani",
+			},
+		]);
+		expect(result).toEqual([
+			{
+				question: "Which tool?",
+				options: [{ label: "Kani", description: "Verifier", recommended: true }],
+			},
+		]);
 	});
 });
 
@@ -293,9 +350,23 @@ describe("EXTRACTION_SYSTEM_PROMPT", () => {
 		expect(EXTRACTION_SYSTEM_PROMPT).toContain("Put background context in the `context` field");
 	});
 
-	it("instructs LLM to always extract explicit choices as options", () => {
+	it("instructs LLM to extract explicit choices as options", () => {
 		expect(EXTRACTION_SYSTEM_PROMPT).toContain("Always extract all explicit choices");
 		expect(EXTRACTION_SYSTEM_PROMPT).toContain("include every option");
+	});
+
+	it("instructs LLM to mark recommended options", () => {
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("mark it with `recommended: true`");
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("recommended: true");
+	});
+
+	it("includes single-recommendation example", () => {
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("single recommendation without explicit choices");
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("Proptest");
+	});
+
+	it("instructs LLM to synthesize recommended option when no multiple options exist", () => {
+		expect(EXTRACTION_SYSTEM_PROMPT).toContain("recommendation marked `recommended: true`");
 	});
 });
 
@@ -398,8 +469,8 @@ describe("extractQuestions", () => {
 			{
 				question: "Database?",
 				options: [
-					{ label: "PostgreSQL", description: "Relational" },
-					{ label: "SQLite", description: "Embedded" },
+					{ label: "PostgreSQL", description: "Relational", recommended: false },
+					{ label: "SQLite", description: "Embedded", recommended: false },
 				],
 			},
 		]);

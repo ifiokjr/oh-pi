@@ -47,6 +47,7 @@ function getPiTui() {
 export interface QnAOption {
 	label: string;
 	description: string;
+	recommended?: boolean;
 }
 
 export interface QnAQuestion {
@@ -698,17 +699,22 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 				lines.push(padToWidth(emptyBoxLine()));
 				for (let i = 0; i <= options.length; i++) {
 					const isOther = i === options.length;
-					const optionLabel = isOther ? "Other" : options[i].label;
+					const rawLabel = isOther ? "Other" : options[i].label;
+					const isRecommended = !isOther && options[i].recommended;
+					const optionLabel = isRecommended ? `${rawLabel} (recommended)` : rawLabel;
 					const description = isOther ? "Type your own answer" : options[i].description;
 					const selected = response.selectedOptionIndex === i;
 					const marker = selected ? "▶" : " ";
 					const optionPrefix = `${marker} ${i + 1}. `;
 					const line = `${optionPrefix}${optionLabel}`;
-					const styledLine = selected
-						? response.selectionTouched
-							? this.green(line)
-							: this.cyan(line)
-						: line;
+					let styledLine: string;
+					if (selected) {
+						styledLine = response.selectionTouched ? this.green(line) : this.cyan(line);
+					} else if (isRecommended) {
+						styledLine = this.bold(line);
+					} else {
+						styledLine = line;
+					}
 					lines.push(padToWidth(boxLine(truncateToWidth(styledLine, contentWidth))));
 
 					if (selected && description && description.trim().length > 0) {

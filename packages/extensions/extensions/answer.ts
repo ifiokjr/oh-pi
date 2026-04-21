@@ -25,14 +25,16 @@ const ANSWER_ENTRY_TYPE = "answer-state";
 const EXTRACTION_SYSTEM_PROMPT = [
 	"You are a question extractor. Given text from a conversation, extract any questions that need answering.",
 	"",
-	"Output a JSON array of objects, each with a `question` field (required) and optional `context` and `options` fields.",
-	"If a question has known options (e.g. yes/no, A/B/C, a numbered list of choices), include them as an `options` array where each option has `label` and `description` fields.",
+	"Output a JSON array of objects, each with a `question` field (required) and optional `context`, `options`, and `recommendation` fields.",
+	"If a question has known options (e.g. yes/no, A/B/C, a numbered list of choices), include them as an `options` array where each option has `label`, `description`, and optional `recommended` fields.",
+	'If an option is clearly recommended (e.g. "I recommend X", "I\'d suggest Y"), mark it with `recommended: true`.',
+	'If there is a recommendation but no multiple options, create a single option array with the recommendation marked `recommended: true`. The user will see the one recommended option and an "Other" choice to describe what they actually want.',
 	"If no questions are found, output an empty array: []",
 	"",
 	"Example output — simple options:",
 	"```json",
 	'[{"question": "What is your preferred database?", "options": [{"label": "PostgreSQL", "description": "Relational, mature"}, {"label": "MongoDB", "description": "Document store, flexible schema"}, {"label": "SQLite", "description": "Lightweight, embedded"}]},',
-	' {"question": "Should we use TypeScript or JavaScript?", "options": [{"label": "TypeScript", "description": "Static typing, better DX"}, {"label": "JavaScript", "description": "Simpler, no build step"}]},',
+	' {"question": "Should we use TypeScript or JavaScript?", "options": [{"label": "TypeScript", "description": "Static typing, better DX", "recommended": true}, {"label": "JavaScript", "description": "Simpler, no build step"}]},',
 	' {"question": "Any additional context or preferences?"}]',
 	"```",
 	"",
@@ -41,10 +43,17 @@ const EXTRACTION_SYSTEM_PROMPT = [
 	'[{"question": "What is the most expensive bug this system could ship?", "context": "Rank the options below by impact.", "options": [{"label": "a. Wrong version bump", "description": "e.g. patch instead of major"}, {"label": "b. Missing package in release", "description": "e.g. dependency not propagated"}, {"label": "c. Breaking dependency graph", "description": "e.g. circular propagation"}, {"label": "d. Config parsing silently ignores invalid input"}, {"label": "e. Adapter produces wrong manifest edits", "description": "e.g. corrupts Cargo.toml"}]}]',
 	"```",
 	"",
+	"Example output — single recommendation without explicit choices:",
+	"```json",
+	'[{"question": "Which testing strategy should we use first?", "context": "Based on the current codebase state.", "options": [{"label": "Proptest", "description": "Property-based testing finds more bugs per hour and integrates easily.", "recommended": true}]}]',
+	"```",
+	"",
 	"Guidelines:",
 	"- Find the MOST COMPLETE formulation of each question. If a question appears both as a detailed section (with choices, rankings, or examples) and as a short summary later (e.g. 'please answer the six questions above'), extract from the detailed section.",
 	"- Keep `question` concise — one sentence with the core question. Put background context in the `context` field.",
 	"- Always extract all explicit choices as `options`. For example, if a question lists options a-e, include every option in the `options` array.",
+	"- Mark any clearly recommended option with `recommended: true`. Do not add a `recommended` field to non-recommended options.",
+	"- When there is a recommendation without multiple options, create a single option array with the recommendation marked `recommended: true`. The user will see the one recommended option and an 'Other' choice to describe what they actually want.",
 	"- Only extract genuine questions that need a response, not rhetorical questions",
 	"- Include free-text questions without options when the answer is open-ended",
 	"- Output only the JSON array, nothing else",
@@ -66,7 +75,7 @@ const DEFAULT_TEMPLATES: QnATemplate[] = [
 interface ExtractedQuestion {
 	question: string;
 	context?: string;
-	options?: Array<{ label: string; description: string }>;
+	options?: Array<{ label: string; description: string; recommended?: boolean }>;
 }
 
 interface AnswerState {
@@ -147,12 +156,24 @@ function normalizeExtractedQuestions(raw: unknown): ExtractedQuestion[] {
 					.map((opt) => ({
 						label: (opt.label as string).trim(),
 						description: typeof opt.description === "string" ? opt.description.trim() : "",
+						recommended: opt.recommended === true,
 					}))
 					.filter((opt) => opt.label.length > 0);
 
 				if (options.length > 0) {
 					question.options = options;
 				}
+			}
+
+			// Synthesize a recommended option if the LLM provided a recommendation text without options
+			if (!question.options && typeof item.recommendation === "string" && item.recommendation.trim().length > 0) {
+				question.options = [
+					{
+						label: (item.recommendation as string).trim(),
+						description: "",
+						recommended: true,
+					},
+				];
 			}
 
 			return question;

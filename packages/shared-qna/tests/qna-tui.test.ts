@@ -267,6 +267,48 @@ describe("QnATuiComponent", () => {
 		expect(rendered).toContain("A: Bun");
 	});
 
+	it("renders recommended options with bold '(recommended)' postfix", () => {
+		const done = vi.fn();
+		const component = new QnATuiComponent(
+			[
+				{
+					question: "Which strategy?",
+					options: [
+						{ label: "Kani", description: "Formal verification" },
+						{ label: "Proptest", description: "Finds more bugs per hour", recommended: true },
+					],
+				},
+			],
+			createTui(),
+			done,
+			{ initialResponses: [{ selectedOptionIndex: 0, selectionTouched: true, committed: false }] },
+		);
+
+		const rendered = component.render(80).join("\n");
+		expect(rendered).toContain("Proptest (recommended)");
+		// The selected option (Kani) should be green/blue, not bold
+		expect(rendered).toContain("Kani");
+		expect(rendered).not.toContain("Kani (recommended)");
+	});
+
+	it("synthesizes single recommended option with implicit Other from UI", () => {
+		const done = vi.fn();
+		const component = new QnATuiComponent(
+			[
+				{
+					question: "Which tool?",
+					options: [{ label: "Start with Kani", description: "Recommended approach", recommended: true }],
+				},
+			],
+			createTui(),
+			done,
+		);
+
+		const rendered = component.render(80).join("\n");
+		expect(rendered).toContain("Start with Kani (recommended)");
+		expect(rendered).toContain("Other");
+	});
+
 	it("supports escape from confirmation and ctrl+c cancellation", () => {
 		const done = vi.fn();
 		const component = new QnATuiComponent([{ question: "Any notes?" }], createTui(), done, {
