@@ -1,7 +1,7 @@
 {
   "name": "@ifi/oh-pi-docs",
   "version": "0.4.4",
-  "description": "Documentation site for oh-pi \u2014 Pi Coding Agent extensions and tools",
+  "description": "Documentation site for oh-pi — Pi Coding Agent extensions and tools",
   "type": "module",
   "private": true,
   "scripts": {
@@ -12,18 +12,19 @@
     "lint": "biome check src/"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.487.0",
+    "minisearch": "^7.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router": "^7.5.3",
-    "lucide-react": "^0.487.0",
-    "clsx": "^2.1.1"
+    "react-router": "^7.5.3"
   },
   "devDependencies": {
+    "@mdx-js/rollup": "^3.1.0",
     "@tailwindcss/vite": "^4.2.2",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
-    "@mdx-js/rollup": "^3.1.0",
     "remark-gfm": "^4.0.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.8.0",

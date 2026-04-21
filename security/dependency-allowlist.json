@@ -51,6 +51,7 @@
 		"react",
 		"react-router",
 		"react-dom",
+		"minisearch",
 		"remark-gfm",
 		"recharts",
 		"tailwind-merge",
