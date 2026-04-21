@@ -312,13 +312,14 @@ export class SchedulerRuntime {
 		let otherCount = 0;
 		let legacyCount = 0;
 
-		for (const task of Array.from(this.tasks.values())) {
+		const deleteIds: string[] = [];
+		for (const task of this.tasks.values()) {
 			const origin = this.getTaskCreatorOrigin(task);
 			if (origin === "current") {
 				continue;
 			}
 
-			this.tasks.delete(task.id);
+			deleteIds.push(task.id);
 			count += 1;
 
 			if (origin === "other") {
@@ -326,6 +327,9 @@ export class SchedulerRuntime {
 			} else {
 				legacyCount += 1;
 			}
+		}
+		for (const id of deleteIds) {
+			this.tasks.delete(id);
 		}
 
 		if (count > 0) {
@@ -369,13 +373,16 @@ export class SchedulerRuntime {
 	}
 
 	clearForeignTasks(): TaskMutationResult {
-		let count = 0;
-		for (const task of Array.from(this.tasks.values())) {
+		const foreignIds: string[] = [];
+		for (const task of this.tasks.values()) {
 			if (task.ownerInstanceId && task.ownerInstanceId !== this.instanceId) {
-				this.tasks.delete(task.id);
-				count += 1;
+				foreignIds.push(task.id);
 			}
 		}
+		for (const id of foreignIds) {
+			this.tasks.delete(id);
+		}
+		const count = foreignIds.length;
 		if (count > 0) {
 			this.persistTasks();
 			this.updateStatus();
@@ -598,12 +605,21 @@ export class SchedulerRuntime {
 	}
 
 	private emitRuntimeDiagnostics(note?: string) {
-		const enabledTasks = Array.from(this.tasks.values()).filter((task) => task.enabled);
-		const dueTasks = enabledTasks.filter((task) => task.resumeRequired || task.pending).length;
+		let enabledTasks = 0;
+		let dueTasks = 0;
+		for (const task of this.tasks.values()) {
+			if (!task.enabled) {
+				continue;
+			}
+			enabledTasks++;
+			if (task.resumeRequired || task.pending) {
+				dueTasks++;
+			}
+		}
 		this.pi.events.emit(RUNTIME_DIAGNOSTICS_EVENT, {
 			extensionId: "scheduler",
 			pendingTasks: this.tasks.size,
-			activeTasks: enabledTasks.length,
+			activeTasks: enabledTasks,
 			dueTasks,
 			mode: this.dispatchMode,
 			note,
@@ -622,7 +638,26 @@ export class SchedulerRuntime {
 			return;
 		}
 		// Clear the stale-task status hint when no tasks need review.
-		const staleCount = Array.from(this.tasks.values()).filter((t) => t.enabled && t.resumeRequired).length;
+		let staleCount = 0;
+		let enabledCount = 0;
+		let resumeRequiredCount = 0;
+		let scheduledCount = 0;
+		let nextScheduledRunAt = Number.POSITIVE_INFINITY;
+		for (const task of this.tasks.values()) {
+			if (!task.enabled) {
+				continue;
+			}
+			enabledCount++;
+			if (task.resumeRequired) {
+				staleCount++;
+				resumeRequiredCount++;
+			} else {
+				scheduledCount++;
+				if (task.nextRunAt < nextScheduledRunAt) {
+					nextScheduledRunAt = task.nextRunAt;
+				}
+			}
+		}
 		if (staleCount === 0) {
 			this.setStatus("pi-scheduler-stale", undefined);
 		}
@@ -632,49 +667,71 @@ export class SchedulerRuntime {
 			return;
 		}
 
-		const enabled = Array.from(this.tasks.values()).filter((t) => t.enabled);
-		if (enabled.length === 0) {
+		if (enabledCount === 0) {
 			this.setStatus("pi-scheduler", `${this.tasks.size} task${this.tasks.size === 1 ? "" : "s"} paused`);
 			return;
 		}
 
-		const resumeRequired = enabled.filter((task) => task.resumeRequired);
-		const scheduled = enabled.filter((task) => !task.resumeRequired);
 		const leaseStatus = this.getLeaseStatus();
 		const parts: string[] = [];
 		if (leaseStatus.activeForeign && this.dispatchMode === "observer") {
 			parts.push("observing other instance");
 		}
-		if (resumeRequired.length > 0) {
-			parts.push(`${resumeRequired.length} due`);
+		if (resumeRequiredCount > 0) {
+			parts.push(`${resumeRequiredCount} due`);
 		}
-		if (scheduled.length > 0) {
-			const nextRunAt = Math.min(...scheduled.map((task) => task.nextRunAt));
-			const next = new Date(nextRunAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-			parts.push(`${scheduled.length} active • next ${next}`);
+		if (scheduledCount > 0) {
+			const next = new Date(nextScheduledRunAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+			parts.push(`${scheduledCount} active • next ${next}`);
 		}
 		this.setStatus("pi-scheduler", parts.join(" • ") || "paused");
 	}
 
 	private pruneDispatchHistory(now: number) {
 		const cutoff = now - DISPATCH_RATE_LIMIT_WINDOW_MS;
-		// Find the first index that is still within the window to avoid O(n) shift() calls.
-		let firstValid = 0;
-		while (firstValid < this.dispatchTimestamps.length && this.dispatchTimestamps[firstValid] <= cutoff) {
-			firstValid++;
+		// Single-pass write-pointer prune — O(n) with no splice() shifts.
+		let write = 0;
+		// biome-ignore lint/style/useForOf: C-style loop needed for write-pointer in-place prune algorithm
+		for (let read = 0; read < this.dispatchTimestamps.length; read++) {
+			if (this.dispatchTimestamps[read] > cutoff) {
+				this.dispatchTimestamps[write++] = this.dispatchTimestamps[read];
+			}
 		}
-		if (firstValid > 0) {
-			this.dispatchTimestamps.splice(0, firstValid);
-		}
+		this.dispatchTimestamps.length = write;
 		// Hard cap to prevent unbounded growth from clock anomalies.
 		if (this.dispatchTimestamps.length > MAX_DISPATCH_TIMESTAMPS) {
-			this.dispatchTimestamps.splice(0, this.dispatchTimestamps.length - MAX_DISPATCH_TIMESTAMPS);
+			this.dispatchTimestamps.copyWithin(0, this.dispatchTimestamps.length - MAX_DISPATCH_TIMESTAMPS);
+			this.dispatchTimestamps.length = MAX_DISPATCH_TIMESTAMPS;
 		}
 	}
 
 	private hasDispatchCapacity(now: number): boolean {
 		this.pruneDispatchHistory(now);
 		return this.dispatchTimestamps.length < MAX_DISPATCHES_PER_WINDOW;
+	}
+
+	/** Check if any enabled, pending, non-awaiting-completion task exists — single-pass, no allocation. */
+	private hasPendingTasks(): boolean {
+		for (const task of this.tasks.values()) {
+			if (task.enabled && task.pending && !task.awaitingCompletion) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Find the next dispatchable task — single-pass with early-exit, no sort needed for the single min. */
+	private getNextDispatchableTask(): ScheduleTask | undefined {
+		let best: ScheduleTask | undefined;
+		for (const task of this.tasks.values()) {
+			if (!(task.enabled && task.pending) || task.awaitingCompletion || !this.canCurrentInstanceDispatchTask(task)) {
+				continue;
+			}
+			if (!best || task.nextRunAt < best.nextRunAt) {
+				best = task;
+			}
+		}
+		return best;
 	}
 
 	private recordDispatch(now: number) {
@@ -708,10 +765,10 @@ export class SchedulerRuntime {
 		const now = Date.now();
 		let mutated = this.reconcileTaskOwnership();
 
-		for (const task of Array.from(this.tasks.values())) {
+		const expiredIds: string[] = [];
+		for (const task of this.tasks.values()) {
 			if (task.kind === "recurring" && task.expiresAt && now >= task.expiresAt) {
-				this.tasks.delete(task.id);
-				mutated = true;
+				expiredIds.push(task.id);
 				continue;
 			}
 
@@ -721,6 +778,12 @@ export class SchedulerRuntime {
 			if (now >= task.nextRunAt) {
 				task.pending = true;
 			}
+		}
+		for (const id of expiredIds) {
+			this.tasks.delete(id);
+		}
+		if (expiredIds.length > 0) {
+			mutated = true;
 		}
 
 		const shouldHoldLease = this.hasManagedTasksForLease();
@@ -747,7 +810,7 @@ export class SchedulerRuntime {
 			return;
 		}
 		if (!this.runtimeCtx.isIdle() || this.runtimeCtx.hasPendingMessages()) {
-			if (Array.from(this.tasks.values()).some((task) => task.enabled && task.pending && !task.awaitingCompletion)) {
+			if (this.hasPendingTasks()) {
 				this.queueSchedulerTick(1_000);
 			}
 			return;
@@ -755,7 +818,7 @@ export class SchedulerRuntime {
 		if (!this.hasDispatchCapacity(now)) {
 			this.emitRuntimeDiagnostics("dispatch throttled");
 			this.notifyRateLimit(now);
-			if (Array.from(this.tasks.values()).some((task) => task.enabled && task.pending && !task.awaitingCompletion)) {
+			if (this.hasPendingTasks()) {
 				this.queueSchedulerTick(1_000);
 			}
 			return;
@@ -767,11 +830,7 @@ export class SchedulerRuntime {
 			return;
 		}
 
-		const nextTask = Array.from(this.tasks.values())
-			.filter(
-				(task) => task.enabled && task.pending && !task.awaitingCompletion && this.canCurrentInstanceDispatchTask(task),
-			)
-			.sort((a, b) => a.nextRunAt - b.nextRunAt)[0];
+		const nextTask = this.getNextDispatchableTask();
 
 		if (!nextTask) {
 			return;
@@ -1470,9 +1529,13 @@ export class SchedulerRuntime {
 	}
 
 	private getForeignTaskCount(): number {
-		return Array.from(this.tasks.values()).filter(
-			(task) => task.ownerInstanceId && task.ownerInstanceId !== this.instanceId,
-		).length;
+		let count = 0;
+		for (const task of this.tasks.values()) {
+			if (task.ownerInstanceId && task.ownerInstanceId !== this.instanceId) {
+				count++;
+			}
+		}
+		return count;
 	}
 
 	private getTasksNotCreatedHere(): ScheduleTask[] {
@@ -1480,7 +1543,12 @@ export class SchedulerRuntime {
 	}
 
 	private hasManagedTasksForLease(): boolean {
-		return Array.from(this.tasks.values()).some((task) => task.enabled && !task.resumeRequired);
+		for (const task of this.tasks.values()) {
+			if (task.enabled && !task.resumeRequired) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private readLease(): SchedulerLease | undefined {

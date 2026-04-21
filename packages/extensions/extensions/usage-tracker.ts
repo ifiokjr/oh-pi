@@ -572,6 +572,13 @@ export default function usageTracker(pi: ExtensionAPI) {
 		return null;
 	}
 
+	function hasOllamaModel(models: Map<string, ModelUsage>): boolean {
+		for (const model of models.values()) {
+			if (normalizeProviderKey(model.provider) === "ollama") return true;
+		}
+		return false;
+	}
+
 	function getActiveProvider(ctx: ExtensionContext | null | undefined = activeCtx): ProviderKey | null {
 		return inferProviderFromModel(ctx?.model as { id?: unknown; provider?: unknown } | null | undefined);
 	}
@@ -1133,7 +1140,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 				process.env.OLLAMA_API_KEY?.trim() || process.env.OLLAMA_HOST?.trim() || process.env.OLLAMA_HOST_CLOUD?.trim(),
 			) ||
 			activeProvider === "ollama" ||
-			[...models.values()].some((model) => normalizeProviderKey(model.provider) === "ollama");
+			hasOllamaModel(models);
 		if (shouldProbeOllama && !seen.has("ollama")) {
 			seen.add("ollama");
 			probeProvider("ollama", force);
