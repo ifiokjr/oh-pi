@@ -129,13 +129,17 @@ export async function runBenchmark(definition: BenchmarkDefinition): Promise<Ben
 		sampleLoopCounts.push(sample.loopCount);
 	}
 
-	const sortedSamples = [...samplesMs].sort((left, right) => left - right);
-	const minMs = round(sortedSamples[0] ?? 0);
-	const maxMs = round(sortedSamples.at(-1) ?? 0);
+	samplesMs.sort((left, right) => left - right);
+	const minMs = round(samplesMs[0] ?? 0);
+	const maxMs = round(samplesMs.at(-1) ?? 0);
 	const meanMs = round(mean(samplesMs));
-	const medianMs = round(percentile(sortedSamples, 0.5));
-	const p95Ms = round(percentile(sortedSamples, 0.95));
+	const medianMs = round(percentile(samplesMs, 0.5));
+	const p95Ms = round(percentile(samplesMs, 0.95));
 	const budgetFailures = evaluateBudget({ medianMs, p95Ms, budget: definition.budget });
+
+	for (let i = 0; i < samplesMs.length; i++) {
+		samplesMs[i] = round(samplesMs[i]);
+	}
 
 	return {
 		id: definition.id,
@@ -147,7 +151,7 @@ export async function runBenchmark(definition: BenchmarkDefinition): Promise<Ben
 		budget: definition.budget,
 		minSampleTimeMs: Math.max(0, definition.minSampleTimeMs ?? 0),
 		avgLoopsPerSample: round(mean(sampleLoopCounts)),
-		samplesMs: sortedSamples.map((value) => round(value)),
+		samplesMs,
 		minMs,
 		maxMs,
 		meanMs,

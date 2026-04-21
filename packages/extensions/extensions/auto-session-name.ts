@@ -33,8 +33,10 @@ function normalizeLabel(input: string): string {
 		.trim();
 }
 
+const TOKENIZE_RE = /[a-z0-9]{3,}/g;
+
 function tokenize(input: string): Set<string> {
-	const terms = input.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [];
+	const terms = input.toLowerCase().match(TOKENIZE_RE) ?? [];
 	return new Set(terms);
 }
 

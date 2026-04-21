@@ -343,13 +343,17 @@ export class Nest {
 			this.pheromoneOffset = stat.size;
 		}
 
-		// Apply exponential decay and filter out faded pheromones
-		const beforeLen = this.pheromoneCache.length;
-		this.pheromoneCache = this.pheromoneCache.filter((pheromone) => {
+		// Apply exponential decay and filter out faded pheromones (single-pass write-pointer)
+		let write = 0;
+		for (let read = 0; read < this.pheromoneCache.length; read++) {
+			const pheromone = this.pheromoneCache[read];
 			pheromone.strength = 0.5 ** ((now - pheromone.createdAt) / PHEROMONE_HALF_LIFE_MS);
-			return pheromone.strength > PHEROMONE_MIN_STRENGTH;
-		});
-		const hadGarbage = this.pheromoneCache.length < beforeLen;
+			if (pheromone.strength > PHEROMONE_MIN_STRENGTH) {
+				this.pheromoneCache[write++] = pheromone;
+			}
+		}
+		const hadGarbage = write < this.pheromoneCache.length;
+		this.pheromoneCache.length = write;
 		if (hadGarbage) {
 			this.pheromoneIndexDirty = true;
 		}
@@ -402,14 +406,19 @@ export class Nest {
 
 	/** Build a text summary of pheromones relevant to the given files, sorted by strength. */
 	getPheromoneContext(files: string[], limit = 20): string {
-		const relevant = this.getAllPheromones()
-			.filter((p) => p.files.some((f) => files.includes(f)) || files.length === 0)
-			.sort((a, b) => b.strength - a.strength)
-			.slice(0, limit);
-		if (relevant.length === 0) {
+		const all = this.getAllPheromones();
+		const relevant: Pheromone[] = [];
+		for (const p of all) {
+			if (files.length === 0 || p.files.some((f) => files.includes(f))) {
+				relevant.push(p);
+			}
+		}
+		relevant.sort((a, b) => b.strength - a.strength);
+		const top = relevant.slice(0, limit);
+		if (top.length === 0) {
 			return "";
 		}
-		return relevant.map((p) => `[${p.type}|${p.antCaste}|str:${p.strength.toFixed(2)}] ${p.content}`).join("\n");
+		return top.map((p) => `[${p.type}|${p.antCaste}|str:${p.strength.toFixed(2)}] ${p.content}`).join("\n");
 	}
 
 	// ═══ Ants ═══

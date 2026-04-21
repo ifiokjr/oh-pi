@@ -97,13 +97,18 @@ export function normalizeDuration(durationMs: number): { durationMs: number; not
 	return { durationMs };
 }
 
+const DURATION_SHORT_RE = /^(\d+)\s*([smhd])$/i;
+const DURATION_LONG_RE = /^(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?|days?)$/i;
+const QUOTED_CRON_RE = /^("|')(.+?)\1\s+(.+)$/;
+const TRAILING_EVERY_RE = /^(.*)\s+every\s+(.+)$/i;
+
 export function parseDuration(text: string): number | undefined {
 	const raw = text.trim().toLowerCase();
 	if (!raw) {
 		return undefined;
 	}
 
-	let match = raw.match(/^(\d+)\s*([smhd])$/i);
+	let match = DURATION_SHORT_RE.exec(raw);
 	if (match) {
 		const n = Number.parseInt(match[1], 10);
 		const unit = match[2].toLowerCase();
@@ -121,7 +126,7 @@ export function parseDuration(text: string): number | undefined {
 		}
 	}
 
-	match = raw.match(/^(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?|days?)$/i);
+	match = DURATION_LONG_RE.exec(raw);
 	if (!match) {
 		return undefined;
 	}
@@ -176,7 +181,7 @@ function extractLeadingCron(input: string): { cronExpression: string; prompt: st
 		return undefined;
 	}
 
-	const quotedMatch = rest.match(/^("|')(.+?)\1\s+(.+)$/);
+	const quotedMatch = QUOTED_CRON_RE.exec(rest);
 	if (quotedMatch) {
 		const normalized = normalizeCronExpression(quotedMatch[2]);
 		const prompt = quotedMatch[3].trim();
@@ -243,7 +248,7 @@ export function parseLoopScheduleArgs(args: string): ParseResult | undefined {
 		};
 	}
 
-	const trailingEvery = input.match(/^(.*)\s+every\s+(.+)$/i);
+	const trailingEvery = TRAILING_EVERY_RE.exec(input);
 	if (trailingEvery) {
 		const prompt = trailingEvery[1].trim();
 		const parsed = parseDuration(trailingEvery[2]);

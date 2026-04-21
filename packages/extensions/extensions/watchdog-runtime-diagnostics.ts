@@ -70,8 +70,9 @@ const wrappedContextCache = new WeakMap<object, Map<string, unknown>>();
 
 function pushBounded<T>(items: T[], item: T, limit = SAMPLE_LIMIT): void {
 	items.push(item);
-	if (items.length > limit) {
-		items.splice(0, items.length - limit);
+	if (items.length > limit * 2) {
+		items.copyWithin(0, items.length - limit);
+		items.length = limit;
 	}
 }
 
@@ -81,9 +82,16 @@ function pruneTimestamps(items: number[], now: number): void {
 	while (firstValid < items.length && items[firstValid] < cutoff) {
 		firstValid += 1;
 	}
-	if (firstValid > 0) {
-		items.splice(0, firstValid);
+	if (firstValid <= 0) {
+		return;
 	}
+	// For small prunes, splice is fine; for large ones, use copyWithin
+	if (firstValid <= 4) {
+		items.splice(0, firstValid);
+		return;
+	}
+	items.copyWithin(0, firstValid);
+	items.length = items.length - firstValid;
 }
 
 function profileSourceToId(source: string): string {
@@ -104,13 +112,16 @@ function profileSourceToId(source: string): string {
 	return "unknown";
 }
 
+/** Compiled once at module scope — not re-created per stack walk. */
+const STACK_FILE_RE = /((?:file:\/\/)?[^\s)]+\.(?:ts|js))/;
+
 function inferExtensionSourceFromStack(stack = new Error().stack): string {
 	const lines = stack?.split("\n") ?? [];
 	for (const line of lines) {
 		if (line.includes("watchdog-runtime-diagnostics")) {
 			continue;
 		}
-		const match = line.match(/((?:file:\/\/)?[^\s)]+\.(?:ts|js))/);
+		const match = STACK_FILE_RE.exec(line);
 		const rawPath = match?.[1];
 		if (!rawPath) {
 			continue;

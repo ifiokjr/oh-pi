@@ -110,6 +110,9 @@ function normalizeJsonTasks(parsed: unknown): ParsedSubTask[] {
 	});
 }
 
+// Pre-compiled field matcher for parseTasksFromStructuredLines — avoid new RegExp() per call.
+const STRUCTURED_FIELD_RE = /^\s*(?:[-*]|\d+\.)?\s*(?:\*\*|__)?\s*(description|desc|files?|caste|role|priority|prio|context)\s*(?:\*\*|__)?\s*:\s*(.*)$/i;
+
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Parser must handle many field variants (en/zh) and edge cases
 function parseTasksFromStructuredLines(output: string): ParsedSubTask[] {
 	const lines = output.split(/\r?\n/);
@@ -134,9 +137,7 @@ function parseTasksFromStructuredLines(output: string): ParsedSubTask[] {
 	};
 
 	const fieldMatch = (line: string) => {
-		return line.match(
-			/^\s*(?:[-*]|\d+\.)?\s*(?:\*\*|__)?\s*(description|desc|files?|caste|role|priority|prio|context)\s*(?:\*\*|__)?\s*:\s*(.*)$/i,
-		);
+		return STRUCTURED_FIELD_RE.exec(line);
 	};
 
 	for (let i = 0; i < lines.length; i++) {
@@ -208,9 +209,12 @@ function parseTasksFromStructuredLines(output: string): ParsedSubTask[] {
 	return tasks;
 }
 
+// Pre-compiled regex for JSON fenced block extraction
+const JSON_FENCE_RE = /```json\s*([\s\S]*?)```/i;
+
 export function parseSubTasks(output: string): ParsedSubTask[] {
 	// 1) JSON fenced block
-	const jsonMatch = output.match(/```json\s*([\s\S]*?)```/i);
+	const jsonMatch = JSON_FENCE_RE.exec(output);
 	if (jsonMatch?.[1]) {
 		try {
 			const jsonTasks = normalizeJsonTasks(JSON.parse(jsonMatch[1].trim()));

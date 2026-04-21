@@ -305,15 +305,19 @@ function makeInitialScoutTask(goal: string): Task {
 	};
 }
 
+const WORKER_CLASS_DESIGN_RE = /(ui|ux|design|layout|style|css|figma|theme|color|typography|component)/;
+const WORKER_CLASS_MULTIMODAL_RE = /(image|video|audio|vision|ocr|multimodal|caption|embedding)/;
+const WORKER_CLASS_REVIEW_RE = /(review|qa|validate|verify|audit|test|lint|check)/;
+
 function classifyWorkerClass(title: string, description: string, files: string[]): WorkerClass {
 	const haystack = `${title}\n${description}\n${files.join("\n")}`.toLowerCase();
-	if (/(ui|ux|design|layout|style|css|figma|theme|color|typography|component)/.test(haystack)) {
+	if (WORKER_CLASS_DESIGN_RE.test(haystack)) {
 		return "design";
 	}
-	if (/(image|video|audio|vision|ocr|multimodal|caption|embedding)/.test(haystack)) {
+	if (WORKER_CLASS_MULTIMODAL_RE.test(haystack)) {
 		return "multimodal";
 	}
-	if (/(review|qa|validate|verify|audit|test|lint|check)/.test(haystack)) {
+	if (WORKER_CLASS_REVIEW_RE.test(haystack)) {
 		return "review";
 	}
 	return "backend";
@@ -400,9 +404,11 @@ export interface PlanValidation {
 	warnings: string[];
 }
 
+const SCOUT_QUORUM_RE = /(\n\s*\d+[.)]|;| and |phase|then)/i;
+
 export function shouldUseScoutQuorum(goal: string): boolean {
 	// Multi-step/compound goals benefit from at least 2 scout votes
-	return /(\n\s*\d+[.)]|;| and |phase|then)/i.test(goal);
+	return SCOUT_QUORUM_RE.test(goal);
 }
 
 export function decidePromoteOrFinalize(input: PromoteFinalizeGateInput): PromoteFinalizeGateDecision {
@@ -582,26 +588,33 @@ interface WaveOptions {
 	usageSnapshot?: Record<string, DelegatedSelectionUsageSnapshot>;
 }
 
+const ERROR_TYPE_ERROR_RE = /TypeError|type|TS/;
+const ERROR_PERMISSION_RE = /permission|401|EACCES/;
+const ERROR_TIMEOUT_RE = /timeout|Timeout|ETIMEDOUT/;
+const ERROR_NOT_FOUND_RE = /ENOENT|not found|Cannot find/;
+const ERROR_SYNTAX_RE = /syntax|SyntaxError|Unexpected/;
+const ERROR_RATE_LIMIT_RE = /429|rate limit/;
+
 /**
  * Bio 6: Corpse cleanup — error pattern classification.
  */
 export function classifyError(errStr: string): string {
-	if (errStr.includes("TypeError") || errStr.includes("type") || errStr.includes("TS")) {
+	if (ERROR_TYPE_ERROR_RE.test(errStr)) {
 		return "type_error";
 	}
-	if (errStr.includes("permission") || errStr.includes("401") || errStr.includes("EACCES")) {
+	if (ERROR_PERMISSION_RE.test(errStr)) {
 		return "permission";
 	}
-	if (errStr.includes("timeout") || errStr.includes("Timeout") || errStr.includes("ETIMEDOUT")) {
+	if (ERROR_TIMEOUT_RE.test(errStr)) {
 		return "timeout";
 	}
-	if (errStr.includes("ENOENT") || errStr.includes("not found") || errStr.includes("Cannot find")) {
+	if (ERROR_NOT_FOUND_RE.test(errStr)) {
 		return "not_found";
 	}
-	if (errStr.includes("syntax") || errStr.includes("SyntaxError") || errStr.includes("Unexpected")) {
+	if (ERROR_SYNTAX_RE.test(errStr)) {
 		return "syntax";
 	}
-	if (errStr.includes("429") || errStr.includes("rate limit")) {
+	if (ERROR_RATE_LIMIT_RE.test(errStr)) {
 		return "rate_limit";
 	}
 	return "unknown";

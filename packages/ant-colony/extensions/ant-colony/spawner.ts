@@ -63,9 +63,10 @@ const DRONE_COMMAND_POLICY: DroneCommandPolicy = {
 };
 
 const BLOCKED_DRONE_TOKENS = /(?:[;&|`$<>]|\$\(|\|\||&&)/;
+const DRONE_CODE_FENCE_RE = /```(?:bash|sh)?\s*\n?([\s\S]*?)```/;
 
 function extractDroneCommand(task: Task): string {
-	const ctxMatch = task.context?.match(/```(?:bash|sh)?\s*\n?([\s\S]*?)```/);
+	const ctxMatch = DRONE_CODE_FENCE_RE.exec(task.context ?? "");
 	return ctxMatch?.[1]?.trim() || task.description.trim();
 }
 

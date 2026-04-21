@@ -62,6 +62,13 @@ export function clampPercent(value: number): number {
 	return Math.max(0, Math.min(100, value));
 }
 
+// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes use control chars by definition
+const ANSI_RE = /\x1b\[[0-9;]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b\(B/g;
+const RESET_COUNTDOWN_RE = /(\d+(?:\.\d+)?)\s*(weeks?|w|days?|d|hours?|hrs?|hr|h|minutes?|mins?|min|m)\b/g;
+const NORMALIZE_WHITESPACE_RE = /\s+/g;
+const RESET_PREFIX_RE = /^resets?\s*/i;
+const IN_PREFIX_RE = /^in\s*/i;
+
 export function parseResetCountdownMs(resetDescription: string | null): number | null {
 	if (!resetDescription) {
 		return null;
@@ -72,13 +79,10 @@ export function parseResetCountdownMs(resetDescription: string | null): number |
 		.replaceAll(",", " ")
 		.replaceAll("·", " ")
 		.replaceAll("|", " ")
-		.replaceAll(/\s+/g, " ")
+		.replaceAll(NORMALIZE_WHITESPACE_RE, " ")
 		.trim();
 
-	normalized = normalized
-		.replace(/^resets?\s*/i, "")
-		.replace(/^in\s*/i, "")
-		.trim();
+	normalized = normalized.replace(RESET_PREFIX_RE, "").replace(IN_PREFIX_RE, "").trim();
 
 	if (!normalized || normalized === "now") {
 		return 0;
@@ -103,9 +107,7 @@ export function parseResetCountdownMs(resetDescription: string | null): number |
 		minutes: 60 * 1000,
 	};
 
-	const matches = [
-		...normalized.matchAll(/(\d+(?:\.\d+)?)\s*(weeks?|w|days?|d|hours?|hrs?|hr|h|minutes?|mins?|min|m)\b/g),
-	];
+	const matches = [...normalized.matchAll(RESET_COUNTDOWN_RE)];
 	if (matches.length === 0) {
 		return null;
 	}
@@ -223,13 +225,10 @@ export function upsertWindow(windows: RateWindow[], nextWindow: RateWindow): Rat
 }
 
 export function stripAnsi(text: string): string {
-	// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes use control chars by definition
-	return text.replace(/\x1b\[[0-9;]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b\(B/g, "");
+	return text.replace(ANSI_RE, "");
 }
 
 // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes use control chars by definition
-const ANSI_RE = /\x1b\[[0-9;]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b\(B/g;
-
 export function truncateAnsi(line: string, width: number): string {
 	const visibleLength = stripAnsi(line).length;
 	if (visibleLength <= width) {

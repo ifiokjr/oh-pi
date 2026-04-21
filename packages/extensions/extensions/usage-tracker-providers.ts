@@ -9,6 +9,9 @@ import {
 	type ProviderRateLimits,
 } from "./usage-tracker-shared.js";
 
+// Pre-compiled regex for OpenAI-style compact duration parsing
+const OPENAI_DURATION_RE = /(\d+(?:\.\d+)?)(ms|s|m|h)/g;
+
 // ─── pi-managed auth ─────────────────────────────────────────────────────────
 
 /** Map from auth.json key to ProviderKey. */
@@ -185,7 +188,8 @@ function resetCountdown(isoOrDuration: string): string | null {
 		return `in ${fmtDuration(diffMs)}`;
 	}
 	// OpenAI uses compact durations like "6ms", "2s", "1m3s"
-	const matches = [...isoOrDuration.matchAll(/(\d+(?:\.\d+)?)(ms|s|m|h)/g)];
+	OPENAI_DURATION_RE.lastIndex = 0;
+	const matches = [...isoOrDuration.matchAll(OPENAI_DURATION_RE)];
 	if (matches.length > 0) {
 		const multipliers: Record<string, number> = { ms: 1, s: 1000, m: 60_000, h: 3_600_000 };
 		let totalMs = 0;

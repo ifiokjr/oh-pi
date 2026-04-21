@@ -107,10 +107,12 @@ function toMilliseconds(value: number): number {
 	return Number.isFinite(value) ? value / 1_000_000 : 0;
 }
 
+/** Amortized O(1) bounded push — trims with copyWithin only when array has doubled past limit. */
 function pushBounded<T>(items: T[], item: T, limit: number): void {
 	items.push(item);
-	if (items.length > limit) {
-		items.splice(0, items.length - limit);
+	if (items.length > limit * 2) {
+		items.copyWithin(0, items.length - limit);
+		items.length = limit;
 	}
 }
 

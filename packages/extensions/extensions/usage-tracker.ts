@@ -590,19 +590,29 @@ export default function usageTracker(pi: ExtensionAPI) {
 	}
 
 	function getModelUsageEntries(provider: ProviderKey | null = null): ModelUsage[] {
-		const entries = [...models.values()];
 		if (!provider) {
-			return entries;
+			return [...models.values()];
 		}
-		return entries.filter((entry) => normalizeProviderKey(entry.provider) === provider);
+		const result: ModelUsage[] = [];
+		for (const entry of models.values()) {
+			if (normalizeProviderKey(entry.provider) === provider) {
+				result.push(entry);
+			}
+		}
+		return result;
 	}
 
 	function getRateLimitEntries(provider: ProviderKey | null = null): ProviderRateLimits[] {
-		const entries = [...rateLimits.values()];
 		if (!provider) {
-			return entries;
+			return [...rateLimits.values()];
 		}
-		return entries.filter((entry) => entry.provider === provider);
+		const result: ProviderRateLimits[] = [];
+		for (const entry of rateLimits.values()) {
+			if (entry.provider === provider) {
+				result.push(entry);
+			}
+		}
+		return result;
 	}
 
 	function getTotals(provider: ProviderKey | null = null) {

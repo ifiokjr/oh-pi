@@ -18,6 +18,12 @@ import { Nest } from "./nest.js";
 import { createUsageLimitsTracker, type QueenCallbacks, resumeColony, runColony } from "./queen.js";
 import { createStatusBarState } from "./status-cache.js";
 import { resolveColonyStorageOptions, shouldManageProjectGitignore } from "./storage.js";
+
+// Pre-compiled regexes for colony message renderers — avoid re-compilation per render.
+const COLONY_SIGNAL_RE = /\[COLONY_SIGNAL:([A-Z_]+)\]/;
+const COLONY_SIGNAL_STRIP_RE = /\[COLONY_SIGNAL:[A-Z_]+\]\s*/;
+const REPORT_STATUS_RE = /\*\*Status:\*\* (.+)/;
+const REPORT_DURATION_RE = /\*\*Duration:\*\* (.+)/;
 import type {
 	AntStreamEvent,
 	AntUsageEvent,
@@ -691,8 +697,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 	pi.registerMessageRenderer("ant-colony-progress", (message, theme) => {
 		const content = typeof message.content === "string" ? message.content : "";
 		const line = content.split("\n")[0] || content;
-		const phaseMatch = line.match(/\[COLONY_SIGNAL:([A-Z_]+)\]/);
-		const text = line.replace(/\[COLONY_SIGNAL:[A-Z_]+\]\s*/, "").trim();
+		const phaseMatch = COLONY_SIGNAL_RE.exec(line);
+		const text = line.replace(COLONY_SIGNAL_STRIP_RE, "").trim();
 
 		const phase = phaseMatch?.[1]?.toLowerCase() || "working";
 		const icon = statusIcon(phase);
@@ -717,8 +723,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		const container = new Container();
 
 		// Extract key info for rendering
-		const _statusMatch = content.match(/\*\*Status:\*\* (.+)/);
-		const durationMatch = content.match(/\*\*Duration:\*\* (.+)/);
+		const _statusMatch = REPORT_STATUS_RE.exec(content);
+		const durationMatch = REPORT_DURATION_RE.exec(content);
 		const ok = content.includes("done") && (content.includes("✅") || content.includes("[ok]"));
 
 		container.addChild(
