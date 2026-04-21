@@ -33,6 +33,7 @@ const coverageExclude = [
 	"packages/docs/vite.config.ts",
 	"packages/docs/src/**/*.tsx",
 	"packages/docs/src/**/*.ts",
+	"packages/docs/scripts/*",
 ];
 
 export default defineConfig({
