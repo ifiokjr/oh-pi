@@ -290,15 +290,23 @@ async function runSingleStep(
 	}
 	if (step.model) args.push("--models", step.model);
 
+	// Only pi's 7 builtin tools can be passed via --tools.
+	// Extension-registered tools (e.g. read_full) are not in allTools
+	// and get silently dropped when passed as --tools because the
+	// whitelist is applied before extensions load.
+	const BUILTIN_TOOL_NAMES = new Set(["read", "bash", "edit", "write", "grep", "find", "ls"]);
+
 	const toolExtensionPaths: string[] = [];
 	if (step.tools?.length) {
 		const builtinTools: string[] = [];
 		for (const tool of step.tools) {
 			if (tool.includes("/") || tool.endsWith(".ts") || tool.endsWith(".js")) {
 				toolExtensionPaths.push(tool);
-			} else {
+			} else if (BUILTIN_TOOL_NAMES.has(tool)) {
 				builtinTools.push(tool);
 			}
+			// else: extension-registered tool (e.g. read_full) — let the
+			// extension register it naturally; don't pass via --tools.
 		}
 		if (builtinTools.length > 0) args.push("--tools", builtinTools.join(","));
 	}

@@ -82,14 +82,22 @@ export async function runSync(
 	// automatically via resolveModelScope. See: #8
 	if (modelArg) args.push("--models", modelArg);
 	const toolExtensionPaths: string[] = [];
+	// Only pi's 7 builtin tools can be passed via --tools.
+	// Extension-registered tools (e.g. read_full) are not in allTools
+	// and get silently dropped when passed as --tools because the
+	// whitelist is applied before extensions load.
+	const BUILTIN_TOOL_NAMES = new Set(["read", "bash", "edit", "write", "grep", "find", "ls"]);
+
 	if (agent.tools?.length) {
 		const builtinTools: string[] = [];
 		for (const tool of agent.tools) {
 			if (tool.includes("/") || tool.endsWith(".ts") || tool.endsWith(".js")) {
 				toolExtensionPaths.push(tool);
-			} else {
+			} else if (BUILTIN_TOOL_NAMES.has(tool)) {
 				builtinTools.push(tool);
 			}
+			// else: extension-registered tool (e.g. read_full) — let the
+			// extension register it naturally; don't pass via --tools.
 		}
 		if (builtinTools.length > 0) {
 			args.push("--tools", builtinTools.join(","));
