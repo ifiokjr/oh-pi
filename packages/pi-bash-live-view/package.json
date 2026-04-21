@@ -1,0 +1,53 @@
+{
+	"name": "@ifi/pi-bash-live-view",
+	"version": "0.4.4",
+	"description": "PTY-backed live bash rendering for pi with a real-time terminal widget and /bash-pty command.",
+	"type": "module",
+	"keywords": [
+		"pi-package",
+		"pi",
+		"pi-coding-agent",
+		"bash",
+		"pty",
+		"terminal",
+		"live-view"
+	],
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	},
+	"files": [
+		"*.ts",
+		"src",
+		"README.md",
+		"!**/*.test.ts",
+		"!tests/**"
+	],
+	"scripts": {
+		"build": "pnpm run typecheck && pnpm run test:worktree",
+		"typecheck": "tsgo --project ./tsconfig.json --noEmit",
+		"test:worktree": "vitest run --config ./vitest.config.ts --coverage"
+	},
+	"dependencies": {
+		"@xterm/headless": "^5.5.0",
+		"node-pty": "^1.0.0"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/pi-bash-live-view"
+	},
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/pi-bash-live-view",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-agent-core": ">=0.56.1",
+		"@mariozechner/pi-ai": ">=0.56.1",
+		"@mariozechner/pi-coding-agent": ">=0.56.1",
+		"@mariozechner/pi-tui": ">=0.56.1",
+		"@sinclair/typebox": "*"
+	}
+}
