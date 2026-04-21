@@ -1302,9 +1302,9 @@ export class SchedulerRuntime {
 				const regexMatch = signal.match(/^\/(.*)\/([gimsuy]*)$/);
 				if (regexMatch) {
 					try {
-					cached = new RegExp(regexMatch[1], regexMatch[2]);
-				} catch {
-					cached = null; // invalid regex — fall back to substring matching
+						cached = new RegExp(regexMatch[1], regexMatch[2]);
+					} catch {
+						cached = null; // invalid regex — fall back to substring matching
 					}
 				} else {
 					cached = null;
