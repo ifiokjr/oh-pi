@@ -1243,7 +1243,7 @@ export class SchedulerRuntime {
 					display: true,
 					details: { taskId: task.id, taskMode: this.taskMode(task), runCount: task.runCount + 1 },
 				},
-				{ triggerTurn: true },
+				{ triggerTurn: true, deliverAs: "followUp" },
 			);
 			this.recordDispatch(now);
 		} catch {
