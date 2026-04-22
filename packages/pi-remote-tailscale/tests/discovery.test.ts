@@ -148,7 +148,7 @@ describe("discovery rendering", () => {
 			await server.stop();
 		}
 
-		const defaultServer = await startDiscoveryHttpServer(service as never);
+		const defaultServer = await startDiscoveryHttpServer(service as never, { port: 0 });
 		try {
 			const listener = defaultServer.server.listeners("request")[0] as (
 				request: { url?: string },

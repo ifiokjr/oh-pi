@@ -122,7 +122,10 @@ oh-pi repo
 │   ├── adaptive-routing
 │   ├── provider-catalog
 │   ├── provider-cursor
-│   └── provider-ollama
+│   ├── provider-ollama
+│   ├── pi-remote-tailscale
+│   ├── pi-bash-live-view
+│   └── pi-pretty
 └── contributor libraries
     ├── core
     ├── cli

@@ -59,7 +59,10 @@ oh-pi repo
 │   ├── adaptive-routing
 │   ├── provider-catalog
 │   ├── provider-cursor
-│   └── provider-ollama
+│   ├── provider-ollama
+│   ├── pi-remote-tailscale
+│   ├── pi-bash-live-view
+│   └── pi-pretty
 └── contributor libraries
     ├── core
     ├── cli
@@ -97,6 +100,9 @@ Opt-in packages that stay separate from the default installer bundle:
 - `@ifi/pi-provider-catalog`
 - `@ifi/pi-provider-cursor`
 - `@ifi/pi-provider-ollama`
+- `@ifi/pi-remote-tailscale`
+- `@ifi/pi-bash-live-view`
+- `@ifi/pi-pretty`
 
 <!-- {/repoExperimentalPackagesDocs} -->
 

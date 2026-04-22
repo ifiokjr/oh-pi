@@ -48,7 +48,10 @@ oh-pi repo
 │   ├── adaptive-routing
 │   ├── provider-catalog
 │   ├── provider-cursor
-│   └── provider-ollama
+│   ├── provider-ollama
+│   ├── pi-remote-tailscale
+│   ├── pi-bash-live-view
+│   └── pi-pretty
 └── contributor libraries
     ├── core
     ├── cli
@@ -103,6 +106,9 @@ Opt-in packages that stay separate from the default installer bundle:
 - `@ifi/pi-provider-catalog`
 - `@ifi/pi-provider-cursor`
 - `@ifi/pi-provider-ollama`
+- `@ifi/pi-remote-tailscale`
+- `@ifi/pi-bash-live-view`
+- `@ifi/pi-pretty`
 
 <!-- {/repoExperimentalPackagesDocs} -->
 
@@ -142,6 +148,9 @@ so build those when you are working on them directly.
 | [`@ifi/pi-provider-catalog`](../packages/providers) | No | `/providers*` | Multi-provider catalog and lazy API-key login backed by `models.dev` |
 | [`@ifi/pi-provider-cursor`](../packages/cursor) | No | `/login cursor`, `/cursor*` | Experimental Cursor OAuth provider with model discovery and direct AgentService streaming |
 | [`@ifi/pi-provider-ollama`](../packages/ollama) | No | `/login ollama-cloud`, `/ollama*`, `/model` | Experimental Ollama local + cloud provider integration |
+| [`@ifi/pi-remote-tailscale`](../packages/pi-remote-tailscale) | No | `/remote`, `/remote:widget`, `/remote:stop` | Secure remote session sharing via Tailscale HTTPS with PTY, WebSocket, QR codes, and token auth |
+| [`@ifi/pi-bash-live-view`](../packages/pi-bash-live-view) | No | `/bash-pty`, `bash` tool override with `usePTY` | PTY-backed live terminal viewing with real-time widget and `/xterm/headless` ANSI rendering |
+| [`@ifi/pi-pretty`](../packages/pi-pretty) | No | wrapped `read`, `bash`, `ls`, `find`, `grep` tools | Syntax highlighting via Shiki, Nerd Font icons, tree-view listings, colored bash summaries, FFF search |
 
 ## `@ifi/oh-pi-extensions`: core extension pack
 
@@ -562,6 +571,9 @@ The AGENTS template pack currently ships 5 templates.
 - **Named specialists and reusable pipelines** → `@ifi/pi-extension-subagents`
 - **Structured planning without implementing yet** → `@ifi/pi-plan`
 - **Spec-first product development** → `@ifi/pi-spec`
+- **Secure remote session sharing via Tailscale HTTPS with PTY/WebSocket** → `@ifi/pi-remote-tailscale`
+- **PTY-backed live terminal viewing with real-time ANSI widget** → `@ifi/pi-bash-live-view`
+- **Syntax highlighting, Nerd Font icons, tree-view listings, and colored output** → `@ifi/pi-pretty`
 - **Remote access from a browser UI** → `@ifi/pi-web-remote`
 - **Automatic or explainable model routing** → `@ifi/pi-extension-adaptive-routing`
 - **Extra API-key providers** → `@ifi/pi-provider-catalog`
