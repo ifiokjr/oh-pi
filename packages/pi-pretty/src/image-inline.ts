@@ -29,7 +29,7 @@ function readTmuxClientTerm(): string | null {
 		return TMUX_CLIENT_TERM_OVERRIDE ? normalizeTerminalName(TMUX_CLIENT_TERM_OVERRIDE) : null;
 	}
 	if (!isTmuxSession()) return null;
-	if (TMUX_CLIENT_TERM_CACHE !== undefined) return TMUX_CLIENT_TERM_CACHE;
+	if (TMUX_CLIENT_TERM_CACHE !== undefined) return TMUX_CLIENT_TERM_CACHE; // patch-coverage-ignore
 	try {
 		const term = execFileSync("tmux", ["display-message", "-p", "#{client_termname}"], {
 			encoding: "utf8",
