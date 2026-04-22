@@ -22,6 +22,30 @@ Use these types:
 - `chore`
 - `revert`
 
+## Issue titles
+
+Write issue titles in sentence case — capitalize only the first word and proper nouns.
+
+- ✅ "Fix memory leak in usage tracker"
+- ✅ "Support nested worktree paths on Windows"
+- ❌ "Fix Memory Leak In Usage Tracker"
+- ❌ "Support Nested Worktree Paths On Windows"
+
+## Pull request titles
+
+PR titles must follow conventional commits, just like commit messages:
+
+```text
+type(scope)?: description
+```
+
+- ✅ `feat(extensions): add context-aware rate limiting`
+- ✅ `fix(ui): resolve race condition in footer render`
+- ❌ `Add context-aware rate limiting`
+- ❌ `Fixed bug with footer`
+
+This keeps the commit history clean after squash merging and makes the PR list scannable.
+
 ## Branch hygiene
 
 - Rebase onto `main` regularly while working to avoid falling behind and minimize merge conflicts.
