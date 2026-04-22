@@ -26,6 +26,9 @@ versioned_files = [
   "packages/web-server/package.json",
   "packages/web-remote/package.json",
   "packages/web-client/package.json",
+  "packages/pi-remote-tailscale/package.json",
+  "packages/pi-bash-live-view/package.json",
+  "packages/pi-pretty/package.json",
 ]
 changelog = "CHANGELOG.md"
 
