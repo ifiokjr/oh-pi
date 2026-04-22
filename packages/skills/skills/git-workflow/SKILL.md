@@ -53,6 +53,37 @@ git stash push -m "interrupted: switching to urgent bugfix PR #123"
 - When done, remove the worktree: `git worktree remove <path>` — the branch remains for PR/merge
 - If the repo has the oh-pi worktree extension, prefer `/worktree create --purpose "..."`
 
+### 4. Clean up history before sharing
+
+**Never merge or push to `origin` while `wip:` commits remain in the stack, unless the user explicitly says otherwise.**
+
+- WIP commits are for *local* iteration only — they are checkpoints, not publication-ready units
+- Before pushing or opening a PR, restructure history so every commit is a logical, self-contained unit of work
+- Each commit should tell a clear story: what changed, why it changed, and ideally be independently buildable/testable
+- Squash related `wip:` commits using interactive rebase: `git rebase -i main`
+- Rename `wip:` commits to proper Conventional Commit messages that describe the final intent
+- If a commit cannot stand on its own (e.g. "wip: broken test"), squash it into the commit that makes it pass
+- Only ever push `wip:` commits to `origin` if the user explicitly requests it (e.g. "just push what I have")
+
+Example — cleaning up before a PR:
+```bash
+# Check what's in the stack
+git log --oneline main..HEAD
+
+# If there are wip: commits, restructure
+git rebase -i main
+#   pick    feat(widget): add new rendering pipeline
+#   squash  wip: failing test for edge case
+#   squash  wip: fix off-by-one in renderer
+#   pick    perf(widget): cache computed layout
+#   drop    wip: try alternative approach (abandoned)
+
+# Push the cleaned branch
+git push origin feat/widget-rendering
+```
+
+See also [Core Principle #1: Commit early and often](#1-commit-early-and-often) — commit freely with `wip:` during development, but clean up before sharing.
+
 ## Capabilities
 
 ### Branch Strategy
