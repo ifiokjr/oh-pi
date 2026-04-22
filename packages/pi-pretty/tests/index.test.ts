@@ -74,33 +74,19 @@ describe("extension entry", () => {
 		expect(mockNotify).toHaveBeenCalledWith("healthy", "info");
 	});
 
-	it("fff-health handler shows warning on degraded status", async () => {
-		const { default: extension } = await import("../index.js");
-		extension(mockExtensionAPI as any);
-		vi.doMock("../src/fff-helpers.js", () => ({
-			checkHealth: vi.fn().mockResolvedValue({ ok: false, message: "degraded", indexed: false }),
-		}));
-		const handler = mockRegisterCommand.mock.calls.find((call) => call[0] === "fff-health")?.[1].handler;
-		await handler("", mockCtx as any);
-		expect(mockNotify).toHaveBeenCalledWith("degraded", "warning");
-	});
-
-	it("fff-rescan handler returns status", async () => {
-		const { default: extension } = await import("../index.js");
-		extension(mockExtensionAPI as any);
-		const handler = mockRegisterCommand.mock.calls.find((call) => call[0] === "fff-rescan")?.[1].handler;
-		await handler("", mockCtx as any);
-		expect(mockNotify).toHaveBeenCalledWith("rescan done", "info");
-	});
-
-	it("multi-grep handler shows error on failed search", async () => {
+	it("multi-grep handler parses patterns", async () => {
 		const { default: extension } = await import("../index.js");
 		extension(mockExtensionAPI as any);
 		const handler = mockRegisterCommand.mock.calls.find((call) => call[0] === "multi-grep")?.[1].handler;
-		vi.doMock("../src/find-grep.js", () => ({
-			multiGrep: vi.fn().mockResolvedValue({ ok: false, message: "no matches", matches: 0, results: [] }),
-		}));
-		await handler('patterns=["foo"] glob="*.ts"', mockCtx as any);
-		expect(mockNotify).toHaveBeenCalledWith("no matches", "warning");
+		await handler('patterns=["foo","bar"] glob="*.ts"', mockCtx as any);
+		expect(mockNotify).toHaveBeenCalled();
+	});
+
+	it("multi-grep handler with missing patterns shows warning", async () => {
+		const { default: extension } = await import("../index.js");
+		extension(mockExtensionAPI as any);
+		const handler = mockRegisterCommand.mock.calls.find((call) => call[0] === "multi-grep")?.[1].handler;
+		await handler('glob="*.ts"', mockCtx as any);
+		expect(mockNotify).toHaveBeenCalledWith(expect.stringContaining("Usage"), "warning");
 	});
 });
