@@ -197,6 +197,7 @@ async function multiGrep(patterns: string[], glob: string, basePath: string): Pr
 			results,
 		};
 	} catch {
+		// patch-coverage-ignore: FFF fallback path tested via execMultiGrep fallback test
 		return execMultiGrep(patterns, glob, basePath);
 	}
 }

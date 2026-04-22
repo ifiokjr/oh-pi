@@ -61,6 +61,11 @@
 		"vite",
 		"vitest",
 		"ws",
-		"zustand"
+		"zustand",
+		"@xterm/headless",
+		"node-pty",
+		"qrcode-terminal",
+		"@shikijs/cli",
+		"@ff-labs/fff-node"
 	]
 }
