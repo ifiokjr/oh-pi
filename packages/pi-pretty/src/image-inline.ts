@@ -37,8 +37,7 @@ function readTmuxClientTerm(): string | null {
 			timeout: 200,
 		}).trim();
 		TMUX_CLIENT_TERM_CACHE = term ? normalizeTerminalName(term) : null;
-	} catch {
-		// patch-coverage-ignore: tmux execution failure in non-tmux environments
+	} catch { // patch-coverage-ignore
 		TMUX_CLIENT_TERM_CACHE = null;
 	}
 	return TMUX_CLIENT_TERM_CACHE;
@@ -80,8 +79,7 @@ export function tmuxAllowsPassthrough(): boolean | null {
 			timeout: 200,
 		}).trim().toLowerCase();
 		TMUX_ALLOW_PASSTHROUGH_CACHE = value === "on" || value === "all";
-	} catch {
-		// patch-coverage-ignore: tmux execution failure in non-tmux environments
+	} catch { // patch-coverage-ignore
 		TMUX_ALLOW_PASSTHROUGH_CACHE = null;
 	}
 	return TMUX_ALLOW_PASSTHROUGH_CACHE;
