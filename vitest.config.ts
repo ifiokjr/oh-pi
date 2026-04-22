@@ -67,6 +67,9 @@ export default defineConfig({
 			"packages/web-client/tests/**/*.test.ts",
 			"packages/web-remote/tests/**/*.test.ts",
 			"packages/analytics-db/src/tests/**/*.test.ts",
+			"packages/pi-remote-tailscale/tests/**/*.test.ts",
+			"packages/pi-bash-live-view/tests/**/*.test.ts",
+			"packages/pi-pretty/tests/**/*.test.ts",
 		],
 		coverage: {
 			provider: "v8",
