@@ -64,7 +64,7 @@ vi.mock("../src/pty-session.js", () => ({
 	},
 }));
 
-import bashLiveViewExtension, { BASH_PTY_COMMAND, bashLiveViewInternals } from "../index.js";
+import bashLiveViewExtension, { BASH_LIVE_VIEW_TOOL, BASH_PTY_COMMAND, bashLiveViewInternals } from "../index.js";
 
 describe("@ifi/pi-bash-live-view index", () => {
 	beforeEach(() => {
@@ -73,7 +73,7 @@ describe("@ifi/pi-bash-live-view index", () => {
 		mocks.executePtyCommand.mockResolvedValue({ sessionId: "pty-1" });
 	});
 
-	it("registers the bash override and slash command", () => {
+	it("registers the live-view bash tool and slash command", () => {
 		mocks.createBashTool.mockImplementationOnce(
 			() =>
 				({
@@ -87,9 +87,9 @@ describe("@ifi/pi-bash-live-view index", () => {
 		const harness = createExtensionHarness();
 		bashLiveViewExtension(harness.pi as never);
 
-		expect(harness.tools.has("bash")).toBe(true);
+		expect(harness.tools.has(BASH_LIVE_VIEW_TOOL)).toBe(true);
 		expect(harness.commands.has(BASH_PTY_COMMAND)).toBe(true);
-		expect(harness.tools.get("bash")?.description).toContain("usePTY=true");
+		expect(harness.tools.get(BASH_LIVE_VIEW_TOOL)?.description).toContain("usePTY=true");
 		expect(bashLiveViewInternals.buildToolDescription("base")).toContain("pseudo-terminal");
 		expect(bashLiveViewInternals.resolveCwd({ cwd: "/ctx" } as never, { cwd: "/fallback" } as never, "/explicit")).toBe(
 			"/explicit",
@@ -107,7 +107,7 @@ describe("@ifi/pi-bash-live-view index", () => {
 		bashLiveViewExtension(harness.pi as never);
 		harness.emit("session_start", { type: "session_start" }, harness.ctx);
 
-		const result = await harness.tools.get("bash")?.execute("tool-1", {
+		const result = await harness.tools.get(BASH_LIVE_VIEW_TOOL)?.execute("tool-1", {
 			command: "echo delegated",
 			timeout: 5,
 			usePTY: false,
@@ -122,7 +122,7 @@ describe("@ifi/pi-bash-live-view index", () => {
 		harness.ctx.cwd = "/workspace/b";
 		bashLiveViewExtension(harness.pi as never);
 
-		const result = await harness.tools.get("bash")?.execute(
+		const result = await harness.tools.get(BASH_LIVE_VIEW_TOOL)?.execute(
 			"tool-2",
 			{
 				command: "pnpm dev",
@@ -146,7 +146,7 @@ describe("@ifi/pi-bash-live-view index", () => {
 		bashLiveViewExtension(harness.pi as never);
 		mocks.executePtyCommand.mockRejectedValueOnce(new Error("boom"));
 
-		const result = await harness.tools.get("bash")?.execute("tool-3", { command: "broken", usePTY: true }, undefined, undefined, harness.ctx);
+		const result = await harness.tools.get(BASH_LIVE_VIEW_TOOL)?.execute("tool-3", { command: "broken", usePTY: true }, undefined, undefined, harness.ctx);
 		expect(result).toMatchObject({
 			content: [{ text: "PTY execution failed: boom" }],
 			details: { error: true, pty: true },

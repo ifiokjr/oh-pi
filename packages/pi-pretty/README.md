@@ -5,7 +5,7 @@ Pretty terminal output for pi built-in tools.
 ## Features
 
 - **`read`** — Syntax-highlighted file content with line numbers + inline image rendering
-- **`bash`** — Colored exit status with output preview
+- **`bash_pretty`** — Colored exit status with output preview
 - **`ls`** — Tree-view directory listing with Nerd Font file type icons
 - **`find`** / **`grep`** — FFF-backed frecency-aware search with grouped/highlighted rendering
 - **`multi_grep`** — OR-search across multiple patterns
@@ -24,11 +24,11 @@ pi -e ./packages/pi-pretty/index.ts
 
 ## Usage
 
-Use built-in tools normally — `pi-pretty` enhances them transparently:
+Use the wrapped tools directly:
 
 ```text
 read path="src/index.ts"
-bash command="pnpm test"
+bash_pretty command="pnpm test"
 ls path="src"
 grep pattern="handleRequest" glob="*.ts"
 ```

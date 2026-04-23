@@ -23,10 +23,10 @@ describe("enhanceBashTool", () => {
 		vi.clearAllMocks();
 	});
 
-	it("registers bash tool enhancement", async () => {
-		const { enhanceBashTool } = await import("../src/bash.js");
+	it("registers pretty bash as a separate tool", async () => {
+		const { PRETTY_BASH_TOOL, enhanceBashTool } = await import("../src/bash.js");
 		enhanceBashTool(mockExtensionAPI as any);
-		expect(mockRegisterTool).toHaveBeenCalledWith(expect.objectContaining({ name: "bash" }));
+		expect(mockRegisterTool).toHaveBeenCalledWith(expect.objectContaining({ name: PRETTY_BASH_TOOL }));
 	});
 
 	it("returns enhanced content for exit code 0", async () => {
