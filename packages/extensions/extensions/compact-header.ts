@@ -94,9 +94,17 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 
+		// Snapshot session-bound values once — pi.* and ctx.model both call
+		// assertActive() and will throw if accessed after session teardown.
+		// The TUI render loop fires one final tick via setTimeout after the
+		// extension runner is invalidated on quit, so render() must not call
+		// them directly.
+		const commandCatalog = buildCommandCatalog(pi.getCommands());
+		const initialModel = ctx.model;
+		const initialThinking = pi.getThinkingLevel();
+
 		ctx.ui.setHeader((tui, theme) => {
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
-			const commandCatalog = buildCommandCatalog(pi.getCommands());
 			return {
 				dispose() {
 					unsubSafeMode();
@@ -108,10 +116,10 @@ export default function (pi: ExtensionAPI) {
 					const d = (s: string) => theme.fg("dim", s);
 					const a = (s: string) => theme.fg("accent", s);
 
-					const model = ctx.model ? `${ctx.model.id}` : "no model";
+					const model = initialModel ? `${initialModel.id}` : "no model";
 					const { prompts, skills } = commandCatalog;
-					const thinking = pi.getThinkingLevel();
-					const provider = ctx.model?.provider ?? "";
+					const thinking = initialThinking;
+					const provider = initialModel?.provider ?? "";
 
 					const pad = (s: string, w: number) => s + " ".repeat(Math.max(0, w - visibleWidth(s)));
 					const t = (s: string) => truncateToWidth(s, width);
