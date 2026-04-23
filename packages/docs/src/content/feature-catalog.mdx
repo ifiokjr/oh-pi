@@ -162,7 +162,7 @@ This package is where most of the day-to-day ergonomics live.
 | `auto-update` | startup notification | Checks npm asynchronously and tells you when a newer oh-pi release is available |
 | `external-editor` | `/external-editor`, `Ctrl+Shift+E` | Opens the current draft in `$VISUAL` or `$EDITOR`, then syncs the saved text back into pi |
 | `worktree` | `/worktree`, `/worktree list`, `/worktree create`, `/worktree cleanup` | Gives oh-pi first-class git worktree awareness and managed pi-owned worktrees under shared storage |
-| `bg-process` | `bash` override, `bg_status` tool | Automatically detaches long-running commands after a timeout and lets the agent inspect/stop them later |
+| `bg-process` | `bg_task`, `bg_status`, `/bg`, `Ctrl+Shift+B` | Explicitly manages long-lived background tasks like watchers, servers, and log tails without auto-detaching ordinary bash commands |
 | `scheduler` | `/remind`, `/loop`, `/schedule*`, `schedule_prompt` tool | Schedules one-time reminders and recurring follow-ups for builds, CI, deploys, PRs, and long-running checks |
 | `usage-tracker` | widget, `/usage`, `/usage-toggle`, `/usage-refresh`, `Ctrl+U`, `usage_report` | Tracks provider quotas, rolling cost history, and per-model/session usage |
 | `btw` / `qq` | `/btw*`, `/qq*` | Runs side conversations in a widget above the editor, then injects the full thread or a summary back into the main agent |
@@ -213,7 +213,7 @@ It includes:
 
 ## `@ifi/pi-background-tasks`: reactive background shell tasks
 
-This package promotes long-running shell commands from an implementation detail into a first-class pi workflow.
+This package turns explicit long-lived shell tasks into a first-class pi workflow while leaving ordinary `bash` commands in the foreground.
 
 ### Primary surfaces
 
@@ -559,7 +559,7 @@ The AGENTS template pack currently ships 5 templates.
 ## Which feature should I reach for?
 
 - **Safer day-to-day pi sessions** → `@ifi/oh-pi-extensions`
-- **Long-running shell commands, watches, and log tails** → `@ifi/pi-background-tasks`
+- **Long-lived watchers, servers, and log tails** → `@ifi/pi-background-tasks`
 - **Timing and completion visibility** → `@ifi/pi-diagnostics`
 - **Large parallel work** → `@ifi/oh-pi-ant-colony`
 - **Named specialists and reusable pipelines** → `@ifi/pi-extension-subagents`

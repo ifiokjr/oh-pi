@@ -382,19 +382,19 @@ agent or inject a generated summary instead.
 
 ### ⏳ Background Process (`bg-process`) — **default: off**
 
-Automatically backgrounds long-running commands (dev servers, builds, test suites). When a command
-exceeds a 10-second timeout, it's moved to the background and the agent gets the PID + log file
-path.
+Manages explicit background tasks for long-lived commands like dev servers, PR watchers, and log
+followers. Ordinary `bash` commands stay in the foreground so their output remains visible in the
+current pi session.
 
-**How it works:** Overrides the built-in `bash` tool. Spawns commands with a timer — if they're
-still running after 10s, detaches them and writes output to `/tmp/oh-pi-bg-*.log`. Provides a
-`bg_status` tool for listing, viewing logs, and stopping background processes.
+**How it works:** Use `bg_task` or `/bg` when you want a command to keep running after the tool
+returns. Background tasks write output to `/tmp/oh-pi-bg-*.log`, can wake pi up on new output, and
+can be inspected or stopped later with `bg_status`, `bg_task`, or the `/bg` dashboard.
 
 ```
-Agent: bash npm run dev
-→ Command still running after 10s, moved to background.
-  PID: 12345 | Log: /tmp/oh-pi-bg-1709654321.log
-  ⏳ You will be notified automatically when it finishes.
+Agent: bg_task spawn "npm run dev"
+→ Started bg-1 (pid 12345) in the background.
+  Log: /tmp/oh-pi-bg-bg-1-1709654321.log
+  ⏳ Pi can notify you when new output arrives or when the task exits.
 ```
 
 **Commands:** `bg_status list` | `bg_status log --pid 12345` | `bg_status stop --pid 12345`

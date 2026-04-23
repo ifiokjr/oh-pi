@@ -16,9 +16,9 @@ npx @ifi/oh-pi
 
 ## What it provides
 
-This package turns background shell commands into a first-class pi workflow:
+This package turns explicit background shell commands into a first-class pi workflow:
 
-- `bash` override — long-running shell commands auto-promote into tracked background tasks after 10s
+- ordinary `bash` commands stay in the foreground and use pi's built-in execution flow
 - `bg_status` — compatibility tool for listing, tailing, and stopping tracked background tasks by PID
 - `bg_task` — richer LLM-callable tool for spawning, listing, tailing, stopping, and clearing tasks by id or PID
 - `/bg` — slash command for launching and managing background tasks manually
@@ -37,7 +37,7 @@ This package turns background shell commands into a first-class pi workflow:
 /bg stop bg-1
 ```
 
-The `bg_task` tool also lets the agent start tasks itself and optionally gate wakeups with a
+The `bg_task` tool lets the agent start tasks explicitly and optionally gate wakeups with a
 substring or `/regex/flags` pattern.
 
 The dashboard supports:
@@ -52,6 +52,7 @@ The dashboard supports:
 
 - tasks are tracked for the current pi runtime and cleaned up on session shutdown
 - every task writes output to a log file so you can inspect recent activity even after the command returns
+- use `bg_task` or `/bg` for servers, watchers, PR checks, and other commands you want to keep running after the tool returns
 - `reactToOutput` defaults to `true`, so long-lived watchers like `gh ... --watch` can wake the agent when new output arrives
 
 This package ships raw `.ts` sources for pi to load directly.

@@ -3,6 +3,7 @@
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import {
+	createBashTool,
 	type ExtensionAPI,
 	type ExtensionCommandContext,
 	type ExtensionContext,
@@ -65,8 +66,6 @@ type SpawnTaskOptions = {
 };
 
 type ThemeLike = Theme;
-
-const BG_TIMEOUT_MS = 10_000;
 
 function taskSnapshot(task: ManagedTask): BackgroundTaskSnapshot {
 	return {
@@ -905,100 +904,35 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 		clearWidget();
 	});
 
+	const bashTemplate = createBashTool(process.cwd()) as ReturnType<typeof createBashTool> & {
+		label?: string;
+		description: string;
+		renderCall?: unknown;
+		renderResult?: unknown;
+	};
+
 	pi.registerTool({
 		name: "bash",
-		label: "Bash",
-		description: `Execute a bash command. Output is truncated to 2000 lines or 50KB. If a command runs longer than ${BG_TIMEOUT_MS / 1000}s, it is automatically moved into the background task runtime and you get the task id, PID, and log file. Background tasks expire after 10 minutes by default. Use bg_status or bg_task to inspect it later.`,
+		label: bashTemplate.label ?? "Bash",
+		description: `${bashTemplate.description} Use bg_task or /bg only for long-lived watchers, servers, and other commands that should keep running after the tool returns.`,
 		parameters: Type.Object({
 			command: Type.String({ description: "Bash command to execute" }),
-			timeout: Type.Optional(Type.Number({ description: "Timeout in seconds before auto-backgrounding" })),
+			timeout: Type.Optional(Type.Number({ description: "Optional timeout in seconds before the command is terminated" })),
 		}),
-		async execute(_toolCallId, params, signal, _onUpdate, _ctx): Promise<any> {
-			const command = params.command.trim();
-			const cwd = activeCtx?.cwd || process.cwd();
-			const timeoutMs = params.timeout ? Math.max(1, params.timeout * 1_000) : BG_TIMEOUT_MS;
-			const { shell, args } = getShellConfig();
+		renderCall: bashTemplate.renderCall as any,
+		renderResult: bashTemplate.renderResult as any,
+		async execute(toolCallId, params, signal, onUpdate, ctx): Promise<any> {
+			const cwd = ctx?.cwd ?? activeCtx?.cwd ?? process.cwd();
+			const bashTool = createBashTool(cwd);
 
-			return await new Promise<any>((resolve) => {
-				let settled = false;
-				let stdout = "";
-				let stderr = "";
-				const child = spawn(shell, [...args, command], {
-					cwd,
-					env: createBgProcessShellEnv(),
-					stdio: ["ignore", "pipe", "pipe"],
-				});
-
-				const finish = (result: { text: string; isError?: boolean; details?: Record<string, unknown> }) => {
-					if (settled) {
-						return;
-					}
-					settled = true;
-					clearTimeout(timer);
-					resolve(makeToolResult(result.text, { details: result.details, isError: result.isError }));
-				};
-
-				child.stdout?.on("data", (chunk: Buffer) => {
-					stdout += chunk.toString();
-				});
-				child.stderr?.on("data", (chunk: Buffer) => {
-					stderr += chunk.toString();
-				});
-
-				const timer = setTimeout(() => {
-					const task = spawnTask({
-						command,
-						cwd,
-						child,
-						initialOutput: stdout + stderr,
-						initialLastAlertLength: (stdout + stderr).length,
-					});
-					const preview = tailText((stdout + stderr).trim(), 500) || "(no output yet)";
-					finish({
-						text: `Command still running after ${timeoutMs / 1000}s, moved to the background.\nTask: ${task.id}\nPID: ${task.pid}\nLog: ${task.logFile}\nExpiry: ${task.expiresAt != null ? formatRelativeTime(task.expiresAt) : "none"}\n\nOutput so far:\n${preview}\n\nPi will watch for new output and notify you when the task exits.`,
-						details: { task: taskSnapshot(task) },
-					});
-				}, timeoutMs);
-				timer.unref?.();
-
-				child.on("close", (code) => {
-					if (settled) {
-						return;
-					}
-					const output = (stdout + stderr).trim();
-					const exitInfo = code === 0 ? "" : `\n[Exit code: ${code}]`;
-					finish({ text: output + exitInfo });
-				});
-
-				child.on("error", (error) => {
-					finish({ text: `Error: ${error.message}`, isError: true });
-				});
-
-				if (signal) {
-					signal.addEventListener(
-						"abort",
-						() => {
-							if (settled) {
-								return;
-							}
-							try {
-								child.kill();
-							} catch {
-								// Ignore abort races for already-exited commands.
-							}
-							finish({ text: "Command cancelled." });
-						},
-						{ once: true },
-					);
-				}
-			});
+			return await bashTool.execute(toolCallId, { command: params.command, timeout: params.timeout } as never, signal, onUpdate);
 		},
 	});
 
 	pi.registerTool({
 		name: "bg_status",
 		label: "Background Process Status",
-		description: "Check status, view output, or stop background tasks that were auto-backgrounded or spawned explicitly.",
+		description: "Check status, view output, or stop background tasks that were spawned explicitly.",
 		parameters: Type.Object({
 			action: StringEnum(["list", "log", "stop"] as const, {
 				description: "list=show tasks, log=view task output, stop=terminate a task",

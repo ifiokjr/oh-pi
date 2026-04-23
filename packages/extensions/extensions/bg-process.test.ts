@@ -2,7 +2,14 @@ import { EventEmitter } from "node:events";
 import { delimiter, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { getShellConfigMock, spawnMock } = vi.hoisted(() => ({
+const { createBashToolMock, getShellConfigMock, spawnMock } = vi.hoisted(() => ({
+	createBashToolMock: vi.fn(() => ({
+		label: "Bash",
+		description: "Built-in bash tool.",
+		renderCall: undefined,
+		renderResult: undefined,
+		execute: vi.fn(),
+	})),
 	getShellConfigMock: vi.fn(() => ({ shell: "C:/Program Files/Git/bin/bash.exe", args: ["-c"] })),
 	spawnMock: vi.fn(),
 }));
@@ -12,6 +19,7 @@ vi.mock("node:child_process", () => ({
 }));
 
 vi.mock("@mariozechner/pi-coding-agent", () => ({
+	createBashTool: createBashToolMock,
 	getAgentDir: () => "/mock-home/.pi/agent",
 	getShellConfig: getShellConfigMock,
 }));
@@ -85,19 +93,15 @@ describe("bg-process", () => {
 		expect(getBgProcessLogFilePath(123, "C:/Temp")).toBe(join("C:/Temp", "oh-pi-bg-123.log"));
 	});
 
-	it("uses pi shell resolution instead of spawning a bare bash command", async () => {
+	it("uses pi shell resolution for explicit background tasks", async () => {
 		const child = createMockChild();
 		spawnMock.mockReturnValueOnce(child);
 
 		const pi = createMockPi();
 		bgProcessExtension(pi as never);
-		const tool = pi.tools.get("bash");
+		const tool = pi.tools.get("bg_task");
 
-		const resultPromise = tool.execute("tool-1", { command: "echo hello" });
-		child.stdout.emit("data", Buffer.from("hello\n"));
-		child.emit("close", 0);
-
-		const result = await resultPromise;
+		const result = await tool.execute("tool-1", { action: "spawn", command: "echo hello" });
 
 		expect(getShellConfigMock).toHaveBeenCalledOnce();
 		expect(spawnMock).toHaveBeenCalledWith(
@@ -111,6 +115,6 @@ describe("bg-process", () => {
 				}),
 			}),
 		);
-		expect(result.content[0].text).toBe("hello");
+		expect(result.content[0].text).toContain("Started bg-1");
 	});
 });
