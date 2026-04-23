@@ -88,6 +88,7 @@ describe("provider catalog extension", () => {
 				set: vi.fn(),
 			},
 			refresh,
+			registerProvider: vi.fn((name, config) => harness.pi.registerProvider(name, config)),
 		} as never;
 
 		providerCatalogExtension(harness.pi as never);
@@ -135,6 +136,7 @@ describe("provider catalog extension", () => {
 				}),
 			},
 			refresh,
+			registerProvider: vi.fn((name, config) => harness.pi.registerProvider(name, config)),
 		} as never;
 
 		let pickerFactory: any;

@@ -1,6 +1,11 @@
 /* c8 ignore file */
 import * as sharedQna from "@ifi/pi-shared-qna";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type {
+	ExtensionAPI,
+	ExtensionCommandContext,
+	ExtensionContext,
+	ProviderConfig,
+} from "@mariozechner/pi-coding-agent";
 import {
 	createApiKeyOAuthProvider,
 	loginProvider,
@@ -42,6 +47,11 @@ type ProviderAuthWriter = Pick<ExtensionContext["modelRegistry"]["authStorage"],
 type ProviderModelRegistry = {
 	authStorage: ProviderAuthWriter;
 	refresh?: ExtensionContext["modelRegistry"]["refresh"];
+	registerProvider: ExtensionContext["modelRegistry"]["registerProvider"];
+};
+
+type ProviderRegistrar = {
+	registerProvider(name: string, config: ProviderConfig): void;
 };
 
 type ProviderRegistryContext = {
@@ -73,8 +83,8 @@ const runtimeState: RuntimeProviderState = {
 	registered: new Set(),
 };
 
-function registerProvider(pi: ExtensionAPI, provider: SupportedProviderDefinition): void {
-	pi.registerProvider(provider.id, {
+function registerProvider(registrar: ProviderRegistrar, provider: SupportedProviderDefinition): void {
+	registrar.registerProvider(provider.id, {
 		api: provider.api,
 		apiKey: resolveApiKeyConfig(provider),
 		baseUrl: provider.baseUrl,
@@ -100,7 +110,7 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 				if (!provider) {
 					return;
 				}
-				await loginProviderFromCommand(pi, ctx, provider);
+				await loginProviderFromCommand(ctx.modelRegistry, ctx, provider);
 				return;
 			}
 
@@ -110,7 +120,7 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 					ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
 					return;
 				}
-				const refreshed = await refreshProviders(pi, ctx, providers);
+				const refreshed = await refreshProviders(ctx.modelRegistry, ctx, providers);
 				ctx.modelRegistry.refresh?.();
 				ctx.ui.notify(renderRefreshSummary(refreshed, providers.length), "info");
 				return;
@@ -191,7 +201,7 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Refresh handling branches clearly by stored credential vs env configuration paths.
 async function refreshProviders(
-	pi: ExtensionAPI,
+	registrar: ProviderRegistrar,
 	ctx: ProviderRegistryContext,
 	providers: readonly SupportedProviderDefinition[],
 ): Promise<
@@ -221,7 +231,7 @@ async function refreshProviders(
 				runtimeState.models.set(provider.id, getCredentialModels(refreshed));
 				runtimeState.lastRefresh.set(provider.id, refreshed.lastModelRefresh ?? Date.now());
 				runtimeState.lastError.set(provider.id, null);
-				registerProvider(pi, provider);
+				registerProvider(registrar, provider);
 				results.push({ provider, status: "refreshed", models: getCredentialModels(refreshed).length });
 				continue;
 			} catch (error) {
@@ -248,12 +258,12 @@ async function refreshProviders(
 			runtimeState.models.set(provider.id, models);
 			runtimeState.lastRefresh.set(provider.id, Date.now());
 			runtimeState.lastError.set(provider.id, null);
-			registerProvider(pi, provider);
+			registerProvider(registrar, provider);
 			results.push({ provider, status: "refreshed", models: models.length });
 		} catch (error) {
 			runtimeState.lastRefresh.set(provider.id, Date.now());
 			runtimeState.lastError.set(provider.id, error instanceof Error ? error.message : String(error));
-			registerProvider(pi, provider);
+			registerProvider(registrar, provider);
 			results.push({
 				provider,
 				status: "failed",
@@ -516,12 +526,12 @@ function formatProviderPickerOption(provider: SupportedProviderDefinition, ctx: 
 }
 
 async function loginProviderFromCommand(
-	pi: ExtensionAPI,
+	registrar: ProviderRegistrar,
 	ctx: ProviderCommandContext,
 	provider: SupportedProviderDefinition,
 ): Promise<void> {
 	try {
-		registerProvider(pi, provider);
+		registerProvider(registrar, provider);
 		const credential = await loginProvider(provider, {
 			onAuth(params) {
 				ctx.ui.notify(`${params.instructions}\n${params.url}`, "info");
@@ -539,7 +549,7 @@ async function loginProviderFromCommand(
 		runtimeState.models.set(provider.id, getCredentialModels(credential));
 		runtimeState.lastRefresh.set(provider.id, credential.lastModelRefresh ?? Date.now());
 		runtimeState.lastError.set(provider.id, null);
-		registerProvider(pi, provider);
+		registerProvider(registrar, provider);
 		ctx.modelRegistry.refresh?.();
 		ctx.ui.notify(
 			`Logged in to ${provider.name}. ${getCredentialModels(credential).length} model${getCredentialModels(credential).length === 1 ? "" : "s"} available.`,
@@ -604,6 +614,7 @@ function bootstrapProviders(pi: ExtensionAPI): void {
 					get: () => undefined,
 					set: () => undefined,
 				},
+				registerProvider: pi.registerProvider.bind(pi),
 			},
 		},
 		SUPPORTED_PROVIDERS.filter((provider) => Boolean(getEnvApiKey(provider))),
@@ -618,7 +629,7 @@ function registerPersistedProviders(pi: ExtensionAPI): void {
 				continue;
 			}
 			const wasRegistered = runtimeState.registered.has(provider.id);
-			registerProvider(pi, provider);
+			registerProvider(ctx.modelRegistry, provider);
 			changed ||= !wasRegistered;
 		}
 		if (changed) {
