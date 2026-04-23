@@ -22,7 +22,22 @@ vi.mock("@mariozechner/pi-coding-agent", async () => {
 	};
 });
 
-import compactHeaderExtension from "./compact-header.js";
+import compactHeaderExtension, { buildCommandCatalog } from "./compact-header.js";
+
+describe("buildCommandCatalog", () => {
+	it("groups prompts and skills once into cached display strings", () => {
+		expect(
+			buildCommandCatalog([
+				{ name: "optimize", source: "prompt" },
+				{ name: "git-workflow", source: "skill" },
+				{ name: "usage", source: "command" },
+			]),
+		).toEqual({
+			prompts: "/optimize",
+			skills: "git-workflow",
+		});
+	});
+});
 
 describe("compact-header plain-icons bootstrap", () => {
 	beforeEach(() => {
@@ -77,5 +92,33 @@ describe("compact-header plain-icons bootstrap", () => {
 		compactHeaderExtension(harness.pi as never);
 		expect(process.env.OH_PI_PLAIN_ICONS).toBe("1");
 		expect(readFileSyncMock).not.toHaveBeenCalled();
+	});
+
+	it("caches the command catalog at header mount instead of rescanning on every render", () => {
+		const harness = createExtensionHarness();
+		const setHeader = vi.fn();
+		(harness.ctx.ui as { setHeader: typeof setHeader }).setHeader = setHeader;
+		harness.pi.getCommands = vi.fn(() => [
+			{ name: "optimize", source: "prompt" },
+			{ name: "review", source: "prompt" },
+			{ name: "git-workflow", source: "skill" },
+		]) as never;
+
+		compactHeaderExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+
+		const headerFactory = setHeader.mock.calls[0]?.[0] as
+			| ((
+					tui: { requestRender: () => void },
+					theme: { fg: (color: string, text: string) => string },
+			  ) => { render: (width: number) => string[]; dispose?: () => void })
+			| undefined;
+		expect(headerFactory).toBeTypeOf("function");
+
+		const component = headerFactory?.({ requestRender() {} }, { fg: (_color: string, text: string) => text });
+		component?.render(120);
+		component?.render(120);
+
+		expect(harness.pi.getCommands).toHaveBeenCalledTimes(1);
 	});
 });

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { performance } from "node:perf_hooks";
+import { buildCommandCatalog } from "../packages/extensions/extensions/compact-header.ts";
 
 function time(label, fn, iterations) {
 	const start = performance.now();
@@ -13,6 +14,21 @@ function time(label, fn, iterations) {
 		totalMs,
 		avgMs: totalMs / iterations,
 	};
+}
+
+function makeCommands(count) {
+	const commands = [];
+	for (let index = 0; index < count; index++) {
+		commands.push({
+			name: `command-${index}`,
+			source: index % 6 === 0 ? "prompt" : index % 5 === 0 ? "skill" : "command",
+		});
+	}
+	return commands;
+}
+
+function renderHeaderFromCatalog(catalog) {
+	return `${catalog.prompts}\n${catalog.skills}`;
 }
 
 function makeJobs(count) {
@@ -63,7 +79,18 @@ function makeSamples(count) {
 
 const iterations = 500;
 
-console.log("Subagent widget scaling with and without the display cap (MAX_WIDGET_JOBS=4)\n");
+console.log("Compact-header command catalog rebuild vs cached render data\n");
+console.log("commands\trebuild avg\tcached avg\tspeedup");
+for (const size of [10, 100, 1_000, 10_000]) {
+	const commands = makeCommands(size);
+	const catalog = buildCommandCatalog(commands);
+	const rebuild = time("rebuild", () => buildCommandCatalog(commands), iterations);
+	const cached = time("cached", () => renderHeaderFromCatalog(catalog), iterations);
+	const speedup = cached.totalMs > 0 ? rebuild.totalMs / cached.totalMs : Number.POSITIVE_INFINITY;
+	console.log(`${size}\t${rebuild.avgMs.toFixed(4)}ms\t${cached.avgMs.toFixed(4)}ms\t${speedup.toFixed(1)}x`);
+}
+
+console.log("\nSubagent widget scaling with and without the display cap (MAX_WIDGET_JOBS=4)\n");
 console.log("jobs\tuncapped avg\tcapped avg\tspeedup");
 for (const size of [1, 4, 16, 64]) {
 	const jobs = makeJobs(size);

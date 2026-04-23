@@ -30,6 +30,29 @@ function loadPlainIconsSetting(): boolean {
 	return false;
 }
 
+export function buildCommandCatalog(commands: ReadonlyArray<{ name: string; source?: string }>): {
+	prompts: string;
+	skills: string;
+} {
+	const promptNames: string[] = [];
+	const skillNames: string[] = [];
+
+	for (const command of commands) {
+		if (command.source === "prompt") {
+			promptNames.push(`/${command.name}`);
+			continue;
+		}
+		if (command.source === "skill") {
+			skillNames.push(command.name);
+		}
+	}
+
+	return {
+		prompts: promptNames.join("  "),
+		skills: skillNames.join("  "),
+	};
+}
+
 export default function (pi: ExtensionAPI) {
 	let plainIconsSyncTimer: ReturnType<typeof setTimeout> | undefined;
 	const cancelPlainIconsSync = () => {
@@ -73,6 +96,7 @@ export default function (pi: ExtensionAPI) {
 
 		ctx.ui.setHeader((tui, theme) => {
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
+			const commandCatalog = buildCommandCatalog(pi.getCommands());
 			return {
 				dispose() {
 					unsubSafeMode();
@@ -84,16 +108,8 @@ export default function (pi: ExtensionAPI) {
 					const d = (s: string) => theme.fg("dim", s);
 					const a = (s: string) => theme.fg("accent", s);
 
-					const cmds = pi.getCommands();
-					const prompts = cmds
-						.filter((c) => c.source === "prompt")
-						.map((c) => `/${c.name}`)
-						.join("  ");
-					const skills = cmds
-						.filter((c) => c.source === "skill")
-						.map((c) => c.name)
-						.join("  ");
 					const model = ctx.model ? `${ctx.model.id}` : "no model";
+					const { prompts, skills } = commandCatalog;
 					const thinking = pi.getThinkingLevel();
 					const provider = ctx.model?.provider ?? "";
 

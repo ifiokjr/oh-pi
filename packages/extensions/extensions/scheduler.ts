@@ -297,6 +297,9 @@ export class SchedulerRuntime {
 			}
 			this.persistTasks();
 			this.updateStatus();
+			if (this.tasks.size === 0) {
+				this.stopScheduler();
+			}
 		}
 		return removed;
 	}
@@ -307,6 +310,9 @@ export class SchedulerRuntime {
 		this.awaitingTaskId = null;
 		this.persistTasks();
 		this.updateStatus();
+		if (count > 0) {
+			this.stopScheduler();
+		}
 		return count;
 	}
 
@@ -492,6 +498,7 @@ export class SchedulerRuntime {
 		this.tasks.set(id, task);
 		this.persistTasks();
 		this.updateStatus();
+		this.startScheduler();
 		return task;
 	}
 
@@ -537,6 +544,7 @@ export class SchedulerRuntime {
 		this.tasks.set(id, task);
 		this.persistTasks();
 		this.updateStatus();
+		this.startScheduler();
 		return task;
 	}
 
@@ -569,11 +577,12 @@ export class SchedulerRuntime {
 		this.tasks.set(id, task);
 		this.persistTasks();
 		this.updateStatus();
+		this.startScheduler();
 		return task;
 	}
 
 	startScheduler() {
-		if (this.schedulerTimer) {
+		if (this.schedulerTimer || this.tasks.size === 0) {
 			return;
 		}
 		const intervalMs = this.safeModeEnabled ? SCHEDULER_SAFE_MODE_HEARTBEAT_MS : SCHEDULER_LEASE_HEARTBEAT_MS;
@@ -667,6 +676,9 @@ export class SchedulerRuntime {
 
 		if (this.tasks.size === 0) {
 			this.setStatus("pi-scheduler", undefined);
+			if (this.schedulerTimer || this.schedulerRetryTimer) {
+				this.stopScheduler();
+			}
 			return;
 		}
 

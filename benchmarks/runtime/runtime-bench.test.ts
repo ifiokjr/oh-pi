@@ -11,6 +11,15 @@ describe("runtime churn benchmark suite", () => {
 			const suite = await createRuntimeBenchmarkSuite();
 			try {
 				expect(suite.report.results.length).toBeGreaterThan(0);
+
+				const schedulerIdle = suite.report.results.find((result) => result.id === "extension-runtime-idle-scheduler");
+				expect(schedulerIdle).toBeDefined();
+				expect(schedulerIdle).toMatchObject({
+					widgetRenderRequests: 0,
+					footerRenderRequests: 0,
+					statusUpdates: 0,
+					notifications: 0,
+				});
 			} finally {
 				await suite.cleanup();
 				vi.useRealTimers();
