@@ -2,11 +2,14 @@ import type { ExtensionAPI, AgentToolResult } from "@mariozechner/pi-coding-agen
 import { createBashTool } from "@mariozechner/pi-coding-agent";
 import { FG_GREEN, FG_RED, FG_YELLOW, fillToolBackground, resolveBaseBackground } from "./theme.js";
 
+export const PRETTY_BASH_TOOL = "bash_pretty";
+
 export function enhanceBashTool(pi: ExtensionAPI): void {
 	const original = createBashTool(process.cwd());
 
 	pi.registerTool({
 		...original,
+		name: PRETTY_BASH_TOOL,
 		async execute(toolCallId, params, signal, onUpdate): Promise<AgentToolResult<unknown>> {
 			resolveBaseBackground(null);
 			const result = await original.execute(toolCallId, params, signal, onUpdate);

@@ -14,7 +14,7 @@ The built-in `bash` tool is great for batch output, but it does not preserve a t
 
 ## What it provides
 
-- `bash` tool override with `usePTY?: boolean`
+- `bash_live_view` tool with `usePTY?: boolean`
 - live terminal widget while PTY commands run
 - `@xterm/headless` terminal snapshots rendered back into ANSI lines
 - `node-pty` session management with timeout, abort, and cleanup handling
@@ -28,14 +28,14 @@ The built-in `bash` tool is great for batch output, but it does not preserve a t
 ### Agent tool call
 
 ```ts
-await bash({
+await bash_live_view({
   command: "pnpm test --watch",
   timeout: 30,
   usePTY: true,
 });
 ```
 
-`usePTY` defaults to `false`, so ordinary `bash` calls still use pi's original built-in tool behavior.
+`usePTY` defaults to `false`, so `bash_live_view` can still delegate to pi's original built-in `bash` behavior when you don't need a PTY.
 
 ### Slash command
 

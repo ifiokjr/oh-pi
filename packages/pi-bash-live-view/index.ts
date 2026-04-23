@@ -4,6 +4,7 @@ import { Type } from "@sinclair/typebox";
 import { executePtyCommand, toAgentToolResult, toUserBashResult } from "./src/pty-execute.js";
 import { PtySessionManager } from "./src/pty-session.js";
 
+export const BASH_LIVE_VIEW_TOOL = "bash_live_view";
 export const BASH_PTY_COMMAND = "bash-pty";
 const BASH_PTY_MESSAGE_TYPE = "pi-bash-live-view:result";
 
@@ -55,7 +56,7 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.registerTool({
-		name: "bash",
+		name: BASH_LIVE_VIEW_TOOL,
 		label: bashTemplate.label ?? "Bash",
 		description: buildToolDescription(bashTemplate.description),
 		parameters: BASH_TOOL_PARAMETERS,

@@ -149,8 +149,8 @@ so build those when you are working on them directly.
 | [`@ifi/pi-provider-cursor`](../packages/cursor) | No | `/login cursor`, `/cursor*` | Experimental Cursor OAuth provider with model discovery and direct AgentService streaming |
 | [`@ifi/pi-provider-ollama`](../packages/ollama) | No | `/login ollama-cloud`, `/ollama*`, `/model` | Experimental Ollama local + cloud provider integration |
 | [`@ifi/pi-remote-tailscale`](../packages/pi-remote-tailscale) | No | `/remote`, `/remote:widget`, `/remote:stop` | Secure remote session sharing via Tailscale HTTPS with PTY, WebSocket, QR codes, and token auth |
-| [`@ifi/pi-bash-live-view`](../packages/pi-bash-live-view) | No | `/bash-pty`, `bash` tool override with `usePTY` | PTY-backed live terminal viewing with real-time widget and `/xterm/headless` ANSI rendering |
-| [`@ifi/pi-pretty`](../packages/pi-pretty) | No | wrapped `read`, `bash`, `ls`, `find`, `grep` tools | Syntax highlighting via Shiki, Nerd Font icons, tree-view listings, colored bash summaries, FFF search |
+| [`@ifi/pi-bash-live-view`](../packages/pi-bash-live-view) | No | `/bash-pty`, `bash_live_view` tool with `usePTY` | PTY-backed live terminal viewing with real-time widget and `/xterm/headless` ANSI rendering |
+| [`@ifi/pi-pretty`](../packages/pi-pretty) | No | wrapped `read`, `bash_pretty`, `ls`, `find`, `grep` tools | Syntax highlighting via Shiki, Nerd Font icons, tree-view listings, colored bash summaries, FFF search |
 
 ## `@ifi/oh-pi-extensions`: core extension pack
 
