@@ -3,7 +3,6 @@
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import {
-	createBashTool,
 	type ExtensionAPI,
 	type ExtensionCommandContext,
 	type ExtensionContext,
@@ -902,31 +901,6 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			}
 		}
 		clearWidget();
-	});
-
-	const bashTemplate = createBashTool(process.cwd()) as ReturnType<typeof createBashTool> & {
-		label?: string;
-		description: string;
-		renderCall?: unknown;
-		renderResult?: unknown;
-	};
-
-	pi.registerTool({
-		name: "bash",
-		label: bashTemplate.label ?? "Bash",
-		description: `${bashTemplate.description} Use bg_task or /bg only for long-lived watchers, servers, and other commands that should keep running after the tool returns.`,
-		parameters: Type.Object({
-			command: Type.String({ description: "Bash command to execute" }),
-			timeout: Type.Optional(Type.Number({ description: "Optional timeout in seconds before the command is terminated" })),
-		}),
-		renderCall: bashTemplate.renderCall as any,
-		renderResult: bashTemplate.renderResult as any,
-		async execute(toolCallId, params, signal, onUpdate, ctx): Promise<any> {
-			const cwd = ctx?.cwd ?? activeCtx?.cwd ?? process.cwd();
-			const bashTool = createBashTool(cwd);
-
-			return await bashTool.execute(toolCallId, { command: params.command, timeout: params.timeout } as never, signal, onUpdate);
-		},
 	});
 
 	pi.registerTool({

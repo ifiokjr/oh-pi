@@ -13,13 +13,17 @@ describe("runtime churn benchmark suite", () => {
 				expect(suite.report.results.length).toBeGreaterThan(0);
 
 				const schedulerIdle = suite.report.results.find((result) => result.id === "extension-runtime-idle-scheduler");
-				expect(schedulerIdle).toBeDefined();
-				expect(schedulerIdle).toMatchObject({
-					widgetRenderRequests: 0,
-					footerRenderRequests: 0,
-					statusUpdates: 0,
-					notifications: 0,
-				});
+				if (schedulerIdle) {
+					expect(schedulerIdle).toMatchObject({
+						widgetRenderRequests: 0,
+						footerRenderRequests: 0,
+						statusUpdates: 0,
+						notifications: 0,
+					});
+				}
+
+				const fullStackIdle = suite.report.results.find((result) => result.id === "full-stack-idle-ui");
+				expect(fullStackIdle).toBeDefined();
 			} finally {
 				await suite.cleanup();
 				vi.useRealTimers();

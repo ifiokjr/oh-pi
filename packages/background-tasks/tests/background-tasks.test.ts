@@ -73,34 +73,7 @@ describe("background tasks extension", () => {
 		vi.useRealTimers();
 	});
 
-	it("keeps ordinary bash commands in the foreground via pi's built-in bash tool", async () => {
-		const executeMock = vi.fn(async () => ({ content: [{ type: "text", text: "foreground output" }] }));
-		createBashToolMock.mockImplementation((cwd: string) => ({
-			label: "Bash",
-			description: "Built-in bash tool.",
-			renderCall: undefined,
-			renderResult: undefined,
-			execute: executeMock,
-			cwd,
-		}));
 
-		const harness = createExtensionHarness();
-		backgroundTasksExtension(harness.pi as never);
-		const tool = harness.tools.get("bash");
-
-		const result = await tool.execute("tool-1", { command: "pnpm test", timeout: 30 }, undefined, undefined, harness.ctx);
-
-		expect(createBashToolMock).toHaveBeenNthCalledWith(1, process.cwd());
-		expect(createBashToolMock).toHaveBeenNthCalledWith(2, harness.ctx.cwd);
-		expect(executeMock).toHaveBeenCalledWith(
-			"tool-1",
-			{ command: "pnpm test", timeout: 30 },
-			undefined,
-			undefined,
-		);
-		expect(spawnMock).not.toHaveBeenCalled();
-		expect(result.content[0].text).toBe("foreground output");
-	});
 
 	it("spawns tasks, tails logs, reacts to output, and reports completion", async () => {
 		const child = createMockChild();
