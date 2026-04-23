@@ -1007,8 +1007,9 @@ describe("SchedulerRuntime", () => {
 			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
 			expect(runtime.taskCount).toBe(1);
 
-			// Advance past the default recurring expiry window.
-			vi.advanceTimersByTime(DEFAULT_RECURRING_EXPIRY_MS + 1000);
+			// Advance past the default recurring expiry window without triggering
+			// the 1 s heartbeat interval 86 k times.
+			vi.setSystemTime(Date.now() + DEFAULT_RECURRING_EXPIRY_MS + 1000);
 			await runtime.tickScheduler();
 
 			expect(runtime.taskCount).toBe(0);
