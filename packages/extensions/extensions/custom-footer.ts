@@ -333,7 +333,13 @@ export default function (pi: ExtensionAPI) {
 					const thinking = pi.getThinkingLevel();
 					const thinkColor =
 						thinking === "high" ? "warning" : thinking === "medium" ? "accent" : thinking === "low" ? "dim" : "muted";
-					const modelId = ctx.model?.id || "no-model";
+					const modelId = (() => {
+						try {
+							return ctx.model?.id || "no-model";
+						} catch {
+							return "no-model";
+						}
+					})();
 					const modelStr = `${theme.fg(thinkColor, "◆")} ${theme.fg("accent", modelId)}`;
 
 					const sep = theme.fg("dim", " | ");

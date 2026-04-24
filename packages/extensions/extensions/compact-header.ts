@@ -108,10 +108,18 @@ export default function (pi: ExtensionAPI) {
 					const d = (s: string) => theme.fg("dim", s);
 					const a = (s: string) => theme.fg("accent", s);
 
-					const model = ctx.model ? `${ctx.model.id}` : "no model";
+					let model: string;
+					let provider: string;
+					try {
+						const m = ctx.model;
+						model = m ? `${m.id}` : "no model";
+						provider = m?.provider ?? "";
+					} catch {
+						model = "no model";
+						provider = "";
+					}
 					const { prompts, skills } = commandCatalog;
 					const thinking = pi.getThinkingLevel();
-					const provider = ctx.model?.provider ?? "";
 
 					const pad = (s: string, w: number) => s + " ".repeat(Math.max(0, w - visibleWidth(s)));
 					const t = (s: string) => truncateToWidth(s, width);
