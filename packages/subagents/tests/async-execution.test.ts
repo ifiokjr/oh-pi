@@ -214,6 +214,7 @@ describe("async execution helpers", () => {
 			skills: ["git", "context7"],
 			outputPath: "/workspace/report.md",
 		});
+		expect(asyncMocks.resolveSkills).toHaveBeenCalledWith(["git", "context7"], "/workspace");
 		expect(config.steps[0].systemPrompt).toBe("Base system prompt\n\nINJECT:git,context7");
 		expect(ctx.pi.events.emit).toHaveBeenCalledWith("subagent:started", {
 			id: "run-1",
@@ -298,6 +299,9 @@ describe("async execution helpers", () => {
 			model: "anthropic/claude-sonnet-4",
 			skills: ["context7"],
 		});
+		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(1, ["git"], "/workspace");
+		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(2, ["shared-skill"], "/workspace/a");
+		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(3, ["context7"], "/workspace");
 		expect(ctx.pi.events.emit).toHaveBeenCalledWith("subagent:started", {
 			id: "chain-2",
 			pid: 4242,

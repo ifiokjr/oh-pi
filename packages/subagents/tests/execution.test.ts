@@ -210,6 +210,22 @@ describe("runSync", () => {
 		});
 	});
 
+	it("resolves skills against task cwd, not runtime cwd", async () => {
+		const runPromise = runSync(
+			"/runtime-dir",
+			[{ name: "reviewer", model: "anthropic/claude-sonnet-4", skills: ["ecsc-reviewer"] }],
+			"reviewer",
+			"Inspect",
+			{ cwd: "/legal/project", share: false },
+		);
+
+		const proc = executionMocks.procs[0];
+		proc.emit("close", 0);
+		await runPromise;
+
+		expect(executionMocks.resolveSkills).toHaveBeenCalledWith(["ecsc-reviewer"], "/legal/project");
+	});
+
 	it("streams successful runs, writes artifacts, and records truncation + shared sessions", async () => {
 		const onUpdate = vi.fn();
 		const longTask = "A".repeat(9000);
@@ -267,6 +283,7 @@ describe("runSync", () => {
 
 		const result = await runPromise;
 
+		expect(executionMocks.resolveSkills).toHaveBeenCalledWith(["git", "missing"], "/workspace");
 		expect(executionMocks.spawn).toHaveBeenCalledWith(
 			"pi",
 			expect.arrayContaining([
@@ -358,6 +375,7 @@ describe("runSync", () => {
 		proc.emit("close", 0);
 
 		const result = await runPromise;
+		expect(executionMocks.resolveSkills).toHaveBeenCalledWith([], "/repo");
 		expect(proc.kill).toHaveBeenCalledWith("SIGTERM");
 		expect(proc.kill).toHaveBeenCalledWith("SIGKILL");
 		expect(result).toMatchObject({
