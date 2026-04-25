@@ -231,12 +231,37 @@ function loadChainsFromDir(dir: string, source: AgentSource): ChainConfig[] {
 
 const BUILTIN_AGENTS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "agents");
 
+/**
+ * Read the `subagents.excludeBuiltins` flag from `.pi/settings.json`.
+ * Walks up from cwd looking for the nearest `.pi/settings.json`.
+ * When true, built-in and user-level agents are excluded — only project agents are used.
+ */
+function readExcludeBuiltinsFlag(cwd: string): boolean {
+	let current = cwd;
+	const home = os.homedir();
+	for (let i = 0; i < 20; i++) {
+		const settingsPath = path.join(current, ".pi", "settings.json");
+		if (fs.existsSync(settingsPath)) {
+			try {
+				const raw = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+				if (raw.subagents?.excludeBuiltins === true) return true;
+			} catch {}
+			break;
+		}
+		const parent = path.dirname(current);
+		if (parent === current || current === home) break;
+		current = parent;
+	}
+	return false;
+}
+
 export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryResult {
 	const userDir = getUserAgentsDir();
 	const projectAgentsDir = findNearestProjectAgentsDir(cwd);
+	const excludeBuiltins = readExcludeBuiltinsFlag(cwd);
 
-	const builtinAgents = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
-	const userAgents = scope === "project" ? [] : loadAgentsFromDir(userDir, "user");
+	const builtinAgents = excludeBuiltins ? [] : loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
+	const userAgents = (scope === "project" || excludeBuiltins) ? [] : loadAgentsFromDir(userDir, "user");
 	const projectAgents = scope === "user" || !projectAgentsDir ? [] : loadAgentsFromDir(projectAgentsDir, "project");
 	const agents = mergeAgentsForScope(scope, userAgents, projectAgents, builtinAgents);
 
@@ -253,9 +278,10 @@ export function discoverAgentsAll(cwd: string): {
 } {
 	const userDir = getUserAgentsDir();
 	const projectDir = findNearestProjectAgentsDir(cwd);
+	const excludeBuiltins = readExcludeBuiltinsFlag(cwd);
 
-	const builtin = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
-	const user = loadAgentsFromDir(userDir, "user");
+	const builtin = excludeBuiltins ? [] : loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
+	const user = excludeBuiltins ? [] : loadAgentsFromDir(userDir, "user");
 	const project = projectDir ? loadAgentsFromDir(projectDir, "project") : [];
 	const chains = [
 		...loadChainsFromDir(userDir, "user"),
