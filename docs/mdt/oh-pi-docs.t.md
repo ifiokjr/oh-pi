@@ -291,7 +291,7 @@ Key usage-tracker surfaces:
 
 - widget above the editor for at-a-glance quotas and session totals
 - `/usage` for the full dashboard overlay
-- `Ctrl+U` as a shortcut for the same overlay
+- `Ctrl+Shift+U` as a shortcut for the same overlay
 - `/usage-toggle` to show or hide the widget
 - `/usage-refresh` to force fresh provider probes
 - `usage_report` so the agent can answer quota and spend questions directly

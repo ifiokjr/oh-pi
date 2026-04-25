@@ -434,7 +434,7 @@ recent subscription windows when a live provider probe is temporarily rate-limit
 Claude [████████░░░░] 67% ↻in 3d 2h │ 💰$0.42 │ 12.3k/8.1k
 ```
 
-**`/usage` overlay** (`Ctrl+U`):
+**`/usage` overlay** (`Ctrl+Shift+U`):
 
 ```
 ╭─ Usage Dashboard ──────────────────────────────────────╮
@@ -464,7 +464,7 @@ Key usage-tracker surfaces:
 
 - widget above the editor for at-a-glance quotas and session totals
 - `/usage` for the full dashboard overlay
-- `Ctrl+U` as a shortcut for the same overlay
+- `Ctrl+Shift+U` as a shortcut for the same overlay
 - `/usage-toggle` to show or hide the widget
 - `/usage-refresh` to force fresh provider probes
 - `usage_report` so the agent can answer quota and spend questions directly

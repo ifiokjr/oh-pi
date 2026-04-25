@@ -352,10 +352,10 @@ describe("usage-tracker extension", () => {
 			expect(pi._commands.has("usage-refresh")).toBe(true);
 		});
 
-		it("registers ctrl+u shortcut (overrides built-in deleteToLineStart)", () => {
+		it("registers ctrl+shift+u shortcut (overrides built-in deleteToLineStart)", () => {
 			usageTracker(pi as any);
-			expect(pi._shortcuts.has("ctrl+u")).toBe(true);
-			expect(pi._shortcuts.get("ctrl+u").description).toContain("rate limits");
+			expect(pi._shortcuts.has("ctrl+shift+u")).toBe(true);
+			expect(pi._shortcuts.get("ctrl+shift+u").description).toContain("rate limits");
 		});
 
 		it("does not load persisted history or rate-limit cache during registration", () => {

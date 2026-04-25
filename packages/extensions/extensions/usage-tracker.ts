@@ -23,7 +23,7 @@ Key usage-tracker surfaces:
 
 - widget above the editor for at-a-glance quotas and session totals
 - `/usage` for the full dashboard overlay
-- `Ctrl+U` as a shortcut for the same overlay
+- `Ctrl+Shift+U` as a shortcut for the same overlay
 - `/usage-toggle` to show or hide the widget
 - `/usage-refresh` to force fresh provider probes
 - `usage_report` so the agent can answer quota and spend questions directly
@@ -1813,7 +1813,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	// ─── Keyboard shortcut ────────────────────────────────────────────────
 
-	pi.registerShortcut("ctrl+u", {
+	pi.registerShortcut("ctrl+shift+u", {
 		description: "Show usage dashboard with current-provider rate limits and costs",
 		async handler(ctx) {
 			await loadPersistedState();

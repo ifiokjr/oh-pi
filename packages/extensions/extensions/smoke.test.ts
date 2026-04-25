@@ -44,7 +44,7 @@ describe("extensions runtime smoke tests", () => {
 		expect(harness.commands.has("usage-toggle")).toBe(true);
 		expect(harness.commands.has("usage-refresh")).toBe(true);
 		expect(harness.tools.has("usage_report")).toBe(true);
-		expect(harness.shortcuts.has("ctrl+u")).toBe(true);
+		expect(harness.shortcuts.has("ctrl+shift+u")).toBe(true);
 	});
 
 	it("registers tool metadata hooks without crashing", async () => {
