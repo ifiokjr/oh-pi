@@ -227,16 +227,87 @@ function loadChainsFromDir(dir: string, source: AgentSource): ChainConfig[] {
 
 const BUILTIN_AGENTS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "agents");
 
+/**
+ * Resolve agent directories from a settings.json `agents` array.
+ * Relative paths resolve against the settings file's parent directory.
+ */
+function resolveAgentPaths(agentPaths: string[], settingsBaseDir: string): string[] {
+	return agentPaths
+		.map((p: string) => {
+			let resolved = p;
+			if (p.startsWith("~/")) {
+				resolved = p.replace("~", os.homedir());
+			}
+			if (!resolved.startsWith("/")) {
+				resolved = path.resolve(settingsBaseDir, resolved);
+			}
+			return resolved;
+		})
+		.filter((p: string) => {
+			try {
+				return fs.statSync(p).isDirectory();
+			} catch {
+				return false;
+			}
+		});
+}
+
+/**
+ * Read the `agents` array from a project's `.pi/settings.json`.
+ * Returns undefined if no project settings or no agents field.
+ */
+function readProjectAgentPaths(cwd: string): { paths: string[]; baseDir: string } | undefined {
+	let current = path.resolve(cwd);
+	const home = os.homedir();
+	for (let i = 0; i < 30; i++) {
+		const settingsPath = path.join(current, ".pi", "settings.json");
+		try {
+			const raw = fs.readFileSync(settingsPath, "utf-8");
+			const parsed = JSON.parse(raw);
+			if (Array.isArray(parsed.agents) && parsed.agents.length > 0) {
+				return { paths: parsed.agents as string[], baseDir: current };
+			}
+		} catch {
+			// no settings or invalid JSON — continue walking up
+		}
+		const parent = path.dirname(current);
+		if (parent === current || current === home) break;
+		current = parent;
+	}
+	return undefined;
+}
+
 export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryResult {
 	const userDir = getUserAgentsDir();
-	const projectAgentsDir = findNearestProjectAgentsDir(cwd);
 
-	const builtinAgents = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
-	const userAgents = scope === "project" ? [] : loadAgentsFromDir(userDir, "user");
-	const projectAgents = scope === "user" || !projectAgentsDir ? [] : loadAgentsFromDir(projectAgentsDir, "project");
+	// Check for explicit agent paths in project settings
+	const projectAgentsConfig = scope !== "user" ? readProjectAgentPaths(cwd) : undefined;
+
+	let projectAgents: AgentConfig[] = [];
+	let builtinAgents: AgentConfig[] = [];
+	let userAgents: AgentConfig[] = [];
+
+	if (projectAgentsConfig) {
+		// Explicit agent paths — ONLY load from these (no builtins, no user agents)
+		const dirs = resolveAgentPaths(projectAgentsConfig.paths, projectAgentsConfig.baseDir);
+		for (const dir of dirs) {
+			projectAgents = [...projectAgents, ...loadAgentsFromDir(dir, "project")];
+		}
+	} else {
+		// No explicit config — fall back to standard discovery
+		const projectAgentsDir = findNearestProjectAgentsDir(cwd);
+		if (projectAgentsDir) {
+			projectAgents = loadAgentsFromDir(projectAgentsDir, "project");
+		}
+		if (scope !== "project") {
+			builtinAgents = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
+			userAgents = loadAgentsFromDir(userDir, "user");
+		}
+	}
+
 	const agents = mergeAgentsForScope(scope, userAgents, projectAgents, builtinAgents);
 
-	return { agents, projectAgentsDir };
+	return { agents, projectAgentsDir: projectAgentsConfig?.baseDir ?? findNearestProjectAgentsDir(cwd) };
 }
 
 export function discoverAgentsAll(cwd: string): {
@@ -248,15 +319,43 @@ export function discoverAgentsAll(cwd: string): {
 	projectDir: string;
 } {
 	const userDir = getUserAgentsDir();
-	const projectDir = findNearestProjectAgentsDir(cwd);
 
-	const builtin = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
-	const user = loadAgentsFromDir(userDir, "user");
-	const project = projectDir ? loadAgentsFromDir(projectDir, "project") : [];
-	const chains = [
-		...loadChainsFromDir(userDir, "user"),
-		...(projectDir ? loadChainsFromDir(projectDir, "project") : []),
-	];
+	// Check for explicit agent paths in project settings
+	const projectAgentsConfig = readProjectAgentPaths(cwd);
 
-	return { builtin, user, project, chains, userDir, projectDir };
+	let project: AgentConfig[] = [];
+	let builtin: AgentConfig[] = [];
+	let user: AgentConfig[] = [];
+
+	if (projectAgentsConfig) {
+		const dirs = resolveAgentPaths(projectAgentsConfig.paths, projectAgentsConfig.baseDir);
+		for (const dir of dirs) {
+			project = [...project, ...loadAgentsFromDir(dir, "project")];
+		}
+	} else {
+		const projectDir = findNearestProjectAgentsDir(cwd);
+		if (projectDir) {
+			project = loadAgentsFromDir(projectDir, "project");
+		}
+		builtin = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
+		user = loadAgentsFromDir(userDir, "user");
+	}
+
+	const chains: ChainConfig[] = [];
+	const chainDirs: string[] = [];
+	if (projectAgentsConfig) {
+		// With explicit config, only load chains from user dir
+		chainDirs.push(userDir);
+	} else {
+		// Without explicit config, load chains from user dir and project dir
+		chainDirs.push(userDir);
+		const projDir = findNearestProjectAgentsDir(cwd);
+		if (projDir) chainDirs.push(projDir);
+	}
+	for (const dir of chainDirs) {
+		const loaded = loadChainsFromDir(dir, dir === userDir ? "user" : "project");
+		chains.push(...loaded);
+	}
+
+	return { builtin, user, project, chains, userDir, projectDir: projectAgentsConfig?.baseDir ?? findNearestProjectAgentsDir(cwd) };
 }

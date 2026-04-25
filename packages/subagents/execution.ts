@@ -106,7 +106,12 @@ export async function runSync(
 	}
 
 	const skillNames = options.skills ?? agent.skills ?? [];
-	const { resolved: resolvedSkills, missing: missingSkills } = resolveSkills(skillNames, runtimeCwd);
+	const resolveCwd = cwd ?? runtimeCwd;
+	// DEBUG: log skill resolution
+	const { resolved: resolvedSkills, missing: missingSkills } = resolveSkills(skillNames, resolveCwd);
+	if (missingSkills.length > 0) {
+		console.error(`[subagents DEBUG] resolveSkills: names=${JSON.stringify(skillNames)}, resolveCwd=${JSON.stringify(resolveCwd)}, cwd=${JSON.stringify(cwd)}, runtimeCwd=${JSON.stringify(runtimeCwd)}, resolved=${JSON.stringify(resolvedSkills.map(r=>r.name))}, missing=${JSON.stringify(missingSkills)}`);
+	}
 
 	// When explicit skills are specified (via options or agent config), disable
 	// pi's own skill discovery so the spawned process doesn't inject the full

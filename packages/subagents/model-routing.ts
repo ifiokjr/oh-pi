@@ -386,6 +386,13 @@ export function resolveSubagentModelResolution(
 		}
 	}
 
+	// Fall back to the session's current model — subagents should inherit
+	// the user's active provider/model unless the agent frontmatter or
+	// an explicit override specifies otherwise.
+	if (options.currentModel) {
+		return { model: options.currentModel, source: "session-default", category };
+	}
+
 	const delegatedModel = resolveDelegatedAgentModel(agent, availableModels, options);
 	if (delegatedModel) {
 		return { model: delegatedModel, source: "delegated-category", category };
