@@ -14,7 +14,7 @@
 	],
 	"pi": {
 		"extensions": [
-			"./index.ts"
+			"./dist/index.js"
 		]
 	},
 	"main": "./dist/index.js",

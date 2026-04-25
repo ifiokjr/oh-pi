@@ -1,6 +1,6 @@
 {
   "name": "@ifi/pi-analytics-db",
-  "version": "0.2.0",
+  "version": "0.4.4",
   "description": "SQLite database layer for Pi analytics with migrations",
   "type": "module",
   "main": "./src/index.ts",

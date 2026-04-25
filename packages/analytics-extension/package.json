@@ -1,6 +1,6 @@
 {
   "name": "@ifi/pi-analytics-extension",
-  "version": "0.1.0",
+  "version": "0.4.4",
   "description": "Pi extension for analytics tracking with SQLite persistence",
   "type": "module",
   "main": "./index.ts",
@@ -10,7 +10,7 @@
     ]
   },
   "dependencies": {
-    "@ifi/pi-analytics-db": "0.2.0"
+    "@ifi/pi-analytics-db": "0.4.4"
   },
   "peerDependencies": {
     "@mariozechner/pi-agent-core": ">=0.56.1",

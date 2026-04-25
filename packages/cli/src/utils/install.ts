@@ -1,5 +1,15 @@
 import { execSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
+import {
+	copyFileSync,
+	existsSync,
+	lstatSync,
+	mkdirSync,
+	readdirSync,
+	readlinkSync,
+	rmSync,
+	statSync,
+	symlinkSync,
+} from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { resolvePiAgentDir } from "@ifi/oh-pi-core";
 import type { OhPConfigWithRouting } from "../types.js";
@@ -34,6 +44,20 @@ export function ensureDir(dir: string) {
 	mkdirSync(dir, { recursive: true });
 }
 
+function syncSymlink(srcPath: string, destPath: string) {
+	const linkTarget = readlinkSync(srcPath);
+	try {
+		const destStat = lstatSync(destPath);
+		if (destStat.isSymbolicLink() && readlinkSync(destPath) === linkTarget) {
+			return;
+		}
+	} catch {
+		/* recreate below */
+	}
+	rmSync(destPath, { recursive: true, force: true });
+	symlinkSync(linkTarget, destPath);
+}
+
 /**
  * Incrementally sync a directory: copy changed files, delete files not in source.
  */
@@ -46,16 +70,20 @@ export function syncDir(src: string, dest: string) {
 		const destPath = join(dest, entry.name);
 		if (entry.isDirectory()) {
 			syncDir(srcPath, destPath);
-		} else {
-			try {
-				if (existsSync(destPath) && statSync(destPath).size === statSync(srcPath).size) {
-					continue;
-				}
-			} catch {
-				/* copy anyway */
-			}
-			copyFileSync(srcPath, destPath);
+			continue;
 		}
+		if (entry.isSymbolicLink()) {
+			syncSymlink(srcPath, destPath);
+			continue;
+		}
+		try {
+			if (existsSync(destPath) && statSync(destPath).size === statSync(srcPath).size) {
+				continue;
+			}
+		} catch {
+			/* copy anyway */
+		}
+		copyFileSync(srcPath, destPath);
 	}
 	try {
 		for (const entry of readdirSync(dest, { withFileTypes: true })) {
@@ -78,9 +106,13 @@ function copyDir(src: string, dest: string) {
 		const destPath = join(dest, entry.name);
 		if (entry.isDirectory()) {
 			copyDir(srcPath, destPath);
-		} else {
-			copyFileSync(srcPath, destPath);
+			continue;
 		}
+		if (entry.isSymbolicLink()) {
+			syncSymlink(srcPath, destPath);
+			continue;
+		}
+		copyFileSync(srcPath, destPath);
 	}
 }
 
