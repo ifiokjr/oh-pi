@@ -2,6 +2,7 @@
  * Type definitions for the subagent extension
  */
 
+import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { Message } from "@mariozechner/pi-ai";
@@ -251,8 +252,8 @@ export const DEFAULT_ARTIFACT_CONFIG: ArtifactConfig = {
 	cleanupDays: 7,
 };
 
-export const MAX_PARALLEL = 8;
-export const MAX_CONCURRENCY = 4;
+export const DEFAULT_MAX_PARALLEL = 8;
+export const DEFAULT_MAX_CONCURRENCY = 4;
 
 /** Default idle timeout: kill a subagent if it produces no output for this long.
  *  15 min — enough for slow OCR/vision tasks but catches truly stuck agents.
@@ -265,6 +266,92 @@ export const WIDGET_KEY = "subagent-async";
 export const POLL_INTERVAL_MS = 250;
 export const MAX_WIDGET_JOBS = 4;
 export const DEFAULT_SUBAGENT_MAX_DEPTH = 2;
+
+// ============================================================================
+// Subagent Limits Configuration
+// ============================================================================
+
+export interface SubagentLimits {
+	maxParallel: number;
+	maxConcurrency: number;
+}
+
+/**
+ * Resolve subagent parallel/concurrency limits from:
+ * 1. Env vars: PI_SUBAGENT_MAX_PARALLEL, PI_SUBAGENT_MAX_CONCURRENCY (always win)
+ * 2. Project settings: .pi/settings.json (nearest wins)
+ * 3. User settings: ~/.pi/agent/settings.json (fallback)
+ * 4. Defaults: DEFAULT_MAX_PARALLEL (8), DEFAULT_MAX_CONCURRENCY (4)
+ *
+ * Hard safety cap: maxParallel ≤ 32, maxConcurrency ≤ 16.
+ * Prevents typos or malicious configs from spawning hundreds of processes.
+ */
+export function resolveSubagentLimits(cwd: string): SubagentLimits {
+	const envParallel = process.env.PI_SUBAGENT_MAX_PARALLEL;
+	const envConcurrency = process.env.PI_SUBAGENT_MAX_CONCURRENCY;
+
+	// Env vars always win
+	if (envParallel && envConcurrency) {
+		return {
+			maxParallel: Math.min(32, Math.max(1, parseInt(envParallel, 10) || DEFAULT_MAX_PARALLEL)),
+			maxConcurrency: Math.min(16, Math.max(1, parseInt(envConcurrency, 10) || DEFAULT_MAX_CONCURRENCY)),
+		};
+	}
+
+	// Project settings win over user settings (you control your projects)
+	const projectLimits = _readProjectLimits(cwd);
+	if (projectLimits.maxParallel !== undefined || projectLimits.maxConcurrency !== undefined) {
+		return {
+			maxParallel: Math.min(32, Math.max(1, projectLimits.maxParallel ?? DEFAULT_MAX_PARALLEL)),
+			maxConcurrency: Math.min(16, Math.max(1, projectLimits.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY)),
+		};
+	}
+
+	// User-level fallback
+	const userLimits = _readUserLimits();
+	return {
+		maxParallel: Math.min(32, Math.max(1, userLimits.maxParallel ?? DEFAULT_MAX_PARALLEL)),
+		maxConcurrency: Math.min(16, Math.max(1, userLimits.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY)),
+	};
+}
+
+function _readUserLimits(): { maxParallel?: number; maxConcurrency?: number } {
+	try {
+		const file = path.resolve(os.homedir(), ".pi", "agent", "settings.json");
+		const raw = fs.readFileSync(file, "utf-8");
+		const settings = JSON.parse(raw);
+		const subagent = settings?.subagent;
+		if (typeof subagent !== "object" || subagent === null) return {};
+		const result: { maxParallel?: number; maxConcurrency?: number } = {};
+		if (typeof subagent.maxParallel === "number" && subagent.maxParallel > 0) result.maxParallel = subagent.maxParallel;
+		if (typeof subagent.maxConcurrency === "number" && subagent.maxConcurrency > 0) result.maxConcurrency = subagent.maxConcurrency;
+		return result;
+	} catch {
+		return {};
+	}
+}
+
+function _readProjectLimits(cwd: string): { maxParallel?: number; maxConcurrency?: number } {
+	try {
+		const file = path.resolve(cwd, ".pi", "settings.json");
+		const raw = fs.readFileSync(file, "utf-8");
+		const settings = JSON.parse(raw);
+		const subagent = settings?.subagent;
+		if (typeof subagent !== "object" || subagent === null) return {};
+		const result: { maxParallel?: number; maxConcurrency?: number } = {};
+		if (typeof subagent.maxParallel === "number" && subagent.maxParallel > 0) result.maxParallel = subagent.maxParallel;
+		if (typeof subagent.maxConcurrency === "number" && subagent.maxConcurrency > 0) result.maxConcurrency = subagent.maxConcurrency;
+		return result;
+	} catch {
+		return {};
+	}
+}
+
+// Backwards-compatible aliases
+/** @deprecated Use resolveSubagentLimits(cwd).maxParallel instead */
+export const MAX_PARALLEL = DEFAULT_MAX_PARALLEL;
+/** @deprecated Use resolveSubagentLimits(cwd).maxConcurrency instead */
+export const MAX_CONCURRENCY = DEFAULT_MAX_CONCURRENCY;
 
 // ============================================================================
 // Recursion Depth Guard

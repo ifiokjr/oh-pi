@@ -41,7 +41,7 @@ import {
 	type ArtifactPaths,
 	type Details,
 	type SingleResult,
-	MAX_CONCURRENCY,
+	resolveSubagentLimits,
 } from "./types.js";
 
 /** Resolve a model name to its full provider/model format */
@@ -267,7 +267,8 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 		if (isParallelStep(step)) {
 			// === PARALLEL STEP EXECUTION ===
 			const parallelTemplates = stepTemplates as string[];
-			const concurrency = step.concurrency ?? MAX_CONCURRENCY;
+			const limits = resolveSubagentLimits(ctx.cwd);
+			const concurrency = step.concurrency ?? limits.maxConcurrency;
 			const failFast = step.failFast ?? false;
 
 			// Create subdirectories for parallel outputs
