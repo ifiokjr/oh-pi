@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-
+import { afterEach, describe, expect, it } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
 const tempDirs: string[] = [];
@@ -30,7 +30,7 @@ afterEach(() => {
 		process.env.USERPROFILE = previousUserProfile;
 	}
 	for (const dir of tempDirs.splice(0)) {
-		fs.rmSync(dir, { force: true, recursive: true });
+		fs.rmSync(dir, { recursive: true, force: true });
 	}
 });
 
@@ -41,9 +41,9 @@ describe("subagents runtime smoke tests", () => {
 		const mod = await import("../index.js");
 		mod.default(harness.pi as never);
 
-		expect(harness.commands.has("agents")).toBeTruthy();
-		expect(harness.commands.has("run")).toBeTruthy();
-		expect(harness.tools.has("subagent")).toBeTruthy();
-		expect(harness.tools.has("subagent_status")).toBeTruthy();
+		expect(harness.commands.has("agents")).toBe(true);
+		expect(harness.commands.has("run")).toBe(true);
+		expect(harness.tools.has("subagent")).toBe(true);
+		expect(harness.tools.has("subagent_status")).toBe(true);
 	});
 });

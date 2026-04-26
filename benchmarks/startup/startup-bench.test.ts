@@ -1,5 +1,5 @@
 import * as path from "node:path";
-
+import { describe, expect, it } from "vitest";
 import { createSuiteReport, runBenchmark, writeBenchmarkReport } from "../shared/benchmark";
 import { createStartupBenchmarkSuite } from "./suite";
 
@@ -24,7 +24,7 @@ describe("startup benchmark suite", () => {
 				await writeBenchmarkReport(report, outputDir);
 
 				const failures = results.filter((result) => result.budgetFailures.length > 0);
-				expect(failures.map((result) => `${result.label}: ${result.budgetFailures.join(", ")}`)).toStrictEqual([]);
+				expect(failures.map((result) => `${result.label}: ${result.budgetFailures.join(", ")}`)).toEqual([]);
 			} finally {
 				await suite.cleanup();
 			}

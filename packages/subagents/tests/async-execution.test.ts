@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 const asyncMocks = vi.hoisted(() => {
 	const createRequire = () => {
 		const requireFn = ((specifier: string) => {
@@ -8,81 +10,81 @@ const asyncMocks = vi.hoisted(() => {
 	};
 
 	return {
+		spawn: vi.fn(() => ({ pid: 4242, unref: vi.fn() })),
+		mkdtempSync: vi.fn(() => "/tmp/pi-async-cfg-123"),
+		writeFileSync: vi.fn(),
+		mkdirSync: vi.fn(),
+		existsSync: vi.fn((filePath: string) => filePath.includes("jiti-cli.mjs")),
+		realpathSync: vi.fn(() => "/virtual/pi/bin/pi.js"),
+		createRequire,
 		applyThinkingSuffix: vi.fn((model: string | undefined, thinking: string | undefined) =>
 			model && thinking && thinking !== "off" ? `${model}:${thinking}` : model,
 		),
-		buildSkillInjection: vi.fn(
-			(skills: Array<{ name: string }>) => `INJECT:${skills.map((skill) => skill.name).join(",")}`,
-		),
-		createRequire,
-		existsSync: vi.fn((filePath: string) => filePath.includes("jiti-cli.mjs")),
 		injectSingleOutputInstruction: vi.fn((task: string, outputPath?: string) =>
 			outputPath ? `${task}\nWRITE ${outputPath}` : task,
 		),
-		isParallelStep: vi.fn((step: any) => Boolean(step?.parallel)),
-		mkdirSync: vi.fn(),
-		mkdtempSync: vi.fn(() => "/tmp/pi-async-cfg-123"),
-		normalizeSkillInput: vi.fn((value: unknown) => value),
-		realpathSync: vi.fn(() => "/virtual/pi/bin/pi.js"),
-		resolvePiPackageRoot: vi.fn(() => "/virtual/pi-root"),
 		resolveSingleOutputPath: vi.fn((output: string | false | undefined, _runtimeCwd: string, cwd?: string) => {
 			if (!output || output === false) {
 				return undefined;
 			}
 			return `${cwd ?? "/repo"}/${output}`;
 		}),
+		isParallelStep: vi.fn((step: any) => Boolean(step?.parallel)),
+		resolveStepBehavior: vi.fn((_agent: any, stepOverrides: any, chainSkills: string[]) => ({
+			skills: stepOverrides.skills ?? chainSkills,
+		})),
+		resolvePiPackageRoot: vi.fn(() => "/virtual/pi-root"),
+		buildSkillInjection: vi.fn(
+			(skills: Array<{ name: string }>) => `INJECT:${skills.map((skill) => skill.name).join(",")}`,
+		),
+		normalizeSkillInput: vi.fn((value: unknown) => value),
 		resolveSkills: vi.fn((skillNames: string[]) => ({
 			resolved: skillNames.map((name) => ({ name })),
 			missing: [],
-		})),
-		resolveStepBehavior: vi.fn((_agent: any, stepOverrides: any, chainSkills: string[]) => ({
-			skills: stepOverrides.skills ?? chainSkills,
 		})),
 		resolveSubagentModelResolution: vi.fn((_agent: any, _models: any[], explicitModel?: string) => ({
 			model: explicitModel,
 			source: explicitModel ? "runtime-override" : "agent-default",
 			category: explicitModel ? "explicit" : undefined,
 		})),
-		spawn: vi.fn(() => ({ pid: 4242, unref: vi.fn() })),
-		writeFileSync: vi.fn(),
 	};
 });
 
-vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({ spawn: asyncMocks.spawn }));
-vi.mock<typeof import("node:fs")>(import("node:fs"), () => ({
-	existsSync: asyncMocks.existsSync,
-	mkdirSync: asyncMocks.mkdirSync,
+vi.mock("node:child_process", () => ({ spawn: asyncMocks.spawn }));
+vi.mock("node:fs", () => ({
 	mkdtempSync: asyncMocks.mkdtempSync,
-	realpathSync: asyncMocks.realpathSync,
 	writeFileSync: asyncMocks.writeFileSync,
+	mkdirSync: asyncMocks.mkdirSync,
+	existsSync: asyncMocks.existsSync,
+	realpathSync: asyncMocks.realpathSync,
 }));
-vi.mock<typeof import("node:module")>(import("node:module"), () => ({
+vi.mock("node:module", () => ({
 	createRequire: () => asyncMocks.createRequire(),
 }));
-vi.mock<typeof import("../execution.js")>(import("../execution.js"), () => ({
+vi.mock("../execution.js", () => ({
 	applyThinkingSuffix: asyncMocks.applyThinkingSuffix,
 }));
-vi.mock<typeof import("../single-output.js")>(import("../single-output.js"), () => ({
+vi.mock("../single-output.js", () => ({
 	injectSingleOutputInstruction: asyncMocks.injectSingleOutputInstruction,
 	resolveSingleOutputPath: asyncMocks.resolveSingleOutputPath,
 }));
-vi.mock<typeof import("../settings.js")>(import("../settings.js"), () => ({
+vi.mock("../settings.js", () => ({
 	isParallelStep: asyncMocks.isParallelStep,
 	resolveStepBehavior: asyncMocks.resolveStepBehavior,
 }));
-vi.mock<typeof import("../pi-spawn.js")>(import("../pi-spawn.js"), () => ({
+vi.mock("../pi-spawn.js", () => ({
 	resolvePiPackageRoot: asyncMocks.resolvePiPackageRoot,
 }));
-vi.mock<typeof import("../skills.js")>(import("../skills.js"), () => ({
+vi.mock("../skills.js", () => ({
 	buildSkillInjection: asyncMocks.buildSkillInjection,
 	normalizeSkillInput: asyncMocks.normalizeSkillInput,
 	resolveSkills: asyncMocks.resolveSkills,
 }));
-vi.mock<typeof import("../types.js")>(import("../types.js"), () => ({
+vi.mock("../types.js", () => ({
 	ASYNC_DIR: "/tmp/pi-async-subagent-runs",
 	RESULTS_DIR: "/tmp/pi-async-subagent-results",
 }));
-vi.mock<typeof import("../model-routing.js")>(import("../model-routing.js"), () => ({
+vi.mock("../model-routing.js", () => ({
 	resolveSubagentModelResolution: asyncMocks.resolveSubagentModelResolution,
 	toAvailableModelRefs: (models: any[]) =>
 		models.map((model) => ({
@@ -96,10 +98,10 @@ import { executeAsyncChain, executeAsyncSingle, isAsyncAvailable } from "../asyn
 
 function createCtx() {
 	return {
-		availableModels: [{ provider: "anthropic", id: "claude-sonnet-4", fullId: "anthropic/claude-sonnet-4" }],
-		currentModel: "anthropic/claude-sonnet-4",
-		currentSessionId: "session-1",
 		cwd: "/repo",
+		currentSessionId: "session-1",
+		currentModel: "anthropic/claude-sonnet-4",
+		availableModels: [{ provider: "anthropic", id: "claude-sonnet-4", fullId: "anthropic/claude-sonnet-4" }],
 		pi: {
 			events: {
 				emit: vi.fn(),
@@ -131,54 +133,54 @@ beforeEach(() => {
 		skills: stepOverrides.skills ?? chainSkills,
 	}));
 	asyncMocks.resolveSkills.mockImplementation((skillNames: string[]) => ({
-		missing: [],
 		resolved: skillNames.map((name) => ({ name })),
+		missing: [],
 	}));
 	asyncMocks.resolveSubagentModelResolution.mockImplementation(
 		(_agent: any, _models: any[], explicitModel?: string, options?: { currentModel?: string }) => {
 			if (explicitModel) {
-				return { category: "explicit", model: explicitModel, source: "runtime-override" };
+				return { model: explicitModel, source: "runtime-override", category: "explicit" };
 			}
 			if (options?.currentModel) {
-				return { category: undefined, model: options.currentModel, source: "session-default" };
+				return { model: options.currentModel, source: "session-default", category: undefined };
 			}
-			return { category: undefined, model: undefined, source: "agent-default" };
+			return { model: undefined, source: "agent-default", category: undefined };
 		},
 	);
 });
 
 describe("async execution helpers", () => {
 	it("reports async support when the jiti runner is available", () => {
-		expect(isAsyncAvailable()).toBeTruthy();
+		expect(isAsyncAvailable()).toBe(true);
 	});
 
 	it("builds async single-runner configs, injects output instructions, and emits start events", () => {
 		const ctx = createCtx();
 		const result = executeAsyncSingle("run-1", {
 			agent: "scout",
+			task: "Inspect the repo",
 			agentConfig: {
-				extensions: ["./extensions/worktree.ts"],
-				mcpDirectTools: ["read"],
 				name: "scout",
-				skills: ["git", "context7"],
 				systemPrompt: "Base system prompt",
 				thinking: "high",
+				skills: ["git", "context7"],
 				tools: ["bash"],
+				extensions: ["./extensions/worktree.ts"],
+				mcpDirectTools: ["read"],
 			},
-			artifactConfig: { enabled: true },
-			artifactsDir: "/tmp/artifacts",
 			ctx,
 			cwd: "/workspace",
-			maxOutput: { bytes: 1000, lines: 20 },
 			output: "report.md",
-			sessionRoot: "/tmp/sessions",
 			shareEnabled: true,
-			task: "Inspect the repo",
+			sessionRoot: "/tmp/sessions",
+			artifactConfig: { enabled: true },
+			artifactsDir: "/tmp/artifacts",
+			maxOutput: { bytes: 1000, lines: 20 },
 		});
 
-		expect(result).toStrictEqual({
-			content: [{ text: "Async: scout [run-1]", type: "text" }],
-			details: { asyncDir: "/tmp/pi-async-subagent-runs/run-1", asyncId: "run-1", mode: "single", results: [] },
+		expect(result).toEqual({
+			content: [{ type: "text", text: "Async: scout [run-1]" }],
+			details: { mode: "single", results: [], asyncId: "run-1", asyncDir: "/tmp/pi-async-subagent-runs/run-1" },
 		});
 		expect(asyncMocks.mkdirSync).toHaveBeenCalledWith("/tmp/pi-async-subagent-runs/run-1", { recursive: true });
 		expect(asyncMocks.spawn).toHaveBeenCalledWith(
@@ -193,48 +195,48 @@ describe("async execution helpers", () => {
 
 		const config = lastRunnerConfig();
 		expect(config).toMatchObject({
-			artifactsDir: "/tmp/artifacts",
-			cwd: "/workspace",
 			id: "run-1",
-			piPackageRoot: "/virtual/pi-root",
+			cwd: "/workspace",
 			resultPath: "/tmp/pi-async-subagent-results/run-1.json",
+			artifactsDir: "/tmp/artifacts",
+			share: true,
 			sessionDir: "/tmp/sessions/async-run-1",
 			sessionId: "session-1",
-			share: true,
+			piPackageRoot: "/virtual/pi-root",
 		});
 		expect(config.steps[0]).toMatchObject({
 			agent: "scout",
+			task: "Inspect the repo\nWRITE /workspace/report.md",
+			model: "anthropic/claude-sonnet-4:high",
+			tools: ["bash"],
 			extensions: ["./extensions/worktree.ts"],
 			mcpDirectTools: ["read"],
-			model: "anthropic/claude-sonnet-4:high",
-			outputPath: "/workspace/report.md",
 			skills: ["git", "context7"],
-			task: "Inspect the repo\nWRITE /workspace/report.md",
-			tools: ["bash"],
+			outputPath: "/workspace/report.md",
 		});
 		expect(asyncMocks.resolveSkills).toHaveBeenCalledWith(["git", "context7"], "/workspace");
 		expect(config.steps[0].systemPrompt).toBe("Base system prompt\n\nINJECT:git,context7");
 		expect(ctx.pi.events.emit).toHaveBeenCalledWith("subagent:started", {
-			agent: "scout",
-			asyncDir: "/tmp/pi-async-subagent-runs/run-1",
-			cwd: "/workspace",
 			id: "run-1",
 			pid: 4242,
+			agent: "scout",
 			task: "Inspect the repo",
+			cwd: "/workspace",
+			asyncDir: "/tmp/pi-async-subagent-runs/run-1",
 		});
 	});
 
 	it("fails fast for unknown agents in async chains", () => {
 		const ctx = createCtx();
 		const result = executeAsyncChain("chain-1", {
-			agents: [{ name: "scout" }],
-			artifactConfig: { enabled: false },
 			chain: [{ agent: "missing", task: "Inspect" }],
+			agents: [{ name: "scout" }],
 			ctx,
 			shareEnabled: false,
+			artifactConfig: { enabled: false },
 		});
 
-		expect(result.isError).toBeTruthy();
+		expect(result.isError).toBe(true);
 		expect(result.content[0]?.text).toBe("Unknown agent: missing");
 		expect(asyncMocks.spawn).not.toHaveBeenCalled();
 	});
@@ -242,16 +244,10 @@ describe("async execution helpers", () => {
 	it("builds sequential and parallel async chain configs with resolved skills and outputs", () => {
 		const ctx = createCtx();
 		asyncMocks.resolveSubagentModelResolution
-			.mockReturnValueOnce({ category: "explicit", model: "openai/gpt-5", source: "runtime-override" })
-			.mockReturnValue({ category: undefined, model: "anthropic/claude-sonnet-4", source: "session-default" });
+			.mockReturnValueOnce({ model: "openai/gpt-5", source: "runtime-override", category: "explicit" })
+			.mockReturnValue({ model: "anthropic/claude-sonnet-4", source: "session-default", category: undefined });
 
 		const result = executeAsyncChain("chain-2", {
-			agents: [
-				{ name: "scout", systemPrompt: "Scout", thinking: "minimal" },
-				{ name: "planner", systemPrompt: "Plan" },
-				{ name: "reviewer", systemPrompt: "Review" },
-			],
-			artifactConfig: { enabled: false },
 			chain: [
 				{ agent: "scout", task: "Inspect {task}", output: "notes.md", skill: ["git"] },
 				{
@@ -263,51 +259,57 @@ describe("async execution helpers", () => {
 					failFast: true,
 				},
 			],
-			chainSkills: ["shared-skill"],
+			agents: [
+				{ name: "scout", systemPrompt: "Scout", thinking: "minimal" },
+				{ name: "planner", systemPrompt: "Plan" },
+				{ name: "reviewer", systemPrompt: "Review" },
+			],
 			ctx,
 			cwd: "/workspace",
-			sessionRoot: "/tmp/sessions",
 			shareEnabled: true,
+			sessionRoot: "/tmp/sessions",
+			artifactConfig: { enabled: false },
+			chainSkills: ["shared-skill"],
 		});
 
-		expect(result).toStrictEqual({
-			content: [{ text: "Async chain: scout -> [planner+reviewer] [chain-2]", type: "text" }],
-			details: { asyncDir: "/tmp/pi-async-subagent-runs/chain-2", asyncId: "chain-2", mode: "chain", results: [] },
+		expect(result).toEqual({
+			content: [{ type: "text", text: "Async chain: scout -> [planner+reviewer] [chain-2]" }],
+			details: { mode: "chain", results: [], asyncId: "chain-2", asyncDir: "/tmp/pi-async-subagent-runs/chain-2" },
 		});
 
 		const config = lastRunnerConfig();
 		expect(config.steps[0]).toMatchObject({
 			agent: "scout",
-			model: "openai/gpt-5:minimal",
-			outputPath: "/workspace/notes.md",
-			skills: ["git"],
 			task: "Inspect {task}\nWRITE /workspace/notes.md",
+			model: "openai/gpt-5:minimal",
+			skills: ["git"],
+			outputPath: "/workspace/notes.md",
 		});
 		expect(config.steps[1]).toMatchObject({ concurrency: 2, failFast: true });
 		expect(config.steps[1].parallel[0]).toMatchObject({
 			agent: "planner",
-			model: "anthropic/claude-sonnet-4",
-			outputPath: "/workspace/a/plan.md",
-			skills: ["shared-skill"],
 			task: "Plan {previous}\nWRITE /workspace/a/plan.md",
+			model: "anthropic/claude-sonnet-4",
+			skills: ["shared-skill"],
+			outputPath: "/workspace/a/plan.md",
 		});
 		expect(config.steps[1].parallel[1]).toMatchObject({
 			agent: "reviewer",
+			task: "Review {previous}",
 			model: "anthropic/claude-sonnet-4",
 			skills: ["context7"],
-			task: "Review {previous}",
 		});
 		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(1, ["git"], "/workspace");
 		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(2, ["shared-skill"], "/workspace/a");
 		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(3, ["context7"], "/workspace");
 		expect(ctx.pi.events.emit).toHaveBeenCalledWith("subagent:started", {
-			agent: "scout",
-			asyncDir: "/tmp/pi-async-subagent-runs/chain-2",
-			chain: ["scout", "[planner+reviewer]"],
-			cwd: "/workspace",
 			id: "chain-2",
 			pid: 4242,
+			agent: "scout",
 			task: "Inspect {task}",
+			chain: ["scout", "[planner+reviewer]"],
+			cwd: "/workspace",
+			asyncDir: "/tmp/pi-async-subagent-runs/chain-2",
 		});
 	});
 });

@@ -1,11 +1,12 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
 const { readFileSyncMock, getAgentDirMock } = vi.hoisted(() => ({
-	getAgentDirMock: vi.fn(() => "/mock-home/.pi/agent"),
 	readFileSyncMock: vi.fn(),
+	getAgentDirMock: vi.fn(() => "/mock-home/.pi/agent"),
 }));
 
-vi.mock<typeof import("node:fs")>(import("node:fs"), async (importOriginal) => {
+vi.mock("node:fs", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs")>();
 	return {
 		...actual,
@@ -13,7 +14,7 @@ vi.mock<typeof import("node:fs")>(import("node:fs"), async (importOriginal) => {
 	};
 });
 
-vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), async () => {
+vi.mock("@mariozechner/pi-coding-agent", async () => {
 	const actual = await vi.importActual<typeof import("@mariozechner/pi-coding-agent")>("@mariozechner/pi-coding-agent");
 	return {
 		...actual,
@@ -23,7 +24,7 @@ vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi
 
 import compactHeaderExtension, { buildCommandCatalog } from "./compact-header.js";
 
-describe(buildCommandCatalog, () => {
+describe("buildCommandCatalog", () => {
 	it("groups prompts and skills once into cached display strings", () => {
 		expect(
 			buildCommandCatalog([
@@ -31,7 +32,7 @@ describe(buildCommandCatalog, () => {
 				{ name: "git-workflow", source: "skill" },
 				{ name: "usage", source: "command" },
 			]),
-		).toStrictEqual({
+		).toEqual({
 			prompts: "/optimize",
 			skills: "git-workflow",
 		});
@@ -65,7 +66,7 @@ describe("compact-header plain-icons bootstrap", () => {
 		expect(process.env.OH_PI_PLAIN_ICONS).toBe("");
 
 		await vi.advanceTimersByTimeAsync(250);
-		expect(readFileSyncMock).toHaveBeenCalledWith();
+		expect(readFileSyncMock).toHaveBeenCalled();
 		expect(process.env.OH_PI_PLAIN_ICONS).toBe("1");
 	});
 
@@ -118,6 +119,6 @@ describe("compact-header plain-icons bootstrap", () => {
 		component?.render(120);
 		component?.render(120);
 
-		expect(harness.pi.getCommands).toHaveBeenCalledOnce();
+		expect(harness.pi.getCommands).toHaveBeenCalledTimes(1);
 	});
 });

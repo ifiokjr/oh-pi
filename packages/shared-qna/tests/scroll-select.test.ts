@@ -1,11 +1,13 @@
-vi.mock<typeof import("../pi-tui-loader.js")>(import("../pi-tui-loader.js"), () => ({
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../pi-tui-loader.js", () => ({
 	requirePiTuiModule: () => ({
 		Key: {
-			ctrl: (key: string) => `<ctrl-${key}>`,
-			down: "<down>",
 			enter: "<enter>",
 			escape: "<escape>",
 			up: "<up>",
+			down: "<down>",
+			ctrl: (key: string) => `<ctrl-${key}>`,
 		},
 		matchesKey: (input: string, key: string) => input === key,
 		truncateToWidth: (text: string, width: number) => (text.length <= width ? text : text.slice(0, width)),
@@ -14,8 +16,7 @@ vi.mock<typeof import("../pi-tui-loader.js")>(import("../pi-tui-loader.js"), () 
 	}),
 }));
 
-import { openScrollableSelect } from "../scroll-select.js";
-import type { ScrollSelectConfig } from "../scroll-select.js";
+import { openScrollableSelect, type ScrollSelectConfig } from "../scroll-select.js";
 
 type CustomFactory = (...args: any[]) => {
 	render: (width: number) => string[];
@@ -24,16 +25,16 @@ type CustomFactory = (...args: any[]) => {
 	focused?: boolean;
 };
 
-interface TestTheme {
+type TestTheme = {
 	fg: (color: string, text: string) => string;
 	bg?: (color: string, text: string) => string;
 	bold: (text: string) => string;
-}
+};
 
 function createTheme(overrides: Partial<TestTheme> = {}): TestTheme {
 	return {
-		bold: (text: string) => text,
 		fg: (_color: string, text: string) => text,
+		bold: (text: string) => text,
 		...overrides,
 	};
 }
@@ -46,7 +47,7 @@ async function flushAsyncWork(turns = 4) {
 
 function createFactoryRunner(theme = createTheme()) {
 	const factories: CustomFactory[] = [];
-	const resolvers: (((value: unknown) => void) | undefined)[] = [];
+	const resolvers: Array<((value: unknown) => void) | undefined> = [];
 	const ui = {
 		custom: vi.fn(((nextFactory: CustomFactory) => {
 			const index = factories.push(nextFactory) - 1;
@@ -69,16 +70,16 @@ function createFactoryRunner(theme = createTheme()) {
 		return factory({ requestRender: vi.fn() }, theme, {}, done ?? resolvers[index] ?? vi.fn());
 	}
 
-	return { buildComponent, ui };
+	return { ui, buildComponent };
 }
 
-describe(openScrollableSelect, () => {
+describe("openScrollableSelect", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
 	it("returns null when there are no options", async () => {
-		const result = await openScrollableSelect({ custom: vi.fn() }, { options: [], title: "Empty" });
+		const result = await openScrollableSelect({ custom: vi.fn() }, { title: "Empty", options: [] });
 
 		expect(result).toBeNull();
 	});
@@ -87,7 +88,7 @@ describe(openScrollableSelect, () => {
 		const custom = vi.fn();
 		const result = await openScrollableSelect(
 			{ custom },
-			{ options: [{ value: "only", label: "Only" }], title: "Single" },
+			{ title: "Single", options: [{ value: "only", label: "Only" }] },
 		);
 
 		expect(result).toBe("only");
@@ -99,11 +100,11 @@ describe(openScrollableSelect, () => {
 		const result = await openScrollableSelect(
 			{ select },
 			{
+				title: "Fallback",
 				options: [
 					{ value: "alpha", label: "Alpha" },
 					{ value: "beta", label: "Beta" },
 				],
-				title: "Fallback",
 			},
 		);
 
@@ -115,11 +116,11 @@ describe(openScrollableSelect, () => {
 		const result = await openScrollableSelect(
 			{},
 			{
+				title: "Unavailable",
 				options: [
 					{ value: "alpha", label: "Alpha" },
 					{ value: "beta", label: "Beta" },
 				],
-				title: "Unavailable",
 			},
 		);
 
@@ -129,11 +130,11 @@ describe(openScrollableSelect, () => {
 	it("uses a centered overlay capped at 75% height", async () => {
 		const { ui } = createFactoryRunner();
 		const config: ScrollSelectConfig<string> = {
+			title: "Pick one",
 			options: [
 				{ value: "a", label: "Alpha" },
 				{ value: "b", label: "Beta" },
 			],
-			title: "Pick one",
 		};
 
 		await openScrollableSelect(ui, config);
@@ -142,8 +143,8 @@ describe(openScrollableSelect, () => {
 			overlay: true,
 			overlayOptions: {
 				anchor: "center",
-				maxHeight: "75%",
 				width: 84,
+				maxHeight: "75%",
 			},
 		});
 	});
@@ -151,12 +152,12 @@ describe(openScrollableSelect, () => {
 	it("renders a scrollable window and reveals later items as the cursor moves", async () => {
 		const { ui, buildComponent } = createFactoryRunner();
 		await openScrollableSelect(ui, {
-			maxVisibleOptions: 5,
+			title: "Providers",
 			options: Array.from({ length: 14 }, (_, index) => ({
 				value: `value-${index + 1}`,
 				label: `Option ${index + 1}`,
 			})),
-			title: "Providers",
+			maxVisibleOptions: 5,
 		});
 
 		const component = buildComponent();
@@ -182,17 +183,17 @@ describe(openScrollableSelect, () => {
 			}),
 		);
 		await openScrollableSelect(ui, {
+			title: "Scheduled tasks",
 			options: [
 				{ value: "first", label: "First task" },
 				{ value: "second", label: "Second task" },
 			],
-			title: "Scheduled tasks",
 		});
 
 		const lines = buildComponent().render(40);
 		expect(lines[0]).toContain("<customMessageBg>");
-		expect(lines.some((line) => line.includes("<selectedBg>"))).toBeTruthy();
-		expect(lines.every((line) => line.startsWith("<") && line.endsWith(">"))).toBeTruthy();
+		expect(lines.some((line) => line.includes("<selectedBg>"))).toBe(true);
+		expect(lines.every((line) => line.startsWith("<") && line.endsWith(">"))).toBe(true);
 	});
 
 	it("renders the empty message on the popup surface when options disappear", async () => {
@@ -202,11 +203,11 @@ describe(openScrollableSelect, () => {
 			}),
 		);
 		await openScrollableSelect(ui, {
+			title: "Scheduled tasks",
 			options: [
 				{ value: "first", label: "First task" },
 				{ value: "second", label: "Second task" },
 			],
-			title: "Scheduled tasks",
 		});
 
 		const component = buildComponent() as any;
@@ -221,12 +222,15 @@ describe(openScrollableSelect, () => {
 		ui.input.mockResolvedValueOnce("beta");
 
 		await openScrollableSelect(ui, {
+			title: "Provider login",
 			options: [
 				{ value: "alpha", label: "Alpha" },
 				{ value: "beta", label: "Beta" },
 				{ value: "gamma", label: "Gamma" },
 			],
 			search: {
+				title: "Provider search",
+				placeholder: "Type a provider id or name",
 				getOptions(query) {
 					const all = [
 						{ value: "alpha", label: "Alpha" },
@@ -235,10 +239,7 @@ describe(openScrollableSelect, () => {
 					];
 					return all.filter((option) => option.label.toLowerCase().includes(query.toLowerCase()));
 				},
-				placeholder: "Type a provider id or name",
-				title: "Provider search",
 			},
-			title: "Provider login",
 		});
 
 		const component = buildComponent();
@@ -256,16 +257,16 @@ describe(openScrollableSelect, () => {
 		ui.input.mockResolvedValueOnce("zzz");
 
 		await openScrollableSelect(ui, {
+			title: "Provider login",
 			options: [
 				{ value: "alpha", label: "Alpha" },
 				{ value: "beta", label: "Beta" },
 			],
 			search: {
-				emptyMessage: (query) => `No provider matched "${query}".`,
-				getOptions: () => [],
 				title: "Provider search",
+				getOptions: () => [],
+				emptyMessage: (query) => `No provider matched "${query}".`,
 			},
-			title: "Provider login",
 		});
 
 		const component = buildComponent();
@@ -280,19 +281,19 @@ describe(openScrollableSelect, () => {
 
 	it("does not re-run search work when the query is unchanged", async () => {
 		const { ui, buildComponent } = createFactoryRunner();
-		const getOptions = vi.fn(() => [{ label: "Beta", value: "beta" }]);
+		const getOptions = vi.fn(() => [{ value: "beta", label: "Beta" }]);
 		ui.input.mockResolvedValueOnce("beta").mockResolvedValueOnce("beta");
 
 		await openScrollableSelect(ui, {
+			title: "Provider login",
 			options: [
 				{ value: "alpha", label: "Alpha" },
 				{ value: "beta", label: "Beta" },
 			],
 			search: {
-				getOptions,
 				title: "Provider search",
+				getOptions,
 			},
-			title: "Provider login",
 		});
 
 		const component = buildComponent();
@@ -301,17 +302,17 @@ describe(openScrollableSelect, () => {
 		component.handleInput("/");
 		await flushAsyncWork();
 
-		expect(getOptions).toHaveBeenCalledOnce();
+		expect(getOptions).toHaveBeenCalledTimes(1);
 	});
 
 	it("handles enter and escape shortcuts", async () => {
 		const { ui, buildComponent } = createFactoryRunner();
 		await openScrollableSelect(ui, {
+			title: "Pick one",
 			options: [
 				{ value: "alpha", label: "Alpha" },
 				{ value: "beta", label: "Beta" },
 			],
-			title: "Pick one",
 		});
 
 		const done = vi.fn();

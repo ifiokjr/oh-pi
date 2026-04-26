@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-
+import { afterEach, describe, expect, it } from "vitest";
 import {
 	cleanupEmptyColonyStorageDirs,
 	getColonyStateParentDir,
@@ -21,9 +21,9 @@ function mkTempDir(prefix: string): string {
 afterEach(() => {
 	for (const dir of tmpDirs.splice(0)) {
 		try {
-			fs.rmSync(dir, { force: true, recursive: true });
+			fs.rmSync(dir, { recursive: true, force: true });
 		} catch {
-			/* Ignore */
+			/* ignore */
 		}
 	}
 });
@@ -58,10 +58,10 @@ describe("ant-colony shared storage", () => {
 		migrateLegacyProjectColonies(cwd, { mode: "shared", sharedRoot });
 
 		const migratedDir = path.join(getColonyStateParentDir(cwd, { mode: "shared", sharedRoot }), "colony-legacy");
-		expect(fs.existsSync(path.join(migratedDir, "state.json"))).toBeTruthy();
-		expect(fs.existsSync(path.join(migratedDir, "tasks", "t-1.json"))).toBeTruthy();
-		expect(fs.existsSync(legacyDir)).toBeFalsy();
-		expect(fs.existsSync(path.join(cwd, ".ant-colony", "worktrees"))).toBeTruthy();
+		expect(fs.existsSync(path.join(migratedDir, "state.json"))).toBe(true);
+		expect(fs.existsSync(path.join(migratedDir, "tasks", "t-1.json"))).toBe(true);
+		expect(fs.existsSync(legacyDir)).toBe(false);
+		expect(fs.existsSync(path.join(cwd, ".ant-colony", "worktrees"))).toBe(true);
 	});
 
 	it("cleans up empty shared workspace storage directories", () => {
@@ -72,6 +72,6 @@ describe("ant-colony shared storage", () => {
 
 		cleanupEmptyColonyStorageDirs(cwd, { mode: "shared", sharedRoot });
 
-		expect(fs.existsSync(stateParent)).toBeFalsy();
+		expect(fs.existsSync(stateParent)).toBe(false);
 	});
 });

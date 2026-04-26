@@ -1,12 +1,11 @@
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-
+import { afterEach, describe, expect, it } from "vitest";
 import { SWITCHER_PACKAGES } from "../packages/oh-pi/bin/package-list.mts";
 import {
 	buildPiExecutableCandidates,
 	dedupeManagedPackageEntries,
-	main,
 	mergeManagedPackageManifest,
 	parseNpmPackageName,
 	planPackageSyncOperations,
@@ -15,6 +14,7 @@ import {
 	resolveWorkspacePackageManifests,
 	resolveWorkspacePackageSources,
 	rewriteManagedPackageSources,
+	main,
 } from "./pi-source-switch.mts";
 
 const tempDirs: string[] = [];
@@ -63,7 +63,7 @@ function createWorkspaceRepo(
 	const packageDirs = new Map<string, string>();
 
 	for (const [index, packageName] of SWITCHER_PACKAGES.entries()) {
-		const dirName = `${index}-${packageName.replaceAll(/[^a-z0-9]+/gi, "-").replaceAll(/^-|-$/g, "")}`;
+		const dirName = `${index}-${packageName.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}`;
 		packageDirs.set(
 			packageName,
 			writeWorkspacePackage(repoDir, dirName, packageName, {
@@ -88,10 +88,10 @@ function createFakePiExecutable(logPath: string): string {
 			"const fs = require('node:fs');",
 			"const logPath = process.env.PI_TEST_LOG_PATH;",
 			"if (logPath) {",
-			String.raw`  fs.appendFileSync(logPath, process.argv.slice(2).join(' ') + '\n');`,
+			"  fs.appendFileSync(logPath, process.argv.slice(2).join(' ') + '\\n');",
 			"}",
 			"if (process.argv[2] === '--version') {",
-			String.raw`  process.stdout.write('0.0.0-test\n');`,
+			"  process.stdout.write('0.0.0-test\\n');",
 			"  process.exit(0);",
 			"}",
 			"if (process.env.PI_TEST_FAIL_ON === process.argv[2]) {",
@@ -153,15 +153,15 @@ function runSwitcher(
 
 	return {
 		status,
-		stderr: stderr.join(""),
 		stdout: stdout.join(""),
+		stderr: stderr.join(""),
 	};
 }
 
 describe("pi source switcher helpers", () => {
 	afterEach(() => {
 		for (const dir of tempDirs) {
-			rmSync(dir, { force: true, recursive: true });
+			rmSync(dir, { recursive: true, force: true });
 		}
 		tempDirs.length = 0;
 	});
@@ -185,7 +185,7 @@ describe("pi source switcher helpers", () => {
 			(source) => parseNpmPackageName(source),
 		);
 
-		expect(nextEntries).toStrictEqual([
+		expect(nextEntries).toEqual([
 			"npm:@ifi/oh-pi",
 			{ source: "/repo/packages/extensions" },
 			"/repo/packages/themes",
@@ -208,7 +208,7 @@ describe("pi source switcher helpers", () => {
 			},
 		);
 
-		expect(nextEntries).toStrictEqual(["npm:@ifi/oh-pi", "/tmp/new/extensions", "/tmp/new/themes"]);
+		expect(nextEntries).toEqual(["npm:@ifi/oh-pi", "/tmp/new/extensions", "/tmp/new/themes"]);
 	});
 
 	it("resolves workspace package directories from a repo checkout", () => {
@@ -230,22 +230,22 @@ describe("pi source switcher helpers", () => {
 	it("merges local package manifests into object settings so new extensions are not missed", () => {
 		expect(
 			mergeManagedPackageManifest(
-				{ extensions: ["extensions/existing.ts"], source: "/repo/packages/extensions" },
+				{ source: "/repo/packages/extensions", extensions: ["extensions/existing.ts"] },
 				{ extensions: ["extensions/existing.ts", "extensions/worktree.ts"] },
 			),
-		).toStrictEqual({
-			extensions: ["extensions/existing.ts", "extensions/worktree.ts"],
+		).toEqual({
 			source: "/repo/packages/extensions",
+			extensions: ["extensions/existing.ts", "extensions/worktree.ts"],
 		});
 	});
 
 	it("keeps explicit empty arrays when merging local package manifests", () => {
 		expect(
 			mergeManagedPackageManifest(
-				{ extensions: [], source: "/repo/packages/extensions" },
+				{ source: "/repo/packages/extensions", extensions: [] },
 				{ extensions: ["extensions/worktree.ts"] },
 			),
-		).toStrictEqual({ extensions: [], source: "/repo/packages/extensions" });
+		).toEqual({ source: "/repo/packages/extensions", extensions: [] });
 	});
 
 	it("reads workspace pi manifests for managed packages", () => {
@@ -261,7 +261,7 @@ describe("pi source switcher helpers", () => {
 		);
 
 		const manifests = resolveWorkspacePackageManifests(repoDir, ["@ifi/oh-pi-extensions"]);
-		expect(manifests.get("@ifi/oh-pi-extensions")).toStrictEqual({
+		expect(manifests.get("@ifi/oh-pi-extensions")).toEqual({
 			extensions: ["extensions/custom-footer.ts", "extensions/worktree.ts"],
 		});
 	});
@@ -275,10 +275,10 @@ describe("pi source switcher helpers", () => {
 			]),
 		);
 
-		expect(operations).toStrictEqual(
+		expect(operations).toEqual(
 			expect.arrayContaining([
-				{ action: "update", packageName: "@ifi/oh-pi-extensions", source: "/repo/packages/extensions" },
-				{ action: "install", packageName: "@ifi/pi-provider-catalog", source: "/repo/packages/providers" },
+				{ packageName: "@ifi/oh-pi-extensions", source: "/repo/packages/extensions", action: "update" },
+				{ packageName: "@ifi/pi-provider-catalog", source: "/repo/packages/providers", action: "install" },
 			]),
 		);
 	});
@@ -306,10 +306,9 @@ describe("pi source switcher helpers", () => {
 	});
 
 	it("resolves pi from fallback candidates after PATH misses", () => {
-		const resolved = resolvePiCommand(
-			["pi", "/Users/tester/Library/pnpm/pi"],
-			(candidate) => candidate === "/Users/tester/Library/pnpm/pi",
-		);
+		const resolved = resolvePiCommand(["pi", "/Users/tester/Library/pnpm/pi"], (candidate) => {
+			return candidate === "/Users/tester/Library/pnpm/pi";
+		});
 
 		expect(resolved).toBe("/Users/tester/Library/pnpm/pi");
 	});
@@ -346,7 +345,7 @@ describe("pi source switcher helpers", () => {
 		mkdirSync(path.dirname(settingsPath), { recursive: true });
 		const originalSettings = JSON.stringify(
 			{
-				packages: [{ extensions: ["extensions/legacy.ts"], source: "npm:@ifi/oh-pi-extensions" }, "npm:chalk@5.0.0"],
+				packages: [{ source: "npm:@ifi/oh-pi-extensions", extensions: ["extensions/legacy.ts"] }, "npm:chalk@5.0.0"],
 			},
 			null,
 			2,
@@ -387,7 +386,7 @@ describe("pi source switcher helpers", () => {
 			JSON.stringify(
 				{
 					packages: [
-						{ extensions: ["extensions/custom-footer.ts"], source: "npm:@ifi/oh-pi-extensions@0.4.3" },
+						{ source: "npm:@ifi/oh-pi-extensions@0.4.3", extensions: ["extensions/custom-footer.ts"] },
 						"npm:chalk@5.0.0",
 					],
 				},
@@ -401,8 +400,8 @@ describe("pi source switcher helpers", () => {
 		const result = runSwitcher(["remote", "--version", "0.4.4"], {
 			env: {
 				PATH: [piBinDir, path.dirname(process.execPath), process.env.PATH ?? ""].join(path.delimiter),
-				PI_CODING_AGENT_BIN: piBinDir,
 				PI_CODING_AGENT_DIR: agentDir,
+				PI_CODING_AGENT_BIN: piBinDir,
 				PI_TEST_LOG_PATH: logPath,
 			},
 		});
@@ -425,9 +424,9 @@ describe("pi source switcher helpers", () => {
 		expect(managedSources).toHaveLength(SWITCHER_PACKAGES.length);
 		expect(savedSources).toContain("npm:@ifi/pi-provider-cursor@0.4.4");
 		expect(savedSources).toContain("npm:chalk@5.0.0");
-		expect(extensionEntry).toStrictEqual({
-			extensions: ["extensions/custom-footer.ts"],
+		expect(extensionEntry).toEqual({
 			source: "npm:@ifi/oh-pi-extensions@0.4.4",
+			extensions: ["extensions/custom-footer.ts"],
 		});
 
 		const piLog = readFileSync(logPath, "utf8");
@@ -449,8 +448,8 @@ describe("pi source switcher helpers", () => {
 		const result = runSwitcher(["local", "--path", repoDir], {
 			env: {
 				PATH: [piBinDir, path.dirname(process.execPath), process.env.PATH ?? ""].join(path.delimiter),
-				PI_CODING_AGENT_BIN: piBinDir,
 				PI_CODING_AGENT_DIR: agentDir,
+				PI_CODING_AGENT_BIN: piBinDir,
 				PI_TEST_LOG_PATH: logPath,
 			},
 		});

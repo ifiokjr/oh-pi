@@ -1,10 +1,11 @@
+import { describe, expect, it } from "vitest";
 import { clearProgressLine, renderProgress, runWithProgress } from "./progress.js";
 
-describe(renderProgress, () => {
+describe("renderProgress", () => {
 	it("writes a progress bar", () => {
 		const chunks: string[] = [];
 		const stdout = { write: (c: string) => chunks.push(c) } as unknown as NodeJS.WriteStream;
-		renderProgress({ current: 5, label: "test", total: 10 }, { stdout });
+		renderProgress({ total: 10, current: 5, label: "test" }, { stdout });
 		const output = chunks.join("");
 		expect(output).toContain("50%");
 		expect(output).toContain("Installing:");
@@ -12,16 +13,16 @@ describe(renderProgress, () => {
 	});
 });
 
-describe(clearProgressLine, () => {
+describe("clearProgressLine", () => {
 	it("writes clear sequence", () => {
 		const chunks: string[] = [];
 		const stdout = { write: (c: string) => chunks.push(c) } as unknown as NodeJS.WriteStream;
 		clearProgressLine({ stdout });
-		expect(chunks.join("")).toContain("\u001B[K");
+		expect(chunks.join("")).toContain("\x1B[K");
 	});
 });
 
-describe(runWithProgress, () => {
+describe("runWithProgress", () => {
 	it("runs tasks and shows progress", async () => {
 		const chunks: string[] = [];
 		const stdout = { write: (c: string) => chunks.push(c) } as unknown as NodeJS.WriteStream;
@@ -29,21 +30,21 @@ describe(runWithProgress, () => {
 		await runWithProgress(
 			[
 				{
+					label: "a",
 					fn: () => {
 						calls.push("a");
 					},
-					label: "a",
 				},
 				{
+					label: "b",
 					fn: () => {
 						calls.push("b");
 					},
-					label: "b",
 				},
 			],
 			{ stdout },
 		);
-		expect(calls).toStrictEqual(["a", "b"]);
+		expect(calls).toEqual(["a", "b"]);
 		const output = chunks.join("");
 		expect(output).toContain("a");
 		expect(output).toContain("b");

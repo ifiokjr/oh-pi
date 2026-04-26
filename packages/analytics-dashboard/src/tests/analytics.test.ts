@@ -4,6 +4,7 @@
  * Comprehensive unit tests for the analytics API layer.
  */
 
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { analyticsApi } from "../api/analytics";
 import type { TimeRange } from "../types";
 
@@ -29,7 +30,7 @@ afterEach(() => {
 	vi.resetModules();
 });
 
-describe(analyticsApi, () => {
+describe("analyticsApi", () => {
 	describe("getSummaryStats", () => {
 		it("should return summary statistics", async () => {
 			const stats = await analyticsApi.getSummaryStats();
@@ -117,7 +118,7 @@ describe(analyticsApi, () => {
 			const models = await analyticsApi.getModelUsage("30d");
 
 			// Mock data is ordered: first model has highest share
-			expect(models[0].tokens).toBeGreaterThanOrEqual(models.at(-1).tokens);
+			expect(models[0].tokens).toBeGreaterThanOrEqual(models[models.length - 1].tokens);
 		});
 	});
 
@@ -236,14 +237,14 @@ describe(analyticsApi, () => {
 		it("should return a string for JSON export", async () => {
 			const result = await analyticsApi.exportData("json", "30d");
 
-			expectTypeOf(result).toBeString();
+			expect(typeof result).toBe("string");
 			expect(result).toContain("blob:");
 		});
 
 		it("should return a string for CSV export", async () => {
 			const result = await analyticsApi.exportData("csv", "30d");
 
-			expectTypeOf(result).toBeString();
+			expect(typeof result).toBe("string");
 			expect(result).toContain("blob:");
 		});
 	});
@@ -268,7 +269,7 @@ describe(analyticsApi, () => {
 	describe("getRateLimitTrends", () => {
 		it("should return rate limit data", async () => {
 			const trends = await analyticsApi.getRateLimitTrend();
-			expect(Array.isArray(trends)).toBeTruthy();
+			expect(Array.isArray(trends)).toBe(true);
 			expect(trends.length).toBeGreaterThan(0);
 			trends.forEach((t) => {
 				expect(t).toHaveProperty("provider");
@@ -278,7 +279,7 @@ describe(analyticsApi, () => {
 
 		it("should return data for specific provider", async () => {
 			const anthropicTrends = await analyticsApi.getRateLimitTrend("anthropic");
-			expect(Array.isArray(anthropicTrends)).toBeTruthy();
+			expect(Array.isArray(anthropicTrends)).toBe(true);
 			expect(anthropicTrends).toHaveLength(1);
 			expect(anthropicTrends[0].provider).toBe("anthropic");
 		});
@@ -287,7 +288,7 @@ describe(analyticsApi, () => {
 	describe("getTopWords", () => {
 		it("should return word frequency data", async () => {
 			const words = await analyticsApi.getTopWords(undefined, "30d");
-			expect(Array.isArray(words)).toBeTruthy();
+			expect(Array.isArray(words)).toBe(true);
 			expect(words.length).toBeGreaterThan(0);
 			words.forEach((w) => {
 				expect(w).toHaveProperty("word");
@@ -299,7 +300,7 @@ describe(analyticsApi, () => {
 	describe("getMisspellings", () => {
 		it("should return misspelling corrections", async () => {
 			const misspells = await analyticsApi.getMisspellings("30d");
-			expect(Array.isArray(misspells)).toBeTruthy();
+			expect(Array.isArray(misspells)).toBe(true);
 			expect(misspells.length).toBeGreaterThan(0);
 			misspells.forEach((m) => {
 				expect(m).toHaveProperty("misspelled");
@@ -320,7 +321,7 @@ describe(analyticsApi, () => {
 		});
 	});
 
-	describe("aPI mode selection", () => {
+	describe("API mode selection", () => {
 		it("should default to the mock API when VITE_API_MODE is unset", async () => {
 			delete process.env.VITE_API_MODE;
 			delete process.env.VITE_API_BASE;
@@ -340,6 +341,9 @@ describe(analyticsApi, () => {
 			process.env.VITE_API_BASE = "http://localhost:4010";
 
 			const fetchMock = vi.fn(async () => ({
+				ok: true,
+				status: 200,
+				statusText: "OK",
 				json: async () => [
 					{
 						provider: "anthropic",
@@ -347,9 +351,6 @@ describe(analyticsApi, () => {
 						history: [],
 					},
 				],
-				ok: true,
-				status: 200,
-				statusText: "OK",
 			}));
 			globalThis.fetch = fetchMock as typeof fetch;
 
@@ -357,11 +358,11 @@ describe(analyticsApi, () => {
 			const trends = await api.getRateLimitTrend("anthropic");
 
 			expect(fetchMock).toHaveBeenCalledWith("http://localhost:4010/api/rate-limits?provider=anthropic");
-			expect(trends).toStrictEqual([
+			expect(trends).toEqual([
 				{
-					history: [],
 					provider: "anthropic",
 					windowLabel: "1 hour",
+					history: [],
 				},
 			]);
 		});

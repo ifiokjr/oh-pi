@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import toolMetadataExtension, {
 	buildToolMetadata,
@@ -31,21 +32,21 @@ describe("tool-metadata extension", () => {
 		const [patch] = await harness.emitAsync(
 			"tool_result",
 			{
-				content: [{ type: "text", text: `${longLine}\u0000${longLine}` }],
-				details: {},
-				input: { command: "printf huge" },
 				toolCallId: "tool-big",
 				toolName: "bash",
+				input: { command: "printf huge" },
+				content: [{ type: "text", text: `${longLine}\u0000${longLine}` }],
+				details: {},
 			},
 			harness.ctx,
 		);
 
-		expect(patch.details.outputGuard).toStrictEqual(
+		expect(patch.details.outputGuard).toEqual(
 			expect.objectContaining({
+				truncated: true,
 				maxChars: 120_000,
 				maxLineChars: 2_000,
 				maxLines: 2_000,
-				truncated: true,
 			}),
 		);
 		expect(patch.content[0].text).toContain("[tool output truncated for UI safety]");
@@ -60,11 +61,11 @@ describe("tool-metadata extension", () => {
 		const [patch] = await harness.emitAsync(
 			"tool_result",
 			{
-				content: [{ type: "text", text: "ok" }],
-				details: { nested: { stderr: huge }, stdout: huge },
-				input: { command: "huge" },
 				toolCallId: "tool-details",
 				toolName: "bash",
+				input: { command: "huge" },
+				content: [{ type: "text", text: "ok" }],
+				details: { stdout: huge, nested: { stderr: huge } },
 			},
 			harness.ctx,
 		);
@@ -72,20 +73,20 @@ describe("tool-metadata extension", () => {
 		expect((patch.details.stdout as string).length).toBeLessThan(130_000);
 		expect(patch.details.stdout).not.toContain("\u0000");
 		expect((patch.details.nested as { stderr: string }).stderr.length).toBeLessThan(130_000);
-		expect(patch.details.outputGuard).toStrictEqual(expect.objectContaining({ detailsSanitized: true }));
+		expect(patch.details.outputGuard).toEqual(expect.objectContaining({ detailsSanitized: true }));
 	});
 
 	it("builds visible completion metadata for tool results", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.getContextUsage = vi
 			.fn()
-			.mockReturnValueOnce({ contextWindow: 200_000, percent: 12.5, tokens: 24_500 })
-			.mockReturnValueOnce({ contextWindow: 200_000, percent: 13.1, tokens: 26_200 });
+			.mockReturnValueOnce({ percent: 12.5, tokens: 24_500, contextWindow: 200_000 })
+			.mockReturnValueOnce({ percent: 13.1, tokens: 26_200, contextWindow: 200_000 });
 		toolMetadataExtension(harness.pi as never);
 
 		await harness.emitAsync(
 			"tool_call",
-			{ input: { command: "pnpm test" }, toolCallId: "tool-1", toolName: "bash" },
+			{ toolCallId: "tool-1", toolName: "bash", input: { command: "pnpm test" } },
 			harness.ctx,
 		);
 		await vi.advanceTimersByTimeAsync(2300);
@@ -93,11 +94,11 @@ describe("tool-metadata extension", () => {
 		const [patch] = await harness.emitAsync(
 			"tool_result",
 			{
-				content: [{ type: "text", text: "tests passed" }],
-				details: {},
-				input: { command: "pnpm test" },
 				toolCallId: "tool-1",
 				toolName: "bash",
+				input: { command: "pnpm test" },
+				content: [{ type: "text", text: "tests passed" }],
+				details: {},
 			},
 			harness.ctx,
 		);
@@ -115,8 +116,8 @@ describe("tool-metadata extension", () => {
 			Date.UTC(2026, 3, 15, 9, 12, 13),
 			Date.UTC(2026, 3, 15, 9, 12, 13),
 			{ path: "README.md" },
-			[{ text: "hello", type: "text" }],
-			{ getContextUsage: () => {} } as never,
+			[{ type: "text", text: "hello" }],
+			{ getContextUsage: () => undefined } as never,
 		);
 
 		expect(metadata.durationMs).toBe(0);

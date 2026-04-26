@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import planExtension from "../index.js";
 
@@ -19,7 +19,7 @@ afterEach(async () => {
 		if (!tempDir) {
 			continue;
 		}
-		await rm(tempDir, { force: true, recursive: true });
+		await rm(tempDir, { recursive: true, force: true });
 	}
 	vi.restoreAllMocks();
 });
@@ -37,10 +37,8 @@ describe("plan extension", () => {
 			() => {},
 			harness.ctx,
 		);
-		expect(inactive.isError).toBeTruthy();
-		expect(inactive.content).toStrictEqual([
-			{ text: "set_plan is only available while plan mode is active.", type: "text" },
-		]);
+		expect(inactive.isError).toBe(true);
+		expect(inactive.content).toEqual([{ type: "text", text: "set_plan is only available while plan mode is active." }]);
 	});
 
 	it("rejects empty plans and writes the canonical plan file when active", async () => {
@@ -50,15 +48,15 @@ describe("plan extension", () => {
 		harness.ctx.ui.setWidget = vi.fn();
 		harness.ctx.sessionManager.getEntries = () => [
 			{
+				type: "custom",
 				customType: "pi-plan:state",
 				data: {
+					version: 1,
 					active: true,
-					lastPlanLeafId: null,
 					originLeafId: "leaf-1",
 					planFilePath,
-					version: 1,
+					lastPlanLeafId: null,
 				},
-				type: "custom",
 			},
 		];
 
@@ -67,8 +65,8 @@ describe("plan extension", () => {
 		const setPlan = harness.tools.get("set_plan");
 
 		const empty = await setPlan.execute("tool-2", { plan: "   " }, new AbortController().signal, () => {}, harness.ctx);
-		expect(empty.isError).toBeTruthy();
-		expect(empty.content).toStrictEqual([{ text: "set_plan requires non-empty plan text.", type: "text" }]);
+		expect(empty.isError).toBe(true);
+		expect(empty.content).toEqual([{ type: "text", text: "set_plan requires non-empty plan text." }]);
 
 		const result = await setPlan.execute(
 			"tool-3",
@@ -77,13 +75,11 @@ describe("plan extension", () => {
 			() => {},
 			harness.ctx,
 		);
-		expect(result.content).toStrictEqual([{ text: "Plan written.", type: "text" }]);
-		expect(result.details).toStrictEqual({
+		expect(result.content).toEqual([{ type: "text", text: "Plan written." }]);
+		expect(result.details).toEqual({
 			plan: "# Canonical Plan\n\n- verify behavior\n- add coverage",
 		});
-		await expect(readFile(planFilePath, "utf8")).resolves.toBe(
-			"# Canonical Plan\n\n- verify behavior\n- add coverage\n",
-		);
+		expect(await readFile(planFilePath, "utf8")).toBe("# Canonical Plan\n\n- verify behavior\n- add coverage\n");
 		expect(harness.ctx.ui.setWidget).toHaveBeenCalledWith(
 			"pi-plan-banner",
 			expect.any(Function),
@@ -95,15 +91,15 @@ describe("plan extension", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.sessionManager.getEntries = () => [
 			{
+				type: "custom",
 				customType: "pi-plan:state",
 				data: {
+					version: 1,
 					active: true,
-					lastPlanLeafId: null,
 					originLeafId: "leaf-1",
 					planFilePath: "/tmp/session.plan.md",
-					version: 1,
+					lastPlanLeafId: null,
 				},
-				type: "custom",
 			},
 		];
 
@@ -111,10 +107,10 @@ describe("plan extension", () => {
 		await harness.emitAsync("session_switch", { type: "session_switch" }, harness.ctx);
 		const [entry] = await harness.emitAsync("before_agent_start");
 
-		expect(entry).toStrictEqual({
+		expect(entry).toEqual({
 			message: expect.objectContaining({
-				content: expect.stringContaining("set_plan"),
 				customType: "pi-plan:context",
+				content: expect.stringContaining("set_plan"),
 				display: false,
 			}),
 		});

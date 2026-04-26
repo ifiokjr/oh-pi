@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const childProcessMocks = vi.hoisted(() => ({
 	execFileSync: vi.fn(),
 }));
 
-vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({
+vi.mock("node:child_process", () => ({
 	execFileSync: childProcessMocks.execFileSync,
 }));
 
@@ -39,20 +40,20 @@ describe("check-patch-coverage", () => {
 
 	afterEach(() => {
 		for (const dir of tempDirs) {
-			fs.rmSync(dir, { force: true, recursive: true });
+			fs.rmSync(dir, { recursive: true, force: true });
 		}
 		tempDirs.length = 0;
 	});
 
 	it("parses cli arguments with defaults and overrides", () => {
-		expect(parsePatchCoverageArgs([])).toMatchObject({ lcovPath: "coverage/lcov.info", threshold: 100 });
+		expect(parsePatchCoverageArgs([])).toMatchObject({ threshold: 100, lcovPath: "coverage/lcov.info" });
 		expect(
 			parsePatchCoverageArgs(["--threshold", "97.5", "--lcov", "tmp/lcov.info", "--base", "abc", "--head", "def"]),
-		).toStrictEqual({
+		).toEqual({
+			threshold: 97.5,
+			lcovPath: "tmp/lcov.info",
 			base: "abc",
 			head: "def",
-			lcovPath: "tmp/lcov.info",
-			threshold: 97.5,
 		});
 	});
 
@@ -71,7 +72,7 @@ describe("check-patch-coverage", () => {
 			].join("\n"),
 		);
 
-		expect(changed).toStrictEqual(new Map([["packages/demo.ts", new Set([11, 12])]]));
+		expect(changed).toEqual(new Map([["packages/demo.ts", new Set([11, 12])]]));
 	});
 
 	it("throws on malformed diff hunks", () => {
@@ -87,13 +88,13 @@ describe("check-patch-coverage", () => {
 		);
 		const summary = calculatePatchCoverage(changed, coverage);
 
-		expect(summary).toMatchObject({ covered: 2, pct: 66.66666666666666, total: 3 });
-		expect(summary.perFile).toStrictEqual([
+		expect(summary).toMatchObject({ covered: 2, total: 3, pct: 66.66666666666666 });
+		expect(summary.perFile).toEqual([
 			{
-				covered: 2,
 				file: "packages/demo.ts",
-				pct: 66.66666666666666,
+				covered: 2,
 				total: 3,
+				pct: 66.66666666666666,
 				uncoveredLines: [11],
 			},
 		]);
@@ -107,13 +108,13 @@ describe("check-patch-coverage", () => {
 		const coverage = parseLcovByFile(`TN:\nSF:packages/demo.ts\nDA:20,1\nend_of_record\n`);
 		const summary = calculatePatchCoverage(changed, coverage);
 
-		expect(summary).toMatchObject({ covered: 1, pct: 100, total: 1 });
-		expect(summary.perFile).toStrictEqual([
+		expect(summary).toMatchObject({ covered: 1, total: 1, pct: 100 });
+		expect(summary.perFile).toEqual([
 			{
-				covered: 1,
 				file: "packages/demo.ts",
-				pct: 100,
+				covered: 1,
 				total: 1,
+				pct: 100,
 				uncoveredLines: [],
 			},
 		]);
@@ -129,13 +130,14 @@ describe("check-patch-coverage", () => {
 		);
 		const summary = calculatePatchCoverage(changed, coverage);
 
-		expect(summary.perFile.map((entry) => entry.file)).toStrictEqual(["packages/b.ts", "packages/a.ts"]);
+		expect(summary.perFile.map((entry) => entry.file)).toEqual(["packages/b.ts", "packages/a.ts"]);
 	});
 
 	it("formats readable reports with and without uncovered files", () => {
 		const failingReport = formatPatchCoverageReport(
 			{
 				covered: 19,
+				total: 20,
 				pct: 95,
 				perFile: [
 					{
@@ -146,7 +148,6 @@ describe("check-patch-coverage", () => {
 						uncoveredLines: [42],
 					},
 				],
-				total: 20,
 			},
 			100,
 		);
@@ -157,9 +158,9 @@ describe("check-patch-coverage", () => {
 		const passingReport = formatPatchCoverageReport(
 			{
 				covered: 3,
+				total: 3,
 				pct: 100,
 				perFile: [{ file: "packages/demo.ts", covered: 3, total: 3, pct: 100, uncoveredLines: [] }],
-				total: 3,
 			},
 			100,
 		);
@@ -173,9 +174,9 @@ describe("check-patch-coverage", () => {
 		fs.writeFileSync(ignored, "/* c8 ignore file */\nexport const ignored = true;\n", "utf8");
 		fs.writeFileSync(included, "export const included = true;\n", "utf8");
 
-		expect(shouldIgnoreFileForPatchCoverage(ignored)).toBeTruthy();
-		expect(shouldIgnoreFileForPatchCoverage(included)).toBeFalsy();
-		expect(shouldIgnoreFileForPatchCoverage(path.join(dir, "missing.ts"))).toBeFalsy();
+		expect(shouldIgnoreFileForPatchCoverage(ignored)).toBe(true);
+		expect(shouldIgnoreFileForPatchCoverage(included)).toBe(false);
+		expect(shouldIgnoreFileForPatchCoverage(path.join(dir, "missing.ts"))).toBe(false);
 	});
 
 	it("normalizes coverage paths and delegates git diff lookup", () => {
@@ -193,14 +194,12 @@ describe("check-patch-coverage", () => {
 	it("skips patch coverage checks when base or head is missing", () => {
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-		expect(
-			runPatchCoverageCheck({ base: "", head: "head", lcovPath: "coverage/lcov.info", threshold: 100 }),
-		).toStrictEqual({
-			covered: 0,
-			pct: 100,
-			perFile: [],
+		expect(runPatchCoverageCheck({ base: "", head: "head", lcovPath: "coverage/lcov.info", threshold: 100 })).toEqual({
 			skipped: true,
+			pct: 100,
+			covered: 0,
 			total: 0,
+			perFile: [],
 		});
 		expect(logSpy).toHaveBeenCalledWith("Skipping patch coverage check because BASE_SHA or HEAD_SHA is missing.");
 	});
@@ -218,7 +217,7 @@ describe("check-patch-coverage", () => {
 
 		const summary = runPatchCoverageCheck({ base: "base", head: "head", lcovPath, threshold: 100 });
 
-		expect(summary).toMatchObject({ covered: 0, pct: 100, total: 0 });
+		expect(summary).toMatchObject({ covered: 0, total: 0, pct: 100 });
 		expect(logSpy).toHaveBeenCalledWith("Patch coverage: 100.00% (no changed executable lines found)");
 	});
 
@@ -233,7 +232,7 @@ describe("check-patch-coverage", () => {
 
 		const summary = runPatchCoverageCheck({ base: "base", head: "head", lcovPath, threshold: 100 });
 
-		expect(summary).toMatchObject({ covered: 0, pct: 100, total: 0 });
+		expect(summary).toMatchObject({ covered: 0, total: 0, pct: 100 });
 		expect(logSpy).toHaveBeenCalledWith("Patch coverage: 100.00% (no changed executable lines found)");
 	});
 
@@ -271,14 +270,14 @@ describe("check-patch-coverage", () => {
 
 		const summary = runPatchCoverageCheck({ base: "base", head: "head", lcovPath, threshold: 100 });
 
-		expect(summary).toMatchObject({ covered: 1, pct: 100, total: 1 });
+		expect(summary).toMatchObject({ covered: 1, total: 1, pct: 100 });
 		expect(logSpy).toHaveBeenCalledWith(
 			expect.stringContaining("Patch coverage: 100.00% (1/1 changed executable lines covered)"),
 		);
 		expect(main(["--base", "base", "--head", "head", "--threshold", "100", "--lcov", lcovPath])).toMatchObject({
 			covered: 1,
-			pct: 100,
 			total: 1,
+			pct: 100,
 		});
 	});
 

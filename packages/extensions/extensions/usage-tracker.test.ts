@@ -6,59 +6,61 @@
  * tool/command APIs.
  */
 
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const { mockFsReadFile, mockFsAccess } = vi.hoisted(() => ({
-	mockFsAccess: vi.fn().mockRejectedValue(new Error("missing")),
 	mockFsReadFile: vi.fn().mockResolvedValue("{}"),
+	mockFsAccess: vi.fn().mockRejectedValue(new Error("missing")),
 }));
 
-vi.mock<typeof import("node:fs")>(import("node:fs"), async (importOriginal) => {
+vi.mock("node:fs", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs")>();
 	return {
 		...actual,
 		existsSync: vi.fn().mockReturnValue(false),
 		mkdirSync: vi.fn(),
+		readFileSync: vi.fn().mockReturnValue("{}"),
+		writeFileSync: vi.fn(),
 		promises: {
 			...actual.promises,
 			access: mockFsAccess,
 			readFile: mockFsReadFile,
 		},
-		readFileSync: vi.fn().mockReturnValue("{}"),
-		writeFileSync: vi.fn(),
 	};
 });
 
-vi.mock<typeof import("node:os")>(import("node:os"), async (importOriginal) => {
+vi.mock("node:os", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:os")>();
 	return { ...actual, homedir: () => "/mock-home" };
 });
 
-vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
+vi.mock("@mariozechner/pi-coding-agent", () => ({
 	CustomEditor: class {},
 	getAgentDir: () => "/mock-home/.pi/agent",
 }));
 
-vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({}));
+vi.mock("@mariozechner/pi-ai", () => ({}));
 
-vi.mock<typeof import("@sinclair/typebox")>(import("@sinclair/typebox"), () => ({
+vi.mock("@sinclair/typebox", () => ({
 	Type: {
-		Literal: (value: any) => ({ const: value }),
-		Number: (opts?: any) => ({ type: "number", ...opts }),
 		Object: (schema: any) => schema,
-		Optional: (t: any) => ({ optional: true, ...t }),
 		String: (opts?: any) => ({ type: "string", ...opts }),
+		Number: (opts?: any) => ({ type: "number", ...opts }),
+		Optional: (t: any) => ({ optional: true, ...t }),
 		Union: (types: any[], opts?: any) => ({ oneOf: types, ...opts }),
+		Literal: (value: any) => ({ const: value }),
 	},
 }));
 
 // ─── Fetch mock ─────────────────────────────────────────────────────────────
 
 const mockFetch = vi.fn().mockResolvedValue({
-	headers: new Map<string, string>(),
-	json: async () => ({}),
 	ok: true,
 	status: 200,
+	headers: new Map<string, string>(),
+	json: async () => ({}),
 });
 vi.stubGlobal("fetch", mockFetch);
 
@@ -70,27 +72,27 @@ const RATE_LIMIT_CACHE_PATH = "/mock-home/.pi/agent/usage-tracker-rate-limits.js
 function makeAuthJson(overrides: Record<string, any> = {}) {
 	return JSON.stringify({
 		anthropic: {
+			type: "oauth",
 			access: "sk-ant-oat01-test-token",
-			expires: Date.now() + 86_400_000,
 			refresh: "sk-ant-ort01-refresh",
-			type: "oauth",
-		},
-		"google-antigravity": {
-			access: "ya29.test-token",
-			email: "test@example.com",
 			expires: Date.now() + 86_400_000,
-			projectId: "test-project",
-			refresh: "1//test-refresh",
-			type: "oauth",
 		},
 		"openai-codex": {
+			type: "oauth",
 			access:
 				// Minimal JWT: header.payload.signature
 				`eyJ0eXAiOiJKV1QifQ.${Buffer.from(JSON.stringify({ "https://api.openai.com/profile": { email: "test@example.com" }, "https://api.openai.com/auth": { chatgpt_plan_type: "pro" } })).toString("base64url")}.sig`,
-			accountId: "test-account",
-			expires: Date.now() + 86_400_000,
 			refresh: "rt_test",
+			expires: Date.now() + 86_400_000,
+			accountId: "test-account",
+		},
+		"google-antigravity": {
 			type: "oauth",
+			access: "ya29.test-token",
+			refresh: "1//test-refresh",
+			expires: Date.now() + 86_400_000,
+			projectId: "test-project",
+			email: "test@example.com",
 		},
 		...overrides,
 	});
@@ -98,14 +100,9 @@ function makeAuthJson(overrides: Record<string, any> = {}) {
 
 function makeRateLimitCacheJson(overrides: Record<string, any> = {}) {
 	return JSON.stringify({
+		version: 1,
 		providers: {
 			anthropic: {
-				account: null,
-				credits: null,
-				error: null,
-				note: null,
-				plan: "OAuth",
-				probedAt: Date.now() - 60_000,
 				provider: "anthropic",
 				windows: [
 					{
@@ -115,21 +112,20 @@ function makeRateLimitCacheJson(overrides: Record<string, any> = {}) {
 						windowMinutes: 10_080,
 					},
 				],
+				credits: null,
+				account: null,
+				plan: "OAuth",
+				note: null,
+				probedAt: Date.now() - 60_000,
+				error: null,
 			},
 			...overrides,
 		},
-		version: 1,
 	});
 }
 
 function makeOpenAiRateLimitCacheEntry() {
 	return {
-		account: "test@example.com",
-		credits: null,
-		error: null,
-		note: null,
-		plan: "pro",
-		probedAt: Date.now() - 60_000,
 		provider: "openai",
 		windows: [
 			{
@@ -139,6 +135,12 @@ function makeOpenAiRateLimitCacheEntry() {
 				windowMinutes: 300,
 			},
 		],
+		credits: null,
+		account: "test@example.com",
+		plan: "pro",
+		note: null,
+		probedAt: Date.now() - 60_000,
+		error: null,
 	};
 }
 
@@ -150,14 +152,14 @@ function makeFetchResponse(
 	);
 	const body = opts.body ?? {};
 	return {
+		ok:
+			opts.ok ?? (opts.status === undefined || (opts.status !== undefined && opts.status >= 200 && opts.status < 300)),
+		status: opts.status ?? 200,
 		headers: {
 			get: (key: string) => headers.get(key.toLowerCase()) ?? null,
 			...headers,
 		},
 		json: async () => body,
-		ok:
-			opts.ok ?? (opts.status === undefined || (opts.status !== undefined && opts.status >= 200 && opts.status < 300)),
-		status: opts.status ?? 200,
 	};
 }
 
@@ -165,32 +167,32 @@ function makeFetchResponse(
 
 function makeAssistantMessage(overrides: Record<string, any> = {}) {
 	return {
-		api: "anthropic-messages",
-		content: [],
+		role: "assistant" as const,
 		model: overrides.model ?? "claude-sonnet-4-20250514",
 		provider: overrides.provider ?? "anthropic",
-		role: "assistant" as const,
+		content: [],
+		api: "anthropic-messages",
 		stopReason: "stop",
 		timestamp: Date.now(),
 		usage: {
-			cacheRead: overrides.cacheRead ?? 200,
-			cacheWrite: overrides.cacheWrite ?? 100,
-			cost: {
-				cacheRead: overrides.costCacheRead ?? 0.0003,
-				cacheWrite: overrides.costCacheWrite ?? 0.00038,
-				input: overrides.costInput ?? 0.003,
-				output: overrides.costOutput ?? 0.0075,
-				total: overrides.costTotal ?? 0.01118,
-			},
 			input: overrides.input ?? 1000,
 			output: overrides.output ?? 500,
+			cacheRead: overrides.cacheRead ?? 200,
+			cacheWrite: overrides.cacheWrite ?? 100,
 			totalTokens: (overrides.input ?? 1000) + (overrides.output ?? 500),
+			cost: {
+				input: overrides.costInput ?? 0.003,
+				output: overrides.costOutput ?? 0.0075,
+				cacheRead: overrides.costCacheRead ?? 0.0003,
+				cacheWrite: overrides.costCacheWrite ?? 0.00038,
+				total: overrides.costTotal ?? 0.01118,
+			},
 		},
 	};
 }
 
 function makeSessionEntry(msg: any) {
-	return { message: msg, type: "message" };
+	return { type: "message", message: msg };
 }
 
 function createMockPi() {
@@ -200,25 +202,14 @@ function createMockPi() {
 	const shortcuts = new Map<string, any>();
 
 	return {
-		_commands: commands,
-		_emit(event: string, ...args: any[]) {
-			const fns = handlers.get(event) ?? [];
-			for (const fn of fns) {
-				fn(...args);
-			}
-		},
-		_handlers: handlers,
-		_shortcuts: shortcuts,
-		_tools: tools,
-		events: { emit: vi.fn(), on: vi.fn() },
-		exec: vi.fn().mockResolvedValue({ stdout: "", exitCode: 0 }),
-
-		getThinkingLevel: () => "medium",
 		on(event: string, handler: (...args: any[]) => void) {
 			if (!handlers.has(event)) {
 				handlers.set(event, []);
 			}
 			handlers.get(event)!.push(handler);
+		},
+		registerTool(tool: any) {
+			tools.set(tool.name, tool);
 		},
 		registerCommand(name: string, opts: any) {
 			commands.set(name, opts);
@@ -226,8 +217,19 @@ function createMockPi() {
 		registerShortcut(key: string, opts: any) {
 			shortcuts.set(key, opts);
 		},
-		registerTool(tool: any) {
-			tools.set(tool.name, tool);
+		getThinkingLevel: () => "medium",
+		exec: vi.fn().mockResolvedValue({ stdout: "", exitCode: 0 }),
+		events: { on: vi.fn(), emit: vi.fn() },
+
+		_handlers: handlers,
+		_tools: tools,
+		_commands: commands,
+		_shortcuts: shortcuts,
+		_emit(event: string, ...args: any[]) {
+			const fns = handlers.get(event) ?? [];
+			for (const fn of fns) {
+				fn(...args);
+			}
 		},
 	};
 }
@@ -237,18 +239,11 @@ function createMockCtx(entries: any[] = []) {
 	const notifications: any[] = [];
 
 	return {
-		_notifications: notifications,
-		_widgets: widgets,
-		getContextUsage: () => ({ tokens: 45000, contextWindow: 200000, percent: 22.5 }),
 		hasUI: true,
-		model: { id: "claude-sonnet-4-20250514", provider: "anthropic" },
 		sessionManager: { getBranch: () => entries },
+		getContextUsage: () => ({ tokens: 45000, contextWindow: 200000, percent: 22.5 }),
+		model: { id: "claude-sonnet-4-20250514", provider: "anthropic" },
 		ui: {
-			custom: vi.fn().mockResolvedValue(undefined),
-			notify(msg: string, type: string) {
-				notifications.push({ msg, type });
-			},
-			select: vi.fn(async (_title: string, options: string[]) => options[0]),
 			setWidget(key: string, content: any) {
 				if (content === undefined) {
 					widgets.delete(key);
@@ -256,7 +251,14 @@ function createMockCtx(entries: any[] = []) {
 					widgets.set(key, content);
 				}
 			},
+			notify(msg: string, type: string) {
+				notifications.push({ msg, type });
+			},
+			select: vi.fn(async (_title: string, options: string[]) => options[0]),
+			custom: vi.fn().mockResolvedValue(undefined),
 		},
+		_widgets: widgets,
+		_notifications: notifications,
 	};
 }
 
@@ -271,8 +273,8 @@ async function runWithTimers<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 function stripAnsiForTest(text: string): string {
-	// Biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes use control chars by definition
-	return text.replaceAll(/\x1B\[[0-9;]*[A-Za-z]|\x1B\][^\x07]*\x07|\x1B\(B/g, "");
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes use control chars by definition
+	return text.replace(/\x1b\[[0-9;]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b\(B/g, "");
 }
 
 // ─── Import ──────────────────────────────────────────────────────────────────
@@ -302,8 +304,8 @@ describe("usage-tracker extension", () => {
 			}
 			return "{}";
 		});
-		(mkdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
-		(writeFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
 		(mockFsAccess as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("missing"));
 		(mockFsReadFile as ReturnType<typeof vi.fn>).mockResolvedValue("{}");
 		mockFetch.mockResolvedValue(
@@ -330,10 +332,10 @@ describe("usage-tracker extension", () => {
 	describe("registration", () => {
 		it("registers all expected event handlers", () => {
 			usageTracker(pi as any);
-			expect(pi._handlers.has("session_start")).toBeTruthy();
-			expect(pi._handlers.has("session_switch")).toBeTruthy();
-			expect(pi._handlers.has("turn_end")).toBeTruthy();
-			expect(pi._handlers.has("model_select")).toBeTruthy();
+			expect(pi._handlers.has("session_start")).toBe(true);
+			expect(pi._handlers.has("session_switch")).toBe(true);
+			expect(pi._handlers.has("turn_end")).toBe(true);
+			expect(pi._handlers.has("model_select")).toBe(true);
 		});
 
 		it("registers usage_report tool with rate limit description", () => {
@@ -345,14 +347,14 @@ describe("usage-tracker extension", () => {
 
 		it("registers /usage, /usage-toggle, and /usage-refresh commands", () => {
 			usageTracker(pi as any);
-			expect(pi._commands.has("usage")).toBeTruthy();
-			expect(pi._commands.has("usage-toggle")).toBeTruthy();
-			expect(pi._commands.has("usage-refresh")).toBeTruthy();
+			expect(pi._commands.has("usage")).toBe(true);
+			expect(pi._commands.has("usage-toggle")).toBe(true);
+			expect(pi._commands.has("usage-refresh")).toBe(true);
 		});
 
 		it("registers ctrl+shift+u shortcut (overrides built-in deleteToLineStart)", () => {
 			usageTracker(pi as any);
-			expect(pi._shortcuts.has("ctrl+shift+u")).toBeTruthy();
+			expect(pi._shortcuts.has("ctrl+shift+u")).toBe(true);
 			expect(pi._shortcuts.get("ctrl+shift+u").description).toContain("rate limits");
 		});
 
@@ -365,7 +367,7 @@ describe("usage-tracker extension", () => {
 		it("defers persisted history and cache loading until after startup", async () => {
 			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path).includes("usage-tracker-history.json")) {
-					return JSON.stringify({ entries: [{ timestamp: Date.now() - 60_000, cost: 1.25 }], version: 1 });
+					return JSON.stringify({ version: 1, entries: [{ timestamp: Date.now() - 60_000, cost: 1.25 }] });
 				}
 				if (String(path).includes("usage-tracker-rate-limits.json")) {
 					return makeRateLimitCacheJson({ openai: makeOpenAiRateLimitCacheEntry() });
@@ -394,8 +396,8 @@ describe("usage-tracker extension", () => {
 			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path).includes("usage-tracker-history.json")) {
 					return JSON.stringify({
-						entries: [{ timestamp: now - 60_000, cost: 1.23 }],
 						version: 1,
+						entries: [{ timestamp: now - 60_000, cost: 1.23 }],
 					});
 				}
 				return "{}";
@@ -407,7 +409,7 @@ describe("usage-tracker extension", () => {
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "summary" }, undefined, undefined, ctx));
 
-			expect(fsPromises.readFile).toHaveBeenCalledWith();
+			expect(fsPromises.readFile).toHaveBeenCalled();
 			expect(result.content[0].text).toContain("30d: $1.23");
 		});
 
@@ -427,11 +429,11 @@ describe("usage-tracker extension", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
-			const msg1 = makeAssistantMessage({ costTotal: 0.01, input: 1000, output: 500 });
-			pi._emit("turn_end", { message: msg1, toolResults: [], turnIndex: 0, type: "turn_end" }, ctx);
+			const msg1 = makeAssistantMessage({ input: 1000, output: 500, costTotal: 0.01 });
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg1, toolResults: [] }, ctx);
 
-			const msg2 = makeAssistantMessage({ costTotal: 0.02, input: 2000, output: 800 });
-			pi._emit("turn_end", { message: msg2, toolResults: [], turnIndex: 1, type: "turn_end" }, ctx);
+			const msg2 = makeAssistantMessage({ input: 2000, output: 800, costTotal: 0.02 });
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 1, message: msg2, toolResults: [] }, ctx);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
@@ -446,27 +448,27 @@ describe("usage-tracker extension", () => {
 			pi._emit(
 				"turn_end",
 				{
+					type: "turn_end",
+					turnIndex: 0,
 					message: makeAssistantMessage({ model: "claude-sonnet-4-20250514" }),
 					toolResults: [],
-					turnIndex: 0,
-					type: "turn_end",
 				},
 				ctx,
 			);
 			pi._emit(
 				"turn_end",
 				{
+					type: "turn_end",
+					turnIndex: 1,
 					message: makeAssistantMessage({ model: "gpt-4o", provider: "openai" }),
 					toolResults: [],
-					turnIndex: 1,
-					type: "turn_end",
 				},
 				ctx,
 			);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 			expect(text).toContain("claude-sonnet-4-20250514");
 			expect(text).toContain("gpt-4o");
 		});
@@ -478,8 +480,8 @@ describe("usage-tracker extension", () => {
 			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path).includes("usage-tracker-history.json")) {
 					return JSON.stringify({
-						entries: [{ timestamp: now - 60_000, cost: 1.23 }],
 						version: 1,
+						entries: [{ timestamp: now - 60_000, cost: 1.23 }],
 					});
 				}
 				return "{}";
@@ -498,7 +500,7 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 			pi._emit(
 				"turn_end",
-				{ message: makeAssistantMessage({ costTotal: 0.45 }), toolResults: [], turnIndex: 0, type: "turn_end" },
+				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.45 }), toolResults: [] },
 				ctx,
 			);
 
@@ -509,7 +511,7 @@ describe("usage-tracker extension", () => {
 				(call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("usage-tracker-history.json"),
 			);
 			expect(writes.length).toBeGreaterThan(0);
-			expect(String(writes.at(-1)[1])).toContain('"entries"');
+			expect(String(writes[writes.length - 1][1])).toContain('"entries"');
 		});
 
 		it("drops history older than 30 days", async () => {
@@ -517,11 +519,11 @@ describe("usage-tracker extension", () => {
 			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path).includes("usage-tracker-history.json")) {
 					return JSON.stringify({
+						version: 1,
 						entries: [
 							{ timestamp: now - 31 * 24 * 60 * 60 * 1000, cost: 10 },
 							{ timestamp: now - 60_000, cost: 1 },
 						],
-						version: 1,
 					});
 				}
 				return "{}";
@@ -531,7 +533,7 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 			pi._emit(
 				"turn_end",
-				{ message: makeAssistantMessage({ costTotal: 0.5 }), toolResults: [], turnIndex: 0, type: "turn_end" },
+				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.5 }), toolResults: [] },
 				ctx,
 			);
 
@@ -544,9 +546,9 @@ describe("usage-tracker extension", () => {
 	describe("session hydration", () => {
 		it("reconstructs usage from session entries on start", async () => {
 			const entries = [
-				makeSessionEntry(makeAssistantMessage({ costTotal: 0.005, input: 500, output: 300 })),
-				makeSessionEntry(makeAssistantMessage({ costTotal: 0.008, input: 700, output: 400 })),
-				makeSessionEntry({ content: "hello", role: "user" }),
+				makeSessionEntry(makeAssistantMessage({ input: 500, output: 300, costTotal: 0.005 })),
+				makeSessionEntry(makeAssistantMessage({ input: 700, output: 400, costTotal: 0.008 })),
+				makeSessionEntry({ role: "user", content: "hello" }),
 			];
 			ctx = createMockCtx(entries);
 
@@ -560,7 +562,7 @@ describe("usage-tracker extension", () => {
 
 		it("defers startup hydration for large sessions so the widget can mount first", async () => {
 			const entries = Array.from({ length: 300 }, () =>
-				makeSessionEntry(makeAssistantMessage({ costTotal: 0.001, input: 10, output: 5 })),
+				makeSessionEntry(makeAssistantMessage({ input: 10, output: 5, costTotal: 0.001 })),
 			);
 			ctx = createMockCtx(entries);
 			usageTracker(pi as any);
@@ -578,7 +580,7 @@ describe("usage-tracker extension", () => {
 				{ requestRender: vi.fn() },
 				{ fg: (_color: string, text: string) => text },
 			).render(120);
-			expect(beforeStartupRefresh).toStrictEqual([]);
+			expect(beforeStartupRefresh).toEqual([]);
 
 			await vi.advanceTimersByTimeAsync(500);
 
@@ -595,12 +597,12 @@ describe("usage-tracker extension", () => {
 
 			pi._emit(
 				"turn_end",
-				{ message: makeAssistantMessage({ costTotal: 0.05 }), toolResults: [], turnIndex: 0, type: "turn_end" },
+				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.05 }), toolResults: [] },
 				ctx,
 			);
 
 			const emptyCtx = createMockCtx([]);
-			pi._emit("session_switch", { reason: "new", type: "session_switch" }, emptyCtx);
+			pi._emit("session_switch", { type: "session_switch", reason: "new" }, emptyCtx);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() =>
@@ -616,9 +618,9 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
 			const msg = makeAssistantMessage({ costTotal: 0.55 });
-			pi._emit("turn_end", { message: msg, toolResults: [], turnIndex: 0, type: "turn_end" }, ctx);
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg, toolResults: [] }, ctx);
 
-			expect(ctx._notifications).toHaveLength(1);
+			expect(ctx._notifications.length).toBe(1);
 			expect(ctx._notifications[0].msg).toContain("$0.50");
 			expect(ctx._notifications[0].type).toBe("warning");
 		});
@@ -629,16 +631,16 @@ describe("usage-tracker extension", () => {
 
 			pi._emit(
 				"turn_end",
-				{ message: makeAssistantMessage({ costTotal: 0.55 }), toolResults: [], turnIndex: 0, type: "turn_end" },
+				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.55 }), toolResults: [] },
 				ctx,
 			);
 			pi._emit(
 				"turn_end",
-				{ message: makeAssistantMessage({ costTotal: 0.1 }), toolResults: [], turnIndex: 1, type: "turn_end" },
+				{ type: "turn_end", turnIndex: 1, message: makeAssistantMessage({ costTotal: 0.1 }), toolResults: [] },
 				ctx,
 			);
 
-			expect(ctx._notifications).toHaveLength(1); // Only one notification
+			expect(ctx._notifications.length).toBe(1); // Only one notification
 		});
 
 		it("triggers highest matching threshold", () => {
@@ -647,11 +649,11 @@ describe("usage-tracker extension", () => {
 
 			pi._emit(
 				"turn_end",
-				{ message: makeAssistantMessage({ costTotal: 1.1 }), toolResults: [], turnIndex: 0, type: "turn_end" },
+				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 1.1 }), toolResults: [] },
 				ctx,
 			);
 
-			expect(ctx._notifications).toHaveLength(1);
+			expect(ctx._notifications.length).toBe(1);
 			expect(ctx._notifications[0].msg).toContain("$1.00"); // Skips $0.50
 		});
 	});
@@ -704,7 +706,7 @@ describe("usage-tracker extension", () => {
 			// Simulate model switch (enough time has passed for cooldown)
 			pi._emit(
 				"model_select",
-				{ model: { id: "gpt-4o" }, type: "model_select" },
+				{ type: "model_select", model: { id: "gpt-4o" } },
 				{
 					...ctx,
 					model: { id: "gpt-4o" },
@@ -728,7 +730,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 			expect(text).toContain("No pi auth configured for Anthropic");
 		});
 	});
@@ -746,11 +748,11 @@ describe("usage-tracker extension", () => {
 		it("returns summary with rate limits, session cost, and 30d total", async () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
-			pi._emit("turn_end", { message: makeAssistantMessage(), toolResults: [], turnIndex: 0, type: "turn_end" }, ctx);
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: makeAssistantMessage(), toolResults: [] }, ctx);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "summary" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 			expect(text).toContain("Session:");
 			expect(text).toContain("1 turns");
 			expect(text).toContain("in /");
@@ -773,10 +775,10 @@ describe("usage-tracker extension", () => {
 			pi._emit(
 				"turn_end",
 				{
+					type: "turn_end",
+					turnIndex: 0,
 					message: makeAssistantMessage({ model: "gemma3:4b", provider: "ollama", api: "openai-completions" }),
 					toolResults: [],
-					turnIndex: 0,
-					type: "turn_end",
 				},
 				ollamaCtx,
 			);
@@ -785,7 +787,7 @@ describe("usage-tracker extension", () => {
 			const result = await runWithTimers(() =>
 				tool.execute("id", { format: "detailed" }, undefined, undefined, ollamaCtx),
 			);
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 			expect(text).toContain("Ollama Rate Limits:");
 			expect(text).toContain("Local daemon reachable");
 			expect(text).toContain("remaining account limits are unavailable");
@@ -795,13 +797,13 @@ describe("usage-tracker extension", () => {
 			process.env.OLLAMA_API_KEY = "test-key";
 			mockFetch.mockImplementation((url: string) => {
 				if (url.includes("127.0.0.1:11434/v1/models")) {
-					return Promise.resolve(makeFetchResponse({ ok: false, status: 503 }));
+					return Promise.resolve(makeFetchResponse({ status: 503, ok: false }));
 				}
 				if (url.includes("ollama.com/v1/models")) {
 					return Promise.resolve(
 						makeFetchResponse({
-							body: { data: [{ id: "gpt-oss:20b" }] },
 							headers: { "x-ratelimit-limit": "100", "x-ratelimit-remaining": "75", "x-ratelimit-reset": "60s" },
+							body: { data: [{ id: "gpt-oss:20b" }] },
 						}),
 					);
 				}
@@ -818,7 +820,7 @@ describe("usage-tracker extension", () => {
 			const result = await runWithTimers(() =>
 				tool.execute("id", { format: "detailed" }, undefined, undefined, ollamaCtx),
 			);
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 			expect(text).toContain("Ollama Rate Limits:");
 			expect(text).toContain("75% left");
 			expect(text).toContain("Cloud auth configured (1 model(s)).");
@@ -829,16 +831,16 @@ describe("usage-tracker extension", () => {
 				makeFetchResponse({
 					body: {
 						five_hour: {
-							resets_at: new Date(Date.now() + 30_000).toISOString(),
 							utilization: 64,
+							resets_at: new Date(Date.now() + 30_000).toISOString(),
 						},
 						seven_day: {
-							resets_at: new Date(Date.now() + 3_600_000).toISOString(),
 							utilization: 18,
+							resets_at: new Date(Date.now() + 3_600_000).toISOString(),
 						},
 						seven_day_sonnet: {
-							resets_at: new Date(Date.now() + 7_200_000).toISOString(),
 							utilization: 33,
+							resets_at: new Date(Date.now() + 7_200_000).toISOString(),
 						},
 					},
 				}),
@@ -846,11 +848,11 @@ describe("usage-tracker extension", () => {
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
-			pi._emit("turn_end", { message: makeAssistantMessage(), toolResults: [], turnIndex: 0, type: "turn_end" }, ctx);
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: makeAssistantMessage(), toolResults: [] }, ctx);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 
 			expect(text).toContain("Anthropic Rate Limits:");
 			expect(text).toContain("5-hour");
@@ -866,8 +868,8 @@ describe("usage-tracker extension", () => {
 				makeFetchResponse({
 					body: {
 						seven_day_sonnet: {
-							resets_at: new Date(Date.now() + 86_400_000).toISOString(),
 							utilization: 1.0,
+							resets_at: new Date(Date.now() + 86_400_000).toISOString(),
 						},
 					},
 				}),
@@ -878,7 +880,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 			expect(text).toContain("7-day Sonnet");
 			expect(text).toContain("99% left");
 			expect(text).toContain("(1% used)");
@@ -894,14 +896,14 @@ describe("usage-tracker extension", () => {
 							makeFetchResponse({
 								body: {
 									five_hour: {
-										resets_at: new Date(Date.now() + 30_000).toISOString(),
 										utilization: 40,
+										resets_at: new Date(Date.now() + 30_000).toISOString(),
 									},
 								},
 							}),
 						);
 					}
-					return Promise.resolve(makeFetchResponse({ headers: { "retry-after": "5" }, ok: false, status: 429 }));
+					return Promise.resolve(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "5" } }));
 				}
 				return Promise.resolve(makeFetchResponse());
 			});
@@ -911,7 +913,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 
 			expect(text).toContain("5-hour");
 			expect(text).toContain("60% left");
@@ -931,14 +933,14 @@ describe("usage-tracker extension", () => {
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ headers: { "retry-after": "120" }, ok: false, status: 429 }));
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 
 			expect(text).toContain("Anthropic Rate Limits:");
 			expect(text).toContain("7-day Sonnet");
@@ -959,14 +961,14 @@ describe("usage-tracker extension", () => {
 									allowed: true,
 									limit_reached: false,
 									primary_window: {
+										used_percent: 35,
 										limit_window_seconds: 18_000,
 										reset_after_seconds: 600,
-										used_percent: 35,
 									},
 									secondary_window: {
+										used_percent: 10,
 										limit_window_seconds: 604_800,
 										reset_after_seconds: 3_600,
-										used_percent: 10,
 									},
 								},
 							},
@@ -981,7 +983,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 
 			expect(text).toContain("OpenAI Rate Limits:");
 			expect(text).toContain("Codex (5h)");
@@ -997,11 +999,11 @@ describe("usage-tracker extension", () => {
 					return Promise.resolve(
 						makeFetchResponse({
 							body: {
-								cloudaicompanionProject: "test-project",
 								currentTier: {
 									id: "standard-tier",
 									name: "Gemini Code Assist",
 								},
+								cloudaicompanionProject: "test-project",
 							},
 						}),
 					);
@@ -1023,7 +1025,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 
 			expect(text).toContain("Google Rate Limits:");
 			expect(text).toContain("Plan: Gemini Code Assist (standard-tier)");
@@ -1038,12 +1040,12 @@ describe("usage-tracker extension", () => {
 					return Promise.resolve(
 						makeFetchResponse({
 							body: {
-								cloudaicompanionProject: "test-project",
 								currentTier: {
-									description: "Unlimited coding assistant with the most powerful Gemini models",
 									id: "standard-tier",
 									name: "Gemini Code Assist",
+									description: "Unlimited coding assistant with the most powerful Gemini models",
 								},
+								cloudaicompanionProject: "test-project",
 							},
 						}),
 					);
@@ -1056,35 +1058,35 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 			expect(text).toContain("Subscription quota");
 			expect(text).toContain("100% left");
 			expect(text).toContain("Tier reports unlimited coding assistant capacity");
 		});
 
 		it("shows auth expired error when API returns 401", async () => {
-			mockFetch.mockResolvedValue(makeFetchResponse({ ok: false, status: 401 }));
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 401, ok: false }));
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 
 			expect(text).toContain("Anthropic auth token expired");
 			expect(text).toContain("re-authenticate in pi settings");
 		});
 
 		it("shows a non-auth note when Anthropic OAuth usage endpoint is rate-limited", async () => {
-			mockFetch.mockResolvedValue(makeFetchResponse({ headers: { "retry-after": "120" }, ok: false, status: 429 }));
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 
 			expect(text).toContain("Anthropic OAuth usage endpoint is rate-limited");
 			expect(text).not.toContain("Anthropic auth token expired");
@@ -1092,14 +1094,14 @@ describe("usage-tracker extension", () => {
 
 		it("shows OpenAI auth expired error when API returns 401", async () => {
 			ctx.model = { id: "gpt-4o" } as any;
-			mockFetch.mockResolvedValue(makeFetchResponse({ ok: false, status: 401 }));
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 401, ok: false }));
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 
 			expect(text).toContain("OpenAI auth token expired");
 			expect(text).toContain("re-authenticate in pi settings");
@@ -1109,7 +1111,7 @@ describe("usage-tracker extension", () => {
 			ctx.model = { id: "gpt-4o" } as any;
 			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
 				if (String(path).includes("auth.json")) {
-					return JSON.stringify({ anthropic: { access: "sk-test", expires: 0, refresh: "r", type: "oauth" } });
+					return JSON.stringify({ anthropic: { type: "oauth", access: "sk-test", refresh: "r", expires: 0 } });
 				}
 				return "{}";
 			});
@@ -1119,7 +1121,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const { text } = result.content[0];
+			const text = result.content[0].text;
 
 			expect(text).toContain("No pi auth configured for OpenAI");
 			expect(text).toContain("run pi login");
@@ -1130,7 +1132,7 @@ describe("usage-tracker extension", () => {
 		it("sets up widget on session_start", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
-			expect(ctx._widgets.has("usage-tracker")).toBeTruthy();
+			expect(ctx._widgets.has("usage-tracker")).toBe(true);
 		});
 
 		it("renders current-provider session totals in the widget", () => {
@@ -1139,20 +1141,20 @@ describe("usage-tracker extension", () => {
 			pi._emit(
 				"turn_end",
 				{
+					type: "turn_end",
+					turnIndex: 0,
 					message: makeAssistantMessage({ provider: "anthropic", model: "claude-sonnet-4-20250514", costTotal: 0.02 }),
 					toolResults: [],
-					turnIndex: 0,
-					type: "turn_end",
 				},
 				ctx,
 			);
 			pi._emit(
 				"turn_end",
 				{
+					type: "turn_end",
+					turnIndex: 1,
 					message: makeAssistantMessage({ provider: "openai", model: "gpt-4o", costTotal: 0.03 }),
 					toolResults: [],
-					turnIndex: 1,
-					type: "turn_end",
 				},
 				ctx,
 			);
@@ -1192,15 +1194,15 @@ describe("usage-tracker extension", () => {
 			pi._emit(
 				"turn_end",
 				{
+					type: "turn_end",
+					turnIndex: 0,
 					message: makeAssistantMessage({ costTotal: 0.02 }),
 					toolResults: [],
-					turnIndex: 0,
-					type: "turn_end",
 				},
 				ctx,
 			);
 
-			expect(requestRender).toHaveBeenCalledOnce();
+			expect(requestRender).toHaveBeenCalledTimes(1);
 		});
 
 		it("does not re-render for deferred startup work when the widget stays visually empty", async () => {
@@ -1224,7 +1226,7 @@ describe("usage-tracker extension", () => {
 			widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
 			requestRender.mockClear();
 
-			await vi.advanceTimersByTimeAsync(2000);
+			await vi.advanceTimersByTimeAsync(2_000);
 			await Promise.resolve();
 
 			expect(requestRender).not.toHaveBeenCalled();
@@ -1298,7 +1300,7 @@ describe("usage-tracker extension", () => {
 			requestRender.mockClear();
 
 			setSafeModeState(true, { source: "manual" });
-			expect(requestRender).toHaveBeenCalledOnce();
+			expect(requestRender).toHaveBeenCalledTimes(1);
 
 			requestRender.mockClear();
 			pi._emit("model_select", { type: "model_select" }, ctx);
@@ -1314,10 +1316,10 @@ describe("usage-tracker extension", () => {
 			pi._emit(
 				"turn_end",
 				{
+					type: "turn_end",
+					turnIndex: 0,
 					message: makeAssistantMessage({ provider: "anthropic", model: "claude-sonnet-4-20250514", costTotal: 0.02 }),
 					toolResults: [],
-					turnIndex: 0,
-					type: "turn_end",
 				},
 				ctx,
 			);
@@ -1334,7 +1336,7 @@ describe("usage-tracker extension", () => {
 			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
 
 			const nextCtx = createMockCtx([
-				makeSessionEntry(makeAssistantMessage({ costTotal: 0.03, model: "gpt-4o", provider: "openai" })),
+				makeSessionEntry(makeAssistantMessage({ provider: "openai", model: "gpt-4o", costTotal: 0.03 })),
 			]);
 			nextCtx.model = { id: "gpt-4o", provider: "openai" } as any;
 			pi._emit("session_switch", { type: "session_switch" }, nextCtx);
@@ -1358,7 +1360,7 @@ describe("usage-tracker extension", () => {
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ headers: { "retry-after": "120" }, ok: false, status: 429 }));
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
@@ -1393,7 +1395,7 @@ describe("usage-tracker extension", () => {
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ headers: { "retry-after": "120" }, ok: false, status: 429 }));
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
 			ctx.model = { id: "gpt-4o", provider: "openai" } as any;
 
 			usageTracker(pi as any);
@@ -1422,14 +1424,14 @@ describe("usage-tracker extension", () => {
 			pi._emit(
 				"turn_end",
 				{
+					type: "turn_end",
+					turnIndex: 0,
 					message: makeAssistantMessage({
 						input: 50_000,
 						output: 25_000,
 						costTotal: 0.02,
 					}),
 					toolResults: [],
-					turnIndex: 0,
-					type: "turn_end",
 				},
 				ctx,
 			);
@@ -1455,10 +1457,10 @@ describe("usage-tracker extension", () => {
 		it("removes widget via /usage-toggle", async () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
-			expect(ctx._widgets.has("usage-tracker")).toBeTruthy();
+			expect(ctx._widgets.has("usage-tracker")).toBe(true);
 
 			await pi._commands.get("usage-toggle").handler("", ctx);
-			expect(ctx._widgets.has("usage-tracker")).toBeFalsy();
+			expect(ctx._widgets.has("usage-tracker")).toBe(false);
 		});
 
 		it("re-adds widget via second /usage-toggle", async () => {
@@ -1467,7 +1469,7 @@ describe("usage-tracker extension", () => {
 
 			await pi._commands.get("usage-toggle").handler("", ctx);
 			await pi._commands.get("usage-toggle").handler("", ctx);
-			expect(ctx._widgets.has("usage-tracker")).toBeTruthy();
+			expect(ctx._widgets.has("usage-tracker")).toBe(true);
 		});
 	});
 
@@ -1478,7 +1480,7 @@ describe("usage-tracker extension", () => {
 
 			await pi._commands.get("usage-refresh").handler("", ctx);
 
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Refreshing"))).toBeTruthy();
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Refreshing"))).toBe(true);
 		});
 	});
 
@@ -1488,12 +1490,12 @@ describe("usage-tracker extension", () => {
 				makeFetchResponse({
 					body: {
 						five_hour: {
-							resets_at: new Date(Date.now() + 45_000).toISOString(),
 							utilization: 58,
+							resets_at: new Date(Date.now() + 45_000).toISOString(),
 						},
 						seven_day: {
-							resets_at: new Date(Date.now() + 3_600_000).toISOString(),
 							utilization: 21,
+							resets_at: new Date(Date.now() + 3_600_000).toISOString(),
 						},
 					},
 				}),
@@ -1501,11 +1503,11 @@ describe("usage-tracker extension", () => {
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
-			pi._emit("turn_end", { message: makeAssistantMessage(), toolResults: [], turnIndex: 0, type: "turn_end" }, ctx);
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: makeAssistantMessage(), toolResults: [] }, ctx);
 			vi.advanceTimersByTime(15_000);
 			pi._emit(
 				"turn_end",
-				{ message: makeAssistantMessage({ costTotal: 0.015 }), toolResults: [], turnIndex: 1, type: "turn_end" },
+				{ type: "turn_end", turnIndex: 1, message: makeAssistantMessage({ costTotal: 0.015 }), toolResults: [] },
 				ctx,
 			);
 
@@ -1545,7 +1547,7 @@ describe("usage-tracker extension", () => {
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ headers: { "retry-after": "120" }, ok: false, status: 429 }));
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
 			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
 			(ctx.ui.select as ReturnType<typeof vi.fn>).mockImplementation(async (_title: string, options: string[]) =>
 				options.find((option) => option.includes("OpenAI")),
@@ -1555,7 +1557,7 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 			pi._emit(
 				"turn_end",
-				{ message: makeAssistantMessage({ costTotal: 0.015 }), toolResults: [], turnIndex: 0, type: "turn_end" },
+				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.015 }), toolResults: [] },
 				ctx,
 			);
 
@@ -1612,7 +1614,7 @@ describe("usage-tracker extension", () => {
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ headers: { "retry-after": "120" }, ok: false, status: 429 }));
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
 			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
 			(ctx.ui.select as ReturnType<typeof vi.fn>).mockImplementation(
 				async (_title: string, options: string[]) => options[0],
@@ -1625,9 +1627,7 @@ describe("usage-tracker extension", () => {
 			await runWithTimers(() => pi._commands.get("usage").handler("", ctx));
 
 			const pickerOptions = (ctx.ui.select as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string[];
-			expect(pickerOptions).toStrictEqual(
-				expect.arrayContaining([expect.stringContaining("OpenAI — recently viewed")]),
-			);
+			expect(pickerOptions).toEqual(expect.arrayContaining([expect.stringContaining("OpenAI — recently viewed")]));
 		});
 	});
 
@@ -1646,8 +1646,8 @@ describe("usage-tracker extension", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
-			const msg = makeAssistantMessage({ costTotal: 0.05, input: 1_500_000, output: 800 });
-			pi._emit("turn_end", { message: msg, toolResults: [], turnIndex: 0, type: "turn_end" }, ctx);
+			const msg = makeAssistantMessage({ input: 1_500_000, output: 800, costTotal: 0.05 });
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg, toolResults: [] }, ctx);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
@@ -1677,16 +1677,16 @@ describe("usage-tracker extension", () => {
 			expect(recordHandler).toBeDefined();
 
 			recordHandler?.({
-				model: "claude-sonnet-4-20250514",
-				provider: "anthropic",
-				scope: "background",
 				source: "ant-colony",
+				scope: "background",
+				provider: "anthropic",
+				model: "claude-sonnet-4-20250514",
 				usage: {
+					input: 1200,
+					output: 800,
 					cacheRead: 0,
 					cacheWrite: 0,
 					costTotal: 0.02,
-					input: 1200,
-					output: 800,
 				},
 			});
 
@@ -1701,15 +1701,15 @@ describe("usage-tracker extension", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
-			const msg = makeAssistantMessage({ costTotal: 0.01, input: 1000, output: 500 });
-			pi._emit("turn_end", { message: msg, toolResults: [], turnIndex: 0, type: "turn_end" }, ctx);
+			const msg = makeAssistantMessage({ input: 1000, output: 500, costTotal: 0.01 });
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg, toolResults: [] }, ctx);
 
 			expect(pi.events.emit).toHaveBeenCalledWith(
 				"usage:limits",
 				expect.objectContaining({
-					perModel: expect.any(Object),
-					providers: expect.any(Object),
 					sessionCost: expect.any(Number),
+					providers: expect.any(Object),
+					perModel: expect.any(Object),
 				}),
 			);
 		});
@@ -1719,18 +1719,18 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
 			const msg = makeAssistantMessage({
-				costTotal: 0.01,
-				input: 1000,
 				model: "claude-sonnet-4-20250514",
+				input: 1000,
 				output: 500,
+				costTotal: 0.01,
 			});
-			pi._emit("turn_end", { message: msg, toolResults: [], turnIndex: 0, type: "turn_end" }, ctx);
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg, toolResults: [] }, ctx);
 
 			// Find the last usage:limits call
 			const emitCalls = (pi.events.emit as ReturnType<typeof vi.fn>).mock.calls;
 			const limitsCalls = emitCalls.filter((c: unknown[]) => c[0] === "usage:limits");
 			expect(limitsCalls.length).toBeGreaterThan(0);
-			const lastCall = limitsCalls.at(-1);
+			const lastCall = limitsCalls[limitsCalls.length - 1];
 			const data = lastCall[1] as { perModel: Record<string, { model: string }> };
 			expect(data.perModel["claude-sonnet-4-20250514"]).toBeDefined();
 			expect(data.perModel["claude-sonnet-4-20250514"].model).toBe("claude-sonnet-4-20250514");
@@ -1743,8 +1743,8 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
 			// Record a turn so there's data
-			const msg = makeAssistantMessage({ costTotal: 0.005, input: 500, output: 250 });
-			pi._emit("turn_end", { message: msg, toolResults: [], turnIndex: 0, type: "turn_end" }, ctx);
+			const msg = makeAssistantMessage({ input: 500, output: 250, costTotal: 0.005 });
+			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg, toolResults: [] }, ctx);
 
 			// Clear previous emit calls
 			(pi.events.emit as ReturnType<typeof vi.fn>).mockClear();
@@ -1776,7 +1776,7 @@ describe("usage-tracker extension", () => {
 
 			const emitCalls = (pi.events.emit as ReturnType<typeof vi.fn>).mock.calls;
 			const limitsCalls = emitCalls.filter((c: unknown[]) => c[0] === "usage:limits");
-			expect(limitsCalls).toHaveLength(1);
+			expect(limitsCalls.length).toBe(1);
 			const data = limitsCalls[0][1] as { sessionCost: number };
 			expect(data.sessionCost).toBe(0);
 		});
@@ -1791,7 +1791,7 @@ describe("usage-tracker extension", () => {
 			expect(writeFileSync).toHaveBeenCalledWith(
 				expect.stringContaining("keybindings.json"),
 				expect.stringContaining('"deleteToLineStart"'),
-				"utf8",
+				"utf-8",
 			);
 		});
 
@@ -1805,7 +1805,7 @@ describe("usage-tracker extension", () => {
 			expect(writeFileSync).toHaveBeenCalledWith(
 				expect.stringContaining("keybindings.json"),
 				expect.stringContaining('"deleteToLineStart": []'),
-				"utf8",
+				"utf-8",
 			);
 		});
 
@@ -1817,7 +1817,7 @@ describe("usage-tracker extension", () => {
 			usageTracker(pi as any);
 			await vi.advanceTimersByTimeAsync(500);
 
-			// WriteFileSync should not be called for keybindings (may be called for other things)
+			// writeFileSync should not be called for keybindings (may be called for other things)
 			const keybindingWrites = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls.filter(
 				(c: unknown[]) => typeof c[0] === "string" && (c[0] as string).includes("keybindings.json"),
 			);
@@ -1838,8 +1838,8 @@ describe("usage-tracker extension", () => {
 			);
 			expect(writeCalls).toHaveLength(1);
 			const written = JSON.parse(writeCalls[0][1] as string);
-			expect(written.deleteToLineStart).toStrictEqual(["ctrl+shift+u"]);
-			expect(written.cursorUp).toStrictEqual(["up"]);
+			expect(written.deleteToLineStart).toEqual(["ctrl+shift+u"]);
+			expect(written.cursorUp).toEqual(["up"]);
 		});
 
 		it("preserves existing keybindings when adding deleteToLineStart", async () => {
@@ -1854,8 +1854,8 @@ describe("usage-tracker extension", () => {
 			);
 			expect(writeCalls).toHaveLength(1);
 			const written = JSON.parse(writeCalls[0][1] as string);
-			expect(written.cursorUp).toStrictEqual(["up", "ctrl+p"]);
-			expect(written.deleteToLineStart).toStrictEqual([]);
+			expect(written.cursorUp).toEqual(["up", "ctrl+p"]);
+			expect(written.deleteToLineStart).toEqual([]);
 		});
 	});
 
@@ -1869,7 +1869,7 @@ describe("usage-tracker extension", () => {
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ headers: { "retry-after": "5" }, ok: false, status: 429 }));
+			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "5" } }));
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);

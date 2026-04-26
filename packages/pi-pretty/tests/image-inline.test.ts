@@ -1,13 +1,14 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
-	__imageInternals,
 	detectImageProtocol,
-	getOuterTerminal,
-	getTmuxPassthroughWarning,
-	isTmuxSession,
 	renderInlineImage,
+	getOuterTerminal,
+	isTmuxSession,
+	getTmuxPassthroughWarning,
+	__imageInternals,
 } from "../src/image-inline.js";
 
-describe(detectImageProtocol, () => {
+describe("detectImageProtocol", () => {
 	beforeEach(() => {
 		delete process.env.PRETTY_IMAGE_PROTOCOL;
 		delete process.env.TERM_PROGRAM;
@@ -58,7 +59,7 @@ describe(detectImageProtocol, () => {
 	});
 });
 
-describe(renderInlineImage, () => {
+describe("renderInlineImage", () => {
 	it("returns null for none protocol", () => {
 		expect(renderInlineImage("none", "image/png", "abc123")).toBeNull();
 	});
@@ -75,7 +76,7 @@ describe(renderInlineImage, () => {
 	});
 });
 
-describe(getOuterTerminal, () => {
+describe("getOuterTerminal", () => {
 	beforeEach(() => {
 		delete process.env.PRETTY_IMAGE_PROTOCOL;
 		delete process.env.TERM_PROGRAM;
@@ -103,16 +104,16 @@ describe(getOuterTerminal, () => {
 	});
 });
 
-describe(isTmuxSession, () => {
+describe("isTmuxSession", () => {
 	it("detects tmux from env", () => {
 		process.env.TMUX = "/tmp/tmux-1000/default,1234,0";
-		expect(isTmuxSession()).toBeTruthy();
+		expect(isTmuxSession()).toBe(true);
 		delete process.env.TMUX;
 	});
 
 	it("detects screen from TERM", () => {
 		process.env.TERM = "screen-256color";
-		expect(isTmuxSession()).toBeTruthy();
+		expect(isTmuxSession()).toBe(true);
 		delete process.env.TERM;
 	});
 });

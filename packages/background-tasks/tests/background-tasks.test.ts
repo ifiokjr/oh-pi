@@ -1,18 +1,18 @@
 import { EventEmitter } from "node:events";
-
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
 const { createBashToolMock, getShellConfigMock, spawnMock } = vi.hoisted(() => ({
 	createBashToolMock: vi.fn(),
-	getShellConfigMock: vi.fn(() => ({ args: ["-lc"], shell: "/bin/bash" })),
+	getShellConfigMock: vi.fn(() => ({ shell: "/bin/bash", args: ["-lc"] })),
 	spawnMock: vi.fn(),
 }));
 
-vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({
+vi.mock("node:child_process", () => ({
 	spawn: spawnMock,
 }));
 
-vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), async () => {
+vi.mock("@mariozechner/pi-coding-agent", async () => {
 	const actual = await vi.importActual<typeof import("@mariozechner/pi-coding-agent")>("@mariozechner/pi-coding-agent");
 	return {
 		...actual,
@@ -22,21 +22,21 @@ vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi
 	};
 });
 
-vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({
+vi.mock("@mariozechner/pi-ai", () => ({
 	StringEnum: (values: readonly string[], options?: Record<string, unknown>) => ({
-		enum: [...values],
 		type: "string",
+		enum: [...values],
 		...options,
 	}),
 }));
 
-vi.mock<typeof import("@sinclair/typebox")>(import("@sinclair/typebox"), () => ({
+vi.mock("@sinclair/typebox", () => ({
 	Type: {
-		Boolean: (options?: Record<string, unknown>) => ({ type: "boolean", ...options }),
-		Number: (options?: Record<string, unknown>) => ({ type: "number", ...options }),
 		Object: (schema: unknown) => schema,
-		Optional: (value: unknown) => ({ optional: true, ...((value as object | undefined) ?? {}) }),
 		String: (options?: Record<string, unknown>) => ({ type: "string", ...options }),
+		Number: (options?: Record<string, unknown>) => ({ type: "number", ...options }),
+		Boolean: (options?: Record<string, unknown>) => ({ type: "boolean", ...options }),
+		Optional: (value: unknown) => ({ optional: true, ...((value as object | undefined) ?? {}) }),
 	},
 }));
 
@@ -60,11 +60,11 @@ describe("background tasks extension", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
 		createBashToolMock.mockImplementation(() => ({
-			description: "Built-in bash tool.",
-			execute: vi.fn(async () => ({ content: [{ type: "text", text: "" }] })),
 			label: "Bash",
+			description: "Built-in bash tool.",
 			renderCall: undefined,
 			renderResult: undefined,
+			execute: vi.fn(async () => ({ content: [{ type: "text", text: "" }] })),
 		}));
 	});
 
@@ -83,7 +83,7 @@ describe("background tasks extension", () => {
 
 		const spawnResult = await tool.execute("tool-1", { action: "spawn", command: "echo hello" });
 		expect(spawnResult.content[0].text).toContain("Started bg-1");
-		expect(getShellConfigMock).toHaveBeenCalledTimes(1);
+		expect(getShellConfigMock).toHaveBeenCalledOnce();
 		expect(spawnMock).toHaveBeenCalledWith(
 			"/bin/bash",
 			["-lc", "echo hello"],
@@ -91,7 +91,7 @@ describe("background tasks extension", () => {
 		);
 
 		child.stdout.emit("data", Buffer.from("watching\n"));
-		await vi.advanceTimersByTimeAsync(1500);
+		await vi.advanceTimersByTimeAsync(1_500);
 		expect(harness.messages).toHaveLength(1);
 		expect(harness.messages[0].details.eventType).toBe("output");
 
@@ -112,13 +112,13 @@ describe("background tasks extension", () => {
 		spawnMock.mockReturnValueOnce(child);
 
 		const harness = createExtensionHarness();
-		harness.ctx.ui.custom = vi.fn().mockResolvedValue();
+		harness.ctx.ui.custom = vi.fn().mockResolvedValue(undefined);
 		backgroundTasksExtension(harness.pi as never);
 
 		await harness.commands.get("bg").handler("", harness.ctx);
 		expect(harness.ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {
 			overlay: true,
-			overlayOptions: { anchor: "center", maxHeight: "80%", width: 96 },
+			overlayOptions: { anchor: "center", width: 96, maxHeight: "80%" },
 		});
 
 		await harness.commands.get("bg").handler("run gh pr checks 123 --watch", harness.ctx);

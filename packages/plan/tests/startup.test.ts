@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import planExtension from "../index.js";
 
@@ -15,13 +16,13 @@ describe("plan extension startup refresh", () => {
 		harness.ctx.ui.setWidget = vi.fn();
 		harness.ctx.sessionManager.getEntries = () => [
 			{
+				type: "custom",
 				customType: "pi-plan:state",
 				data: {
+					version: 1,
 					active: true,
 					planFilePath: "/tmp/session.plan.md",
-					version: 1,
 				},
-				type: "custom",
 			},
 		];
 
@@ -42,13 +43,13 @@ describe("plan extension startup refresh", () => {
 		harness.ctx.ui.setWidget = vi.fn();
 		harness.ctx.sessionManager.getEntries = () => [
 			{
+				type: "custom",
 				customType: "pi-plan:state",
 				data: {
+					version: 1,
 					active: true,
 					planFilePath: "/tmp/session.plan.md",
-					version: 1,
 				},
-				type: "custom",
 			},
 		];
 

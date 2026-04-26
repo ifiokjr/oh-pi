@@ -1,8 +1,9 @@
+import { describe, expect, it } from "vitest";
 import { resolveExecutionAgentScope } from "../agent-scope.js";
 
-describe(resolveExecutionAgentScope, () => {
+describe("resolveExecutionAgentScope", () => {
 	it("defaults to both when scope is omitted", () => {
-		expect(resolveExecutionAgentScope()).toBe("both");
+		expect(resolveExecutionAgentScope(undefined)).toBe("both");
 	});
 
 	it("passes through explicit scopes", () => {

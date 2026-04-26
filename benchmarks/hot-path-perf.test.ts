@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { runBenchmark } from "./shared/benchmark";
 
 const benchmarkIt = process.env.OH_PI_RUN_BENCHMARKS === "1" ? it : it.skip;
@@ -12,12 +13,13 @@ describe("hot path micro benchmarks", () => {
 		"bounded-array push (amortized O(1))",
 		async () => {
 			const result = await runBenchmark({
-				budget: { medianMs: 1, p95Ms: 5 },
-				group: "micro",
 				id: "bounded-push",
-				iterations: 50,
 				label: "bounded array push (amortized)",
+				group: "micro",
+				iterations: 50,
+				warmupIterations: 2,
 				minSampleTimeMs: 20,
+				budget: { medianMs: 1, p95Ms: 5 },
 				run() {
 					const arr: number[] = [];
 					const limit = 60;
@@ -29,9 +31,8 @@ describe("hot path micro benchmarks", () => {
 						}
 					}
 				},
-				warmupIterations: 2,
 			});
-			expect(result.budgetFailures).toStrictEqual([]);
+			expect(result.budgetFailures).toEqual([]);
 		},
 		30_000,
 	);
@@ -40,12 +41,13 @@ describe("hot path micro benchmarks", () => {
 		"timestamp array prune (copyWithin vs splice)",
 		async () => {
 			const result = await runBenchmark({
-				budget: { medianMs: 1, p95Ms: 5 },
-				group: "micro",
 				id: "timestamp-prune",
-				iterations: 50,
 				label: "timestamp array prune (copyWithin)",
+				group: "micro",
+				iterations: 50,
+				warmupIterations: 2,
 				minSampleTimeMs: 20,
+				budget: { medianMs: 1, p95Ms: 5 },
 				run() {
 					const items: number[] = [];
 					const now = Date.now();
@@ -66,9 +68,8 @@ describe("hot path micro benchmarks", () => {
 						}
 					}
 				},
-				warmupIterations: 2,
 			});
-			expect(result.budgetFailures).toStrictEqual([]);
+			expect(result.budgetFailures).toEqual([]);
 		},
 		30_000,
 	);
@@ -77,12 +78,13 @@ describe("hot path micro benchmarks", () => {
 		"pheromone decay prune (write-pointer in-place)",
 		async () => {
 			const result = await runBenchmark({
-				budget: { medianMs: 1, p95Ms: 5 },
-				group: "micro",
 				id: "pheromone-prune",
-				iterations: 50,
 				label: "pheromone decay prune (write-pointer)",
+				group: "micro",
+				iterations: 50,
+				warmupIterations: 2,
 				minSampleTimeMs: 20,
+				budget: { medianMs: 1, p95Ms: 5 },
 				run() {
 					const cache: { strength: number; createdAt: number }[] = [];
 					const now = Date.now();
@@ -98,9 +100,8 @@ describe("hot path micro benchmarks", () => {
 					}
 					cache.length = write;
 				},
-				warmupIterations: 2,
 			});
-			expect(result.budgetFailures).toStrictEqual([]);
+			expect(result.budgetFailures).toEqual([]);
 		},
 		30_000,
 	);
@@ -111,21 +112,21 @@ describe("hot path micro benchmarks", () => {
 			const HOISTED_RE = /(\d+(?:\.\d+)?)\s*(weeks?|w|days?|d|hours?|hrs?|hr|h|minutes?|mins?|min|m)\b/g;
 			const text = "Resets in 2hours 30 minutes";
 			const result = await runBenchmark({
-				budget: { medianMs: 1, p95Ms: 5 },
-				group: "micro",
 				id: "regex-hoisted",
-				iterations: 100,
 				label: "regex compilation (hoisted vs inline)",
+				group: "micro",
+				iterations: 100,
+				warmupIterations: 5,
 				minSampleTimeMs: 20,
+				budget: { medianMs: 1, p95Ms: 5 },
 				run() {
 					for (let i = 0; i < 1000; i++) {
 						HOISTED_RE.lastIndex = 0;
 						const _m = [...text.matchAll(HOISTED_RE)];
 					}
 				},
-				warmupIterations: 5,
 			});
-			expect(result.budgetFailures).toStrictEqual([]);
+			expect(result.budgetFailures).toEqual([]);
 		},
 		30_000,
 	);
@@ -134,12 +135,13 @@ describe("hot path micro benchmarks", () => {
 		"single-pass map filter vs chained filter+map",
 		async () => {
 			const result = await runBenchmark({
-				budget: { medianMs: 1, p95Ms: 5 },
-				group: "micro",
 				id: "single-pass-filter-map",
-				iterations: 50,
 				label: "single-pass filter+map vs chained",
+				group: "micro",
+				iterations: 50,
+				warmupIterations: 2,
 				minSampleTimeMs: 20,
+				budget: { medianMs: 1, p95Ms: 5 },
 				run() {
 					const arr: number[] = [];
 					for (let i = 0; i < 1000; i++) {
@@ -154,9 +156,8 @@ describe("hot path micro benchmarks", () => {
 					}
 					const _sum = out.reduce((a, b) => a + Number(b), 0);
 				},
-				warmupIterations: 2,
 			});
-			expect(result.budgetFailures).toStrictEqual([]);
+			expect(result.budgetFailures).toEqual([]);
 		},
 		30_000,
 	);
@@ -165,12 +166,13 @@ describe("hot path micro benchmarks", () => {
 		"map-to-array without intermediate copy",
 		async () => {
 			const result = await runBenchmark({
-				budget: { medianMs: 1, p95Ms: 5 },
-				group: "micro",
 				id: "map-values-no-copy",
-				iterations: 50,
 				label: "map values iteration without Array.from copy",
+				group: "micro",
+				iterations: 50,
+				warmupIterations: 2,
 				minSampleTimeMs: 20,
+				budget: { medianMs: 1, p95Ms: 5 },
 				run() {
 					const map = new Map<string, number>();
 					for (let i = 0; i < 500; i++) {
@@ -183,9 +185,8 @@ describe("hot path micro benchmarks", () => {
 					}
 					const _sum = sum;
 				},
-				warmupIterations: 2,
 			});
-			expect(result.budgetFailures).toStrictEqual([]);
+			expect(result.budgetFailures).toEqual([]);
 		},
 		30_000,
 	);

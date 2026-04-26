@@ -1,6 +1,7 @@
+import { describe, expect, it } from "vitest";
 import { EXTENSIONS, KEYBINDING_SCHEMES, MODEL_CAPABILITIES, PROVIDERS, THEMES } from "./registry.js";
 
-describe(MODEL_CAPABILITIES, () => {
+describe("MODEL_CAPABILITIES", () => {
 	it("has entries", () => {
 		expect(Object.keys(MODEL_CAPABILITIES).length).toBeGreaterThan(0);
 	});
@@ -17,7 +18,7 @@ describe(MODEL_CAPABILITIES, () => {
 	});
 });
 
-describe(PROVIDERS, () => {
+describe("PROVIDERS", () => {
 	const expected = ["anthropic", "openai", "google", "groq", "openrouter", "xai", "mistral"];
 
 	it("has 7 providers", () => {
@@ -33,15 +34,15 @@ describe(PROVIDERS, () => {
 	it("each provider has env/label/models", () => {
 		for (const [, info] of Object.entries(PROVIDERS)) {
 			expect(info.env).toMatch(/_API_KEY$|_KEY$/);
-			expect(info.label).toBe(true);
-			expect(Array.isArray(info.models)).toBeTruthy();
+			expect(info.label).toBeTruthy();
+			expect(Array.isArray(info.models)).toBe(true);
 		}
 	});
 });
 
-describe(THEMES, () => {
+describe("THEMES", () => {
 	it("is array with entries", () => {
-		expect(Array.isArray(THEMES)).toBeTruthy();
+		expect(Array.isArray(THEMES)).toBe(true);
 		expect(THEMES.length).toBeGreaterThan(0);
 	});
 
@@ -54,9 +55,9 @@ describe(THEMES, () => {
 	});
 });
 
-describe(EXTENSIONS, () => {
+describe("EXTENSIONS", () => {
 	it("is array with entries", () => {
-		expect(Array.isArray(EXTENSIONS)).toBeTruthy();
+		expect(Array.isArray(EXTENSIONS)).toBe(true);
 		expect(EXTENSIONS.length).toBeGreaterThan(0);
 	});
 
@@ -71,23 +72,23 @@ describe(EXTENSIONS, () => {
 	it("exposes the optional plan mode extension", () => {
 		const plan = EXTENSIONS.find((ext) => ext.name === "plan");
 		expect(plan).toBeDefined();
-		expect(plan?.default).toBeFalsy();
+		expect(plan?.default).toBe(false);
 	});
 
 	it("exposes the optional spec workflow extension", () => {
 		const spec = EXTENSIONS.find((ext) => ext.name === "spec");
 		expect(spec).toBeDefined();
-		expect(spec?.default).toBeFalsy();
+		expect(spec?.default).toBe(false);
 	});
 
 	it("enables tool metadata by default", () => {
 		const toolMetadata = EXTENSIONS.find((ext) => ext.name === "tool-metadata");
 		expect(toolMetadata).toBeDefined();
-		expect(toolMetadata?.default).toBeTruthy();
+		expect(toolMetadata?.default).toBe(true);
 	});
 });
 
-describe(KEYBINDING_SCHEMES, () => {
+describe("KEYBINDING_SCHEMES", () => {
 	it("has default/vim/emacs", () => {
 		expect(KEYBINDING_SCHEMES).toHaveProperty("default");
 		expect(KEYBINDING_SCHEMES).toHaveProperty("vim");

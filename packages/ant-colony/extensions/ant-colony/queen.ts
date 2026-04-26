@@ -940,7 +940,7 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 	// Scheduling loop: keep dispatching ants until no pending tasks remain
 	let lastSampleTime = 0;
 	while (true) {
-			if (signal?.aborted) break;
+		if (signal?.aborted) break;
 		const state = nest.getStateLight();
 		const pending = state.tasks.filter((t) => t.status === "pending" && t.caste === caste);
 		if (pending.length === 0) {

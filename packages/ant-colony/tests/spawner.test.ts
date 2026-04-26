@@ -1,20 +1,22 @@
-vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@mariozechner/pi-coding-agent", () => ({
 	AuthStorage: class {},
+	createAgentSession: vi.fn(),
+	createReadTool: vi.fn(),
+	createBashTool: vi.fn(),
+	createEditTool: vi.fn(),
+	createWriteTool: vi.fn(),
+	createGrepTool: vi.fn(),
+	createFindTool: vi.fn(),
+	createLsTool: vi.fn(),
 	ModelRegistry: class {},
 	SessionManager: { inMemory: vi.fn() },
 	SettingsManager: { inMemory: vi.fn() },
-	createAgentSession: vi.fn(),
-	createBashTool: vi.fn(),
-	createEditTool: vi.fn(),
 	createExtensionRuntime: vi.fn(),
-	createFindTool: vi.fn(),
-	createGrepTool: vi.fn(),
-	createLsTool: vi.fn(),
-	createReadTool: vi.fn(),
-	createWriteTool: vi.fn(),
 	getAgentDir: () => "/mock-home/.pi/agent",
 }));
-vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({ getModel: vi.fn() }));
+vi.mock("@mariozechner/pi-ai", () => ({ getModel: vi.fn() }));
 
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -23,7 +25,7 @@ import { Nest } from "../extensions/ant-colony/nest.js";
 import { makeAntId, makePheromoneId, makeTaskId, runDrone } from "../extensions/ant-colony/spawner.js";
 import type { ColonyState, Task } from "../extensions/ant-colony/types.js";
 
-describe(makeAntId, () => {
+describe("makeAntId", () => {
 	it("includes caste name", () => {
 		expect(makeAntId("scout")).toContain("scout");
 		expect(makeAntId("worker")).toContain("worker");
@@ -34,7 +36,7 @@ describe(makeAntId, () => {
 	});
 });
 
-describe(makePheromoneId, () => {
+describe("makePheromoneId", () => {
 	it("starts with p-", () => {
 		expect(makePheromoneId()).toMatch(/^p-/);
 	});
@@ -44,7 +46,7 @@ describe(makePheromoneId, () => {
 	});
 });
 
-describe(makeTaskId, () => {
+describe("makeTaskId", () => {
 	it("starts with t-", () => {
 		expect(makeTaskId()).toMatch(/^t-/);
 	});
@@ -55,49 +57,49 @@ describe(makeTaskId, () => {
 });
 
 const mkState = (overrides: Partial<ColonyState> = {}): ColonyState => ({
-	ants: [],
-	concurrency: { current: 1, history: [], max: 2, min: 1, optimal: 1 },
-	createdAt: Date.now(),
-	finishedAt: null,
-	goal: "drone",
 	id: "drone-test-colony",
-	maxCost: null,
-	metrics: {
-		antsSpawned: 0,
-		startTime: Date.now(),
-		tasksDone: 0,
-		tasksFailed: 0,
-		tasksTotal: 0,
-		throughputHistory: [],
-		totalCost: 0,
-		totalTokens: 0,
-	},
-	modelOverrides: {},
-	pheromones: [],
+	goal: "drone",
 	status: "working",
 	tasks: [],
+	ants: [],
+	pheromones: [],
+	concurrency: { current: 1, min: 1, max: 2, optimal: 1, history: [] },
+	metrics: {
+		tasksTotal: 0,
+		tasksDone: 0,
+		tasksFailed: 0,
+		antsSpawned: 0,
+		totalCost: 0,
+		totalTokens: 0,
+		startTime: Date.now(),
+		throughputHistory: [],
+	},
+	maxCost: null,
+	modelOverrides: {},
+	createdAt: Date.now(),
+	finishedAt: null,
 	...overrides,
 });
 
 const mkTask = (description: string): Task => ({
-	caste: "drone",
-	claimedBy: null,
-	createdAt: Date.now(),
-	description,
-	error: null,
-	files: [],
-	finishedAt: null,
 	id: makeTaskId(),
 	parentId: null,
-	priority: 1,
-	result: null,
-	spawnedTasks: [],
-	startedAt: null,
-	status: "pending",
 	title: "Drone task",
+	description,
+	caste: "drone",
+	status: "pending",
+	priority: 1,
+	files: [],
+	claimedBy: null,
+	result: null,
+	error: null,
+	spawnedTasks: [],
+	createdAt: Date.now(),
+	startedAt: null,
+	finishedAt: null,
 });
 
-describe(runDrone, () => {
+describe("runDrone", () => {
 	it("executes allowlisted commands", async () => {
 		const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "drone-ok-"));
 		const nest = new Nest(cwd, "drone-ok", { mode: "project" });
@@ -107,7 +109,7 @@ describe(runDrone, () => {
 		const result = await runDrone(cwd, nest, task);
 		expect(result.ant.status).toBe("done");
 		expect(result.output).toContain("ok");
-		fs.rmSync(cwd, { force: true, recursive: true });
+		fs.rmSync(cwd, { recursive: true, force: true });
 	});
 
 	it("rejects shell metacharacters", async () => {
@@ -119,7 +121,7 @@ describe(runDrone, () => {
 		const result = await runDrone(cwd, nest, task);
 		expect(result.ant.status).toBe("failed");
 		expect(result.output).toContain("shell metacharacters");
-		fs.rmSync(cwd, { force: true, recursive: true });
+		fs.rmSync(cwd, { recursive: true, force: true });
 	});
 
 	it("rejects non-allowlisted executables", async () => {
@@ -131,6 +133,6 @@ describe(runDrone, () => {
 		const result = await runDrone(cwd, nest, task);
 		expect(result.ant.status).toBe("failed");
 		expect(result.output).toContain("not allowlisted");
-		fs.rmSync(cwd, { force: true, recursive: true });
+		fs.rmSync(cwd, { recursive: true, force: true });
 	});
 });

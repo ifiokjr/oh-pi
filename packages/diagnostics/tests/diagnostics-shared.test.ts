@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import {
 	extractTextContent,
 	formatDuration,
@@ -13,7 +14,7 @@ describe("diagnostics shared helpers", () => {
 
 	it("formats durations across milliseconds, seconds, minutes, and hours", () => {
 		expect(formatDuration(250)).toBe("250ms");
-		expect(formatDuration(1250)).toBe("1.3s");
+		expect(formatDuration(1_250)).toBe("1.3s");
 		expect(formatDuration(12_000)).toBe("12s");
 		expect(formatDuration(90_000)).toBe("1m30s");
 		expect(formatDuration(3_600_000)).toBe("1h");
@@ -25,10 +26,10 @@ describe("diagnostics shared helpers", () => {
 		expect(extractTextContent(null)).toBe("");
 		expect(
 			extractTextContent([
-				{ text: "hello", type: "text" },
+				{ type: "text", text: "hello" },
 				{ type: "image", url: "file://image.png" },
-				{ text: "world", type: "text" },
-				{ text: 42, type: "text" },
+				{ type: "text", text: "world" },
+				{ type: "text", text: 42 },
 			]),
 		).toBe("hello world");
 	});
@@ -43,8 +44,8 @@ describe("diagnostics shared helpers", () => {
 		expect(
 			summarizeContent(
 				[
-					{ text: "First line", type: "text" },
-					{ text: "Second line", type: "text" },
+					{ type: "text", text: "First line" },
+					{ type: "text", text: "Second line" },
 				],
 				20,
 			),

@@ -2,27 +2,28 @@
  * Utility Function Tests
  */
 
+import { describe, it, expect } from "vitest";
 import {
-	calculatePercentage,
 	cn,
-	debounce,
-	formatCurrency,
-	formatDate,
-	formatDuration,
 	formatNumber,
-	formatTimeRange,
+	formatCurrency,
 	formatTokens,
+	formatDuration,
+	formatDate,
+	formatTimeRange,
+	truncate,
+	stringToColor,
 	getChartColors,
-	getModelShortName,
+	calculatePercentage,
 	getProviderDisplayName,
+	getModelShortName,
+	debounce,
 	isEqual,
 	safeJsonParse,
-	stringToColor,
-	truncate,
 } from "../lib/utils";
 
 describe("utils", () => {
-	describe(cn, () => {
+	describe("cn", () => {
 		it("should merge class names", () => {
 			expect(cn("a", "b", "c")).toBe("a b c");
 		});
@@ -37,10 +38,10 @@ describe("utils", () => {
 		});
 	});
 
-	describe(formatNumber, () => {
+	describe("formatNumber", () => {
 		it("should format thousands with compact notation", () => {
 			expect(formatNumber(1000)).toBe("1k");
-			expect(formatNumber(1_000_000)).toBe("1M");
+			expect(formatNumber(1000000)).toBe("1M");
 		});
 
 		it("should format small numbers with commas", () => {
@@ -50,7 +51,7 @@ describe("utils", () => {
 
 		it("should format with decimals in compact mode", () => {
 			expect(formatNumber(1234, 2)).toBe("1.23k");
-			expect(formatNumber(15_678, 1)).toBe("15.7k");
+			expect(formatNumber(15678, 1)).toBe("15.7k");
 		});
 
 		it("should return 0 for zero", () => {
@@ -58,7 +59,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(formatCurrency, () => {
+	describe("formatCurrency", () => {
 		it("should format USD correctly", () => {
 			expect(formatCurrency(100, "USD")).toBe("$100.00");
 		});
@@ -77,10 +78,10 @@ describe("utils", () => {
 		});
 	});
 
-	describe(formatTokens, () => {
+	describe("formatTokens", () => {
 		it("should format large numbers", () => {
-			expect(formatTokens(1_000_000)).toBe("1.00M");
-			expect(formatTokens(15_000)).toBe("15.0k");
+			expect(formatTokens(1000000)).toBe("1.00M");
+			expect(formatTokens(15000)).toBe("15.0k");
 		});
 
 		it("should format medium numbers with compact notation", () => {
@@ -89,7 +90,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(formatDuration, () => {
+	describe("formatDuration", () => {
 		it("should format milliseconds", () => {
 			expect(formatDuration(500)).toBe("500ms");
 		});
@@ -99,11 +100,11 @@ describe("utils", () => {
 		});
 
 		it("should format minutes", () => {
-			expect(formatDuration(120_000)).toBe("2.0m");
+			expect(formatDuration(120000)).toBe("2.0m");
 		});
 	});
 
-	describe(formatDate, () => {
+	describe("formatDate", () => {
 		it("should return Today for current date", () => {
 			const today = new Date();
 			expect(formatDate(today)).toBe("Today");
@@ -116,7 +117,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(truncate, () => {
+	describe("truncate", () => {
 		it("should truncate long strings", () => {
 			expect(truncate("Hello World", 5)).toBe("He...");
 		});
@@ -126,7 +127,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(stringToColor, () => {
+	describe("stringToColor", () => {
 		it("should return a color for any string", () => {
 			expect(stringToColor("test")).toMatch(/^#/);
 		});
@@ -136,7 +137,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(getChartColors, () => {
+	describe("getChartColors", () => {
 		it("should return array of colors", () => {
 			const colors = getChartColors(5);
 			expect(colors).toHaveLength(5);
@@ -144,7 +145,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(calculatePercentage, () => {
+	describe("calculatePercentage", () => {
 		it("should calculate correctly", () => {
 			expect(calculatePercentage(50, 100)).toBe(50);
 			expect(calculatePercentage(25, 100)).toBe(25);
@@ -155,18 +156,18 @@ describe("utils", () => {
 		});
 	});
 
-	describe(formatNumber, () => {
+	describe("formatNumber", () => {
 		it("should handle NaN", () => {
 			expect(formatNumber(Number.NaN)).toBe("—");
 		});
 
 		it("should handle negative numbers", () => {
 			expect(formatNumber(-5000)).toBe("-5k");
-			expect(formatNumber(-1_000_000)).toBe("-1M");
+			expect(formatNumber(-1000000)).toBe("-1M");
 		});
 
 		it("should format millions with M suffix", () => {
-			expect(formatNumber(2_500_000, 1)).toBe("2.5M");
+			expect(formatNumber(2500000, 1)).toBe("2.5M");
 		});
 
 		it("should format with decimals for thousands", () => {
@@ -174,7 +175,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(formatCurrency, () => {
+	describe("formatCurrency", () => {
 		it("should handle negative amounts", () => {
 			expect(formatCurrency(-1500, "USD", true)).toBe("-$1.5k");
 		});
@@ -193,7 +194,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(formatTokens, () => {
+	describe("formatTokens", () => {
 		it("should handle zero", () => {
 			expect(formatTokens(0)).toBe("0");
 		});
@@ -203,7 +204,7 @@ describe("utils", () => {
 		});
 
 		it("should format millions", () => {
-			expect(formatTokens(2_500_000)).toBe("2.50M");
+			expect(formatTokens(2500000)).toBe("2.50M");
 		});
 
 		it("should format less than 1000 normally", () => {
@@ -211,13 +212,13 @@ describe("utils", () => {
 		});
 	});
 
-	describe(formatDuration, () => {
+	describe("formatDuration", () => {
 		it("should format hours", () => {
-			expect(formatDuration(3_600_000)).toBe("1.0h");
+			expect(formatDuration(3600000)).toBe("1.0h");
 		});
 
 		it("should format exact minute boundary", () => {
-			expect(formatDuration(60_000)).toBe("1.0m");
+			expect(formatDuration(60000)).toBe("1.0m");
 		});
 	});
 
@@ -249,17 +250,17 @@ describe("utils", () => {
 
 		it("should handle string date input", () => {
 			const result = formatDate("2024-06-15");
-			expectTypeOf(result).toBeString();
+			expect(typeof result).toBe("string");
 		});
 
 		it("should handle numeric date input", () => {
 			const timestamp = new Date(2024, 0, 15).getTime();
 			const result = formatDate(timestamp);
-			expectTypeOf(result).toBeString();
+			expect(typeof result).toBe("string");
 		});
 	});
 
-	describe(formatTimeRange, () => {
+	describe("formatTimeRange", () => {
 		it("should format short session", () => {
 			const start = new Date(2024, 0, 15, 10, 0, 0);
 			const end = new Date(start.getTime() + 500); // 500ms later
@@ -277,7 +278,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(getProviderDisplayName, () => {
+	describe("getProviderDisplayName", () => {
 		it("should map known providers", () => {
 			expect(getProviderDisplayName("anthropic")).toBe("Anthropic");
 			expect(getProviderDisplayName("openai")).toBe("OpenAI");
@@ -291,7 +292,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(getModelShortName, () => {
+	describe("getModelShortName", () => {
 		it("should remove organization prefix", () => {
 			expect(getModelShortName("anthropic/claude-3")).toBe("claude-3");
 			expect(getModelShortName("openai/gpt-4")).toBe("gpt-4");
@@ -336,7 +337,7 @@ describe("utils", () => {
 		});
 	});
 
-	describe(debounce, () => {
+	describe("debounce", () => {
 		it("should delay function execution", async () => {
 			let count = 0;
 			const fn = debounce(() => {
@@ -351,36 +352,36 @@ describe("utils", () => {
 		});
 	});
 
-	describe(isEqual, () => {
+	describe("isEqual", () => {
 		it("should compare equal objects", () => {
-			expect(isEqual({ a: 1 }, { a: 1 })).toBeTruthy();
+			expect(isEqual({ a: 1 }, { a: 1 })).toBe(true);
 		});
 
 		it("should compare different objects", () => {
-			expect(isEqual({ a: 1 }, { a: 2 })).toBeFalsy();
+			expect(isEqual({ a: 1 }, { a: 2 })).toBe(false);
 		});
 
 		it("should compare primitives", () => {
-			expect(isEqual(1, 1)).toBeTruthy();
-			expect(isEqual("a", "a")).toBeTruthy();
+			expect(isEqual(1, 1)).toBe(true);
+			expect(isEqual("a", "a")).toBe(true);
 		});
 	});
 
-	describe(safeJsonParse, () => {
+	describe("safeJsonParse", () => {
 		it("should parse valid JSON", () => {
-			expect(safeJsonParse('{"a":1}', {})).toStrictEqual({ a: 1 });
+			expect(safeJsonParse('{"a":1}', {})).toEqual({ a: 1 });
 		});
 
 		it("should return fallback for null", () => {
-			expect(safeJsonParse(null, { default: true })).toStrictEqual({ default: true });
+			expect(safeJsonParse(null, { default: true })).toEqual({ default: true });
 		});
 
 		it("should return fallback for invalid JSON", () => {
-			expect(safeJsonParse("not json", { default: true })).toStrictEqual({ default: true });
+			expect(safeJsonParse("not json", { default: true })).toEqual({ default: true });
 		});
 
 		it("should return fallback for empty string", () => {
-			expect(safeJsonParse("", [])).toStrictEqual([]);
+			expect(safeJsonParse("", [])).toEqual([]);
 		});
 	});
 });

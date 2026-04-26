@@ -1,3 +1,5 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 const providerMocks = vi.hoisted(() => {
 	const streams: any[] = [];
 	const connections: any[] = [];
@@ -25,16 +27,13 @@ const providerMocks = vi.hoisted(() => {
 	}
 
 	return {
-		FakeConnection,
-		buildCursorRequestPayload: vi.fn(() => ({
-			requestBytes: { framed: true },
-			blobStore: new Map([["blob", new Uint8Array([1])]]),
-			mcpTools: [{ name: "echo" }],
-		})),
-		calculateCost: vi.fn(),
-		cleanupCursorRuntimeState: vi.fn(),
+		streams,
 		connections,
+		FakeConnection,
 		create: vi.fn((_schema: unknown, value: unknown) => value),
+		fromBinary: vi.fn((_schema: unknown, value: unknown) => value),
+		toBinary: vi.fn((_schema: unknown, value: unknown) => value),
+		calculateCost: vi.fn(),
 		createAssistantMessageEventStream: vi.fn(() => {
 			const stream = {
 				events: [] as any[],
@@ -46,30 +45,14 @@ const providerMocks = vi.hoisted(() => {
 			streams.push(stream);
 			return stream;
 		}),
-		createConnectFrameParser: vi.fn(
-			(onMessage: (payload: unknown) => void, onEnd: (payload: unknown) => void) =>
-				(payload: { kind: "message" | "end"; value: unknown }) => {
-					if (payload.kind === "end") {
-						onEnd(payload.value);
-						return;
-					}
-					onMessage(payload.value);
-				},
-		),
-		decodeMcpArgsMap: vi.fn((args: Record<string, unknown>) => args),
-		deleteActiveRun: vi.fn(),
-		deriveBridgeKey: vi.fn((conversationKey: string, modelId: string) => `${conversationKey}:${modelId}`),
-		deriveConversationKey: vi.fn((sessionId: string | undefined, seed: string) =>
-			sessionId ? `session:${sessionId}` : `seed:${seed}`,
-		),
-		deterministicConversationId: vi.fn((conversationKey: string) => `conv:${conversationKey}`),
-		frameConnectMessage: vi.fn((payload: unknown) => ({ framed: payload })),
-		fromBinary: vi.fn((_schema: unknown, value: unknown) => value),
-		getActiveRun: vi.fn(() => undefined),
-		getConversationState: vi.fn(() => undefined),
 		getEnvApiKey: vi.fn(() => "cursor-token"),
+		buildCursorRequestPayload: vi.fn(() => ({
+			requestBytes: { framed: true },
+			blobStore: new Map([["blob", new Uint8Array([1])]]),
+			mcpTools: [{ name: "echo" }],
+		})),
+		decodeMcpArgsMap: vi.fn((args: Record<string, unknown>) => args),
 		makeHeartbeatFrame: vi.fn(() => new Uint8Array([1])),
-		parseConnectEndStream: vi.fn(() => null),
 		parseCursorConversation: vi.fn(() => ({
 			seed: "seed-text",
 			userText: "Do the thing",
@@ -90,26 +73,45 @@ const providerMocks = vi.hoisted(() => {
 				write({ ack: "requestContext" });
 			},
 		),
+		cleanupCursorRuntimeState: vi.fn(),
+		deleteActiveRun: vi.fn(),
+		deriveBridgeKey: vi.fn((conversationKey: string, modelId: string) => `${conversationKey}:${modelId}`),
+		deriveConversationKey: vi.fn((sessionId: string | undefined, seed: string) =>
+			sessionId ? `session:${sessionId}` : `seed:${seed}`,
+		),
+		deterministicConversationId: vi.fn((conversationKey: string) => `conv:${conversationKey}`),
+		getActiveRun: vi.fn(() => undefined),
+		getConversationState: vi.fn(() => undefined),
 		setActiveRun: vi.fn(),
-		streams,
-		toBinary: vi.fn((_schema: unknown, value: unknown) => value),
 		upsertConversationState: vi.fn(),
+		createConnectFrameParser: vi.fn(
+			(onMessage: (payload: unknown) => void, onEnd: (payload: unknown) => void) =>
+				(payload: { kind: "message" | "end"; value: unknown }) => {
+					if (payload.kind === "end") {
+						onEnd(payload.value);
+						return;
+					}
+					onMessage(payload.value);
+				},
+		),
+		frameConnectMessage: vi.fn((payload: unknown) => ({ framed: payload })),
+		parseConnectEndStream: vi.fn(() => null),
 	};
 });
 
-vi.mock<typeof import("@bufbuild/protobuf")>(import("@bufbuild/protobuf"), () => ({
+vi.mock("@bufbuild/protobuf", () => ({
 	create: providerMocks.create,
 	fromBinary: providerMocks.fromBinary,
 	toBinary: providerMocks.toBinary,
 }));
 
-vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({
+vi.mock("@mariozechner/pi-ai", () => ({
 	calculateCost: providerMocks.calculateCost,
 	createAssistantMessageEventStream: providerMocks.createAssistantMessageEventStream,
 	getEnvApiKey: providerMocks.getEnvApiKey,
 }));
 
-vi.mock<typeof import("../messages.js")>(import("../messages.js"), () => ({
+vi.mock("../messages.js", () => ({
 	buildCursorRequestPayload: providerMocks.buildCursorRequestPayload,
 	decodeMcpArgsMap: providerMocks.decodeMcpArgsMap,
 	makeHeartbeatFrame: providerMocks.makeHeartbeatFrame,
@@ -119,7 +121,7 @@ vi.mock<typeof import("../messages.js")>(import("../messages.js"), () => ({
 	sendRequestContextResult: providerMocks.sendRequestContextResult,
 }));
 
-vi.mock<typeof import("../runtime.js")>(import("../runtime.js"), () => ({
+vi.mock("../runtime.js", () => ({
 	cleanupCursorRuntimeState: providerMocks.cleanupCursorRuntimeState,
 	deleteActiveRun: providerMocks.deleteActiveRun,
 	deriveBridgeKey: providerMocks.deriveBridgeKey,
@@ -131,9 +133,9 @@ vi.mock<typeof import("../runtime.js")>(import("../runtime.js"), () => ({
 	upsertConversationState: providerMocks.upsertConversationState,
 }));
 
-vi.mock<typeof import("../transport.js")>(import("../transport.js"), () => ({
-	CursorStreamingConnection: providerMocks.FakeConnection,
+vi.mock("../transport.js", () => ({
 	createConnectFrameParser: providerMocks.createConnectFrameParser,
+	CursorStreamingConnection: providerMocks.FakeConnection,
 	frameConnectMessage: providerMocks.frameConnectMessage,
 	parseConnectEndStream: providerMocks.parseConnectEndStream,
 }));
@@ -142,17 +144,17 @@ import { streamSimpleCursor } from "../provider.js";
 
 function createModel() {
 	return {
+		provider: "cursor",
+		id: "composer-2",
 		api: "cursor-agent",
 		baseUrl: "https://cursor.test",
-		id: "composer-2",
-		provider: "cursor",
 	};
 }
 
 function createContext() {
 	return {
-		messages: [],
 		systemPrompt: "You are helpful.",
+		messages: [],
 		tools: [{ name: "echo", description: "Echo text", parameters: { type: "object" } }],
 	};
 }
@@ -178,25 +180,25 @@ beforeEach(() => {
 	providerMocks.getEnvApiKey.mockReturnValue("cursor-token");
 	providerMocks.createAssistantMessageEventStream.mockImplementation(() => {
 		const stream = {
-			end: vi.fn(),
 			events: [] as any[],
 			push: vi.fn((event: any) => {
 				stream.events.push(event);
 			}),
+			end: vi.fn(),
 		};
 		providerMocks.streams.push(stream);
 		return stream;
 	});
 	providerMocks.buildCursorRequestPayload.mockReturnValue({
+		requestBytes: new Uint8Array([1, 2, 3]),
 		blobStore: new Map([["blob", new Uint8Array([1, 2, 3])]]),
 		mcpTools: [{ name: "echo" }],
-		requestBytes: new Uint8Array([1, 2, 3]),
 	} as never);
 	providerMocks.decodeMcpArgsMap.mockImplementation((args: Record<string, unknown>) => args);
 	providerMocks.parseCursorConversation.mockReturnValue({
 		seed: "seed-text",
-		trailingToolResults: [],
 		userText: "Do the thing",
+		trailingToolResults: [],
 	});
 	providerMocks.sendExecResult.mockImplementation(
 		(_execId: string, _msgId: string, kind: string, _result: unknown, write: (data: unknown) => void) => {
@@ -220,8 +222,8 @@ beforeEach(() => {
 		sessionId ? `session:${sessionId}` : `seed:${seed}`,
 	);
 	providerMocks.deterministicConversationId.mockImplementation((conversationKey: string) => `conv:${conversationKey}`);
-	providerMocks.getActiveRun.mockReturnValue();
-	providerMocks.getConversationState.mockReturnValue();
+	providerMocks.getActiveRun.mockReturnValue(undefined);
+	providerMocks.getConversationState.mockReturnValue(undefined);
 	providerMocks.createConnectFrameParser.mockImplementation(
 		(onMessage: (payload: unknown) => void, onEnd: (payload: unknown) => void) =>
 			(payload: { kind: "message" | "end"; value: unknown }) => {
@@ -240,7 +242,7 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe(streamSimpleCursor, () => {
+describe("streamSimpleCursor", () => {
 	it("throws when no Cursor API key is available", () => {
 		providerMocks.getEnvApiKey.mockReturnValueOnce(undefined as never);
 		expect(() => streamSimpleCursor(createModel() as never, createContext() as never)).toThrow(
@@ -251,8 +253,8 @@ describe(streamSimpleCursor, () => {
 	it("emits an error when no prompt or resumable tool results are available", async () => {
 		providerMocks.parseCursorConversation.mockReturnValueOnce({
 			seed: "seed-text",
-			trailingToolResults: [],
 			userText: "   ",
+			trailingToolResults: [],
 		});
 
 		const stream = streamSimpleCursor(
@@ -262,34 +264,34 @@ describe(streamSimpleCursor, () => {
 		) as any;
 		await flushMicrotasks();
 
-		expect(providerMocks.cleanupCursorRuntimeState).toHaveBeenCalledOnce();
+		expect(providerMocks.cleanupCursorRuntimeState).toHaveBeenCalledTimes(1);
 		expect(stream.events[0]).toMatchObject({ type: "start" });
 		expect(stream.events.at(-1)).toMatchObject({
+			type: "error",
+			reason: "error",
 			error: expect.objectContaining({
 				errorMessage: "Cursor provider requires a user prompt or resumable tool results.",
 			}),
-			reason: "error",
-			type: "error",
 		});
-		expect(stream.end).toHaveBeenCalledOnce();
+		expect(stream.end).toHaveBeenCalledTimes(1);
 	});
 
 	it("resumes active runs, sends pending tool results, and completes on close", async () => {
 		const activeConnection = new providerMocks.FakeConnection({ url: "https://cursor.test" });
 		const activeRun = {
-			blobStore: new Map(),
 			connection: activeConnection,
-			lastAccessMs: Date.now(),
+			blobStore: new Map(),
 			mcpTools: [{ name: "echo" }],
 			pendingExecs: [
 				{ execId: "exec-1", execMsgId: "msg-1", toolCallId: "call-1", toolName: "echo", decodedArgs: "{}" },
 				{ execId: "exec-2", execMsgId: "msg-2", toolCallId: "call-2", toolName: "echo", decodedArgs: "{}" },
 			],
+			lastAccessMs: Date.now(),
 		};
 		providerMocks.parseCursorConversation.mockReturnValueOnce({
 			seed: "seed-text",
-			trailingToolResults: [{ toolCallId: "call-1", toolName: "echo", content: "pong", isError: false }],
 			userText: "",
+			trailingToolResults: [{ toolCallId: "call-1", toolName: "echo", content: "pong", isError: false }],
 		} as never);
 		providerMocks.getActiveRun.mockReturnValueOnce(activeRun as never);
 
@@ -301,26 +303,26 @@ describe(streamSimpleCursor, () => {
 		await flushMicrotasks();
 
 		expect(providerMocks.sendExecResult).toHaveBeenCalledTimes(2);
-		expect(activeRun.pendingExecs).toStrictEqual([]);
+		expect(activeRun.pendingExecs).toEqual([]);
 
 		activeConnection.handlers.onClose?.();
 		await flushMicrotasks();
 
 		expect(providerMocks.deleteActiveRun).toHaveBeenCalledWith("session:session-1:composer-2");
-		expect(providerMocks.calculateCost).toHaveBeenCalledOnce();
+		expect(providerMocks.calculateCost).toHaveBeenCalledTimes(1);
 		expect(stream.events.at(-1)).toMatchObject({
-			message: expect.objectContaining({ stopReason: "stop" }),
-			reason: "stop",
 			type: "done",
+			reason: "stop",
+			message: expect.objectContaining({ stopReason: "stop" }),
 		});
-		expect(stream.end).toHaveBeenCalledOnce();
+		expect(stream.end).toHaveBeenCalledTimes(1);
 	});
 
 	it("streams new runs, handles server messages, and switches to tool-use mode on MCP execution", async () => {
 		const onPayload = vi.fn();
 		providerMocks.getConversationState.mockReturnValueOnce({
-			blobStore: new Map(),
 			conversationId: "saved-conv",
+			blobStore: new Map(),
 			lastAccessMs: 0,
 		} as never);
 
@@ -328,8 +330,8 @@ describe(streamSimpleCursor, () => {
 			createModel() as never,
 			createContext() as never,
 			{
-				onPayload,
 				sessionId: "session-1",
+				onPayload,
 			} as never,
 		) as any;
 		await flushMicrotasks();
@@ -342,7 +344,7 @@ describe(streamSimpleCursor, () => {
 		});
 		expect(connection.startHeartbeat).toHaveBeenCalledWith(providerMocks.makeHeartbeatFrame);
 		expect(connection.write).toHaveBeenCalledWith({ framed: new Uint8Array([1, 2, 3]) });
-		expect(onPayload).toHaveBeenCalledWith({ conversationId: "saved-conv", model: "composer-2", toolCount: 1 });
+		expect(onPayload).toHaveBeenCalledWith({ model: "composer-2", conversationId: "saved-conv", toolCount: 1 });
 
 		connection.handlers.onData?.({
 			kind: "message",
@@ -386,7 +388,7 @@ describe(streamSimpleCursor, () => {
 			value: {
 				message: {
 					case: "conversationCheckpointUpdate",
-					value: { checkpoint: true, tokenDetails: { usedTokens: 25 } },
+					value: { tokenDetails: { usedTokens: 25 }, checkpoint: true },
 				},
 			},
 		});
@@ -434,7 +436,7 @@ describe(streamSimpleCursor, () => {
 						id: "mcp-msg-1",
 						message: {
 							case: "mcpArgs",
-							value: { args: { text: "ping" }, name: "echo", toolCallId: "tool-1", toolName: "echo" },
+							value: { toolCallId: "tool-1", toolName: "echo", name: "echo", args: { text: "ping" } },
 						},
 					},
 				},
@@ -442,41 +444,41 @@ describe(streamSimpleCursor, () => {
 		});
 		await flushMicrotasks();
 
-		expect(providerMocks.sendKvBlobResponse).toHaveBeenCalledOnce();
-		expect(providerMocks.sendRequestContextResult).toHaveBeenCalledOnce();
+		expect(providerMocks.sendKvBlobResponse).toHaveBeenCalledTimes(1);
+		expect(providerMocks.sendRequestContextResult).toHaveBeenCalledTimes(1);
 		expect(providerMocks.sendExecResult).toHaveBeenCalledTimes(9);
-		expect(providerMocks.upsertConversationState).toHaveBeenCalledOnce();
+		expect(providerMocks.upsertConversationState).toHaveBeenCalledTimes(1);
 		expect(providerMocks.setActiveRun).toHaveBeenCalledWith(
 			"session:session-1:composer-2",
 			expect.objectContaining({
 				pendingExecs: expect.arrayContaining([expect.objectContaining({ toolCallId: "tool-1" })]),
 			}),
 		);
-		expect(connection.clearHandlers).toHaveBeenCalledOnce();
-		expect(stream.events).toStrictEqual(
+		expect(connection.clearHandlers).toHaveBeenCalledTimes(1);
+		expect(stream.events).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({ type: "start" }),
 				expect.objectContaining({ type: "text_start" }),
-				expect.objectContaining({ delta: "Hello ", type: "text_delta" }),
-				expect.objectContaining({ delta: " world", type: "text_delta" }),
+				expect.objectContaining({ type: "text_delta", delta: "Hello " }),
+				expect.objectContaining({ type: "text_delta", delta: " world" }),
 				expect.objectContaining({ type: "thinking_start" }),
-				expect.objectContaining({ delta: "secret", type: "thinking_delta" }),
-				expect.objectContaining({ delta: " plan", type: "thinking_delta" }),
-				expect.objectContaining({ delta: "deep thought", type: "thinking_delta" }),
+				expect.objectContaining({ type: "thinking_delta", delta: "secret" }),
+				expect.objectContaining({ type: "thinking_delta", delta: " plan" }),
+				expect.objectContaining({ type: "thinking_delta", delta: "deep thought" }),
 				expect.objectContaining({ type: "toolcall_start" }),
-				expect.objectContaining({ delta: '{"text":"ping"}', type: "toolcall_delta" }),
+				expect.objectContaining({ type: "toolcall_delta", delta: '{"text":"ping"}' }),
 				expect.objectContaining({
-					toolCall: expect.objectContaining({ id: "tool-1", name: "echo" }),
 					type: "toolcall_end",
+					toolCall: expect.objectContaining({ id: "tool-1", name: "echo" }),
 				}),
 				expect.objectContaining({
-					message: expect.objectContaining({ stopReason: "toolUse" }),
-					reason: "toolUse",
 					type: "done",
+					reason: "toolUse",
+					message: expect.objectContaining({ stopReason: "toolUse" }),
 				}),
 			]),
 		);
-		expect(stream.end).toHaveBeenCalledOnce();
+		expect(stream.end).toHaveBeenCalledTimes(1);
 	});
 
 	it("emits an aborted error when the caller signal aborts an in-flight run", async () => {
@@ -494,12 +496,12 @@ describe(streamSimpleCursor, () => {
 		controller.abort();
 		await flushMicrotasks();
 
-		expect(connection.close).toHaveBeenCalledOnce();
+		expect(connection.close).toHaveBeenCalledTimes(1);
 		expect(stream.events.at(-1)).toMatchObject({
-			error: expect.objectContaining({ stopReason: "aborted", errorMessage: "Request was aborted" }),
-			reason: "aborted",
 			type: "error",
+			reason: "aborted",
+			error: expect.objectContaining({ stopReason: "aborted", errorMessage: "Request was aborted" }),
 		});
-		expect(stream.end).toHaveBeenCalledOnce();
+		expect(stream.end).toHaveBeenCalledTimes(1);
 	});
 });

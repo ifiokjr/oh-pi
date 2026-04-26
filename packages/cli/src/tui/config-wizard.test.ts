@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { summarizeProviders } from "./config-wizard.js";
 import type { ProviderSetupResult } from "./provider-setup.js";
 
@@ -7,7 +8,7 @@ const setup = (overrides: Partial<ProviderSetupResult>): ProviderSetupResult => 
 	...overrides,
 });
 
-describe(summarizeProviders, () => {
+describe("summarizeProviders", () => {
 	it("returns unset copy when setup is missing", () => {
 		expect(summarizeProviders(null)).toBe("Providers: not configured");
 	});
@@ -21,7 +22,7 @@ describe(summarizeProviders, () => {
 			summarizeProviders(
 				setup({
 					providerStrategy: "add",
-					providers: [{ apiKey: "OPENAI_API_KEY", defaultModel: "gpt-4o", name: "openai" }],
+					providers: [{ name: "openai", apiKey: "OPENAI_API_KEY", defaultModel: "gpt-4o" }],
 				}),
 			),
 		).toBe("Add fallback providers: openai");
@@ -38,7 +39,7 @@ describe(summarizeProviders, () => {
 			summarizeProviders(
 				setup({
 					providerStrategy: "replace",
-					providers: [{ apiKey: "ANTHROPIC_API_KEY", defaultModel: "claude-sonnet-4-20250514", name: "anthropic" }],
+					providers: [{ name: "anthropic", apiKey: "ANTHROPIC_API_KEY", defaultModel: "claude-sonnet-4-20250514" }],
 				}),
 			),
 		).toBe("Replace providers with: anthropic");

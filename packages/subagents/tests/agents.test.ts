@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { discoverAgents, discoverAgentsAll } from "../agents.js";
 import { getSharedProjectAgentsDir } from "../project-agents-storage.js";
 
@@ -23,7 +23,7 @@ function createTempDir(prefix: string): string {
 function writeAgentFile(rootDir: string, relativePath: string, content: string): void {
 	const filePath = path.join(rootDir, relativePath);
 	fs.mkdirSync(path.dirname(filePath), { recursive: true });
-	fs.writeFileSync(filePath, content, "utf8");
+	fs.writeFileSync(filePath, content, "utf-8");
 }
 
 beforeEach(() => {
@@ -56,11 +56,11 @@ afterEach(() => {
 		if (!dir) {
 			continue;
 		}
-		fs.rmSync(dir, { force: true, recursive: true });
+		fs.rmSync(dir, { recursive: true, force: true });
 	}
 });
 
-describe(discoverAgents, () => {
+describe("discoverAgents", () => {
 	it("loads bundled builtin agents from the package", () => {
 		const cwd = createTempDir("subagents-builtin-");
 		const result = discoverAgents(cwd, "both");
@@ -183,12 +183,12 @@ describe(discoverAgents, () => {
 		const scout = result.agents.find((agent) => agent.name === "scout");
 		expect(scout?.source).toBe("project");
 		expect(scout?.description).toBe("Legacy project scout");
-		expect(fs.existsSync(path.join(projectDir, ".pi", "agents"))).toBeFalsy();
-		expect(fs.existsSync(path.join(getSharedProjectAgentsDir(projectDir), "scout.md"))).toBeTruthy();
+		expect(fs.existsSync(path.join(projectDir, ".pi", "agents"))).toBe(false);
+		expect(fs.existsSync(path.join(getSharedProjectAgentsDir(projectDir), "scout.md"))).toBe(true);
 	});
 });
 
-describe(discoverAgentsAll, () => {
+describe("discoverAgentsAll", () => {
 	it("returns builtin, user, project agents, and chain files from the shared project store", () => {
 		const homeDir = createTempDir("subagents-all-home-");
 		const projectDir = createTempDir("subagents-all-project-");

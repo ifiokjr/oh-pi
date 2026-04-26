@@ -1,18 +1,21 @@
-import { execMultiGrep, multiGrep } from "../src/find-grep.js";
+import { describe, it, expect, vi } from "vitest";
+import { multiGrep, execMultiGrep } from "../src/find-grep.js";
 
-vi.mock<typeof import("@ff-labs/fff-node")>(import("@ff-labs/fff-node"), async (importOriginal) => ({
-	CursorStore: vi.fn().mockImplementation(() => ({
-		init: vi.fn().mockResolvedValue(undefined),
-		grep: vi.fn().mockResolvedValue([{ file: "src/index.ts", line: 10, text: "function foo()" }]),
-		stats: vi.fn().mockReturnValue({ fileCount: 5 }),
-	})),
-	Cursor: vi.fn(),
-}));
+vi.mock("@ff-labs/fff-node", async (importOriginal) => {
+	return {
+		CursorStore: vi.fn().mockImplementation(() => ({
+			init: vi.fn().mockResolvedValue(undefined),
+			grep: vi.fn().mockResolvedValue([{ file: "src/index.ts", line: 10, text: "function foo()" }]),
+			stats: vi.fn().mockReturnValue({ fileCount: 5 }),
+		})),
+		Cursor: vi.fn(),
+	};
+});
 
-describe(multiGrep, () => {
+describe("multiGrep", () => {
 	it("returns no matches for empty patterns", async () => {
 		const result = await multiGrep([], "*.ts");
-		expect(result.ok).toBeFalsy();
+		expect(result.ok).toBe(false);
 		expect(result.matches).toBe(0);
 	});
 
@@ -20,14 +23,14 @@ describe(multiGrep, () => {
 		// When FFF module is available and returns matches
 		const result = await multiGrep(["foo"], "*.ts");
 		// Result may come from FFF or grep fallback depending on module resolution
-		expectTypeOf(result.ok).toBeBoolean();
-		expectTypeOf(result.matches).toBeNumber();
+		expect(typeof result.ok).toBe("boolean");
+		expect(typeof result.matches).toBe("number");
 	});
 
 	it("falls back to exec grep when FFF fails", async () => {
 		vi.doUnmock("@ff-labs/fff-node");
 		const result = await execMultiGrep(["import"], "*.ts", ".");
 		// Result depends on actual codebase — just verify structure
-		expectTypeOf(result.ok).toBeBoolean();
+		expect(typeof result.ok).toBe("boolean");
 	});
 });

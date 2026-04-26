@@ -1,29 +1,30 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	createTerminalEmulator,
+	terminalEmulatorInternals,
 	renderLineToAnsi,
 	resetHeadlessModuleLoader,
 	sanitizeAnsiOutput,
 	setHeadlessModuleLoader,
 	stripAnsiSequences,
 	styleToSgr,
-	terminalEmulatorInternals,
 } from "../src/terminal-emulator.js";
 
 function makeCell(overrides: Record<string, unknown> = {}) {
 	return {
-		getBgColor: () => (overrides.bgColor as number | undefined) ?? 0,
-		getBgColorMode: () => (overrides.bgColorMode as number | undefined) ?? 0,
 		getChars: () => (overrides.chars as string | undefined) ?? " ",
-		getFgColor: () => (overrides.fgColor as number | undefined) ?? 0,
-		getFgColorMode: () => (overrides.fgColorMode as number | undefined) ?? 0,
 		getWidth: () => (overrides.width as number | undefined) ?? 1,
 		isBold: () => Boolean(overrides.bold),
 		isDim: () => Boolean(overrides.dim),
+		isItalic: () => Boolean(overrides.italic),
+		isUnderline: () => Boolean(overrides.underline),
 		isInverse: () => Boolean(overrides.inverse),
 		isInvisible: () => Boolean(overrides.invisible),
-		isItalic: () => Boolean(overrides.italic),
 		isStrikethrough: () => Boolean(overrides.strikethrough),
-		isUnderline: () => Boolean(overrides.underline),
+		getFgColorMode: () => (overrides.fgColorMode as number | undefined) ?? 0,
+		getBgColorMode: () => (overrides.bgColorMode as number | undefined) ?? 0,
+		getFgColor: () => (overrides.fgColor as number | undefined) ?? 0,
+		getBgColor: () => (overrides.bgColor as number | undefined) ?? 0,
 	};
 }
 
@@ -50,15 +51,15 @@ describe("terminal emulator", () => {
 		const propLine = {
 			getCell(index: number) {
 				const cells = [
-					{ bold: true, chars: "P", fgColor: 0x112233, width: 1 },
-					{ chars: "Q", underline: true, width: 1 },
-					{ chars: "R", fgColor: 5, width: 1 },
-					{ chars: "S", fgColor: 7, fgColorMode: 1, width: 1 },
+					{ chars: "P", width: 1, bold: true, fgColor: 0x112233 },
+					{ chars: "Q", width: 1, underline: true },
+					{ chars: "R", width: 1, fgColor: 5 },
+					{ chars: "S", width: 1, fgColorMode: 1, fgColor: 7 },
 					{
 						chars: "T",
-						getFgColorMode: () => "bad" as never,
-						getWidth: () => "bad" as never,
 						width: 1,
+						getWidth: () => "bad" as never,
+						getFgColorMode: () => "bad" as never,
 					},
 				];
 				return cells[index] as never;
@@ -73,8 +74,8 @@ describe("terminal emulator", () => {
 		const styledLine = {
 			getCell(index: number) {
 				const cells = [
-					makeCell({ bold: true, chars: "A", fgColor: 2, fgColorMode: 2 }),
-					makeCell({ bgColor: 0x102030, bgColorMode: 3, chars: "B", fgColor: 1, fgColorMode: 2, inverse: true }),
+					makeCell({ chars: "A", bold: true, fgColorMode: 2, fgColor: 2 }),
+					makeCell({ chars: "B", inverse: true, fgColorMode: 2, fgColor: 1, bgColorMode: 3, bgColor: 0x102030 }),
 					makeCell({ chars: " ", width: 1 }),
 					makeCell({ chars: "C", width: 0 }),
 					makeCell({ chars: "D", invisible: true, strikethrough: true }),
@@ -86,21 +87,21 @@ describe("terminal emulator", () => {
 		const rendered = renderLineToAnsi(styledLine, 5);
 		expect(rendered).toContain("\u001B[0;1;38;5;2mA");
 		expect(rendered).toContain("\u001B[0;7;38;2;16;32;48;48;5;1mB");
-		expect(rendered.endsWith("\u001B[0m")).toBeTruthy();
+		expect(rendered.endsWith("\u001B[0m")).toBe(true);
 		expect(renderLineToAnsi({ translateToString: () => "plain" }, 10)).toBe("plain");
 		expect(renderLineToAnsi({} as never, 10)).toBe("");
 		expect(renderLineToAnsi(undefined, 10)).toBe("");
 		expect(
 			styleToSgr({
-				background: null,
 				bold: false,
 				dim: false,
-				foreground: null,
-				hidden: false,
-				inverse: false,
 				italic: false,
-				strikethrough: false,
 				underline: false,
+				inverse: false,
+				hidden: false,
+				strikethrough: false,
+				foreground: null,
+				background: null,
 			}),
 		).toBe("\u001B[0m");
 	});
@@ -111,6 +112,7 @@ describe("terminal emulator", () => {
 				active: {
 					baseY: 1,
 					cursorY: 0,
+					length: 4,
 					getLine(index: number) {
 						const lines = [
 							{ translateToString: () => "skip-0" },
@@ -120,11 +122,10 @@ describe("terminal emulator", () => {
 						];
 						return lines[index];
 					},
-					length: 4,
 				},
 			};
 			writeCalls: string[] = [];
-			resizes: [number, number][] = [];
+			resizes: Array<[number, number]> = [];
 			write(data: string, callback?: () => void) {
 				this.writeCalls.push(data);
 				callback?.();
@@ -141,39 +142,37 @@ describe("terminal emulator", () => {
 		emulator.resize(20, 3);
 
 		expect(emulator.getPlainText()).toBe("hello");
-		expect(emulator.toAnsiLines(2)).toStrictEqual(["screen-2", "screen-3"]);
-		expect(terminalEmulatorInternals.decodeRgb(0x11_22_33)).toStrictEqual([17, 34, 51]);
+		expect(emulator.toAnsiLines(2)).toEqual(["screen-2", "screen-3"]);
+		expect(terminalEmulatorInternals.decodeRgb(0x112233)).toEqual([17, 34, 51]);
 		expect(
 			terminalEmulatorInternals.stylesEqual(
 				{
-					background: { kind: "palette", value: 1 },
 					bold: false,
 					dim: false,
-					foreground: null,
-					hidden: false,
-					inverse: false,
 					italic: false,
-					strikethrough: false,
 					underline: false,
+					inverse: false,
+					hidden: false,
+					strikethrough: false,
+					foreground: null,
+					background: { kind: "palette", value: 1 },
 				},
 				{
-					background: { kind: "palette", value: 1 },
 					bold: false,
 					dim: false,
-					foreground: null,
-					hidden: false,
-					inverse: false,
 					italic: false,
-					strikethrough: false,
 					underline: false,
+					inverse: false,
+					hidden: false,
+					strikethrough: false,
+					foreground: null,
+					background: { kind: "palette", value: 1 },
 				},
 			),
-		).toBeTruthy();
-		expect(terminalEmulatorInternals.getVisibleLineIndexes({ baseY: 2, cursorY: 0, length: 6 }, 3)).toStrictEqual([
-			2, 4,
-		]);
-		expect(terminalEmulatorInternals.getVisibleLineIndexes({ length: 0 }, 2)).toStrictEqual([0, -1]);
-		expect(terminalEmulatorInternals.getVisibleLineIndexes(undefined as never, 2)).toStrictEqual([0, 1]);
+		).toBe(true);
+		expect(terminalEmulatorInternals.getVisibleLineIndexes({ baseY: 2, cursorY: 0, length: 6 }, 3)).toEqual([2, 4]);
+		expect(terminalEmulatorInternals.getVisibleLineIndexes({ length: 0 }, 2)).toEqual([0, -1]);
+		expect(terminalEmulatorInternals.getVisibleLineIndexes(undefined as never, 2)).toEqual([0, 1]);
 		emulator.dispose();
 	});
 
@@ -190,10 +189,10 @@ describe("terminal emulator", () => {
 		setHeadlessModuleLoader(async () => ({ Terminal: ThrowingTerminal as never }));
 		const emulator = await createTerminalEmulator({ rows: 1 });
 		emulator.resize(2, 1);
-		expect(emulator.toAnsiLines(1)).toStrictEqual([]);
+		expect(emulator.toAnsiLines(1)).toEqual([]);
 		await emulator.write("boom");
-		expect(emulator.toAnsiLines(1)).toStrictEqual(["boom"]);
-		expect(terminalEmulatorInternals.getVisibleLineIndexes({ length: 0 }, 2)).toStrictEqual([0, -1]);
+		expect(emulator.toAnsiLines(1)).toEqual(["boom"]);
+		expect(terminalEmulatorInternals.getVisibleLineIndexes({ length: 0 }, 2)).toEqual([0, -1]);
 		emulator.dispose();
 	});
 
@@ -203,15 +202,15 @@ describe("terminal emulator", () => {
 		});
 		const emulator = await createTerminalEmulator({ rows: 2 });
 		await emulator.write("one\n\u001B[31mtwo\u001B[0m\nthree");
-		expect(emulator.toAnsiLines(2)).toStrictEqual(["two", "three"]);
+		expect(emulator.toAnsiLines(2)).toEqual(["two", "three"]);
 		expect(emulator.getPlainText()).toContain("one");
 		emulator.dispose();
 
 		setHeadlessModuleLoader(async () => ({ Terminal: undefined as never }));
 		const fallback = await createTerminalEmulator();
 		fallback.resize(1, 1);
-		expect(fallback.toAnsiLines()).toStrictEqual([]);
+		expect(fallback.toAnsiLines()).toEqual([]);
 		await fallback.write("plain");
-		expect(fallback.toAnsiLines()).toStrictEqual(["plain"]);
+		expect(fallback.toAnsiLines()).toEqual(["plain"]);
 	});
 });

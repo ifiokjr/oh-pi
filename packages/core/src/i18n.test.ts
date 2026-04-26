@@ -1,8 +1,9 @@
+import { afterEach, describe, expect, it } from "vitest";
 import { getLocale, setLocale, t } from "./i18n.js";
 
 afterEach(() => setLocale("en"));
 
-describe(t, () => {
+describe("t", () => {
 	it("returns known en key", () => {
 		expect(t("welcome.title")).toContain("oh-pi");
 	});
@@ -27,13 +28,13 @@ describe(t, () => {
 	});
 
 	it("interpolates multiple vars", () => {
-		const result = t("welcome.envInfo", { node: "v20", os: "linux", terminal: "xterm" });
+		const result = t("welcome.envInfo", { terminal: "xterm", os: "linux", node: "v20" });
 		expect(result).toContain("xterm");
 		expect(result).toContain("linux");
 	});
 
 	it("returns string without vars unchanged", () => {
-		expectTypeOf(t("cancelled")).toBeString();
+		expect(typeof t("cancelled")).toBe("string");
 	});
 
 	it("does not crash with empty vars", () => {

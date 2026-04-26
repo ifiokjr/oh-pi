@@ -1,5 +1,5 @@
 import { create, toBinary } from "@bufbuild/protobuf";
-
+import { describe, expect, it } from "vitest";
 import {
 	decodeGetUsableModelsResponse,
 	discoverCursorModels,
@@ -15,27 +15,27 @@ import { createTestCursorBackend } from "./test-backend.js";
 describe("cursor models", () => {
 	it("returns a curated fallback catalog", () => {
 		const models = getFallbackCursorModels();
-		expect(models.some((model) => model.id === "composer-2")).toBeTruthy();
-		expect(models.every((model) => model.input.includes("text"))).toBeTruthy();
+		expect(models.some((model) => model.id === "composer-2")).toBe(true);
+		expect(models.every((model) => model.input.includes("text"))).toBe(true);
 	});
 
 	it("normalizes discovered model metadata and de-duplicates by id", () => {
 		const models = normalizeCursorModels([
-			{ displayName: "Composer 2", modelId: "composer-2", thinkingDetails: {} },
-			{ displayName: "Composer 2 duplicate", modelId: "composer-2" },
-			{ displayNameShort: "GPT-5.2 Codex", modelId: "gpt-5.2-codex" },
+			{ modelId: "composer-2", displayName: "Composer 2", thinkingDetails: {} },
+			{ modelId: "composer-2", displayName: "Composer 2 duplicate" },
+			{ modelId: "gpt-5.2-codex", displayNameShort: "GPT-5.2 Codex" },
 		]);
 
-		expect(models.map((model) => model.id)).toStrictEqual(["composer-2", "gpt-5.2-codex"]);
-		expect(models[0]?.reasoning).toBeTruthy();
-		expect(models[1]?.contextWindow).toBe(400_000);
+		expect(models.map((model) => model.id)).toEqual(["composer-2", "gpt-5.2-codex"]);
+		expect(models[0]?.reasoning).toBe(true);
+		expect(models[1]?.contextWindow).toBe(400000);
 	});
 
 	it("decodes both raw and Connect-framed discovery responses", () => {
 		const payload = toBinary(
 			GetUsableModelsResponseSchema,
 			create(GetUsableModelsResponseSchema, {
-				models: [create(ModelDetailsSchema, { displayName: "Composer 2", modelId: "composer-2" })],
+				models: [create(ModelDetailsSchema, { modelId: "composer-2", displayName: "Composer 2" })],
 			}),
 		);
 
@@ -48,16 +48,16 @@ describe("cursor models", () => {
 		backend.setDiscoveredModels([{ id: "composer-2", name: "Composer 2", reasoning: true }]);
 		const models = await discoverCursorModels("test-access", backend.apiUrl);
 		expect(models?.[0]?.id).toBe("composer-2");
-		expect(backend.getDiscoveryAuthHeaders()).toStrictEqual(["Bearer test-access"]);
+		expect(backend.getDiscoveryAuthHeaders()).toEqual(["Bearer test-access"]);
 		await backend.close();
 	});
 
 	it("prefers models stored with the OAuth credential", () => {
 		const models = getCredentialModels({
+			refresh: "r",
 			access: "a",
 			expires: Date.now() + 1000,
 			models: [toCursorProviderModel({ id: "gpt-5.2", name: "GPT-5.2", reasoning: true })],
-			refresh: "r",
 		});
 		expect(models).toHaveLength(1);
 		expect(models[0]?.id).toBe("gpt-5.2");

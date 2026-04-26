@@ -1,6 +1,7 @@
+import { describe, expect, it } from "vitest";
 import { PRESETS } from "./preset-select.js";
 
-describe(PRESETS, () => {
+describe("PRESETS", () => {
 	it("keeps safe-guard opt-in even in the full preset", () => {
 		const full = PRESETS.full?.config;
 		expect(full).toBeDefined();
@@ -10,11 +11,11 @@ describe(PRESETS, () => {
 	});
 
 	it("keeps the clean preset extension-free", () => {
-		expect(PRESETS.clean?.config.extensions).toStrictEqual([]);
+		expect(PRESETS.clean?.config.extensions).toEqual([]);
 	});
 
 	it("keeps the colony preset focused on colony-related defaults", () => {
-		expect(PRESETS.colony?.config.extensions).toStrictEqual(["ant-colony", "auto-session-name", "compact-header"]);
+		expect(PRESETS.colony?.config.extensions).toEqual(["ant-colony", "auto-session-name", "compact-header"]);
 		expect(PRESETS.colony?.config.extensions).not.toContain("safe-guard");
 	});
 });

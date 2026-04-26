@@ -1,3 +1,4 @@
+import { describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import externalEditorExtension from "./external-editor.js";
 
@@ -6,8 +7,8 @@ describe("external-editor extension", () => {
 		const harness = createExtensionHarness();
 		externalEditorExtension(harness.pi as never);
 
-		expect(harness.commands.has("external-editor")).toBeTruthy();
-		expect(harness.shortcuts.has("ctrl+shift+e")).toBeTruthy();
+		expect(harness.commands.has("external-editor")).toBe(true);
+		expect(harness.shortcuts.has("ctrl+shift+e")).toBe(true);
 	});
 
 	it("shows status for the configured editor", async () => {
@@ -46,7 +47,7 @@ describe("external-editor extension", () => {
 		}
 
 		expect(custom).not.toHaveBeenCalled();
-		expect(harness.notifications.at(-1)).toStrictEqual({
+		expect(harness.notifications.at(-1)).toEqual({
 			msg: "No external editor configured. Set $VISUAL or $EDITOR first.",
 			type: "warning",
 		});
@@ -60,15 +61,15 @@ describe("external-editor extension", () => {
 		const originalStdinTty = process.stdin.isTTY;
 		const originalStdoutTty = process.stdout.isTTY;
 		const originalVisual = process.env.VISUAL;
-		Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
-		Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: true });
+		Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true });
+		Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
 		process.env.VISUAL = "hx";
 
 		try {
 			await harness.commands.get("external-editor").handler("", harness.ctx);
 		} finally {
-			Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: originalStdinTty });
-			Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: originalStdoutTty });
+			Object.defineProperty(process.stdin, "isTTY", { value: originalStdinTty, configurable: true });
+			Object.defineProperty(process.stdout, "isTTY", { value: originalStdoutTty, configurable: true });
 			process.env.VISUAL = originalVisual;
 		}
 
@@ -83,15 +84,15 @@ describe("external-editor extension", () => {
 		const originalStdinTty = process.stdin.isTTY;
 		const originalStdoutTty = process.stdout.isTTY;
 		const originalEditor = process.env.EDITOR;
-		Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
-		Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: true });
+		Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true });
+		Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
 		process.env.EDITOR = "vim";
 
 		try {
 			await harness.shortcuts.get("ctrl+shift+e").handler(harness.ctx);
 		} finally {
-			Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: originalStdinTty });
-			Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: originalStdoutTty });
+			Object.defineProperty(process.stdin, "isTTY", { value: originalStdinTty, configurable: true });
+			Object.defineProperty(process.stdout, "isTTY", { value: originalStdoutTty, configurable: true });
 			process.env.EDITOR = originalEditor;
 		}
 

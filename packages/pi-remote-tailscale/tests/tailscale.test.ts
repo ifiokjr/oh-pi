@@ -1,3 +1,4 @@
+import { describe, expect, it, vi } from "vitest";
 import {
 	buildPublicUrl,
 	buildServeArgs,
@@ -22,7 +23,7 @@ describe("tailscale helpers", () => {
 		expect(buildPublicUrl("test.tailnet.ts.net", "pi/fancy-session-42/")).toBe(
 			"https://test.tailnet.ts.net/pi/fancy-session-42/",
 		);
-		expect(buildServeArgs(3210, "/pi/fancy-session-42/")).toStrictEqual([
+		expect(buildServeArgs(3210, "/pi/fancy-session-42/")).toEqual([
 			"serve",
 			"--bg",
 			"--https",
@@ -31,7 +32,7 @@ describe("tailscale helpers", () => {
 			"/pi/fancy-session-42/",
 			"http://127.0.0.1:3210",
 		]);
-		expect(buildServeOffArgs("/pi/fancy-session-42/")).toStrictEqual([
+		expect(buildServeOffArgs("/pi/fancy-session-42/")).toEqual([
 			"serve",
 			"--https",
 			"443",
@@ -58,8 +59,8 @@ describe("tailscale helpers", () => {
 			throw new Error("unexpected command");
 		});
 
-		await expect(isTailscaleAvailable(availableRunner)).resolves.toBeTruthy();
-		await expect(getTailscaleHostname(availableRunner)).resolves.toBe("pi.tailnet.ts.net");
+		expect(await isTailscaleAvailable(availableRunner)).toBe(true);
+		expect(await getTailscaleHostname(availableRunner)).toBe("pi.tailnet.ts.net");
 		await expect(
 			getTailscaleHostname(async () => ({ exitCode: 0, stderr: "", stdout: '{"Self":{}}' })),
 		).rejects.toThrow("Unable to determine the Tailscale hostname.");
@@ -70,7 +71,7 @@ describe("tailscale helpers", () => {
 			throw new Error("not found");
 		});
 
-		await expect(isTailscaleAvailable(unavailableRunner)).resolves.toBeFalsy();
+		expect(await isTailscaleAvailable(unavailableRunner)).toBe(false);
 	});
 
 	it("starts a tailscale serve session and stops it idempotently", async () => {
@@ -89,7 +90,7 @@ describe("tailscale helpers", () => {
 		await session.stop();
 
 		expect(session.publicUrl).toBe("https://pi.tailnet.ts.net/pi/session-42/");
-		expect(runner.mock.calls).toStrictEqual([
+		expect(runner.mock.calls).toEqual([
 			["which", ["tailscale"]],
 			["tailscale", ["status", "--json"]],
 			["tailscale", ["serve", "--bg", "--https", "443", "--set-path", "/pi/session-42/", "http://127.0.0.1:3100"]],

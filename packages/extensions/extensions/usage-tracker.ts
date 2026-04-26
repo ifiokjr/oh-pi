@@ -98,7 +98,7 @@ function ensureCtrlUUnbound(): void {
 	try {
 		let config: Record<string, unknown> = {};
 		if (existsSync(keybindingsPath)) {
-			config = JSON.parse(readFileSync(keybindingsPath, "utf8"));
+			config = JSON.parse(readFileSync(keybindingsPath, "utf-8"));
 		}
 
 		let shouldWrite = false;
@@ -126,7 +126,7 @@ function ensureCtrlUUnbound(): void {
 		}
 
 		if (shouldWrite) {
-			writeFileSync(keybindingsPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+			writeFileSync(keybindingsPath, `${JSON.stringify(config, null, 2)}\n`, "utf-8");
 		}
 	} catch {
 		// Non-critical — worst case the warning still shows
@@ -277,7 +277,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	async function loadRollingHistory(): Promise<void> {
 		try {
-			const raw = JSON.parse(await fsp.readFile(usageHistoryPath, "utf8")) as { entries?: unknown };
+			const raw = JSON.parse(await fsp.readFile(usageHistoryPath, "utf-8")) as { entries?: unknown };
 			if (!Array.isArray(raw.entries)) {
 				return;
 			}
@@ -329,7 +329,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 				entries: rollingHistory,
 				version: 1,
 			};
-			writeFileSync(usageHistoryPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+			writeFileSync(usageHistoryPath, `${JSON.stringify(payload, null, 2)}\n`, "utf-8");
 		} catch {
 			// Non-critical. We still keep in-memory stats for current runtime.
 		}
@@ -394,7 +394,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	async function loadRateLimitCache(): Promise<void> {
 		try {
-			const raw = JSON.parse(await fsp.readFile(rateLimitCachePath, "utf8")) as { providers?: unknown };
+			const raw = JSON.parse(await fsp.readFile(rateLimitCachePath, "utf-8")) as { providers?: unknown };
 			if (!raw.providers || typeof raw.providers !== "object") {
 				return;
 			}
@@ -449,7 +449,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 				mkdirSync(dir, { recursive: true });
 			}
 			const providers = Object.fromEntries(rateLimits);
-			writeFileSync(rateLimitCachePath, `${JSON.stringify({ providers, version: 1 }, null, 2)}\n`, "utf8");
+			writeFileSync(rateLimitCachePath, `${JSON.stringify({ version: 1, providers }, null, 2)}\n`, "utf-8");
 		} catch {
 			// Non-critical. We can still rely on in-memory provider data.
 		}

@@ -1,13 +1,14 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
 
-const scriptsDir = import.meta.dirname;
+const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptsDir, "..");
 const workflowPath = path.join(repoRoot, ".github", "workflows", "ci.yml");
 const packageJsonPath = path.join(repoRoot, "package.json");
 
-describe("cI workflow branch triggers", () => {
+describe("CI workflow branch triggers", () => {
 	it("runs for main and stacked prep branches on push and pull_request", () => {
 		const workflow = readFileSync(workflowPath, "utf8");
 

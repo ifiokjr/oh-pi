@@ -3,27 +3,27 @@
  *
  * Tests for utility functions and schema definitions that don't require SQLite.
  */
-
-import { formatDate, formatDateBucket, formatHourBucket, formatMonthBucket, formatWeekBucket } from "../db.js";
+import { describe, it, expect } from "vitest";
+import { formatDateBucket, formatHourBucket, formatWeekBucket, formatMonthBucket, formatDate } from "../db.js";
 import {
-	codebaseDailyStats,
+	sessions,
 	codebases,
+	providers,
+	models,
+	turns,
+	rateLimitSnapshots,
 	dailyStats,
 	hourlyStats,
-	misspellings,
 	modelDailyStats,
-	models,
-	providers,
-	rateLimitSnapshots,
-	sessionEvents,
-	sessions,
-	turns,
+	codebaseDailyStats,
 	wordFrequencies,
+	misspellings,
+	sessionEvents,
 } from "../schema.js";
 
 // ─── formatDateBucket ────────────────────────────────────────────────────────
 
-describe(formatDateBucket, () => {
+describe("formatDateBucket", () => {
 	it("formats a Date to YYYY-MM-DD", () => {
 		expect(formatDateBucket(new Date("2024-07-15T12:00:00Z"))).toBe("2024-07-15");
 	});
@@ -45,7 +45,7 @@ describe(formatDateBucket, () => {
 
 // ─── formatHourBucket ────────────────────────────────────────────────────────
 
-describe(formatHourBucket, () => {
+describe("formatHourBucket", () => {
 	it("formats to YYYY-MM-DD HH:00:00", () => {
 		expect(formatHourBucket(new Date("2024-07-15T14:30:00Z"))).toContain("2024-07-15 14:00:00");
 	});
@@ -63,7 +63,7 @@ describe(formatHourBucket, () => {
 
 // ─── formatWeekBucket ────────────────────────────────────────────────────────
 
-describe(formatWeekBucket, () => {
+describe("formatWeekBucket", () => {
 	it("returns YYYY-Wxx format", () => {
 		const result = formatWeekBucket(new Date("2024-01-08T00:00:00Z"));
 		expect(result).toMatch(/^\d{4}-W\d{2}$/);
@@ -77,7 +77,7 @@ describe(formatWeekBucket, () => {
 
 // ─── formatMonthBucket ───────────────────────────────────────────────────────
 
-describe(formatMonthBucket, () => {
+describe("formatMonthBucket", () => {
 	it("returns YYYY-MM format", () => {
 		expect(formatMonthBucket(new Date("2024-07-15"))).toBe("2024-07");
 	});
@@ -89,7 +89,7 @@ describe(formatMonthBucket, () => {
 
 // ─── formatDate ────────────────────────────────────────────────────────────────
 
-describe(formatDate, () => {
+describe("formatDate", () => {
 	it("formats a Date to YYYY-MM-DD", () => {
 		expect(formatDate(new Date("2024-12-25"))).toBe("2024-12-25");
 	});

@@ -1,168 +1,170 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 const runtimeMonitorMock = vi.hoisted(() => ({
-	clearResults: vi.fn(),
-	ensurePoller: vi.fn(),
 	refreshWidget: vi.fn(),
+	ensurePoller: vi.fn(),
 	stop: vi.fn(),
+	clearResults: vi.fn(),
 }));
 
 const mocks = vi.hoisted(() => ({
-	checkSubagentDepth: vi.fn(() => ({ blocked: false, depth: 0, maxDepth: 2 })),
-	cleanupAllArtifactDirs: vi.fn(),
-	cleanupOldArtifacts: vi.fn(),
-	cleanupOldChainDirs: vi.fn(),
-	createSubagentRuntimeMonitor: vi.fn(() => runtimeMonitorMock),
 	discoverAgents: vi.fn(),
 	discoverAgentsAll: vi.fn(() => ({ agents: [], builtin: [], user: [], project: [], chains: [] })),
-	discoverAvailableSkills: vi.fn(() => [{ name: "git" }, { name: "context7" }]),
-	ensureAccessibleDir: vi.fn(),
-	executeAsyncChain: vi.fn(),
-	executeAsyncSingle: vi.fn(),
-	executeChain: vi.fn(),
-	expandTildePath: vi.fn((value: string) => value),
-	finalizeSingleOutput: vi.fn(({ truncatedOutput, fullOutput }: any) => ({
-		displayOutput: truncatedOutput || fullOutput || "(no output)",
-	})),
-	findByPrefix: vi.fn(() => null),
-	getArtifactsDir: vi.fn(() => "/tmp/artifacts"),
-	getFinalOutput: vi.fn(() => "final output"),
+	resolveExecutionAgentScope: vi.fn(() => "both"),
+	cleanupOldChainDirs: vi.fn(),
 	getStepAgents: vi.fn((step: any) =>
 		"parallel" in step ? step.parallel.map((task: any) => task.agent) : [step.agent],
 	),
-	getSubagentSessionRoot: vi.fn(() => "/tmp/subagent-session-root"),
-	handleManagementAction: vi.fn(),
-	injectSingleOutputInstruction: vi.fn((task: string) => task),
-	isAsyncAvailable: vi.fn(() => true),
 	isParallelStep: vi.fn((step: any) => Boolean(step && typeof step === "object" && Array.isArray(step.parallel))),
-	loadSubagentConfig: vi.fn(() => ({})),
+	resolveStepBehavior: vi.fn(() => ({ skills: undefined })),
+	cleanupAllArtifactDirs: vi.fn(),
+	cleanupOldArtifacts: vi.fn(),
+	getArtifactsDir: vi.fn(() => "/tmp/artifacts"),
+	checkSubagentDepth: vi.fn(() => ({ blocked: false, depth: 0, maxDepth: 2 })),
+	findByPrefix: vi.fn(() => null),
+	getFinalOutput: vi.fn(() => "final output"),
 	mapConcurrent: vi.fn((items: any[], concurrencyOrFn: any, maybeFn?: any) => {
 		const mapper = typeof concurrencyOrFn === "function" ? concurrencyOrFn : maybeFn;
 		return Promise.all(items.map((item, index) => mapper(item, index)));
 	}),
-	normalizeSkillInput: vi.fn((value: unknown) => value),
 	readStatus: vi.fn(() => null),
-	recordRun: vi.fn(),
-	registerSubagentCommands: vi.fn(),
-	renderSubagentResult: vi.fn(),
-	renderWidget: vi.fn(),
-	resolveExecutionAgentScope: vi.fn(() => "both"),
-	resolveSingleOutputPath: vi.fn((output: string | undefined) => (output ? `/tmp/${output}` : undefined)),
-	resolveStepBehavior: vi.fn(() => ({ skills: undefined })),
-	resolveSubagentModelResolution: vi.fn(() => ({ model: undefined, source: "agent-default" })),
 	runSync: vi.fn(),
+	renderWidget: vi.fn(),
+	renderSubagentResult: vi.fn(),
+	executeChain: vi.fn(),
+	isAsyncAvailable: vi.fn(() => true),
+	executeAsyncChain: vi.fn(),
+	executeAsyncSingle: vi.fn(),
+	discoverAvailableSkills: vi.fn(() => [{ name: "git" }, { name: "context7" }]),
+	normalizeSkillInput: vi.fn((value: unknown) => value),
+	finalizeSingleOutput: vi.fn(({ truncatedOutput, fullOutput }: any) => ({
+		displayOutput: truncatedOutput || fullOutput || "(no output)",
+	})),
+	injectSingleOutputInstruction: vi.fn((task: string) => task),
+	resolveSingleOutputPath: vi.fn((output: string | undefined) => (output ? `/tmp/${output}` : undefined)),
+	recordRun: vi.fn(),
+	handleManagementAction: vi.fn(),
+	registerSubagentCommands: vi.fn(),
+	ensureAccessibleDir: vi.fn(),
+	expandTildePath: vi.fn((value: string) => value),
+	getSubagentSessionRoot: vi.fn(() => "/tmp/subagent-session-root"),
+	loadSubagentConfig: vi.fn(() => ({})),
+	resolveSubagentModelResolution: vi.fn(() => ({ model: undefined, source: "agent-default" })),
+	createSubagentRuntimeMonitor: vi.fn(() => runtimeMonitorMock),
 }));
 
-vi.mock<typeof import("node:fs")>(import("node:fs"), () => ({
-	accessSync: vi.fn(),
+vi.mock("node:fs", () => ({
 	constants: { R_OK: 4, W_OK: 2 },
 	existsSync: vi.fn(() => false),
-	mkdirSync: vi.fn(),
 	readFileSync: vi.fn(() => '{"id":"result-1","success":true,"summary":"done"}'),
-	readdirSync: vi.fn(() => []),
+	mkdirSync: vi.fn(),
+	accessSync: vi.fn(),
 	rmSync: vi.fn(),
-	unlinkSync: vi.fn(),
 	watch: vi.fn(() => ({
 		on: vi.fn(),
 		unref: vi.fn(),
 		close: vi.fn(),
 	})),
+	readdirSync: vi.fn(() => []),
+	unlinkSync: vi.fn(),
 }));
 
-vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
-	VERSION: "test",
+vi.mock("@mariozechner/pi-coding-agent", () => ({
 	getAgentDir: () => "/tmp/pi-agent",
+	VERSION: "test",
 }));
 
-vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), () => ({
+vi.mock("@mariozechner/pi-tui", () => ({
 	Text: class {},
 }));
 
-vi.mock<typeof import("../agents.js")>(import("../agents.js"), () => ({
+vi.mock("../agents.js", () => ({
 	discoverAgents: mocks.discoverAgents,
 	discoverAgentsAll: mocks.discoverAgentsAll,
 }));
-vi.mock<typeof import("../agent-scope.js")>(import("../agent-scope.js"), () => ({
+vi.mock("../agent-scope.js", () => ({
 	resolveExecutionAgentScope: mocks.resolveExecutionAgentScope,
 }));
-vi.mock<typeof import("../settings.js")>(import("../settings.js"), () => ({
+vi.mock("../settings.js", () => ({
 	cleanupOldChainDirs: mocks.cleanupOldChainDirs,
 	getStepAgents: mocks.getStepAgents,
 	isParallelStep: mocks.isParallelStep,
 	resolveStepBehavior: mocks.resolveStepBehavior,
 }));
-vi.mock<typeof import("../chain-clarify.js")>(import("../chain-clarify.js"), () => ({
+vi.mock("../chain-clarify.js", () => ({
 	ChainClarifyComponent: class {},
 }));
-vi.mock<typeof import("../artifacts.js")>(import("../artifacts.js"), () => ({
+vi.mock("../artifacts.js", () => ({
 	cleanupAllArtifactDirs: mocks.cleanupAllArtifactDirs,
 	cleanupOldArtifacts: mocks.cleanupOldArtifacts,
 	getArtifactsDir: mocks.getArtifactsDir,
 }));
-vi.mock<typeof import("../types.js")>(import("../types.js"), () => ({
+vi.mock("../types.js", () => ({
 	ASYNC_DIR: "/tmp/pi-async-subagent-runs",
+	RESULTS_DIR: "/tmp/pi-async-subagent-results",
 	DEFAULT_ARTIFACT_CONFIG: { cleanupDays: 7 },
 	DEFAULT_MAX_OUTPUT: { bytes: 200 * 1024, lines: 5000 },
 	MAX_CONCURRENCY: 4,
 	MAX_PARALLEL: 3,
-	RESULTS_DIR: "/tmp/pi-async-subagent-results",
 	WIDGET_KEY: "subagent-async",
 	checkSubagentDepth: mocks.checkSubagentDepth,
 }));
-vi.mock<typeof import("../utils.js")>(import("../utils.js"), () => ({
+vi.mock("../utils.js", () => ({
+	readStatus: mocks.readStatus,
 	findByPrefix: mocks.findByPrefix,
 	getFinalOutput: mocks.getFinalOutput,
 	mapConcurrent: mocks.mapConcurrent,
-	readStatus: mocks.readStatus,
 }));
-vi.mock<typeof import("../execution.js")>(import("../execution.js"), () => ({
+vi.mock("../execution.js", () => ({
 	runSync: mocks.runSync,
 }));
-vi.mock<typeof import("../render.js")>(import("../render.js"), () => ({
-	renderSubagentResult: mocks.renderSubagentResult,
+vi.mock("../render.js", () => ({
 	renderWidget: mocks.renderWidget,
+	renderSubagentResult: mocks.renderSubagentResult,
 }));
-vi.mock<typeof import("../schemas.js")>(import("../schemas.js"), () => ({
-	StatusParams: {},
+vi.mock("../schemas.js", () => ({
 	SubagentParams: {},
+	StatusParams: {},
 }));
-vi.mock<typeof import("../chain-execution.js")>(import("../chain-execution.js"), () => ({
+vi.mock("../chain-execution.js", () => ({
 	executeChain: mocks.executeChain,
 }));
-vi.mock<typeof import("../async-execution.js")>(import("../async-execution.js"), () => ({
+vi.mock("../async-execution.js", () => ({
+	isAsyncAvailable: mocks.isAsyncAvailable,
 	executeAsyncChain: mocks.executeAsyncChain,
 	executeAsyncSingle: mocks.executeAsyncSingle,
-	isAsyncAvailable: mocks.isAsyncAvailable,
 }));
-vi.mock<typeof import("../skills.js")>(import("../skills.js"), () => ({
+vi.mock("../skills.js", () => ({
 	discoverAvailableSkills: mocks.discoverAvailableSkills,
 	normalizeSkillInput: mocks.normalizeSkillInput,
 }));
-vi.mock<typeof import("../single-output.js")>(import("../single-output.js"), () => ({
+vi.mock("../single-output.js", () => ({
 	finalizeSingleOutput: mocks.finalizeSingleOutput,
 	injectSingleOutputInstruction: mocks.injectSingleOutputInstruction,
 	resolveSingleOutputPath: mocks.resolveSingleOutputPath,
 }));
-vi.mock<typeof import("../agent-manager.js")>(import("../agent-manager.js"), () => ({
+vi.mock("../agent-manager.js", () => ({
 	AgentManagerComponent: class {},
 }));
-vi.mock<typeof import("../run-history.js")>(import("../run-history.js"), () => ({
+vi.mock("../run-history.js", () => ({
 	recordRun: mocks.recordRun,
 }));
-vi.mock<typeof import("../agent-management.js")>(import("../agent-management.js"), () => ({
+vi.mock("../agent-management.js", () => ({
 	handleManagementAction: mocks.handleManagementAction,
 }));
-vi.mock<typeof import("../command-registration.js")>(import("../command-registration.js"), () => ({
+vi.mock("../command-registration.js", () => ({
 	registerSubagentCommands: mocks.registerSubagentCommands,
 }));
-vi.mock<typeof import("../bootstrap.js")>(import("../bootstrap.js"), () => ({
+vi.mock("../bootstrap.js", () => ({
 	ensureAccessibleDir: mocks.ensureAccessibleDir,
 	expandTildePath: mocks.expandTildePath,
 	getSubagentSessionRoot: mocks.getSubagentSessionRoot,
 	loadSubagentConfig: mocks.loadSubagentConfig,
 }));
-vi.mock<typeof import("../runtime-monitor.js")>(import("../runtime-monitor.js"), () => ({
+vi.mock("../runtime-monitor.js", () => ({
 	createSubagentRuntimeMonitor: mocks.createSubagentRuntimeMonitor,
 }));
-vi.mock<typeof import("../model-routing.js")>(import("../model-routing.js"), () => ({
+vi.mock("../model-routing.js", () => ({
 	resolveSubagentModelResolution: mocks.resolveSubagentModelResolution,
 	toAvailableModelRefs: (models: any[]) =>
 		models.map((model) => ({
@@ -175,53 +177,52 @@ vi.mock<typeof import("../model-routing.js")>(import("../model-routing.js"), () 
 import registerSubagentExtension from "../index.js";
 
 function createMockPi() {
-	const handlers = new Map<string, ((...args: any[]) => any)[]>();
-	const eventHandlers = new Map<string, ((data: unknown) => void)[]>();
+	const handlers = new Map<string, Array<(...args: any[]) => any>>();
+	const eventHandlers = new Map<string, Array<(data: unknown) => void>>();
 	const tools = new Map<string, any>();
 	const shortcuts = new Map<string, any>();
 
 	return {
-		eventHandlers,
-		events: {
-			emit(event: string, data: unknown) {
-				for (const handler of eventHandlers.get(event) ?? []) {
-					handler(data);
-				}
-			},
-			off: vi.fn(),
-			on(event: string, handler: (data: unknown) => void) {
-				if (!eventHandlers.has(event)) {
-					eventHandlers.set(event, []);
-				}
-				eventHandlers.get(event)?.push(handler);
-			},
-		},
 		handlers,
+		eventHandlers,
+		tools,
+		shortcuts,
 		on(event: string, handler: (...args: any[]) => any) {
 			if (!handlers.has(event)) {
 				handlers.set(event, []);
 			}
 			handlers.get(event)?.push(handler);
 		},
+		registerTool: vi.fn((tool: any) => {
+			tools.set(tool.name, tool);
+		}),
 		registerCommand: vi.fn(),
 		registerShortcut: vi.fn((name: string, spec: any) => {
 			shortcuts.set(name, spec);
 		}),
-		registerTool: vi.fn((tool: any) => {
-			tools.set(tool.name, tool);
-		}),
 		sendUserMessage: vi.fn(),
-		shortcuts,
-		tools,
+		events: {
+			on(event: string, handler: (data: unknown) => void) {
+				if (!eventHandlers.has(event)) {
+					eventHandlers.set(event, []);
+				}
+				eventHandlers.get(event)?.push(handler);
+			},
+			off: vi.fn(),
+			emit(event: string, data: unknown) {
+				for (const handler of eventHandlers.get(event) ?? []) {
+					handler(data);
+				}
+			},
+		},
 	};
 }
 
 function createCtx() {
 	return {
 		cwd: "/repo",
-		getContextUsage: () => undefined,
 		hasUI: true,
-		model: { id: "claude-sonnet-4", provider: "anthropic" },
+		model: { provider: "anthropic", id: "claude-sonnet-4" },
 		modelRegistry: {
 			getAvailable: () => [
 				{ provider: "anthropic", id: "claude-sonnet-4" },
@@ -233,14 +234,15 @@ function createCtx() {
 			getSessionId: () => "session-1",
 		},
 		ui: {
-			custom: vi.fn(),
-			notify: vi.fn(),
-			setWidget: vi.fn(),
 			theme: {
-				bold: (text: string) => text,
 				fg: (_color: string, text: string) => text,
+				bold: (text: string) => text,
 			},
+			setWidget: vi.fn(),
+			notify: vi.fn(),
+			custom: vi.fn(),
 		},
+		getContextUsage: () => undefined,
 	};
 }
 
@@ -257,44 +259,44 @@ beforeEach(() => {
 		}
 	}
 	mocks.discoverAgents.mockReturnValue({ agents: agentConfigs });
-	mocks.discoverAgentsAll.mockReturnValue({ agents: agentConfigs, builtin: [], chains: [], project: [], user: [] });
+	mocks.discoverAgentsAll.mockReturnValue({ agents: agentConfigs, builtin: [], user: [], project: [], chains: [] });
 	mocks.resolveExecutionAgentScope.mockReturnValue("both");
 	mocks.checkSubagentDepth.mockReturnValue({ blocked: false, depth: 0, maxDepth: 2 });
 	mocks.getArtifactsDir.mockReturnValue("/tmp/artifacts");
 	mocks.isAsyncAvailable.mockReturnValue(true);
 	mocks.normalizeSkillInput.mockImplementation((value: unknown) => value);
 	mocks.handleManagementAction.mockReturnValue({
-		content: [{ text: "listed", type: "text" }],
+		content: [{ type: "text", text: "listed" }],
 		details: { mode: "management", results: [] },
 	});
 	mocks.executeChain.mockResolvedValue({
-		content: [{ text: "chain complete", type: "text" }],
+		content: [{ type: "text", text: "chain complete" }],
 		details: { mode: "chain", results: [] },
 	});
 	mocks.executeAsyncChain.mockResolvedValue({
-		content: [{ text: "async chain launched", type: "text" }],
+		content: [{ type: "text", text: "async chain launched" }],
 		details: { mode: "chain", results: [] },
 	});
 	mocks.executeAsyncSingle.mockResolvedValue({
-		content: [{ text: "async single launched", type: "text" }],
+		content: [{ type: "text", text: "async single launched" }],
 		details: { mode: "single", results: [] },
 	});
 	mocks.runSync.mockResolvedValue({
 		agent: "scout",
 		exitCode: 0,
 		messages: [{ role: "assistant", content: "final output" }],
-		progressSummary: { durationMs: 12 },
 		truncation: undefined,
+		progressSummary: { durationMs: 12 },
 	});
 	mocks.resolveSubagentModelResolution.mockImplementation(
 		(_agent: any, _models: any[], explicitModel?: string, options?: { currentModel?: string }) => {
 			if (explicitModel) {
-				return { category: "explicit", model: explicitModel, source: "runtime-override" };
+				return { model: explicitModel, source: "runtime-override", category: "explicit" };
 			}
 			if (options?.currentModel) {
-				return { category: undefined, model: options.currentModel, source: "session-default" };
+				return { model: options.currentModel, source: "session-default", category: undefined };
 			}
-			return { category: undefined, model: undefined, source: "agent-default" };
+			return { model: undefined, source: "agent-default", category: undefined };
 		},
 	);
 	mocks.finalizeSingleOutput.mockImplementation(({ truncatedOutput, fullOutput }: any) => ({
@@ -325,7 +327,7 @@ describe("subagent entrypoint", () => {
 		expect(result.content[0]?.text).toBe("listed");
 
 		const invalid = await tool.execute("tool-2", { action: "bogus" }, undefined, undefined, ctx);
-		expect(invalid.isError).toBeTruthy();
+		expect(invalid.isError).toBe(true);
 		expect(invalid.content[0]?.text).toContain("Unknown action: bogus");
 	});
 
@@ -337,11 +339,11 @@ describe("subagent entrypoint", () => {
 
 		mocks.checkSubagentDepth.mockReturnValueOnce({ blocked: true, depth: 2, maxDepth: 2 });
 		const blocked = await tool.execute("tool-1", { agent: "scout", task: "inspect" }, undefined, undefined, ctx);
-		expect(blocked.isError).toBeTruthy();
+		expect(blocked.isError).toBe(true);
 		expect(blocked.content[0]?.text).toContain("Nested subagent call blocked");
 
 		const invalid = await tool.execute("tool-2", {}, undefined, undefined, ctx);
-		expect(invalid.isError).toBeTruthy();
+		expect(invalid.isError).toBe(true);
 		expect(invalid.content[0]?.text).toContain("Provide exactly one mode");
 	});
 
@@ -352,12 +354,12 @@ describe("subagent entrypoint", () => {
 		const tool = pi.tools.get("subagent");
 
 		await expect(tool.execute("c0", { chain: [] }, undefined, undefined, ctx)).resolves.toMatchObject({
-			content: [{ type: "text", text: "Provide exactly one mode. Agents: scout, planner, reviewer" }],
 			isError: true,
+			content: [{ type: "text", text: "Provide exactly one mode. Agents: scout, planner, reviewer" }],
 		});
 
 		const firstStepMissingTask = await tool.execute("c1", { chain: [{ agent: "scout" }] }, undefined, undefined, ctx);
-		expect(firstStepMissingTask.isError).toBeTruthy();
+		expect(firstStepMissingTask.isError).toBe(true);
 		expect(firstStepMissingTask.content[0]?.text).toBe("First step in chain must have a task");
 
 		const firstParallelMissingTask = await tool.execute(
@@ -367,7 +369,7 @@ describe("subagent entrypoint", () => {
 			undefined,
 			ctx,
 		);
-		expect(firstParallelMissingTask.isError).toBeTruthy();
+		expect(firstParallelMissingTask.isError).toBe(true);
 		expect(firstParallelMissingTask.content[0]?.text).toContain("First parallel step: task 1 must have a task");
 
 		const unknownAgent = await tool.execute(
@@ -377,7 +379,7 @@ describe("subagent entrypoint", () => {
 			undefined,
 			ctx,
 		);
-		expect(unknownAgent.isError).toBeTruthy();
+		expect(unknownAgent.isError).toBe(true);
 		expect(unknownAgent.content[0]?.text).toBe("Unknown agent: unknown (step 1)");
 
 		const emptyParallel = await tool.execute(
@@ -387,7 +389,7 @@ describe("subagent entrypoint", () => {
 			undefined,
 			ctx,
 		);
-		expect(emptyParallel.isError).toBeTruthy();
+		expect(emptyParallel.isError).toBe(true);
 		expect(emptyParallel.content[0]?.text).toBe("Parallel step 1 must have at least one task");
 	});
 
@@ -397,7 +399,7 @@ describe("subagent entrypoint", () => {
 		registerSubagentExtension(pi as never);
 		const tool = pi.tools.get("subagent");
 		mocks.executeChain.mockResolvedValueOnce({
-			content: [{ text: "launching", type: "text" }],
+			content: [{ type: "text", text: "launching" }],
 			details: { mode: "chain", results: [] },
 			requestedAsync: {
 				chain: [{ agent: "scout", task: "inspect" }],
@@ -413,11 +415,11 @@ describe("subagent entrypoint", () => {
 			undefined,
 			ctx,
 		);
-		expect(unavailable.isError).toBeTruthy();
+		expect(unavailable.isError).toBe(true);
 		expect(unavailable.content[0]?.text).toContain("Background mode requires jiti");
 
 		mocks.executeChain.mockResolvedValueOnce({
-			content: [{ text: "launching", type: "text" }],
+			content: [{ type: "text", text: "launching" }],
 			details: { mode: "chain", results: [] },
 			requestedAsync: {
 				chain: [{ agent: "scout", task: "inspect" }],
@@ -431,7 +433,7 @@ describe("subagent entrypoint", () => {
 			undefined,
 			ctx,
 		);
-		expect(mocks.executeAsyncChain).toHaveBeenCalledOnce();
+		expect(mocks.executeAsyncChain).toHaveBeenCalledTimes(1);
 		expect(available.content[0]?.text).toBe("async chain launched");
 	});
 
@@ -455,7 +457,7 @@ describe("subagent entrypoint", () => {
 			undefined,
 			ctx,
 		);
-		expect(tooMany.isError).toBeTruthy();
+		expect(tooMany.isError).toBe(true);
 		expect(tooMany.content[0]?.text).toBe("Max 3 tasks");
 
 		const unknownAgent = await tool.execute(
@@ -465,34 +467,34 @@ describe("subagent entrypoint", () => {
 			undefined,
 			ctx,
 		);
-		expect(unknownAgent.isError).toBeTruthy();
+		expect(unknownAgent.isError).toBe(true);
 		expect(unknownAgent.content[0]?.text).toBe("Unknown agent: unknown");
 
 		ctx.ui.custom = vi.fn().mockResolvedValue({
-			behaviorOverrides: [{}, { model: "openai/gpt-5", skills: false }],
 			confirmed: true,
-			runInBackground: true,
 			templates: ["inspect", "plan"],
+			behaviorOverrides: [{}, { model: "openai/gpt-5", skills: false }],
+			runInBackground: true,
 		});
 		const launched = await tool.execute(
 			"p3",
 			{
-				clarify: true,
 				tasks: [
 					{ agent: "scout", task: "inspect" },
 					{ agent: "planner", task: "plan" },
 				],
+				clarify: true,
 			},
 			undefined,
 			undefined,
 			ctx,
 		);
-		expect(mocks.executeAsyncChain).toHaveBeenCalledOnce();
-		expect(mocks.executeAsyncChain.mock.calls[0]?.[1]?.chain).toStrictEqual([
+		expect(mocks.executeAsyncChain).toHaveBeenCalledTimes(1);
+		expect(mocks.executeAsyncChain.mock.calls[0]?.[1]?.chain).toEqual([
 			{
 				parallel: [
-					expect.objectContaining({ agent: "scout", model: "anthropic/claude-sonnet-4", task: "inspect" }),
-					expect.objectContaining({ agent: "planner", model: "openai/gpt-5", skill: false, task: "plan" }),
+					expect.objectContaining({ agent: "scout", task: "inspect", model: "anthropic/claude-sonnet-4" }),
+					expect.objectContaining({ agent: "planner", task: "plan", model: "openai/gpt-5", skill: false }),
 				],
 			},
 		]);
@@ -506,13 +508,13 @@ describe("subagent entrypoint", () => {
 		const tool = pi.tools.get("subagent");
 
 		const unknownAgent = await tool.execute("s0", { agent: "unknown", task: "inspect" }, undefined, undefined, ctx);
-		expect(unknownAgent.isError).toBeTruthy();
+		expect(unknownAgent.isError).toBe(true);
 		expect(unknownAgent.content[0]?.text).toBe("Unknown agent: unknown");
 
-		ctx.ui.custom = vi.fn().mockResolvedValueOnce();
+		ctx.ui.custom = vi.fn().mockResolvedValueOnce(undefined);
 		const cancelled = await tool.execute(
 			"s1",
-			{ agent: "scout", clarify: true, task: "inspect" },
+			{ agent: "scout", task: "inspect", clarify: true },
 			undefined,
 			undefined,
 			ctx,
@@ -520,24 +522,24 @@ describe("subagent entrypoint", () => {
 		expect(cancelled.content[0]?.text).toBe("Cancelled");
 
 		ctx.ui.custom = vi.fn().mockResolvedValueOnce({
-			behaviorOverrides: [{ output: "notes.md", model: "openai/gpt-5", skills: ["git"] }],
 			confirmed: true,
-			runInBackground: true,
 			templates: ["inspect carefully"],
+			behaviorOverrides: [{ output: "notes.md", model: "openai/gpt-5", skills: ["git"] }],
+			runInBackground: true,
 		});
 		const background = await tool.execute(
 			"s2",
-			{ agent: "scout", clarify: true, task: "inspect" },
+			{ agent: "scout", task: "inspect", clarify: true },
 			undefined,
 			undefined,
 			ctx,
 		);
-		expect(mocks.executeAsyncSingle).toHaveBeenCalledOnce();
+		expect(mocks.executeAsyncSingle).toHaveBeenCalledTimes(1);
 		expect(mocks.executeAsyncSingle.mock.calls[0]?.[1]).toMatchObject({
 			agent: "scout",
+			task: "inspect carefully",
 			output: "notes.md",
 			skills: ["git"],
-			task: "inspect carefully",
 		});
 		expect(background.content[0]?.text).toBe("async single launched");
 
@@ -545,12 +547,12 @@ describe("subagent entrypoint", () => {
 			agent: "scout",
 			exitCode: 0,
 			messages: [{ role: "assistant", content: "single output" }],
-			progressSummary: { durationMs: 12 },
 			truncation: undefined,
+			progressSummary: { durationMs: 12 },
 		});
 		const success = await tool.execute(
 			"s3",
-			{ agent: "scout", output: true, task: "inspect" },
+			{ agent: "scout", task: "inspect", output: true },
 			undefined,
 			undefined,
 			ctx,
@@ -560,14 +562,14 @@ describe("subagent entrypoint", () => {
 
 		mocks.runSync.mockResolvedValueOnce({
 			agent: "scout",
-			error: "boom",
 			exitCode: 1,
 			messages: [],
-			progressSummary: { durationMs: 5 },
 			truncation: { text: "truncated" },
+			error: "boom",
+			progressSummary: { durationMs: 5 },
 		});
 		const failure = await tool.execute("s4", { agent: "scout", task: "inspect" }, undefined, undefined, ctx);
-		expect(failure.isError).toBeTruthy();
+		expect(failure.isError).toBe(true);
 		expect(failure.content[0]?.text).toBe("boom");
 	});
 
@@ -578,10 +580,12 @@ describe("subagent entrypoint", () => {
 		const statusTool = pi.tools.get("subagent_status");
 
 		const missing = await statusTool.execute("status-1", { id: "missing" }, undefined, undefined, ctx);
-		expect(missing.isError).toBeTruthy();
+		expect(missing.isError).toBe(true);
 		expect(missing.content[0]?.text).toBe("Async run not found. Provide id or dir.");
 
-		mocks.findByPrefix.mockReturnValueOnce(null).mockReturnValueOnce("/tmp/pi-async-subagent-results/result-1.json");
+		mocks.findByPrefix
+			.mockImplementationOnce(() => null)
+			.mockImplementationOnce(() => "/tmp/pi-async-subagent-results/result-1.json");
 		const found = await statusTool.execute("status-2", { id: "result-1" }, undefined, undefined, ctx);
 		expect(found.content[0]?.text).toContain("Run: result-1");
 		expect(found.content[0]?.text).toContain("State: complete");

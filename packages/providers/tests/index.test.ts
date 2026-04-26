@@ -1,9 +1,9 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
-vi.mock<typeof import("@ifi/pi-shared-qna")>(
-	import("@ifi/pi-shared-qna"),
-	async () => await import("../../shared-qna/index.js"),
-);
+vi.mock("@ifi/pi-shared-qna", async () => {
+	return await import("../../shared-qna/index.js");
+});
 
 import { clearModelsDevCatalogCache } from "../catalog.js";
 import { getSupportedProvider } from "../config.js";
@@ -13,8 +13,8 @@ const envSnapshot = { ...process.env };
 
 function jsonResponse(body: unknown): Response {
 	return new Response(JSON.stringify(body), {
-		headers: { "Content-Type": "application/json" },
 		status: 200,
+		headers: { "Content-Type": "application/json" },
 	});
 }
 
@@ -44,7 +44,7 @@ describe("provider catalog extension", () => {
 		const harness = createExtensionHarness();
 		providerCatalogExtension(harness.pi as never);
 
-		expect(harness.commands.has("providers")).toBeTruthy();
+		expect(harness.commands.has("providers")).toBe(true);
 		expect(harness.providers.size).toBe(0);
 	});
 
@@ -63,7 +63,7 @@ describe("provider catalog extension", () => {
 		providerCatalogExtension(harness.pi as never);
 		await Promise.resolve();
 
-		expect(harness.providers.has(provider.id)).toBeTruthy();
+		expect(harness.providers.has(provider.id)).toBe(true);
 	});
 
 	it("registers stored providers on session_start so existing logins still load", async () => {
@@ -75,13 +75,13 @@ describe("provider catalog extension", () => {
 				get: vi.fn((providerId: string) =>
 					providerId === provider.id
 						? {
+								type: "oauth",
+								refresh: "moonshot-key",
 								access: "moonshot-key",
 								expires: Date.now() + 60_000,
-								lastModelRefresh: Date.now(),
-								models: [],
 								providerId: provider.id,
-								refresh: "moonshot-key",
-								type: "oauth",
+								models: [],
+								lastModelRefresh: Date.now(),
 							}
 						: undefined,
 				),
@@ -94,8 +94,8 @@ describe("provider catalog extension", () => {
 		providerCatalogExtension(harness.pi as never);
 		await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
 
-		expect(harness.providers.has(provider.id)).toBeTruthy();
-		expect(refresh).toHaveBeenCalledOnce();
+		expect(harness.providers.has(provider.id)).toBe(true);
+		expect(refresh).toHaveBeenCalledTimes(1);
 	});
 
 	it("shows a scrollable provider login picker and lazily registers the chosen provider", async () => {
@@ -107,12 +107,12 @@ describe("provider catalog extension", () => {
 			[provider.id]: {
 				models: {
 					"demo-model": {
-						attachment: true,
 						id: "demo-model",
-						limit: { context: 262144, output: 32768 },
-						modalities: { input: ["text", "image"], output: ["text"] },
 						name: "Demo Model",
 						reasoning: true,
+						attachment: true,
+						limit: { context: 262144, output: 32768 },
+						modalities: { input: ["text", "image"], output: ["text"] },
 					},
 				},
 			},
@@ -122,7 +122,7 @@ describe("provider catalog extension", () => {
 			vi
 				.fn<() => Promise<Response>>()
 				.mockImplementationOnce(async () => jsonResponse(sampleCatalog))
-				.mockImplementationOnce(async () => jsonResponse({ data: [{ id: "demo-model", max_output: 24_576 }] })),
+				.mockImplementationOnce(async () => jsonResponse({ data: [{ id: "demo-model", max_output: 24576 }] })),
 		);
 
 		const harness = createExtensionHarness();
@@ -148,7 +148,7 @@ describe("provider catalog extension", () => {
 		harness.ctx.ui.input = vi.fn(async () => "provider-api-key") as never;
 
 		providerCatalogExtension(harness.pi as never);
-		expect(harness.commands.has("providers:login")).toBeTruthy();
+		expect(harness.commands.has("providers:login")).toBe(true);
 		const command = harness.commands.get("providers:login");
 		await command.handler("", harness.ctx);
 
@@ -157,16 +157,16 @@ describe("provider catalog extension", () => {
 			overlay: true,
 			overlayOptions: {
 				anchor: "center",
-				maxHeight: "75%",
 				width: "80%",
+				maxHeight: "75%",
 			},
 		});
 
 		const component = pickerFactory(
 			{ requestRender: vi.fn() },
-			{ bold: (text: string) => text, fg: (_color: string, text: string) => text },
+			{ fg: (_color: string, text: string) => text, bold: (text: string) => text },
 			{},
-			() => {},
+			() => undefined,
 		);
 		const rendered = component.render(120).join("\n");
 		expect(rendered).toContain("Select provider to log in");
@@ -174,9 +174,9 @@ describe("provider catalog extension", () => {
 		expect(rendered).not.toContain("Next 10");
 		expect(rendered).not.toContain("Previous 10");
 
-		expect(harness.providers.has(provider.id)).toBeTruthy();
-		expect(stored.get(provider.id)).toMatchObject({ providerId: provider.id, type: "oauth" });
-		expect(refresh).toHaveBeenCalledOnce();
+		expect(harness.providers.has(provider.id)).toBe(true);
+		expect(stored.get(provider.id)).toMatchObject({ type: "oauth", providerId: provider.id });
+		expect(refresh).toHaveBeenCalledTimes(1);
 	});
 
 	it("routes list, info, models, and refresh-models subcommands", async () => {
@@ -187,6 +187,9 @@ describe("provider catalog extension", () => {
 				get: vi.fn((providerId: string) =>
 					providerId === provider.id
 						? {
+								type: "oauth",
+								providerId: provider.id,
+								refresh: "moonshot-key",
 								access: "moonshot-key",
 								expires: Date.now() + 60_000,
 								lastModelRefresh: Date.now(),
@@ -202,9 +205,6 @@ describe("provider catalog extension", () => {
 										cost: { input: 0, output: 0 },
 									},
 								],
-								providerId: provider.id,
-								refresh: "moonshot-key",
-								type: "oauth",
 							}
 						: undefined,
 				),
@@ -228,7 +228,7 @@ describe("provider catalog extension", () => {
 		expect(harness.notifications.at(-1)?.msg).toContain("Moonshot V1 [reasoning · vision]");
 
 		await command.handler("refresh-models missing-provider", harness.ctx);
-		expect(harness.notifications.at(-1)).toStrictEqual({
+		expect(harness.notifications.at(-1)).toEqual({
 			msg: 'No provider matched "missing-provider". Run /providers:list first.',
 			type: "warning",
 		});
@@ -238,7 +238,7 @@ describe("provider catalog extension", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.modelRegistry = {
 			authStorage: {
-				get: vi.fn(() => {}),
+				get: vi.fn(() => undefined),
 				set: vi.fn(),
 			},
 			refresh: vi.fn(),

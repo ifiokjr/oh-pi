@@ -1,44 +1,46 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 const promptState = vi.hoisted(() => ({
-	cancels: [] as string[],
 	confirm: [] as unknown[],
+	select: [] as unknown[],
 	multiselect: [] as unknown[],
 	notes: [] as Array<{ message: string; title?: string }>,
-	select: [] as unknown[],
+	warns: [] as string[],
+	cancels: [] as string[],
 	spinnerStarts: [] as string[],
 	spinnerStops: [] as string[],
-	warns: [] as string[],
 }));
 
 const dashboardMocks = vi.hoisted(() => ({
+	buildRoutingDashboard: vi.fn(({ config }: { config?: { mode?: string } }) => `dashboard:${config?.mode ?? "unset"}`),
+	detectOptionalRoutingPackages: vi.fn(),
+	suggestOptionalRoutingPackages: vi.fn(),
 	ROUTING_CATEGORIES: [
 		{ name: "quick-discovery", label: "Quick discovery", recommended: ["groq", "openai"] },
 		{ name: "implementation-default", label: "Implementation", recommended: ["openai", "groq"] },
 	],
-	buildRoutingDashboard: vi.fn(({ config }: { config?: { mode?: string } }) => `dashboard:${config?.mode ?? "unset"}`),
-	detectOptionalRoutingPackages: vi.fn(),
-	suggestOptionalRoutingPackages: vi.fn(),
 }));
 
 const packageMocks = vi.hoisted(() => ({
 	installPiPackages: vi.fn(),
 }));
 
-vi.mock<typeof import("@clack/prompts")>(import("@clack/prompts"), () => ({
+vi.mock("@clack/prompts", () => ({
+	confirm: vi.fn(async () => promptState.confirm.shift()),
+	select: vi.fn(async () => promptState.select.shift()),
+	multiselect: vi.fn(async () => promptState.multiselect.shift()),
+	note: vi.fn((message: string, title?: string) => {
+		promptState.notes.push({ message, title });
+	}),
 	cancel: vi.fn((message: string) => {
 		promptState.cancels.push(message);
 	}),
-	confirm: vi.fn(async () => promptState.confirm.shift()),
 	isCancel: (value: unknown) => value === "__CANCEL__",
 	log: {
 		warn: vi.fn((message: string) => {
 			promptState.warns.push(message);
 		}),
 	},
-	multiselect: vi.fn(async () => promptState.multiselect.shift()),
-	note: vi.fn((message: string, title?: string) => {
-		promptState.notes.push({ message, title });
-	}),
-	select: vi.fn(async () => promptState.select.shift()),
 	spinner: () => ({
 		start: (message: string) => {
 			promptState.spinnerStarts.push(message);
@@ -49,25 +51,25 @@ vi.mock<typeof import("@clack/prompts")>(import("@clack/prompts"), () => ({
 	}),
 }));
 
-vi.mock<typeof import("./routing-dashboard.js")>(import("./routing-dashboard.js"), () => dashboardMocks);
-vi.mock<typeof import("../utils/pi-packages.js")>(import("../utils/pi-packages.js"), () => packageMocks);
+vi.mock("./routing-dashboard.js", () => dashboardMocks);
+vi.mock("../utils/pi-packages.js", () => packageMocks);
 
 import { setupAdaptiveRouting, summarizeAdaptiveRouting } from "./routing-setup.js";
 
 function makeProviders() {
 	return [
-		{ apiKey: "OPENAI_API_KEY", defaultModel: "gpt-4o", name: "openai" },
-		{ apiKey: "GROQ_API_KEY", defaultModel: "llama-3.3-70b-versatile", name: "groq" },
+		{ name: "openai", apiKey: "OPENAI_API_KEY", defaultModel: "gpt-4o" },
+		{ name: "groq", apiKey: "GROQ_API_KEY", defaultModel: "llama-3.3-70b-versatile" },
 	];
 }
 
 function missingPackage(packageName: string, label = packageName) {
 	return {
-		hint: `${label} hint`,
-		installed: false,
-		label,
 		packageName,
+		label,
+		hint: `${label} hint`,
 		scope: "none",
+		installed: false,
 		selected: false,
 	} as const;
 }
@@ -91,7 +93,7 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe(setupAdaptiveRouting, () => {
+describe("setupAdaptiveRouting", () => {
 	it("returns undefined when no providers are available", async () => {
 		await expect(setupAdaptiveRouting([])).resolves.toBeUndefined();
 		expect(dashboardMocks.buildRoutingDashboard).not.toHaveBeenCalled();
@@ -111,20 +113,20 @@ describe(setupAdaptiveRouting, () => {
 
 		const result = await setupAdaptiveRouting(makeProviders(), undefined, { piInstalled: true });
 
-		expect(result).toStrictEqual({
-			categories: {
-				"implementation-default": ["openai", "groq"],
-				"quick-discovery": ["groq", "openai"],
-			},
+		expect(result).toEqual({
 			mode: "shadow",
+			categories: {
+				"quick-discovery": ["groq", "openai"],
+				"implementation-default": ["openai", "groq"],
+			},
 		});
 		expect(packageMocks.installPiPackages).toHaveBeenCalledWith(["@ifi/pi-provider-ollama"], "project");
-		expect(promptState.spinnerStarts).toStrictEqual(["Installing optional routing packages (project)"]);
+		expect(promptState.spinnerStarts).toEqual(["Installing optional routing packages (project)"]);
 		expect(promptState.spinnerStops[0]).toContain("Installed 1 optional package(s) in project scope");
 		expect(dashboardMocks.detectOptionalRoutingPackages).toHaveBeenNthCalledWith(2, undefined, [
 			{ packageName: "@ifi/pi-provider-ollama", scope: "project" },
 		]);
-		expect(promptState.notes.map((entry) => entry.message)).toStrictEqual([
+		expect(promptState.notes.map((entry) => entry.message)).toEqual([
 			"dashboard:unset",
 			"dashboard:unset",
 			"dashboard:unset",
@@ -133,7 +135,7 @@ describe(setupAdaptiveRouting, () => {
 	});
 
 	it("shows a note instead of installing packages when pi is missing", async () => {
-		const currentConfig = { categories: { "quick-discovery": ["openai"] }, mode: "off" as const };
+		const currentConfig = { mode: "off" as const, categories: { "quick-discovery": ["openai"] } };
 		dashboardMocks.detectOptionalRoutingPackages.mockReturnValue([missingPackage("@ifi/pi-provider-ollama")]);
 		promptState.confirm.push(false);
 
@@ -141,11 +143,11 @@ describe(setupAdaptiveRouting, () => {
 
 		expect(result).toBe(currentConfig);
 		expect(packageMocks.installPiPackages).not.toHaveBeenCalled();
-		expect(promptState.notes.some((entry) => entry.title === "Optional Packages")).toBeTruthy();
+		expect(promptState.notes.some((entry) => entry.title === "Optional Packages")).toBe(true);
 	});
 
 	it("skips installation when the user declines and returns the current config when not reconfiguring", async () => {
-		const currentConfig = { categories: { "quick-discovery": ["openai"] }, mode: "shadow" as const };
+		const currentConfig = { mode: "shadow" as const, categories: { "quick-discovery": ["openai"] } };
 		dashboardMocks.detectOptionalRoutingPackages.mockReturnValue([missingPackage("@ifi/pi-provider-ollama")]);
 		dashboardMocks.suggestOptionalRoutingPackages.mockReturnValue(["@ifi/pi-provider-ollama"]);
 		promptState.confirm.push(false, false);
@@ -169,7 +171,7 @@ describe(setupAdaptiveRouting, () => {
 		const result = await setupAdaptiveRouting(makeProviders(), undefined, { piInstalled: true });
 
 		expect(result).toBeUndefined();
-		expect(promptState.warns).toStrictEqual(["Error: network unavailable"]);
+		expect(promptState.warns).toEqual(["Error: network unavailable"]);
 		expect(promptState.spinnerStops).toContain("Optional package install failed.");
 	});
 
@@ -190,14 +192,14 @@ describe(setupAdaptiveRouting, () => {
 		promptState.confirm.push(true, false);
 		promptState.select.push("off", "custom-provider", "custom-provider");
 
-		const result = await setupAdaptiveRouting([{ apiKey: "none", defaultModel: "model-a", name: "custom-provider" }]);
+		const result = await setupAdaptiveRouting([{ name: "custom-provider", apiKey: "none", defaultModel: "model-a" }]);
 
-		expect(result).toStrictEqual({
-			categories: {
-				"implementation-default": ["custom-provider"],
-				"quick-discovery": ["custom-provider"],
-			},
+		expect(result).toEqual({
 			mode: "off",
+			categories: {
+				"quick-discovery": ["custom-provider"],
+				"implementation-default": ["custom-provider"],
+			},
 		});
 	});
 
@@ -213,7 +215,7 @@ describe(setupAdaptiveRouting, () => {
 			"process.exit",
 		);
 
-		expect(promptState.cancels).toStrictEqual(["Cancelled."]);
+		expect(promptState.cancels).toEqual(["Cancelled."]);
 		expect(exit).toHaveBeenCalledWith(0);
 	});
 
@@ -231,15 +233,15 @@ describe(setupAdaptiveRouting, () => {
 			"process.exit",
 		);
 
-		expect(promptState.cancels).toStrictEqual(["Cancelled."]);
+		expect(promptState.cancels).toEqual(["Cancelled."]);
 		expect(exit).toHaveBeenCalledWith(0);
 	});
 });
 
-describe(summarizeAdaptiveRouting, () => {
+describe("summarizeAdaptiveRouting", () => {
 	it("summarizes configured and missing routing states", () => {
-		expect(summarizeAdaptiveRouting()).toBe("not configured");
-		expect(summarizeAdaptiveRouting({ categories: { a: ["openai"], b: ["groq"] }, mode: "auto" })).toBe(
+		expect(summarizeAdaptiveRouting(undefined)).toBe("not configured");
+		expect(summarizeAdaptiveRouting({ mode: "auto", categories: { a: ["openai"], b: ["groq"] } })).toBe(
 			"auto · 2 categories",
 		);
 	});

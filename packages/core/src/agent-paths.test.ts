@@ -1,5 +1,5 @@
 import path from "node:path";
-
+import { describe, expect, it } from "vitest";
 import {
 	expandHomeDir,
 	getExtensionConfigPath,
@@ -32,7 +32,7 @@ describe("agent path utilities", () => {
 	});
 
 	it("mirrors workspace paths for shared storage", () => {
-		expect(getMirroredWorkspacePathSegments("/Users/test/work/repo")).toStrictEqual([
+		expect(getMirroredWorkspacePathSegments("/Users/test/work/repo")).toEqual([
 			"root",
 			"Users",
 			"test",

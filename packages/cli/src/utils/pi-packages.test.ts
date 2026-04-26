@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	detectPiPackageInstallScopes,
 	findPiCommand,
@@ -22,7 +22,7 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe(parseNpmPackageName, () => {
+describe("parseNpmPackageName", () => {
 	it("parses scoped and unscoped npm package sources", () => {
 		expect(parseNpmPackageName("npm:@ifi/pi-provider-ollama@0.4.4")).toBe("@ifi/pi-provider-ollama");
 		expect(parseNpmPackageName("npm:@ifi/pi-provider-cursor")).toBe("@ifi/pi-provider-cursor");
@@ -37,7 +37,7 @@ describe(parseNpmPackageName, () => {
 	});
 });
 
-describe(resolveManagedPackageName, () => {
+describe("resolveManagedPackageName", () => {
 	it("resolves local path package names and ignores unsupported sources", () => {
 		const cwd = makeTempDir();
 		const localPackageDir = join(cwd, "local-package");
@@ -49,7 +49,7 @@ describe(resolveManagedPackageName, () => {
 	});
 });
 
-describe(detectPiPackageInstallScopes, () => {
+describe("detectPiPackageInstallScopes", () => {
 	it("detects user, project, both, and missing package scopes", () => {
 		const homeDir = makeTempDir();
 		const cwd = makeTempDir();
@@ -91,7 +91,7 @@ describe(detectPiPackageInstallScopes, () => {
 			{ cwd, homeDir },
 		);
 
-		expect(states).toStrictEqual([
+		expect(states).toEqual([
 			{ packageName: "@ifi/pi-provider-ollama", scope: "user" },
 			{ packageName: "@ifi/pi-provider-cursor", scope: "both" },
 			{ packageName: "@ifi/pi-provider-catalog", scope: "both" },
@@ -108,16 +108,16 @@ describe(detectPiPackageInstallScopes, () => {
 
 		const states = detectPiPackageInstallScopes(["@ifi/pi-provider-ollama"], { cwd, homeDir });
 
-		expect(states).toStrictEqual([{ packageName: "@ifi/pi-provider-ollama", scope: "none" }]);
+		expect(states).toEqual([{ packageName: "@ifi/pi-provider-ollama", scope: "none" }]);
 	});
 });
 
-describe(findPiCommand, () => {
+describe("findPiCommand", () => {
 	it("returns the first working pi command", () => {
 		const run = vi.fn(() => Buffer.from("pi 0.64.0"));
 
 		expect(findPiCommand(run)).toBe("pi");
-		expect(run).toHaveBeenCalledWith("pi", ["--version"], { shell: false, stdio: "pipe", timeout: 3000 });
+		expect(run).toHaveBeenCalledWith("pi", ["--version"], { stdio: "pipe", timeout: 3000, shell: false });
 	});
 
 	it("throws when pi is not available", () => {
@@ -129,7 +129,7 @@ describe(findPiCommand, () => {
 	});
 });
 
-describe(installPiPackages, () => {
+describe("installPiPackages", () => {
 	it("installs requested packages and ignores already-installed responses", () => {
 		const run = vi.fn((_file: string, args: string[]) => {
 			if (args[0] === "--version") {
@@ -145,16 +145,16 @@ describe(installPiPackages, () => {
 
 		installPiPackages(["@ifi/pi-provider-ollama", "@ifi/pi-provider-cursor"], "project", run);
 
-		expect(run).toHaveBeenNthCalledWith(1, "pi", ["--version"], { shell: false, stdio: "pipe", timeout: 3000 });
+		expect(run).toHaveBeenNthCalledWith(1, "pi", ["--version"], { stdio: "pipe", timeout: 3000, shell: false });
 		expect(run).toHaveBeenNthCalledWith(2, "pi", ["install", "npm:@ifi/pi-provider-ollama", "-l"], {
-			shell: false,
 			stdio: "pipe",
 			timeout: 60000,
+			shell: false,
 		});
 		expect(run).toHaveBeenNthCalledWith(3, "pi", ["install", "npm:@ifi/pi-provider-cursor", "-l"], {
-			shell: false,
 			stdio: "pipe",
 			timeout: 60000,
+			shell: false,
 		});
 	});
 

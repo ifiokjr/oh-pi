@@ -1,12 +1,13 @@
+import { describe, expect, it } from "vitest";
 import { getPiTuiFallbackPaths, requirePiTuiModule } from "../pi-tui-loader.js";
 
-describe(getPiTuiFallbackPaths, () => {
+describe("getPiTuiFallbackPaths", () => {
 	it("includes BUN_INSTALL and the default home fallback without duplicates", () => {
 		const paths = getPiTuiFallbackPaths({
-			bunInstallDir: "/custom-bun",
 			homeDir: "/Users/tester",
+			bunInstallDir: "/custom-bun",
 		});
-		expect(paths).toStrictEqual([
+		expect(paths).toEqual([
 			"/custom-bun/install/global/node_modules/@mariozechner/pi-tui",
 			"/Users/tester/.bun/install/global/node_modules/@mariozechner/pi-tui",
 		]);
@@ -14,14 +15,14 @@ describe(getPiTuiFallbackPaths, () => {
 
 	it("deduplicates the default bun root when BUN_INSTALL matches it", () => {
 		const paths = getPiTuiFallbackPaths({
-			bunInstallDir: "/Users/tester/.bun",
 			homeDir: "/Users/tester",
+			bunInstallDir: "/Users/tester/.bun",
 		});
-		expect(paths).toStrictEqual(["/Users/tester/.bun/install/global/node_modules/@mariozechner/pi-tui"]);
+		expect(paths).toEqual(["/Users/tester/.bun/install/global/node_modules/@mariozechner/pi-tui"]);
 	});
 });
 
-describe(requirePiTuiModule, () => {
+describe("requirePiTuiModule", () => {
 	it("uses the regular package resolution path first", () => {
 		const calls: string[] = [];
 		const resolved = requirePiTuiModule({
@@ -30,15 +31,15 @@ describe(requirePiTuiModule, () => {
 				return { source: specifier };
 			},
 		});
-		expect(resolved).toStrictEqual({ source: "@mariozechner/pi-tui" });
-		expect(calls).toStrictEqual(["@mariozechner/pi-tui"]);
+		expect(resolved).toEqual({ source: "@mariozechner/pi-tui" });
+		expect(calls).toEqual(["@mariozechner/pi-tui"]);
 	});
 
 	it("falls back to Bun global paths on module-not-found", () => {
 		const calls: string[] = [];
 		const resolved = requirePiTuiModule({
-			bunInstallDir: "/custom-bun",
 			homeDir: "/Users/tester",
+			bunInstallDir: "/custom-bun",
 			requireFn(specifier) {
 				calls.push(specifier);
 				if (specifier === "@mariozechner/pi-tui") {
@@ -54,7 +55,7 @@ describe(requirePiTuiModule, () => {
 				throw error;
 			},
 		});
-		expect(resolved).toStrictEqual({ source: "/custom-bun/install/global/node_modules/@mariozechner/pi-tui" });
+		expect(resolved).toEqual({ source: "/custom-bun/install/global/node_modules/@mariozechner/pi-tui" });
 		expect(calls[0]).toBe("@mariozechner/pi-tui");
 		expect(calls[1]).toBe("/custom-bun/install/global/node_modules/@mariozechner/pi-tui");
 	});

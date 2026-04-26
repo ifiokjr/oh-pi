@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
-
+import { describe, expect, it } from "vitest";
 import { classifyPromptHeuristically } from "./classifier.js";
 import { DEFAULT_ADAPTIVE_ROUTING_CONFIG } from "./defaults.js";
 import { decideRoute } from "./engine.js";
 import { normalizeRouteCandidates } from "./normalize.js";
 
-interface CorpusEntry {
+type CorpusEntry = {
 	name: string;
 	prompt: string;
 	expectedIntent: string;
@@ -18,44 +18,44 @@ interface CorpusEntry {
 	expectedThinking: string;
 	expectedModel: string;
 	acceptableFallbacks: string[];
-}
+};
 
 const candidates = normalizeRouteCandidates([
 	{
+		provider: "anthropic",
+		id: "claude-opus-4.6",
+		name: "Claude Opus 4.6",
 		api: "anthropic-messages",
 		baseUrl: "https://api.anthropic.com",
-		contextWindow: 200000,
-		cost: { cacheRead: 0, cacheWrite: 0, input: 1, output: 1 },
-		id: "claude-opus-4.6",
-		input: ["text", "image"],
-		maxTokens: 16384,
-		name: "Claude Opus 4.6",
-		provider: "anthropic",
 		reasoning: true,
+		input: ["text", "image"],
+		cost: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0 },
+		contextWindow: 200000,
+		maxTokens: 16384,
 	},
 	{
+		provider: "openai",
+		id: "gpt-5.4",
+		name: "GPT-5.4",
 		api: "openai-responses",
 		baseUrl: "https://api.openai.com/v1",
-		contextWindow: 200000,
-		cost: { cacheRead: 0, cacheWrite: 0, input: 1, output: 1 },
-		id: "gpt-5.4",
-		input: ["text"],
-		maxTokens: 32768,
-		name: "GPT-5.4",
-		provider: "openai",
 		reasoning: true,
+		input: ["text"],
+		cost: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0 },
+		contextWindow: 200000,
+		maxTokens: 32768,
 	},
 	{
+		provider: "groq",
+		id: "llama-3.3-70b-versatile",
+		name: "Llama 3.3 70B Versatile",
 		api: "openai-completions",
 		baseUrl: "https://api.groq.com/openai/v1",
-		contextWindow: 128000,
-		cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0 },
-		id: "llama-3.3-70b-versatile",
-		input: ["text"],
-		maxTokens: 32768,
-		name: "Llama 3.3 70B Versatile",
-		provider: "groq",
 		reasoning: false,
+		input: ["text"],
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+		contextWindow: 128000,
+		maxTokens: 32768,
 	},
 ] as never);
 
@@ -65,15 +65,15 @@ describe("adaptive routing engine", () => {
 			"Design a polished dashboard with stronger hierarchy and visual tone.",
 		);
 		const decision = decideRoute({
-			candidates,
-			classification,
 			config: {
 				...DEFAULT_ADAPTIVE_ROUTING_CONFIG,
 				models: {
-					excluded: [],
 					ranked: ["openai/gpt-5.4", "anthropic/claude-opus-4.6"],
+					excluded: [],
 				},
 			},
+			candidates,
+			classification,
 			currentThinking: "medium",
 			usage: {
 				providers: {
@@ -93,24 +93,24 @@ describe("adaptive routing engine", () => {
 			"Think deeply about a cross-provider architecture migration strategy.",
 		);
 		const decision = decideRoute({
-			candidates,
-			classification,
 			config: {
 				...DEFAULT_ADAPTIVE_ROUTING_CONFIG,
 				providerReserves: {
 					...DEFAULT_ADAPTIVE_ROUTING_CONFIG.providerReserves,
 					openai: {
-						allowOverrideForPeak: false,
+						minRemainingPct: DEFAULT_ADAPTIVE_ROUTING_CONFIG.providerReserves.openai?.minRemainingPct ?? 15,
 						applyToTiers: DEFAULT_ADAPTIVE_ROUTING_CONFIG.providerReserves.openai?.applyToTiers,
 						confidence: DEFAULT_ADAPTIVE_ROUTING_CONFIG.providerReserves.openai?.confidence,
-						minRemainingPct: DEFAULT_ADAPTIVE_ROUTING_CONFIG.providerReserves.openai?.minRemainingPct ?? 15,
+						allowOverrideForPeak: false,
 					},
 				},
 			},
+			candidates,
+			classification,
 			usage: {
 				providers: {
-					anthropic: { confidence: "authoritative", remainingPct: 40 },
 					openai: { confidence: "authoritative", remainingPct: 5 },
+					anthropic: { confidence: "authoritative", remainingPct: 40 },
 				},
 				updatedAt: Date.now(),
 			},
@@ -122,19 +122,19 @@ describe("adaptive routing engine", () => {
 
 	it("evaluates the routing corpus fixtures", () => {
 		const corpus = JSON.parse(
-			readFileSync(new URL("fixtures.route-corpus.json", import.meta.url), "utf8"),
+			readFileSync(new URL("./fixtures.route-corpus.json", import.meta.url), "utf-8"),
 		) as CorpusEntry[];
 		for (const fixture of corpus) {
 			const classification = classifyPromptHeuristically(fixture.prompt);
 			const decision = decideRoute({
+				config: DEFAULT_ADAPTIVE_ROUTING_CONFIG,
 				candidates,
 				classification,
-				config: DEFAULT_ADAPTIVE_ROUTING_CONFIG,
 				usage: {
 					providers: {
 						anthropic: { confidence: "authoritative", remainingPct: 60 },
-						groq: { confidence: "unknown", remainingPct: undefined },
 						openai: { confidence: "authoritative", remainingPct: 60 },
+						groq: { confidence: "unknown", remainingPct: undefined },
 					},
 					updatedAt: Date.now(),
 				},

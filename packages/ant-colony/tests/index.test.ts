@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Nest } from "../extensions/ant-colony/nest.js";
 import type { ColonyState } from "../extensions/ant-colony/types.js";
 
@@ -31,131 +31,125 @@ const queenMocks = vi.hoisted(() => {
 			resolve = res;
 			reject = rej;
 		});
-		return { promise, reject, resolve };
+		return { promise, resolve, reject };
 	}
 
 	const stableIdFromGoal = (goal: string): string => {
 		const slug = goal
 			.toLowerCase()
-			.replaceAll(/[^a-z0-9]+/g, "-")
-			.replaceAll(/(^-|-$)/g, "");
+			.replace(/[^a-z0-9]+/g, "-")
+			.replace(/(^-|-$)/g, "");
 		return `colony-${slug || "goal"}`;
 	};
 
 	const runInvocations: any[] = [];
 	const resumeInvocations: any[] = [];
 	const createUsageLimitsTrackerMock = vi.fn(() => ({
-		dispose: vi.fn(),
 		requestSnapshot: () => null,
+		dispose: vi.fn(),
 	}));
 
 	const runColonyMock = vi.fn((opts: any) => {
-		const inv = { deferred: mkDeferred<any>(), opts, stableId: stableIdFromGoal(opts.goal) };
+		const inv = { opts, deferred: mkDeferred<any>(), stableId: stableIdFromGoal(opts.goal) };
 		runInvocations.push(inv);
 		opts.callbacks?.onSignal?.({
-			active: 1,
-			colonyId: inv.stableId,
-			cost: 0.01,
-			message: "Mock colony running",
 			phase: "working",
 			progress: 0.2,
+			active: 1,
+			cost: 0.01,
+			message: "Mock colony running",
+			colonyId: inv.stableId,
 		});
 		return inv.deferred.promise;
 	});
 
 	const resumeColonyMock = vi.fn((opts: any) => {
-		const inv = { deferred: mkDeferred<any>(), opts, stableId: stableIdFromGoal(opts.goal) };
+		const inv = { opts, deferred: mkDeferred<any>(), stableId: stableIdFromGoal(opts.goal) };
 		resumeInvocations.push(inv);
 		opts.callbacks?.onSignal?.({
-			active: 1,
-			colonyId: inv.stableId,
-			cost: 0,
-			message: "Mock resumed colony running",
 			phase: "working",
 			progress: 0.3,
+			active: 1,
+			cost: 0,
+			message: "Mock resumed colony running",
+			colonyId: inv.stableId,
 		});
 		return inv.deferred.promise;
 	});
 
 	return {
-		createUsageLimitsTrackerMock,
-		resumeColonyMock,
+		runInvocations,
 		resumeInvocations,
 		runColonyMock,
-		runInvocations,
+		resumeColonyMock,
+		createUsageLimitsTrackerMock,
 	};
 });
 
 const runInvocations = queenMocks.runInvocations as ColonyInvocation[];
 const resumeInvocations = queenMocks.resumeInvocations as ColonyInvocation[];
-const { runColonyMock } = queenMocks;
-const { resumeColonyMock } = queenMocks;
-const { createUsageLimitsTrackerMock } = queenMocks;
+const runColonyMock = queenMocks.runColonyMock;
+const resumeColonyMock = queenMocks.resumeColonyMock;
+const createUsageLimitsTrackerMock = queenMocks.createUsageLimitsTrackerMock;
 
 const storageMocks = vi.hoisted(() => ({
 	resolveColonyStorageOptionsMock: vi.fn(),
 	shouldManageProjectGitignoreMock: vi.fn(),
 }));
 
-vi.mock<typeof import("../extensions/ant-colony/queen.js")>(import("../extensions/ant-colony/queen.js"), () => ({
-	createUsageLimitsTracker: queenMocks.createUsageLimitsTrackerMock,
-	resumeColony: queenMocks.resumeColonyMock,
+vi.mock("../extensions/ant-colony/queen.js", () => ({
 	runColony: queenMocks.runColonyMock,
+	resumeColony: queenMocks.resumeColonyMock,
+	createUsageLimitsTracker: queenMocks.createUsageLimitsTrackerMock,
 }));
 
-vi.mock<typeof import("../extensions/ant-colony/storage.js")>(
-	import("../extensions/ant-colony/storage.js"),
-	async (importActual) => {
-		const actual = await importActual<typeof import("../extensions/ant-colony/storage.js")>();
-		storageMocks.resolveColonyStorageOptionsMock.mockImplementation((options?: any) =>
-			actual.resolveColonyStorageOptions(options),
-		);
-		storageMocks.shouldManageProjectGitignoreMock.mockImplementation((options?: any) =>
-			actual.shouldManageProjectGitignore(options),
-		);
-		return {
-			...actual,
-			resolveColonyStorageOptions: storageMocks.resolveColonyStorageOptionsMock,
-			shouldManageProjectGitignore: storageMocks.shouldManageProjectGitignoreMock,
-		};
-	},
-);
+vi.mock("../extensions/ant-colony/storage.js", async (importActual) => {
+	const actual = await importActual<typeof import("../extensions/ant-colony/storage.js")>();
+	storageMocks.resolveColonyStorageOptionsMock.mockImplementation((options?: any) =>
+		actual.resolveColonyStorageOptions(options),
+	);
+	storageMocks.shouldManageProjectGitignoreMock.mockImplementation((options?: any) =>
+		actual.shouldManageProjectGitignore(options),
+	);
+	return {
+		...actual,
+		resolveColonyStorageOptions: storageMocks.resolveColonyStorageOptionsMock,
+		shouldManageProjectGitignore: storageMocks.shouldManageProjectGitignoreMock,
+	};
+});
 
-vi.mock<typeof import("../extensions/ant-colony/worktree.js")>(
-	import("../extensions/ant-colony/worktree.js"),
-	async (importActual) => {
-		const actual = await importActual<typeof import("../extensions/ant-colony/worktree.js")>();
+vi.mock("../extensions/ant-colony/worktree.js", async (importActual) => {
+	const actual = await importActual<typeof import("../extensions/ant-colony/worktree.js")>();
 
-		const mkShared = (cwd: string) => ({
-			baseBranch: null,
-			branch: null,
-			executionCwd: cwd,
-			mode: "shared" as const,
-			note: null,
-			originCwd: cwd,
-			repoRoot: null,
-			worktreeRoot: null,
-		});
+	const mkShared = (cwd: string) => ({
+		mode: "shared" as const,
+		originCwd: cwd,
+		executionCwd: cwd,
+		repoRoot: null,
+		worktreeRoot: null,
+		branch: null,
+		baseBranch: null,
+		note: null,
+	});
 
-		return {
-			...actual,
-			cleanupIsolatedWorktree: () => null,
-			prepareColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
-			resumeColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
-		};
-	},
-);
+	return {
+		...actual,
+		prepareColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
+		resumeColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
+		cleanupIsolatedWorktree: () => null,
+	};
+});
 
-vi.mock<typeof import("@sinclair/typebox")>(import("@sinclair/typebox"), () => ({
+vi.mock("@sinclair/typebox", () => ({
 	Type: {
-		Number: (opts?: any) => ({ type: "number", ...opts }),
 		Object: (schema: any) => schema,
-		Optional: (t: any) => ({ optional: true, ...t }),
 		String: (opts?: any) => ({ type: "string", ...opts }),
+		Number: (opts?: any) => ({ type: "number", ...opts }),
+		Optional: (t: any) => ({ optional: true, ...t }),
 	},
 }));
 
-vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), () => ({
+vi.mock("@mariozechner/pi-tui", () => ({
 	Container: class {
 		children: unknown[] = [];
 		addChild(child: unknown) {
@@ -182,27 +176,27 @@ import antColonyExtension from "../extensions/ant-colony/index.js";
 function mkState(status: ColonyState["status"], goal: string, stableId: string): ColonyState {
 	const now = Date.now();
 	return {
-		ants: [],
-		concurrency: { current: 1, history: [], max: 4, min: 1, optimal: 1 },
-		createdAt: now - 10_000,
-		finishedAt: now,
-		goal,
 		id: stableId,
-		maxCost: null,
-		metrics: {
-			antsSpawned: 2,
-			startTime: now - 10_000,
-			tasksDone: status === "done" ? 4 : 1,
-			tasksFailed: status === "failed" ? 1 : 0,
-			tasksTotal: 4,
-			throughputHistory: [],
-			totalCost: status === "done" ? 0.12 : 0.03,
-			totalTokens: 1400,
-		},
-		modelOverrides: {},
-		pheromones: [],
+		goal,
 		status,
 		tasks: [],
+		ants: [],
+		pheromones: [],
+		concurrency: { current: 1, min: 1, max: 4, optimal: 1, history: [] },
+		metrics: {
+			tasksTotal: 4,
+			tasksDone: status === "done" ? 4 : 1,
+			tasksFailed: status === "failed" ? 1 : 0,
+			antsSpawned: 2,
+			totalCost: status === "done" ? 0.12 : 0.03,
+			totalTokens: 1400,
+			startTime: now - 10_000,
+			throughputHistory: [],
+		},
+		maxCost: null,
+		modelOverrides: {},
+		createdAt: now - 10_000,
+		finishedAt: now,
 	};
 }
 
@@ -213,67 +207,67 @@ function createMockPi() {
 	const tools = new Map<string, any>();
 
 	const pi = {
-		_commands: commands,
-		_emit(event: string, ...args: any[]) {
-			for (const handler of handlers.get(event) ?? []) {
-				handler(...args);
-			}
-		},
-		_eventHandlers: eventHandlers,
-		_handlers: handlers,
-		_tools: tools,
-		events: {
-			emit(event: string, data?: unknown) {
-				for (const handler of eventHandlers.get(event) ?? []) {
-					handler(data);
-				}
-			},
-			off(event: string, handler: (data?: unknown) => void) {
-				eventHandlers.get(event)?.delete(handler);
-			},
-			on(event: string, handler: (data?: unknown) => void) {
-				if (!eventHandlers.has(event)) {
-					eventHandlers.set(event, new Set());
-				}
-				eventHandlers.get(event)?.add(handler);
-			},
-		},
 		on(event: string, handler: (...args: any[]) => void) {
 			if (!handlers.has(event)) {
 				handlers.set(event, []);
 			}
 			handlers.get(event)?.push(handler);
 		},
-		registerCommand(name: string, opts: any) {
-			commands.set(name, opts);
-		},
-		registerMessageRenderer: vi.fn(),
-		registerShortcut: vi.fn(),
 		registerTool(tool: any) {
 			tools.set(tool.name, tool);
 		},
+		registerCommand(name: string, opts: any) {
+			commands.set(name, opts);
+		},
+		registerShortcut: vi.fn(),
+		registerMessageRenderer: vi.fn(),
 		sendMessage: vi.fn(),
+		events: {
+			on(event: string, handler: (data?: unknown) => void) {
+				if (!eventHandlers.has(event)) {
+					eventHandlers.set(event, new Set());
+				}
+				eventHandlers.get(event)?.add(handler);
+			},
+			off(event: string, handler: (data?: unknown) => void) {
+				eventHandlers.get(event)?.delete(handler);
+			},
+			emit(event: string, data?: unknown) {
+				for (const handler of eventHandlers.get(event) ?? []) {
+					handler(data);
+				}
+			},
+		},
+		_handlers: handlers,
+		_eventHandlers: eventHandlers,
+		_commands: commands,
+		_tools: tools,
+		_emit(event: string, ...args: any[]) {
+			for (const handler of handlers.get(event) ?? []) {
+				handler(...args);
+			}
+		},
 	};
 
 	return pi;
 }
 
 function createCommandCtx(cwd: string) {
-	const notifications: { msg: string; level: string }[] = [];
+	const notifications: Array<{ msg: string; level: string }> = [];
 	const ui = {
-		custom: vi.fn().mockResolvedValue(undefined),
 		notify(msg: string, level: string) {
 			notifications.push({ msg, level });
 		},
 		setStatus: vi.fn(),
+		custom: vi.fn().mockResolvedValue(undefined),
 	};
 	return {
-		_notifications: notifications,
-		currentModel: "anthropic/claude-sonnet-4",
 		cwd,
-		model: { id: "claude-sonnet-4", provider: "anthropic" },
+		model: { provider: "anthropic", id: "claude-sonnet-4" },
+		currentModel: "anthropic/claude-sonnet-4",
 		modelRegistry: undefined,
 		ui,
+		_notifications: notifications,
 	};
 }
 
@@ -324,9 +318,9 @@ describe("ant-colony extension commands", () => {
 			inv.deferred.resolve(mkState("failed", inv.opts.goal, inv.stableId));
 		}
 		try {
-			fs.rmSync(cwd, { force: true, recursive: true });
+			fs.rmSync(cwd, { recursive: true, force: true });
 		} catch {
-			/* Ignore */
+			/* ignore */
 		}
 	});
 
@@ -342,7 +336,7 @@ describe("ant-colony extension commands", () => {
 		const colonyCmd = pi._commands.get("colony");
 		await colonyCmd.handler("Keep repo clean", ctx);
 
-		expect(fs.readFileSync(path.join(cwd, ".gitignore"), "utf8")).toBe("");
+		expect(fs.readFileSync(path.join(cwd, ".gitignore"), "utf-8")).toBe("");
 	});
 
 	it("/colony-stop all aborts all running colonies", async () => {
@@ -351,14 +345,14 @@ describe("ant-colony extension commands", () => {
 		await colonyCmd.handler("Second swarm goal", ctx);
 
 		expect(runInvocations).toHaveLength(2);
-		expect(runInvocations[0].opts.signal.aborted).toBeFalsy();
-		expect(runInvocations[1].opts.signal.aborted).toBeFalsy();
+		expect(runInvocations[0].opts.signal.aborted).toBe(false);
+		expect(runInvocations[1].opts.signal.aborted).toBe(false);
 
 		const stopCmd = pi._commands.get("colony-stop");
 		await stopCmd.handler("all", ctx);
 
-		expect(runInvocations[0].opts.signal.aborted).toBeTruthy();
-		expect(runInvocations[1].opts.signal.aborted).toBeTruthy();
+		expect(runInvocations[0].opts.signal.aborted).toBe(true);
+		expect(runInvocations[1].opts.signal.aborted).toBe(true);
 		expect(ctx._notifications.at(-1)?.msg).toContain("Abort signal sent to 2 colonies");
 	});
 
@@ -366,7 +360,7 @@ describe("ant-colony extension commands", () => {
 		const colonyCmd = pi._commands.get("colony");
 		await colonyCmd.handler("Status goal", ctx);
 
-		const { stableId } = runInvocations[0];
+		const stableId = runInvocations[0].stableId;
 		const statusCmd = pi._commands.get("colony-status");
 		await statusCmd.handler(stableId, ctx);
 
@@ -389,8 +383,8 @@ describe("ant-colony extension commands", () => {
 			.filter((msg: any) => msg?.customType === "ant-colony-report")
 			.map((msg: any) => String(msg.content));
 
-		expect(reportCalls.some((content: string) => content.includes("[COLONY_SIGNAL:COMPLETE]"))).toBeTruthy();
-		expect(reportCalls.some((content: string) => content.includes("[COLONY_SIGNAL:FAILED]"))).toBeTruthy();
+		expect(reportCalls.some((content: string) => content.includes("[COLONY_SIGNAL:COMPLETE]"))).toBe(true);
+		expect(reportCalls.some((content: string) => content.includes("[COLONY_SIGNAL:FAILED]"))).toBe(true);
 	});
 
 	it("/colony-resume without args resumes all resumable colonies", async () => {
@@ -403,7 +397,7 @@ describe("ant-colony extension commands", () => {
 		await resumeCmd.handler("", ctx);
 
 		expect(resumeColonyMock).toHaveBeenCalledTimes(2);
-		expect(ctx._notifications.filter((n) => n.msg.includes("Resuming:"))).toHaveLength(2);
+		expect(ctx._notifications.filter((n) => n.msg.includes("Resuming:")).length).toBe(2);
 	});
 
 	it("bg_colony_status requires explicit requests and rate limits manual snapshots", async () => {
@@ -413,24 +407,24 @@ describe("ant-colony extension commands", () => {
 		const statusTool = pi._tools.get("bg_colony_status");
 		const passive = await statusTool.execute("tool-1", {}, undefined, undefined, {
 			sessionManager: {
-				getBranch: () => [{ message: { content: "keep working", role: "user" }, type: "message" }],
+				getBranch: () => [{ type: "message", message: { role: "user", content: "keep working" } }],
 			},
 		});
-		expect(passive.isError).toBeTruthy();
+		expect(passive.isError).toBe(true);
 		expect(passive.content[0]?.text).toContain("Passive mode is active");
 
 		const explicitCtx = {
 			sessionManager: {
-				getBranch: () => [{ message: { content: "show colony status now", role: "user" }, type: "message" }],
+				getBranch: () => [{ type: "message", message: { role: "user", content: "show colony status now" } }],
 			},
 		};
 		const snapshot = await statusTool.execute("tool-2", {}, undefined, undefined, explicitCtx);
-		expect(snapshot.isError).toBe(false);
+		expect(snapshot.isError).toBeFalsy();
 		expect(snapshot.content[0]?.text).toContain("Manual status goal");
 		expect(snapshot.content[0]?.text).toContain("Workspace:");
 
 		const rateLimited = await statusTool.execute("tool-3", {}, undefined, undefined, explicitCtx);
-		expect(rateLimited.isError).toBeTruthy();
+		expect(rateLimited.isError).toBe(true);
 		expect(rateLimited.content[0]?.text).toContain("Manual status snapshot is rate-limited");
 	});
 
@@ -442,9 +436,9 @@ describe("ant-colony extension commands", () => {
 			undefined,
 			undefined,
 			{
-				cwd,
 				hasUI: true,
-				model: { id: "claude-sonnet-4", provider: "anthropic" },
+				cwd,
+				model: { provider: "anthropic", id: "claude-sonnet-4" },
 				modelRegistry: undefined,
 				sessionManager: { getSessionFile: () => null },
 			},
@@ -453,8 +447,8 @@ describe("ant-colony extension commands", () => {
 		expect(launched.content[0]?.text).toContain("Tool-driven colony");
 
 		const theme = {
-			bold: (text: string) => text,
 			fg: (_color: string, text: string) => text,
+			bold: (text: string) => text,
 		};
 		const renderedCall = antColonyTool.renderCall({ goal: "Tool-driven colony", maxAnts: 3, maxCost: 1 }, theme);
 		expect(renderedCall.text).toContain("ant_colony");
@@ -466,11 +460,11 @@ describe("ant-colony extension commands", () => {
 		expect(renderedResult.children[0]?.text).toContain("Colony launched in background");
 
 		const missingModel = await antColonyTool.execute("tool-2", { goal: "No model" }, undefined, undefined, {
-			cwd,
 			hasUI: false,
+			cwd,
 			model: undefined,
 		});
-		expect(missingModel.isError).toBeTruthy();
+		expect(missingModel.isError).toBe(true);
 		expect(missingModel.content[0]?.text).toContain("no model available");
 	});
 
@@ -480,8 +474,8 @@ describe("ant-colony extension commands", () => {
 		)?.[1];
 		const reportRenderer = pi.registerMessageRenderer.mock.calls.find((call) => call[0] === "ant-colony-report")?.[1];
 		const theme = {
-			bold: (text: string) => text,
 			fg: (_color: string, text: string) => text,
+			bold: (text: string) => text,
 		};
 
 		const progress = progressRenderer?.({ content: "[COLONY_SIGNAL:FAILED] colony failed loudly" }, theme);
@@ -526,15 +520,15 @@ describe("index-level telemetry propagation", () => {
 		expect(antColonyTool?.execute).toBeTypeOf("function");
 
 		const ctx = {
-			cwd: process.cwd(),
 			hasUI: false,
-			model: { id: "model", provider: "test" },
+			cwd: process.cwd(),
+			model: { provider: "test", id: "model" },
 			modelRegistry: {},
 		};
 
 		const executePromise = antColonyTool.execute("id", { goal: "test telemetry" }, undefined, undefined, ctx);
 
-		expect(storageMocks.resolveColonyStorageOptionsMock).toHaveBeenCalledOnce();
+		expect(storageMocks.resolveColonyStorageOptionsMock).toHaveBeenCalledTimes(1);
 		expect(runInvocations).toHaveLength(1);
 		expect(runInvocations[0].opts.eventBus).toBe(pi.events);
 
@@ -547,17 +541,17 @@ describe("index-level telemetry propagation", () => {
 		antColonyExtension(pi as any);
 		const ctx = {
 			ui: {
-				custom: vi.fn().mockResolvedValue(undefined),
-				notify: vi.fn(),
 				setStatus: vi.fn(),
+				notify: vi.fn(),
+				custom: vi.fn().mockResolvedValue(undefined),
 			},
 		};
 
 		pi._emit("session_start", {}, ctx);
 
-		expect(pi._eventHandlers.has("ant-colony:render")).toBeTruthy();
-		expect(pi._eventHandlers.has("ant-colony:clear-ui")).toBeTruthy();
-		expect(pi._eventHandlers.has("ant-colony:notify")).toBeTruthy();
+		expect(pi._eventHandlers.has("ant-colony:render")).toBe(true);
+		expect(pi._eventHandlers.has("ant-colony:clear-ui")).toBe(true);
+		expect(pi._eventHandlers.has("ant-colony:notify")).toBe(true);
 	});
 
 	it("coalesces identical ant-colony status refreshes", async () => {
@@ -565,12 +559,12 @@ describe("index-level telemetry propagation", () => {
 		antColonyExtension(pi as any);
 		const ctx = {
 			cwd: process.cwd(),
-			model: { id: "model", provider: "test" },
+			model: { provider: "test", id: "model" },
 			modelRegistry: {},
 			ui: {
-				custom: vi.fn().mockResolvedValue(undefined),
-				notify: vi.fn(),
 				setStatus: vi.fn(),
+				notify: vi.fn(),
+				custom: vi.fn().mockResolvedValue(undefined),
 			},
 		};
 
@@ -582,6 +576,6 @@ describe("index-level telemetry propagation", () => {
 		pi.events.emit("ant-colony:render");
 		pi.events.emit("ant-colony:render");
 
-		expect(ctx.ui.setStatus).toHaveBeenCalledOnce();
+		expect(ctx.ui.setStatus).toHaveBeenCalledTimes(1);
 	});
 });

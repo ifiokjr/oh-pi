@@ -1,35 +1,36 @@
+import { describe, expect, it } from "vitest";
 import { createRoutes } from "../src/routes.js";
 import type { AgentSessionLike } from "../src/ws-handler.js";
 
 function createSession(overrides: Partial<AgentSessionLike> = {}): AgentSessionLike {
 	return {
-		abort: async () => {},
-		agent: { state: { systemPrompt: "You are helpful", tools: [] } },
-		compact: async () => ({ ok: true }),
+		prompt: async () => {},
+		steer: async () => {},
 		followUp: async () => {},
+		abort: async () => {},
+		compact: async () => ({ ok: true }),
+		setModel: async () => true,
+		setThinkingLevel: () => {},
+		subscribe: () => () => {},
 		isStreaming: false,
 		messages: [{ role: "user", content: "hello" }],
 		model: "openai/gpt-5-mini",
-		newSession: async () => ({ cancelled: false }),
-		prompt: async () => {},
-		sessionFile: "/tmp/session-1.jsonl",
-		sessionId: "session-1",
-		setModel: async () => true,
-		setThinkingLevel: () => {},
-		steer: async () => {},
-		subscribe: () => () => {},
 		thinkingLevel: "medium",
+		sessionId: "session-1",
+		sessionFile: "/tmp/session-1.jsonl",
+		agent: { state: { systemPrompt: "You are helpful", tools: [] } },
+		newSession: async () => ({ cancelled: false }),
 		...overrides,
 	};
 }
 
 function createApp(session?: AgentSessionLike) {
 	return createRoutes({
-		getConnectedClients: () => 3,
-		getSession: () => session,
+		token: "test-token",
 		instanceId: "instance-42",
 		startTime: Date.now() - 4_300,
-		token: "test-token",
+		getSession: () => session,
+		getConnectedClients: () => 3,
 	});
 }
 
@@ -37,13 +38,13 @@ function authHeaders(token = "test-token") {
 	return { Authorization: `Bearer ${token}` };
 }
 
-describe(createRoutes, () => {
+describe("createRoutes", () => {
 	it("serves health checks without authentication", async () => {
 		const response = await createApp().request("/api/health");
 		const body = await response.json();
 
 		expect(response.status).toBe(200);
-		expect(body).toStrictEqual({
+		expect(body).toEqual({
 			status: "ok",
 			uptime: expect.any(Number),
 		});
@@ -55,13 +56,13 @@ describe(createRoutes, () => {
 
 		const missing = await app.request("/api/instance");
 		expect(missing.status).toBe(401);
-		await expect(missing.json()).resolves.toStrictEqual({ error: "Authorization required" });
+		expect(await missing.json()).toEqual({ error: "Authorization required" });
 
 		const invalid = await app.request("/api/instance", {
 			headers: authHeaders("wrong-token"),
 		});
 		expect(invalid.status).toBe(401);
-		await expect(invalid.json()).resolves.toStrictEqual({ error: "Invalid token" });
+		expect(await invalid.json()).toEqual({ error: "Invalid token" });
 	});
 
 	it("returns instance metadata when authenticated", async () => {
@@ -70,10 +71,10 @@ describe(createRoutes, () => {
 		});
 
 		expect(response.status).toBe(200);
-		await expect(response.json()).resolves.toStrictEqual({
-			connectedClients: 3,
+		expect(await response.json()).toEqual({
 			instanceId: "instance-42",
 			uptime: expect.any(Number),
+			connectedClients: 3,
 		});
 	});
 
@@ -83,7 +84,7 @@ describe(createRoutes, () => {
 		for (const pathname of ["/api/session/state", "/api/session/messages", "/api/session/stats", "/api/models"]) {
 			const response = await app.request(pathname, { headers: authHeaders() });
 			expect(response.status).toBe(503);
-			await expect(response.json()).resolves.toStrictEqual({ error: "No session attached" });
+			expect(await response.json()).toEqual({ error: "No session attached" });
 		}
 	});
 
@@ -91,37 +92,37 @@ describe(createRoutes, () => {
 		const session = createSession({
 			isStreaming: true,
 			messages: [
-				{ content: "hello", role: "user" },
-				{ content: "hi", role: "assistant" },
+				{ role: "user", content: "hello" },
+				{ role: "assistant", content: "hi" },
 			],
 		});
 		const app = createApp(session);
 
 		const state = await app.request("/api/session/state", { headers: authHeaders() });
 		expect(state.status).toBe(200);
-		await expect(state.json()).resolves.toStrictEqual({
-			isStreaming: true,
-			messageCount: 2,
+		expect(await state.json()).toEqual({
 			model: "openai/gpt-5-mini",
-			sessionId: "session-1",
 			thinkingLevel: "medium",
+			isStreaming: true,
+			sessionId: "session-1",
+			messageCount: 2,
 		});
 
 		const messages = await app.request("/api/session/messages", { headers: authHeaders() });
 		expect(messages.status).toBe(200);
-		await expect(messages.json()).resolves.toStrictEqual({ messages: session.messages });
+		expect(await messages.json()).toEqual({ messages: session.messages });
 
 		const stats = await app.request("/api/session/stats", { headers: authHeaders() });
 		expect(stats.status).toBe(200);
-		await expect(stats.json()).resolves.toStrictEqual({
-			isStreaming: true,
-			messageCount: 2,
+		expect(await stats.json()).toEqual({
 			sessionId: "session-1",
+			messageCount: 2,
+			isStreaming: true,
 		});
 
 		const models = await app.request("/api/models", { headers: authHeaders() });
 		expect(models.status).toBe(200);
-		await expect(models.json()).resolves.toStrictEqual({
+		expect(await models.json()).toEqual({
 			currentModel: "openai/gpt-5-mini",
 			thinkingLevel: "medium",
 		});

@@ -1,6 +1,7 @@
 import path from "node:path";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
+vi.mock("@mariozechner/pi-coding-agent", () => ({
 	BorderedLoader: class BorderedLoader {
 		onAbort?: () => void;
 	},
@@ -12,9 +13,9 @@ const planFileMocks = vi.hoisted(() => ({
 	movePlanFile: vi.fn(),
 	pathExists: vi.fn(),
 	readPlanFile: vi.fn(),
-	resetPlanFile: vi.fn(),
 	resolveActivePlanFilePath: vi.fn(),
 	resolvePlanLocationInput: vi.fn(),
+	resetPlanFile: vi.fn(),
 }));
 
 const stateMocks = vi.hoisted(() => ({
@@ -22,8 +23,8 @@ const stateMocks = vi.hoisted(() => ({
 	hasEntryInSession: vi.fn(),
 }));
 
-vi.mock<typeof import("../plan-files")>(import("../plan-files"), () => planFileMocks);
-vi.mock<typeof import("../state")>(import("../state"), () => stateMocks);
+vi.mock("../plan-files", () => planFileMocks);
+vi.mock("../state", () => stateMocks);
 
 const { registerPlanModeCommand } = await import("../flow");
 
@@ -55,13 +56,13 @@ function createRegisteredBindings(
 	registerPlanModeCommand(
 		{
 			registerCommand: (_name: string, command: { handler: (args: string, ctx: any) => Promise<void> }) => {
-				({ handler } = command);
+				handler = command.handler;
 			},
 			registerShortcut: (_shortcut: string, options: { handler: (ctx: any) => Promise<void> }) => {
 				shortcutHandler = options.handler;
 			},
 		} as any,
-		{ onPlanModeExited: onPlanModeExited as never, stateManager },
+		{ stateManager, onPlanModeExited: onPlanModeExited as never },
 	);
 
 	if (!(handler && shortcutHandler)) {
@@ -76,7 +77,16 @@ function createContext(overrides: Record<string, unknown> = {}) {
 		cwd: "/tmp",
 		hasUI: true,
 		isIdle: () => true,
+		waitForIdle: vi.fn(async () => {}),
 		navigateTree: vi.fn(async () => ({ cancelled: false })),
+		ui: {
+			confirm: vi.fn(async () => true),
+			custom: vi.fn(async () => ({ cancelled: false })),
+			getEditorText: vi.fn(() => ""),
+			notify: vi.fn(),
+			select: vi.fn(() => undefined),
+			setEditorText: vi.fn(),
+		},
 		sessionManager: {
 			appendLabelChange: vi.fn(),
 			branch: vi.fn(),
@@ -88,27 +98,18 @@ function createContext(overrides: Record<string, unknown> = {}) {
 			getSessionId: vi.fn(() => "session-1"),
 			resetLeaf: vi.fn(),
 		},
-		ui: {
-			confirm: vi.fn(async () => true),
-			custom: vi.fn(async () => ({ cancelled: false })),
-			getEditorText: vi.fn(() => ""),
-			notify: vi.fn(),
-			select: vi.fn(() => undefined),
-			setEditorText: vi.fn(),
-		},
-		waitForIdle: vi.fn(async () => {}),
 	};
 
 	return {
 		...base,
 		...overrides,
-		sessionManager: {
-			...base.sessionManager,
-			...((overrides.sessionManager as Record<string, unknown> | undefined) ?? {}),
-		},
 		ui: {
 			...base.ui,
 			...((overrides.ui as Record<string, unknown> | undefined) ?? {}),
+		},
+		sessionManager: {
+			...base.sessionManager,
+			...((overrides.sessionManager as Record<string, unknown> | undefined) ?? {}),
 		},
 	};
 }
@@ -117,15 +118,15 @@ beforeEach(() => {
 	vi.clearAllMocks();
 
 	planFileMocks.createFreshPlanFilePath.mockResolvedValue("/plans/fresh.plan.md");
-	planFileMocks.ensurePlanFileExists.mockResolvedValue();
-	planFileMocks.movePlanFile.mockResolvedValue();
+	planFileMocks.ensurePlanFileExists.mockResolvedValue(undefined);
+	planFileMocks.movePlanFile.mockResolvedValue(undefined);
 	planFileMocks.pathExists.mockResolvedValue(false);
-	planFileMocks.readPlanFile.mockResolvedValue();
+	planFileMocks.readPlanFile.mockResolvedValue(undefined);
 	planFileMocks.resolveActivePlanFilePath.mockImplementation((_ctx, planFilePath: string) => planFilePath);
-	planFileMocks.resolvePlanLocationInput.mockImplementation((_ctx, rawLocation: string) =>
-		Promise.resolve(rawLocation ? path.join("/plans", path.basename(rawLocation)) : null),
-	);
-	planFileMocks.resetPlanFile.mockResolvedValue();
+	planFileMocks.resolvePlanLocationInput.mockImplementation((_ctx, rawLocation: string) => {
+		return Promise.resolve(rawLocation ? path.join("/plans", path.basename(rawLocation)) : null);
+	});
+	planFileMocks.resetPlanFile.mockResolvedValue(undefined);
 
 	stateMocks.getFirstUserMessageId.mockReturnValue("user-1");
 	stateMocks.hasEntryInSession.mockReturnValue(true);
@@ -134,17 +135,17 @@ beforeEach(() => {
 describe("plan flow branches", () => {
 	it("moves the active plan file to a new location", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: true,
 			planFilePath: "/plans/current.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const ctx = createContext({
 			hasUI: false,
 			ui: {
 				notify: (message: string, level: string) => {
-					notifications.push({ level, message });
+					notifications.push({ message, level });
 				},
 			},
 		});
@@ -160,24 +161,24 @@ describe("plan flow branches", () => {
 			expect.objectContaining({ planFilePath: "/plans/next.plan.md" }),
 		);
 		expect(notifications).toContainEqual({
-			level: "info",
 			message: "Plan file moved to /plans/next.plan.md.",
+			level: "info",
 		});
 	});
 
 	it("warns when an active plan move resolves to no valid path", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: true,
 			planFilePath: "/plans/current.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const ctx = createContext({
 			hasUI: false,
 			ui: {
 				notify: (message: string, level: string) => {
-					notifications.push({ level, message });
+					notifications.push({ message, level });
 				},
 			},
 		});
@@ -188,36 +189,36 @@ describe("plan flow branches", () => {
 
 		expect(planFileMocks.movePlanFile).not.toHaveBeenCalled();
 		expect(notifications).toContainEqual({
-			level: "warning",
 			message: "Please enter a valid plan file location.",
+			level: "warning",
 		});
 	});
 
 	it("starts fresh planning in an empty branch and clears the editor", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: false,
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
 		const setEditorText = vi.fn();
 		const navigateTree = vi.fn(async () => ({ cancelled: false }));
 		const ctx = createContext({
 			navigateTree,
-			sessionManager: {
-				getLeafId: () => "assistant-leaf",
-			},
 			ui: {
 				select: () => "Empty branch",
 				setEditorText,
+			},
+			sessionManager: {
+				getLeafId: () => "assistant-leaf",
 			},
 		});
 
 		await handler("", ctx);
 
 		expect(navigateTree).toHaveBeenCalledWith("user-1", {
-			label: "plan",
 			summarize: false,
+			label: "plan",
 		});
 		expect(setEditorText).toHaveBeenCalledWith("");
 		expect(planFileMocks.resetPlanFile).toHaveBeenCalledWith("/plans/session.plan.md");
@@ -230,74 +231,74 @@ describe("plan flow branches", () => {
 
 	it("cancels UI activation before choosing a plan branch", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: false,
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const ctx = createContext({
-			sessionManager: {
-				getLeafId: () => "assistant-leaf",
-			},
 			ui: {
 				notify: (message: string, level: string) => {
 					notifications.push({ message, level });
 				},
 				select: () => undefined,
 			},
+			sessionManager: {
+				getLeafId: () => "assistant-leaf",
+			},
 		});
 
 		await handler("", ctx);
 
 		expect(notifications).toContainEqual({
-			level: "info",
 			message: "Plan mode activation cancelled.",
+			level: "info",
 		});
 		expect(stateManager.startPlanMode).not.toHaveBeenCalled();
 	});
 
 	it("stops empty-branch activation when creating the planning branch is cancelled", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: false,
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const navigateTree = vi.fn(async () => ({ cancelled: true }));
 		const ctx = createContext({
 			navigateTree,
-			sessionManager: {
-				getLeafId: () => "assistant-leaf",
-			},
 			ui: {
 				notify: (message: string, level: string) => {
 					notifications.push({ message, level });
 				},
 				select: () => "Empty branch",
 			},
+			sessionManager: {
+				getLeafId: () => "assistant-leaf",
+			},
 		});
 
 		await handler("", ctx);
 
 		expect(navigateTree).toHaveBeenCalledWith("user-1", {
-			label: "plan",
 			summarize: false,
+			label: "plan",
 		});
 		expect(notifications).toContainEqual({
-			level: "info",
 			message: "Plan mode activation cancelled.",
+			level: "info",
 		});
 		expect(stateManager.startPlanMode).not.toHaveBeenCalled();
 	});
 
 	it("moves an existing plan to a requested path before continuing planning", async () => {
 		const stateManager = createStateManager({
-			active: false,
-			lastPlanLeafId: undefined,
-			planFilePath: "/plans/session.plan.md",
 			version: 1,
+			active: false,
+			planFilePath: "/plans/session.plan.md",
+			lastPlanLeafId: undefined,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
 		const ctx = createContext({
@@ -323,19 +324,19 @@ describe("plan flow branches", () => {
 
 	it("cancels continue planning when restoring the saved branch is cancelled", async () => {
 		const stateManager = createStateManager({
-			active: false,
-			lastPlanLeafId: "saved-leaf",
-			planFilePath: "/plans/session.plan.md",
 			version: 1,
+			active: false,
+			planFilePath: "/plans/session.plan.md",
+			lastPlanLeafId: "saved-leaf",
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const navigateTree = vi.fn(async () => ({ cancelled: true }));
 		const ctx = createContext({
 			navigateTree,
 			ui: {
 				notify: (message: string, level: string) => {
-					notifications.push({ level, message });
+					notifications.push({ message, level });
 				},
 				select: () => "Continue planning",
 			},
@@ -346,12 +347,12 @@ describe("plan flow branches", () => {
 		await handler("", ctx);
 
 		expect(navigateTree).toHaveBeenCalledWith("saved-leaf", {
-			label: "plan",
 			summarize: false,
+			label: "plan",
 		});
 		expect(notifications).toContainEqual({
-			level: "info",
 			message: "Plan mode activation cancelled.",
+			level: "info",
 		});
 		expect(stateManager.startPlanMode).not.toHaveBeenCalled();
 	});
@@ -359,20 +360,17 @@ describe("plan flow branches", () => {
 	it("summarizes the planning branch when exiting plan mode with summary", async () => {
 		const onPlanModeExited = vi.fn();
 		const stateManager = createStateManager({
+			version: 1,
 			active: true,
-			lastPlanLeafId: "old-leaf",
 			originLeafId: "origin-leaf",
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
+			lastPlanLeafId: "old-leaf",
 		});
 		const { handler } = createRegisteredBindings(stateManager, onPlanModeExited);
 		const navigateTree = vi.fn(async () => ({ cancelled: false }));
 		const setEditorText = vi.fn();
 		const ctx = createContext({
 			navigateTree,
-			sessionManager: {
-				getLeafId: () => "planning-leaf",
-			},
 			ui: {
 				custom: (render: (tui: unknown, theme: unknown, kb: unknown, done: (result: unknown) => void) => unknown) => {
 					return new Promise((resolve) => {
@@ -383,6 +381,9 @@ describe("plan flow branches", () => {
 				select: () => "Exit & summarize branch",
 				setEditorText,
 			},
+			sessionManager: {
+				getLeafId: () => "planning-leaf",
+			},
 		});
 
 		planFileMocks.readPlanFile.mockResolvedValue("# Approved plan\n");
@@ -392,8 +393,8 @@ describe("plan flow branches", () => {
 		expect(navigateTree).toHaveBeenCalledWith(
 			"origin-leaf",
 			expect.objectContaining({
-				replaceInstructions: true,
 				summarize: true,
+				replaceInstructions: true,
 			}),
 		);
 		expect(stateManager.setState).toHaveBeenCalledWith(
@@ -409,48 +410,48 @@ describe("plan flow branches", () => {
 
 	it("keeps plan mode active when exit selection is dismissed", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: true,
 			originLeafId: "origin-leaf",
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const ctx = createContext({
 			ui: {
 				notify: (message: string, level: string) => {
-					notifications.push({ level, message });
+					notifications.push({ message, level });
 				},
-				select: () => {},
+				select: () => undefined,
 			},
 		});
 
 		await handler("", ctx);
 
 		expect(notifications).toContainEqual({
-			level: "info",
 			message: "Continuing in Plan mode (Esc).",
+			level: "info",
 		});
 		expect(stateManager.setState).not.toHaveBeenCalled();
 	});
 
 	it("reports fresh plan path allocation failures before starting a new plan", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: false,
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const ctx = createContext({
-			sessionManager: {
-				getLeafId: () => "user-1",
-			},
 			ui: {
 				notify: (message: string, level: string) => {
 					notifications.push({ message, level });
 				},
 				select: () => "Start fresh",
+			},
+			sessionManager: {
+				getLeafId: () => "user-1",
 			},
 		});
 
@@ -460,8 +461,8 @@ describe("plan flow branches", () => {
 		await handler("", ctx);
 
 		expect(notifications).toContainEqual({
-			level: "error",
 			message: "Failed to allocate a fresh plan file path: no slot available",
+			level: "error",
 		});
 		expect(planFileMocks.resetPlanFile).not.toHaveBeenCalled();
 		expect(stateManager.startPlanMode).not.toHaveBeenCalled();
@@ -469,17 +470,17 @@ describe("plan flow branches", () => {
 
 	it("refuses to overwrite an existing requested path without interactive confirmation", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: false,
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const ctx = createContext({
 			hasUI: false,
 			ui: {
 				notify: (message: string, level: string) => {
-					notifications.push({ level, message });
+					notifications.push({ message, level });
 				},
 			},
 		});
@@ -490,8 +491,8 @@ describe("plan flow branches", () => {
 		await handler("requested.plan.md", ctx);
 
 		expect(notifications).toContainEqual({
-			level: "error",
 			message: "Refusing to overwrite existing plan file without interactive confirmation: /plans/requested.plan.md",
+			level: "error",
 		});
 		expect(planFileMocks.resetPlanFile).not.toHaveBeenCalled();
 		expect(stateManager.startPlanMode).not.toHaveBeenCalled();
@@ -499,22 +500,22 @@ describe("plan flow branches", () => {
 
 	it("cancels interactive fresh planning when the requested path overwrite is rejected", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: false,
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const ctx = createContext({
-			sessionManager: {
-				getLeafId: () => "user-1",
-			},
 			ui: {
 				confirm: async () => false,
 				notify: (message: string, level: string) => {
 					notifications.push({ message, level });
 				},
 				select: () => "Current branch",
+			},
+			sessionManager: {
+				getLeafId: () => "user-1",
 			},
 		});
 
@@ -524,8 +525,8 @@ describe("plan flow branches", () => {
 		await handler("requested.plan.md", ctx);
 
 		expect(notifications).toContainEqual({
-			level: "info",
 			message: "Plan mode activation cancelled.",
+			level: "info",
 		});
 		expect(planFileMocks.resetPlanFile).not.toHaveBeenCalled();
 		expect(stateManager.startPlanMode).not.toHaveBeenCalled();
@@ -533,17 +534,17 @@ describe("plan flow branches", () => {
 
 	it("reports requested path lookup failures before overwriting a plan file", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: false,
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const ctx = createContext({
 			hasUI: false,
 			ui: {
 				notify: (message: string, level: string) => {
-					notifications.push({ level, message });
+					notifications.push({ message, level });
 				},
 			},
 		});
@@ -554,25 +555,25 @@ describe("plan flow branches", () => {
 		await handler("requested.plan.md", ctx);
 
 		expect(notifications).toContainEqual({
-			level: "error",
 			message: "Failed to check requested plan path: stat failed",
+			level: "error",
 		});
 		expect(planFileMocks.resetPlanFile).not.toHaveBeenCalled();
 	});
 
 	it("reports reset failures before entering plan mode", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: false,
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const ctx = createContext({
 			hasUI: false,
 			ui: {
 				notify: (message: string, level: string) => {
-					notifications.push({ level, message });
+					notifications.push({ message, level });
 				},
 			},
 		});
@@ -582,8 +583,8 @@ describe("plan flow branches", () => {
 		await handler("", ctx);
 
 		expect(notifications).toContainEqual({
-			level: "error",
 			message: "Failed to reset plan file: locked",
+			level: "error",
 		});
 		expect(planFileMocks.ensurePlanFileExists).not.toHaveBeenCalled();
 		expect(stateManager.startPlanMode).not.toHaveBeenCalled();
@@ -591,17 +592,17 @@ describe("plan flow branches", () => {
 
 	it("reports initialization failures before entering plan mode", async () => {
 		const stateManager = createStateManager({
+			version: 1,
 			active: false,
 			planFilePath: "/plans/session.plan.md",
-			version: 1,
 		});
 		const { handler } = createRegisteredBindings(stateManager);
-		const notifications: { message: string; level: string }[] = [];
+		const notifications: Array<{ message: string; level: string }> = [];
 		const ctx = createContext({
 			hasUI: false,
 			ui: {
 				notify: (message: string, level: string) => {
-					notifications.push({ level, message });
+					notifications.push({ message, level });
 				},
 			},
 		});
@@ -611,8 +612,8 @@ describe("plan flow branches", () => {
 		await handler("", ctx);
 
 		expect(notifications).toContainEqual({
-			level: "error",
 			message: "Failed to initialize plan file: disk full",
+			level: "error",
 		});
 		expect(stateManager.startPlanMode).not.toHaveBeenCalled();
 	});

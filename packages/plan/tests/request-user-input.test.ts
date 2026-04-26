@@ -1,5 +1,5 @@
 import type { QnAResponse } from "@ifi/pi-shared-qna";
-
+import { describe, expect, test } from "vitest";
 import {
 	buildRequestUserInputResponse,
 	buildRequestUserInputSummary,
@@ -7,52 +7,52 @@ import {
 	summarizeRequestUserInputAnswer,
 } from "../request-user-input";
 
-describe(normalizeRequestUserInputQuestions, () => {
-	it("trims ids and defaults options", () => {
+describe("normalizeRequestUserInputQuestions", () => {
+	test("trims ids and defaults options", () => {
 		const result = normalizeRequestUserInputQuestions([
-			{ header: "Runtime", id: " runtime ", question: "Which runtime?" },
+			{ id: " runtime ", header: "Runtime", question: "Which runtime?" },
 		]);
 
 		if ("error" in result) {
 			throw new Error(result.error);
 		}
 
-		expect(result.questions[0]).toStrictEqual({
-			header: "Runtime",
+		expect(result.questions[0]).toEqual({
 			id: "runtime",
-			options: [],
+			header: "Runtime",
 			question: "Which runtime?",
+			options: [],
 		});
 	});
 
-	it("rejects duplicate ids", () => {
+	test("rejects duplicate ids", () => {
 		const result = normalizeRequestUserInputQuestions([
-			{ header: "One", id: "runtime", question: "Q1" },
-			{ header: "Two", id: "runtime", question: "Q2" },
+			{ id: "runtime", header: "One", question: "Q1" },
+			{ id: "runtime", header: "Two", question: "Q2" },
 		]);
 
-		expect("error" in result).toBeTruthy();
+		expect("error" in result).toBe(true);
 		if ("error" in result) {
 			expect(result.error).toContain("Duplicate id: runtime");
 		}
 	});
 });
 
-describe(buildRequestUserInputResponse, () => {
-	it("preserves option, other, and note semantics", () => {
+describe("buildRequestUserInputResponse", () => {
+	test("preserves option, other, and note semantics", () => {
 		const normalized = normalizeRequestUserInputQuestions([
 			{
-				header: "Runtime",
 				id: "runtime",
+				header: "Runtime",
+				question: "Which runtime?",
 				options: [
 					{ label: "Node", description: "Use Node.js" },
 					{ label: "Bun", description: "Use Bun" },
 				],
-				question: "Which runtime?",
 			},
 			{
-				header: "Notes",
 				id: "notes",
+				header: "Notes",
 				question: "Any constraints?",
 			},
 		]);
@@ -62,33 +62,33 @@ describe(buildRequestUserInputResponse, () => {
 
 		const responses: QnAResponse[] = [
 			{
-				committed: true,
-				customText: "Need Bun APIs",
 				selectedOptionIndex: 2,
+				customText: "Need Bun APIs",
 				selectionTouched: true,
+				committed: true,
 			},
 			{
-				committed: true,
-				customText: "Ship in two phases",
 				selectedOptionIndex: 0,
+				customText: "Ship in two phases",
 				selectionTouched: true,
+				committed: true,
 			},
 		];
 
 		const response = buildRequestUserInputResponse(normalized.questions, responses);
-		expect(response.answers.runtime.answers).toStrictEqual(["Other", "user_note: Need Bun APIs"]);
-		expect(response.answers.notes.answers).toStrictEqual(["user_note: Ship in two phases"]);
+		expect(response.answers.runtime.answers).toEqual(["Other", "user_note: Need Bun APIs"]);
+		expect(response.answers.notes.answers).toEqual(["user_note: Ship in two phases"]);
 	});
 });
 
 describe("summary helpers", () => {
-	it("formats missing answer marker", () => {
+	test("formats missing answer marker", () => {
 		expect(summarizeRequestUserInputAnswer({ answers: [] })).toBe("(no answer)");
 	});
 
-	it("builds readable summary lines", () => {
+	test("builds readable summary lines", () => {
 		const details = {
-			questions: [{ header: "Runtime", id: "runtime", options: [], question: "Which runtime?" }],
+			questions: [{ id: "runtime", header: "Runtime", question: "Which runtime?", options: [] }],
 			response: {
 				answers: {
 					runtime: { answers: ["user_note: Bun for startup"] },

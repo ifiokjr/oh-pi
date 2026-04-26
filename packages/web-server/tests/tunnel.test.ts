@@ -1,11 +1,12 @@
 import { EventEmitter } from "node:events";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const childProcess = vi.hoisted(() => ({
 	execFileSync: vi.fn(),
 	spawn: vi.fn(),
 }));
 
-vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => childProcess);
+vi.mock("node:child_process", () => childProcess);
 
 import { detectTunnelProvider, startTunnel } from "../src/tunnel.js";
 
@@ -28,7 +29,7 @@ afterEach(() => {
 	vi.useRealTimers();
 });
 
-describe(detectTunnelProvider, () => {
+describe("detectTunnelProvider", () => {
 	it("prefers cloudflared when available", () => {
 		childProcess.execFileSync.mockImplementation((command: string) => {
 			if (command === "which") {
@@ -46,7 +47,7 @@ describe(detectTunnelProvider, () => {
 			.mockImplementationOnce(() => {
 				throw new Error("missing cloudflared");
 			})
-			.mockReturnValueOnce("");
+			.mockImplementationOnce(() => "");
 
 		expect(detectTunnelProvider()).toBe("tailscale");
 	});
@@ -60,7 +61,7 @@ describe(detectTunnelProvider, () => {
 	});
 });
 
-describe(startTunnel, () => {
+describe("startTunnel", () => {
 	it("rejects when no tunnel provider is available", async () => {
 		childProcess.execFileSync.mockImplementation(() => {
 			throw new Error("missing");
@@ -80,9 +81,9 @@ describe(startTunnel, () => {
 		expect(childProcess.spawn).toHaveBeenCalledWith("cloudflared", ["tunnel", "--url", "http://localhost:3100"], {
 			stdio: ["ignore", "pipe", "pipe"],
 		});
-		expect(tunnel).toStrictEqual({
-			provider: "cloudflared",
+		expect(tunnel).toEqual({
 			publicUrl: "https://quiet-river.trycloudflare.com",
+			provider: "cloudflared",
 			stop: expect.any(Function),
 		});
 

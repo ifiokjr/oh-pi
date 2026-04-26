@@ -1,10 +1,11 @@
+import { describe, expect, it, vi } from "vitest";
 import { isNewer, runAutoUpdateCheck } from "./auto-update.js";
 
 describe("auto-update helpers", () => {
 	it("compares versions correctly", () => {
-		expect(isNewer("1.2.0", "1.1.9")).toBeTruthy();
-		expect(isNewer("1.1.9", "1.2.0")).toBeFalsy();
-		expect(isNewer("1.0.0", "1.0.0")).toBeFalsy();
+		expect(isNewer("1.2.0", "1.1.9")).toBe(true);
+		expect(isNewer("1.1.9", "1.2.0")).toBe(false);
+		expect(isNewer("1.0.0", "1.0.0")).toBe(false);
 	});
 
 	it("skips checks when the stamp is still fresh", async () => {
@@ -13,11 +14,11 @@ describe("auto-update helpers", () => {
 		const writeStamp = vi.fn();
 
 		const result = await runAutoUpdateCheck({
-			getCurrentVersion,
-			getLatestVersion,
 			now: () => 1_000,
 			readStamp: () => 900,
 			writeStamp,
+			getCurrentVersion,
+			getLatestVersion,
 		});
 
 		expect(result).toBeNull();
@@ -31,16 +32,16 @@ describe("auto-update helpers", () => {
 		const writeStamp = vi.fn();
 
 		const result = await runAutoUpdateCheck({
-			getCurrentVersion: async () => "0.4.4",
-			getLatestVersion: async () => "0.4.5",
-			notify,
 			now: () => 24 * 60 * 60 * 1000 + 1,
 			readStamp: () => 0,
 			writeStamp,
+			getCurrentVersion: async () => "0.4.4",
+			getLatestVersion: async () => "0.4.5",
+			notify,
 		});
 
 		expect(result).toContain("0.4.5 available");
-		expect(writeStamp).toHaveBeenCalledOnce();
+		expect(writeStamp).toHaveBeenCalledTimes(1);
 		expect(notify).toHaveBeenCalledWith(expect.stringContaining("0.4.5 available"));
 	});
 
@@ -48,12 +49,12 @@ describe("auto-update helpers", () => {
 		const notify = vi.fn();
 
 		const result = await runAutoUpdateCheck({
-			getCurrentVersion: async () => "0.4.5",
-			getLatestVersion: async () => "0.4.5",
-			notify,
 			now: () => 24 * 60 * 60 * 1000 + 1,
 			readStamp: () => 0,
 			writeStamp: vi.fn(),
+			getCurrentVersion: async () => "0.4.5",
+			getLatestVersion: async () => "0.4.5",
+			notify,
 		});
 
 		expect(result).toBeNull();
@@ -64,6 +65,11 @@ describe("auto-update helpers", () => {
 		const sequence: string[] = [];
 
 		const result = await runAutoUpdateCheck({
+			now: () => 24 * 60 * 60 * 1000 + 1,
+			readStamp: () => 0,
+			writeStamp: () => {
+				sequence.push("write-stamp");
+			},
 			getCurrentVersion: async () => {
 				sequence.push("current:start");
 				await Promise.resolve();
@@ -76,14 +82,9 @@ describe("auto-update helpers", () => {
 				sequence.push("latest:end");
 				return "0.4.5";
 			},
-			now: () => 24 * 60 * 60 * 1000 + 1,
-			readStamp: () => 0,
-			writeStamp: () => {
-				sequence.push("write-stamp");
-			},
 		});
 
 		expect(result).toContain("0.4.5 available");
-		expect(sequence).toStrictEqual(["write-stamp", "current:start", "latest:start", "current:end", "latest:end"]);
+		expect(sequence).toEqual(["write-stamp", "current:start", "latest:start", "current:end", "latest:end"]);
 	});
 });

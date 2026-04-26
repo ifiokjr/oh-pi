@@ -1,5 +1,5 @@
-import { createJsonlWriter } from "../jsonl-writer.js";
-import type { DrainableSource, JsonlWriteStream } from "../jsonl-writer.js";
+import { describe, expect, it } from "vitest";
+import { createJsonlWriter, type DrainableSource, type JsonlWriteStream } from "../jsonl-writer.js";
 
 class MockSource implements DrainableSource {
 	paused = 0;
@@ -49,7 +49,7 @@ class MockStream implements JsonlWriteStream {
 	}
 }
 
-describe(createJsonlWriter, () => {
+describe("createJsonlWriter", () => {
 	it("writes lines with trailing newline", () => {
 		const source = new MockSource();
 		const stream = new MockStream();
@@ -58,7 +58,7 @@ describe(createJsonlWriter, () => {
 		});
 		writer.writeLine('{"type":"a"}');
 		writer.writeLine('{"type":"b"}');
-		expect(stream.writes).toStrictEqual(['{"type":"a"}\n', '{"type":"b"}\n']);
+		expect(stream.writes).toEqual(['{"type":"a"}\n', '{"type":"b"}\n']);
 	});
 
 	it("pauses on backpressure and resumes on drain", () => {
@@ -73,7 +73,7 @@ describe(createJsonlWriter, () => {
 		stream.emitDrain();
 		expect(source.resumed).toBe(1);
 		writer.writeLine('{"type":"b"}');
-		expect(stream.writes).toStrictEqual(['{"type":"a"}\n', '{"type":"b"}\n']);
+		expect(stream.writes).toEqual(['{"type":"a"}\n', '{"type":"b"}\n']);
 	});
 
 	it("closes stream once", async () => {
@@ -83,9 +83,9 @@ describe(createJsonlWriter, () => {
 			createWriteStream: () => stream,
 		});
 		await writer.close();
-		expect(stream.ended).toBeTruthy();
+		expect(stream.ended).toBe(true);
 		await writer.close();
-		expect(stream.ended).toBeTruthy();
+		expect(stream.ended).toBe(true);
 	});
 
 	it("returns no-op writer when file path is undefined", async () => {
@@ -108,7 +108,7 @@ describe(createJsonlWriter, () => {
 		writer.writeLine('{"type":"b"}');
 		writer.writeLine('{"type":"c"}');
 		expect(stream.writes).toHaveLength(2);
-		expect(stream.writes).toStrictEqual(['{"type":"a"}\n', '{"type":"b"}\n']);
+		expect(stream.writes).toEqual(['{"type":"a"}\n', '{"type":"b"}\n']);
 		expect(source.paused).toBe(0);
 	});
 
@@ -116,7 +116,7 @@ describe(createJsonlWriter, () => {
 		const source = new MockSource();
 		const stream = new MockStream();
 		const line = '{"x":"a"}';
-		const lineBytes = Buffer.byteLength(`${line}\n`, "utf8");
+		const lineBytes = Buffer.byteLength(`${line}\n`, "utf-8");
 		const writer = createJsonlWriter("/tmp/out.jsonl", source, {
 			createWriteStream: () => stream,
 			maxBytes: lineBytes * 2,

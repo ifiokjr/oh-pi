@@ -1,22 +1,24 @@
-vi.mock<typeof import("../src/read.js")>(import("../src/read.js"), () => ({
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("../src/read.js", () => ({
 	enhanceReadTool: vi.fn(),
 }));
-vi.mock<typeof import("../src/bash.js")>(import("../src/bash.js"), () => ({
+vi.mock("../src/bash.js", () => ({
 	enhanceBashTool: vi.fn(),
 }));
-vi.mock<typeof import("../src/ls.js")>(import("../src/ls.js"), () => ({
+vi.mock("../src/ls.js", () => ({
 	enhanceLsTool: vi.fn(),
 }));
-vi.mock<typeof import("../src/find-grep.js")>(import("../src/find-grep.js"), () => ({
+vi.mock("../src/find-grep.js", () => ({
 	enhanceFindTool: vi.fn(),
 	enhanceGrepTool: vi.fn(),
 	enhanceMultiGrepTool: vi.fn(),
-	multiGrep: vi.fn().mockResolvedValue({ matches: 1, message: "found 1 match", ok: true, results: [] }),
-}));
-vi.mock<typeof import("../src/fff-helpers.js")>(import("../src/fff-helpers.js"), () => ({
-	checkHealth: vi.fn().mockResolvedValue({ ok: true, message: "healthy", indexed: true, fileCount: 42 }),
 	multiGrep: vi.fn().mockResolvedValue({ ok: true, message: "found 1 match", matches: 1, results: [] }),
+}));
+vi.mock("../src/fff-helpers.js", () => ({
+	checkHealth: vi.fn().mockResolvedValue({ ok: true, message: "healthy", indexed: true, fileCount: 42 }),
 	rescan: vi.fn().mockResolvedValue({ ok: true, message: "rescan done", indexed: true }),
+	multiGrep: vi.fn().mockResolvedValue({ ok: true, message: "found 1 match", matches: 1, results: [] }),
 }));
 
 const mockRegisterCommand = vi.fn();
@@ -30,15 +32,15 @@ const mockExtensionAPI = {
 
 const mockCtx = {
 	hasUI: true,
-	sessionManager: {
-		getSessionFile: vi.fn().mockReturnValue("/tmp/session.json"),
-	},
-	shutdown: vi.fn(),
 	ui: {
 		notify: mockNotify,
 		setWidget: vi.fn(),
 	},
 	waitForIdle: vi.fn().mockResolvedValue(undefined),
+	shutdown: vi.fn(),
+	sessionManager: {
+		getSessionFile: vi.fn().mockReturnValue("/tmp/session.json"),
+	},
 };
 
 describe("extension entry", () => {
@@ -77,7 +79,7 @@ describe("extension entry", () => {
 		extension(mockExtensionAPI as any);
 		const handler = mockRegisterCommand.mock.calls.find((call) => call[0] === "multi-grep")?.[1].handler;
 		await handler('patterns=["foo","bar"] glob="*.ts"', mockCtx as any);
-		expect(mockNotify).toHaveBeenCalledWith();
+		expect(mockNotify).toHaveBeenCalled();
 	});
 
 	it("multi-grep handler with missing patterns shows warning", async () => {

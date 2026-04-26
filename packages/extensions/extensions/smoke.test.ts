@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import autoUpdateExtension from "./auto-update.js";
 import btwExtension from "./btw.js";
@@ -13,13 +14,13 @@ describe("extensions runtime smoke tests", () => {
 		schedulerExtension(harness.pi as never);
 		harness.emit("session_start", { type: "session_start" }, harness.ctx);
 
-		expect(harness.commands.has("schedule")).toBeTruthy();
-		expect(harness.commands.has("schedule:tui")).toBeTruthy();
-		expect(harness.commands.has("loop")).toBeTruthy();
-		expect(harness.tools.has("schedule_prompt")).toBeTruthy();
+		expect(harness.commands.has("schedule")).toBe(true);
+		expect(harness.commands.has("schedule:tui")).toBe(true);
+		expect(harness.commands.has("loop")).toBe(true);
+		expect(harness.tools.has("schedule_prompt")).toBe(true);
 
 		const tool = harness.tools.get("schedule_prompt");
-		const result = await tool.execute("tool-1", { action: "add", duration: "30m", kind: "once", prompt: "check CI" });
+		const result = await tool.execute("tool-1", { action: "add", prompt: "check CI", kind: "once", duration: "30m" });
 		expect(result.content[0].text).toContain("Reminder scheduled");
 	});
 
@@ -27,11 +28,11 @@ describe("extensions runtime smoke tests", () => {
 		const harness = createExtensionHarness();
 		btwExtension(harness.pi as never);
 
-		expect(harness.commands.has("btw")).toBeTruthy();
-		expect(harness.commands.has("qq")).toBeTruthy();
+		expect(harness.commands.has("btw")).toBe(true);
+		expect(harness.commands.has("qq")).toBe(true);
 
 		await harness.commands.get("btw").handler("what changed?", harness.ctx);
-		expect(harness.notifications.some((item) => item.msg.includes("No active model selected"))).toBeTruthy();
+		expect(harness.notifications.some((item) => item.msg.includes("No active model selected"))).toBe(true);
 	});
 
 	it("registers usage tracker commands, tool, and shortcut without crashing", () => {
@@ -39,11 +40,11 @@ describe("extensions runtime smoke tests", () => {
 		usageTrackerExtension(harness.pi as never);
 		harness.emit("session_start", { type: "session_start" }, harness.ctx);
 
-		expect(harness.commands.has("usage")).toBeTruthy();
-		expect(harness.commands.has("usage-toggle")).toBeTruthy();
-		expect(harness.commands.has("usage-refresh")).toBeTruthy();
-		expect(harness.tools.has("usage_report")).toBeTruthy();
-		expect(harness.shortcuts.has("ctrl+shift+u")).toBeTruthy();
+		expect(harness.commands.has("usage")).toBe(true);
+		expect(harness.commands.has("usage-toggle")).toBe(true);
+		expect(harness.commands.has("usage-refresh")).toBe(true);
+		expect(harness.tools.has("usage_report")).toBe(true);
+		expect(harness.shortcuts.has("ctrl+shift+u")).toBe(true);
 	});
 
 	it("registers tool metadata hooks without crashing", async () => {
@@ -52,11 +53,11 @@ describe("extensions runtime smoke tests", () => {
 		const [patch] = await harness.emitAsync(
 			"tool_result",
 			{
-				content: [{ type: "text", text: "ok" }],
-				details: {},
-				input: { path: "README.md" },
 				toolCallId: "tool-1",
 				toolName: "read",
+				input: { path: "README.md" },
+				content: [{ type: "text", text: "ok" }],
+				details: {},
 			},
 			harness.ctx,
 		);
@@ -76,10 +77,10 @@ describe("extensions runtime smoke tests", () => {
 		gitGuardExtension(harness.pi as never);
 		const results = await harness.emitAsync(
 			"tool_call",
-			{ input: { command: "git rebase --continue" }, toolName: "bash" },
+			{ toolName: "bash", input: { command: "git rebase --continue" } },
 			harness.ctx,
 		);
-		expect(results[0]).toStrictEqual(
+		expect(results[0]).toEqual(
 			expect.objectContaining({
 				block: true,
 				reason: expect.stringContaining("Interactive git command blocked"),
@@ -90,13 +91,13 @@ describe("extensions runtime smoke tests", () => {
 	it("registers external editor command and shortcut without crashing", () => {
 		const harness = createExtensionHarness();
 		externalEditorExtension(harness.pi as never);
-		expect(harness.commands.has("external-editor")).toBeTruthy();
-		expect(harness.shortcuts.has("ctrl+shift+e")).toBeTruthy();
+		expect(harness.commands.has("external-editor")).toBe(true);
+		expect(harness.shortcuts.has("ctrl+shift+e")).toBe(true);
 	});
 
 	it("registers worktree command without crashing", () => {
 		const harness = createExtensionHarness();
 		worktreeExtension(harness.pi as never);
-		expect(harness.commands.has("worktree")).toBeTruthy();
+		expect(harness.commands.has("worktree")).toBe(true);
 	});
 });

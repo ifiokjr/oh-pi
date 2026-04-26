@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	detectSubagentError,
 	extractTextFromContent,
@@ -31,7 +31,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	for (const dir of tempDirs) {
-		fs.rmSync(dir, { force: true, recursive: true });
+		fs.rmSync(dir, { recursive: true, force: true });
 	}
 	tempDirs.length = 0;
 	vi.restoreAllMocks();
@@ -46,14 +46,14 @@ describe("subagent utils", () => {
 
 		const first = readStatus(asyncDir);
 		const second = readStatus(asyncDir);
-		expect(first).toStrictEqual({ runId: "run-1", state: "running" });
+		expect(first).toEqual({ runId: "run-1", state: "running" });
 		expect(second).toBe(first);
 
 		fs.writeFileSync(statusPath, JSON.stringify({ runId: "run-1", state: "complete" }));
-		const nextTime = new Date(Date.now() + 5000);
+		const nextTime = new Date(Date.now() + 5_000);
 		fs.utimesSync(statusPath, nextTime, nextTime);
 		const third = readStatus(asyncDir);
-		expect(third).toStrictEqual({ runId: "run-1", state: "complete" });
+		expect(third).toEqual({ runId: "run-1", state: "complete" });
 		expect(readStatus(path.join(asyncDir, "missing"))).toBeNull();
 	});
 
@@ -66,8 +66,8 @@ describe("subagent utils", () => {
 		expect(tail).toHaveLength(2);
 		expect(tail[0]).toContain("line three");
 		expect(tail[1]).toContain("line four");
-		expect(getOutputTail(outputPath, 2)).toStrictEqual(tail);
-		expect(getOutputTail()).toStrictEqual([]);
+		expect(getOutputTail(outputPath, 2)).toEqual(tail);
+		expect(getOutputTail(undefined)).toEqual([]);
 		expect(getLastActivity(outputPath)).toBe("active now");
 
 		const oneMinuteAgo = new Date(Date.now() - 65_000);
@@ -107,22 +107,22 @@ describe("subagent utils", () => {
 	it("extracts outputs, tool previews, display items, and nested text content", () => {
 		const messages = [
 			{
+				role: "assistant",
 				content: [
 					{ type: "text", text: "First" },
 					{ type: "toolCall", name: "bash", arguments: { command: "ls" } },
 				],
-				role: "assistant",
 			},
-			{ content: [{ type: "text", text: "Second" }], role: "assistant" },
+			{ role: "assistant", content: [{ type: "text", text: "Second" }] },
 		] as never;
 
 		expect(getFinalOutput(messages)).toBe("Second");
-		expect(getDisplayItems(messages)).toStrictEqual([
-			{ text: "First", type: "text" },
-			{ args: { command: "ls" }, name: "bash", type: "tool" },
-			{ text: "Second", type: "text" },
+		expect(getDisplayItems(messages)).toEqual([
+			{ type: "text", text: "First" },
+			{ type: "tool", name: "bash", args: { command: "ls" } },
+			{ type: "text", text: "Second" },
 		]);
-		expect(extractToolArgsPreview({ args: '{"q":"pi"}', server: "docs", tool: "search" })).toBe(
+		expect(extractToolArgsPreview({ tool: "search", server: "docs", args: '{"q":"pi"}' })).toBe(
 			'docs/search {"q":"pi"}',
 		);
 		expect(extractToolArgsPreview({ command: "x".repeat(70) })).toBe(`${"x".repeat(57)}...`);
@@ -130,8 +130,8 @@ describe("subagent utils", () => {
 		expect(extractToolArgsPreview({})).toBe("");
 		expect(
 			extractTextFromContent([
-				{ text: "Hello", type: "text" },
-				{ content: [{ type: "text", text: "Nested" }], type: "tool_result" },
+				{ type: "text", text: "Hello" },
+				{ type: "tool_result", content: [{ type: "text", text: "Nested" }] },
 				{ text: "Loose text" },
 			]),
 		).toBe("Hello\nNested\nLoose text");
@@ -141,41 +141,41 @@ describe("subagent utils", () => {
 
 	it("detects recovered and unrecovered tool failures", () => {
 		const recovered = detectSubagentError([
-			{ content: [{ type: "text", text: "exit code 1" }], isError: true, role: "toolResult", toolName: "bash" },
-			{ content: [{ type: "text", text: "Recovered response" }], role: "assistant" },
+			{ role: "toolResult", toolName: "bash", content: [{ type: "text", text: "exit code 1" }], isError: true },
+			{ role: "assistant", content: [{ type: "text", text: "Recovered response" }] },
 		] as never);
-		expect(recovered).toStrictEqual({ hasError: false });
+		expect(recovered).toEqual({ hasError: false });
 
 		const explicitError = detectSubagentError([
-			{ content: [{ type: "text", text: "Started" }], role: "assistant" },
-			{ content: [{ type: "text", text: "permission denied" }], isError: true, role: "toolResult", toolName: "read" },
+			{ role: "assistant", content: [{ type: "text", text: "Started" }] },
+			{ role: "toolResult", toolName: "read", content: [{ type: "text", text: "permission denied" }], isError: true },
 		] as never);
-		expect(explicitError).toMatchObject({ errorType: "read", exitCode: 1, hasError: true });
+		expect(explicitError).toMatchObject({ hasError: true, exitCode: 1, errorType: "read" });
 
 		const bashExit = detectSubagentError([
 			{
-				content: [{ type: "text", text: "Command failed with exit code 23" }],
-				isError: false,
 				role: "toolResult",
 				toolName: "bash",
+				content: [{ type: "text", text: "Command failed with exit code 23" }],
+				isError: false,
 			},
 		] as never);
-		expect(bashExit).toStrictEqual({
-			details: "Command failed with exit code 23",
-			errorType: "bash",
-			exitCode: 23,
+		expect(bashExit).toEqual({
 			hasError: true,
+			exitCode: 23,
+			errorType: "bash",
+			details: "Command failed with exit code 23",
 		});
 
 		const bashFatal = detectSubagentError([
 			{
-				content: [{ type: "text", text: "Connection refused while contacting host" }],
-				isError: false,
 				role: "toolResult",
 				toolName: "bash",
+				content: [{ type: "text", text: "Connection refused while contacting host" }],
+				isError: false,
 			},
 		] as never);
-		expect(bashFatal).toMatchObject({ errorType: "bash", exitCode: 1, hasError: true });
+		expect(bashFatal).toMatchObject({ hasError: true, exitCode: 1, errorType: "bash" });
 	});
 
 	it("maps work with concurrency limits and optional staggering", async () => {
@@ -195,10 +195,10 @@ describe("subagent utils", () => {
 		);
 
 		await vi.advanceTimersByTimeAsync(60);
-		await expect(promise).resolves.toStrictEqual(["A", "B", "C"]);
+		await expect(promise).resolves.toEqual(["A", "B", "C"]);
 		expect(startOrder[0]).toBe(0);
 		expect(finishOrder).toContain(0);
 
-		await expect(mapConcurrent([1, 2], 5, async (item) => item * 2, 0)).resolves.toStrictEqual([2, 4]);
+		await expect(mapConcurrent([1, 2], 5, async (item) => item * 2, 0)).resolves.toEqual([2, 4]);
 	});
 });

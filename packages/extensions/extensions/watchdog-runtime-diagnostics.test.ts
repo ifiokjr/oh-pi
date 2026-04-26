@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	formatExtensionDiagnostic,
 	getExtensionDiagnostics,
@@ -23,7 +24,7 @@ describe("watchdog runtime diagnostics", () => {
 		recordRuntimeSample("scheduler", "event", "turn_end", 140, "scheduler");
 		recordRuntimeUiActivity("scheduler", "status", "scheduler");
 		recordRuntimeUiActivity("scheduler", "status", "scheduler");
-		recordRuntimeMetric({ dueTasks: 2, extensionId: "scheduler", note: "observer mode", pendingTasks: 6 });
+		recordRuntimeMetric({ extensionId: "scheduler", pendingTasks: 6, dueTasks: 2, note: "observer mode" });
 
 		recordRuntimeSample("git-guard", "event", "tool_call", 20, "git-guard");
 
@@ -37,6 +38,6 @@ describe("watchdog runtime diagnostics", () => {
 		recordRuntimeSample("bg-process", "tool", "bash", 200, "bg-process");
 		await vi.advanceTimersByTimeAsync(125_000);
 
-		expect(getExtensionDiagnostics()).toStrictEqual([]);
+		expect(getExtensionDiagnostics()).toEqual([]);
 	});
 });

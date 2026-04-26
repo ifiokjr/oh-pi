@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 
 const tempDirs: string[] = [];
 const scriptPath = path.resolve(import.meta.dirname, "run-pnpm-audit.mjs");
@@ -39,7 +40,7 @@ function runAuditResult(fakePnpmPath: string, args: string[] = []) {
 
 afterEach(() => {
 	for (const dir of tempDirs.splice(0)) {
-		rmSync(dir, { force: true, recursive: true });
+		rmSync(dir, { recursive: true, force: true });
 	}
 });
 
@@ -75,6 +76,6 @@ console.error("audit found 1 high severity vulnerability");
 process.exit(7);
 `);
 
-		expect(() => runAudit(fakePnpmPath, ["-D"])).toThrow(/audit found 1 high severity vulnerability/);
+		expect(() => runAudit(fakePnpmPath, ["-D"])).toThrowError(/audit found 1 high severity vulnerability/);
 	}, 15_000);
 });

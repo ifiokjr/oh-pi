@@ -1,7 +1,7 @@
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDiscoveryService, renderDiscoveryHtml, startDiscoveryHttpServer } from "../src/discovery.js";
 
 async function createTempDir(): Promise<string> {
@@ -14,7 +14,7 @@ afterEach(() => {
 
 describe("discovery service", () => {
 	it("registers, updates, lists, and unregisters records", async () => {
-		let now = 1000;
+		let now = 1_000;
 		const directory = await createTempDir();
 		const service = createDiscoveryService({ directory, now: () => now, ttlMs: 100 });
 
@@ -28,13 +28,13 @@ describe("discovery service", () => {
 			tunnelUrl: "https://pi.tailnet.ts.net/pi/fox-42/",
 		});
 		expect(first.id).toBe("fox-42-123");
-		expect(first.startedAt).toBe(1000);
+		expect(first.startedAt).toBe(1_000);
 
-		now = 1050;
+		now = 1_050;
 		const updated = await service.heartbeat(first.id, { cwd: "/workspace/two" });
 		expect(updated?.cwd).toBe("/workspace/two");
-		expect(updated?.startedAt).toBe(1000);
-		expect(updated?.lastSeenAt).toBe(1050);
+		expect(updated?.startedAt).toBe(1_000);
+		expect(updated?.lastSeenAt).toBe(1_050);
 
 		const second = await service.register({
 			connectUrl: "http://localhost:4100/?t=redacted",
@@ -49,11 +49,11 @@ describe("discovery service", () => {
 		expect(second.id).toBe("custom-id");
 
 		const listed = await service.list();
-		expect(listed.map((record) => record.id)).toStrictEqual(["custom-id", "fox-42-123"]);
-		await expect(service.get(first.id)).resolves.toStrictEqual(updated);
+		expect(listed.map((record) => record.id)).toEqual(["custom-id", "fox-42-123"]);
+		expect(await service.get(first.id)).toEqual(updated);
 
 		await service.unregister(second.id);
-		await expect(service.get(second.id)).resolves.toBeUndefined();
+		expect(await service.get(second.id)).toBeUndefined();
 	});
 
 	it("ignores malformed discovery files and prunes stale records", async () => {
@@ -64,9 +64,9 @@ describe("discovery service", () => {
 		await writeFile(join(directory, "broken.json"), "{not json", "utf8");
 
 		now = 200;
-		await expect(service.prune()).resolves.toStrictEqual(["bear-20-7"]);
-		await expect(service.list()).resolves.toStrictEqual([]);
-		await expect(service.heartbeat("missing-id")).resolves.toBeUndefined();
+		expect(await service.prune()).toEqual(["bear-20-7"]);
+		expect(await service.list()).toEqual([]);
+		expect(await service.heartbeat("missing-id")).toBeUndefined();
 	});
 });
 
@@ -135,11 +135,11 @@ describe("discovery rendering", () => {
 		try {
 			const html = await fetch(`http://${server.host}:${server.port}/`);
 			expect(html.status).toBe(200);
-			await expect(html.text()).resolves.toContain("Active pi remote sessions");
+			expect(await html.text()).toContain("Active pi remote sessions");
 
 			const json = await fetch(`http://${server.host}:${server.port}/sessions.json`);
 			expect(json.status).toBe(200);
-			await expect(json.json()).resolves.toStrictEqual({ sessions: await service.list() });
+			expect(await json.json()).toEqual({ sessions: await service.list() });
 		} finally {
 			await server.stop();
 		}

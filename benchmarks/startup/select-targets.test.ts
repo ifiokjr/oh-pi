@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { computeBenchmarkTargets } from "./select-targets";
 
 describe("startup benchmark target selection", () => {
@@ -6,7 +7,7 @@ describe("startup benchmark target selection", () => {
 
 		expect(report.mode).toBe("selected");
 		expect(report.selectedExtensions).toContain("worktree");
-		expect(report.selectedFocusedBenchmarkIds).toStrictEqual([
+		expect(report.selectedFocusedBenchmarkIds).toEqual([
 			"custom-footer-first-render",
 			"worktree-context-temp-repo",
 			"worktree-snapshot-temp-repo",
@@ -18,7 +19,7 @@ describe("startup benchmark target selection", () => {
 
 		expect(report.mode).toBe("selected");
 		expect(report.selectedExtensions).toContain("scheduler");
-		expect(report.selectedFocusedBenchmarkIds).toStrictEqual(["scheduler-runtime-context-with-store"]);
+		expect(report.selectedFocusedBenchmarkIds).toEqual(["scheduler-runtime-context-with-store"]);
 	});
 
 	it("falls back to all benchmark targets for shared benchmark infrastructure changes", async () => {
@@ -26,7 +27,7 @@ describe("startup benchmark target selection", () => {
 
 		expect(report.mode).toBe("all");
 		expect(report.selectedExtensions.length).toBeGreaterThan(5);
-		expect(report.selectedFocusedBenchmarkIds).toStrictEqual([
+		expect(report.selectedFocusedBenchmarkIds).toEqual([
 			"scheduler-runtime-context-with-store",
 			"custom-footer-usage-scan-large-history",
 			"usage-tracker-session-start-near-threshold",

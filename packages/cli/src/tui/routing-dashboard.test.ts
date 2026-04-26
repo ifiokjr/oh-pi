@@ -1,5 +1,5 @@
 import type { ProviderConfig } from "@ifi/oh-pi-core";
-
+import { describe, expect, it } from "vitest";
 import {
 	buildRoutingDashboard,
 	detectOptionalRoutingPackages,
@@ -9,24 +9,25 @@ import {
 function makeProviders(): ProviderConfig[] {
 	return [
 		{
-			apiKey: "IGNORED",
 			name: " ",
+			apiKey: "IGNORED",
 		},
 		{
+			name: "openai",
 			apiKey: "OPENAI_API_KEY",
 			defaultModel: "gpt-4o",
 			discoveredModels: [
 				{ id: "gpt-4o", reasoning: false, input: ["text", "image"], contextWindow: 128000, maxTokens: 16384 },
 				{ id: "gpt-5-mini", reasoning: true, input: ["text", "image"], contextWindow: 128000, maxTokens: 16384 },
 			],
-			name: "openai",
 		},
 		{
+			name: "openai",
 			apiKey: "OPENAI_API_KEY",
 			defaultModel: "gpt-5-mini",
-			name: "openai",
 		},
 		{
+			name: "groq",
 			apiKey: "GROQ_API_KEY",
 			discoveredModels: [
 				{
@@ -37,16 +38,15 @@ function makeProviders(): ProviderConfig[] {
 					maxTokens: 32768,
 				},
 			],
-			name: "groq",
 		},
 		{
-			apiKey: "none",
 			name: "cursor-agent",
+			apiKey: "none",
 		},
 	];
 }
 
-describe(detectOptionalRoutingPackages, () => {
+describe("detectOptionalRoutingPackages", () => {
 	it("maps installed scopes and selected package state", () => {
 		const packages = detectOptionalRoutingPackages(
 			(packageNames) =>
@@ -79,37 +79,26 @@ describe(detectOptionalRoutingPackages, () => {
 	});
 });
 
-describe(suggestOptionalRoutingPackages, () => {
+describe("suggestOptionalRoutingPackages", () => {
 	it("suggests routing and provider packages based on config and providers", () => {
 		expect(
 			suggestOptionalRoutingPackages(["ollama-cloud", "cursor-agent", "cursor-agent"], {
-				categories: {},
 				mode: "shadow",
+				categories: {},
 			}),
-		).toStrictEqual(["@ifi/pi-extension-adaptive-routing", "@ifi/pi-provider-ollama", "@ifi/pi-provider-cursor"]);
+		).toEqual(["@ifi/pi-extension-adaptive-routing", "@ifi/pi-provider-ollama", "@ifi/pi-provider-cursor"]);
 	});
 
 	it("returns an empty list when nothing is recommended", () => {
-		expect(suggestOptionalRoutingPackages(["openai"], { categories: {}, mode: "off" })).toStrictEqual([]);
-		expect(suggestOptionalRoutingPackages(["openai"])).toStrictEqual([]);
+		expect(suggestOptionalRoutingPackages(["openai"], { mode: "off", categories: {} })).toEqual([]);
+		expect(suggestOptionalRoutingPackages(["openai"])).toEqual([]);
 	});
 });
 
-describe(buildRoutingDashboard, () => {
+describe("buildRoutingDashboard", () => {
 	it("surfaces packages, providers, delegated assignments, and effective routing", () => {
 		const dashboard = buildRoutingDashboard({
-			config: {
-				categories: {
-					"implementation-default": ["missing-provider", "openai"],
-					"multimodal-default": ["openai", "groq"],
-					"planning-default": ["openai", "groq"],
-					"quick-discovery": ["groq", "openai"],
-					"research-default": ["openai", "groq"],
-					"review-critical": ["openai", "groq"],
-					"visual-engineering": ["cursor-agent", "openai"],
-				},
-				mode: "shadow",
-			},
+			providers: makeProviders(),
 			packageStates: [
 				{
 					packageName: "@ifi/pi-extension-adaptive-routing",
@@ -137,7 +126,18 @@ describe(buildRoutingDashboard, () => {
 					selected: false,
 				},
 			],
-			providers: makeProviders(),
+			config: {
+				mode: "shadow",
+				categories: {
+					"quick-discovery": ["groq", "openai"],
+					"planning-default": ["openai", "groq"],
+					"implementation-default": ["missing-provider", "openai"],
+					"research-default": ["openai", "groq"],
+					"review-critical": ["openai", "groq"],
+					"visual-engineering": ["cursor-agent", "openai"],
+					"multimodal-default": ["openai", "groq"],
+				},
+			},
 		});
 
 		expect(dashboard).toContain("Adaptive routing package: selected for install (project)");
@@ -159,8 +159,8 @@ describe(buildRoutingDashboard, () => {
 
 	it("shows empty provider and session-default fallbacks when routing is not configured", () => {
 		const dashboard = buildRoutingDashboard({
-			packageStates: [],
 			providers: [],
+			packageStates: [],
 		});
 
 		expect(dashboard).toContain("Available providers / models:");
@@ -173,20 +173,20 @@ describe(buildRoutingDashboard, () => {
 
 	it("falls back to the session default when a configured category has no matching provider", () => {
 		const dashboard = buildRoutingDashboard({
+			providers: [{ name: "openai", apiKey: "OPENAI_API_KEY", defaultModel: "gpt-4o" }],
+			packageStates: [],
 			config: {
+				mode: "off",
 				categories: {
-					"implementation-default": ["openai"],
-					"multimodal-default": ["openai"],
-					"planning-default": ["openai"],
 					"quick-discovery": ["missing-provider"],
+					"planning-default": ["openai"],
+					"implementation-default": ["openai"],
 					"research-default": ["openai"],
 					"review-critical": ["openai"],
 					"visual-engineering": ["openai"],
+					"multimodal-default": ["openai"],
 				},
-				mode: "off",
 			},
-			packageStates: [],
-			providers: [{ name: "openai", apiKey: "OPENAI_API_KEY", defaultModel: "gpt-4o" }],
 		});
 
 		expect(dashboard).toContain("scout → session default (Quick discovery)");

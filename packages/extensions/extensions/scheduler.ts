@@ -1599,7 +1599,7 @@ export class SchedulerRuntime {
 				this.leaseCacheAt = now;
 				return undefined;
 			}
-			const raw = fs.readFileSync(this.leasePath, "utf8");
+			const raw = fs.readFileSync(this.leasePath, "utf-8");
 			const parsed = JSON.parse(raw) as SchedulerLease;
 			if (!(parsed?.instanceId && Number.isFinite(parsed?.heartbeatAt))) {
 				this.leaseCache = undefined;
@@ -1653,7 +1653,7 @@ export class SchedulerRuntime {
 			};
 			fs.mkdirSync(path.dirname(this.leasePath), { recursive: true });
 			const tempPath = `${this.leasePath}.tmp`;
-			fs.writeFileSync(tempPath, JSON.stringify(lease, null, 2), "utf8");
+			fs.writeFileSync(tempPath, JSON.stringify(lease, null, 2), "utf-8");
 			fs.renameSync(tempPath, this.leasePath);
 			// Update cache so subsequent reads in this tick don't hit disk
 			this.leaseCache = lease;
@@ -1873,7 +1873,7 @@ export class SchedulerRuntime {
 			if (!fs.existsSync(this.storagePath)) {
 				return;
 			}
-			const raw = fs.readFileSync(this.storagePath, "utf8");
+			const raw = fs.readFileSync(this.storagePath, "utf-8");
 			const parsed = JSON.parse(raw) as SchedulerStore;
 			const list = Array.isArray(parsed?.tasks) ? parsed.tasks : [];
 			const now = Date.now();
@@ -2136,7 +2136,7 @@ export class SchedulerRuntime {
 				version: 1,
 			};
 			const tempPath = `${this.storagePath}.tmp`;
-			fs.writeFileSync(tempPath, JSON.stringify(store, null, 2), "utf8");
+			fs.writeFileSync(tempPath, JSON.stringify(store, null, 2), "utf-8");
 			fs.renameSync(tempPath, this.storagePath);
 		} catch {
 			// Best-effort persistence; runtime behavior should continue.

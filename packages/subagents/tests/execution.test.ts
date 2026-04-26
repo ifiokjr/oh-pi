@@ -1,6 +1,8 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 const executionMocks = vi.hoisted(() => {
 	class MiniEmitter {
-		private listeners = new Map<string, ((...args: any[]) => void)[]>();
+		private listeners = new Map<string, Array<(...args: any[]) => void>>();
 
 		on(event: string, handler: (...args: any[]) => void) {
 			const handlers = this.listeners.get(event) ?? [];
@@ -21,98 +23,98 @@ const executionMocks = vi.hoisted(() => {
 	const spawn = vi.fn(() => {
 		const events = new MiniEmitter();
 		const proc = {
+			stdout: new MiniEmitter(),
+			stderr: new MiniEmitter(),
+			on: vi.fn(function (this: any, event: string, handler: (...args: any[]) => void) {
+				events.on(event, handler);
+				return this;
+			}),
 			emit(event: string, ...args: any[]) {
 				return events.emit(event, ...args);
 			},
 			kill: vi.fn(),
 			killed: false,
-			on: vi.fn(function (this: any, event: string, handler: (...args: any[]) => void) {
-				events.on(event, handler);
-				return this;
-			}),
-			stderr: new MiniEmitter(),
-			stdout: new MiniEmitter(),
 		};
 		procs.push(proc);
 		return proc;
 	});
 
 	return {
-		buildSkillInjection: vi.fn(
-			(skills: Array<{ name: string }>) => `INJECT:${skills.map((skill) => skill.name).join(",")}`,
-		),
-		createJsonlWriter: vi.fn(() => ({ writeLine: vi.fn(), close: vi.fn(async () => {}) })),
+		procs,
+		spawn,
+		mkdirSync: vi.fn(),
+		mkdtempSync: vi.fn(() => "/tmp/pi-subagent-task-dir"),
+		writeFileSync: vi.fn(),
+		rmSync: vi.fn(),
+		writePrompt: vi.fn(() => ({ dir: "/tmp/pi-prompt", path: "/tmp/pi-prompt/system.md" })),
+		getFinalOutput: vi.fn((messages: any[]) => messages.map((message) => message.content?.[0]?.text ?? "").join("\n")),
+		findLatestSessionFile: vi.fn(() => "/tmp/session/run.jsonl"),
 		detectSubagentError: vi.fn(() => ({ hasError: false })),
-		ensureArtifactsDir: vi.fn(),
+		extractToolArgsPreview: vi.fn((args: Record<string, unknown>) => JSON.stringify(args)),
 		extractTextFromContent: vi.fn((content: any[]) =>
 			content
 				.filter((item) => item.type === "text")
 				.map((item) => item.text)
 				.join("\n"),
 		),
-		extractToolArgsPreview: vi.fn((args: Record<string, unknown>) => JSON.stringify(args)),
-		findLatestSessionFile: vi.fn(() => "/tmp/session/run.jsonl"),
+		buildSkillInjection: vi.fn(
+			(skills: Array<{ name: string }>) => `INJECT:${skills.map((skill) => skill.name).join(",")}`,
+		),
+		resolveSkills: vi.fn((skills: string[]) => ({
+			resolved: skills.filter((skill) => skill !== "missing").map((name) => ({ name })),
+			missing: skills.filter((skill) => skill === "missing"),
+		})),
+		getPiSpawnCommand: vi.fn((args: string[]) => ({ command: "pi", args })),
+		createJsonlWriter: vi.fn(() => ({ writeLine: vi.fn(), close: vi.fn(async () => {}) })),
+		ensureArtifactsDir: vi.fn(),
 		getArtifactPaths: vi.fn(() => ({
 			inputPath: "/tmp/artifacts/input.md",
 			outputPath: "/tmp/artifacts/output.md",
 			metadataPath: "/tmp/artifacts/metadata.json",
 			jsonlPath: "/tmp/artifacts/run.jsonl",
 		})),
-		getFinalOutput: vi.fn((messages: any[]) => messages.map((message) => message.content?.[0]?.text ?? "").join("\n")),
-		getPiSpawnCommand: vi.fn((args: string[]) => ({ command: "pi", args })),
-		getSubagentDepthEnv: vi.fn(() => ({ PI_SUBAGENT_DEPTH: "1" })),
-		mkdirSync: vi.fn(),
-		mkdtempSync: vi.fn(() => "/tmp/pi-subagent-task-dir"),
-		procs,
-		resolveSkills: vi.fn((skills: string[]) => ({
-			resolved: skills.filter((skill) => skill !== "missing").map((name) => ({ name })),
-			missing: skills.filter((skill) => skill === "missing"),
-		})),
-		rmSync: vi.fn(),
-		spawn,
-		truncateOutput: vi.fn(() => ({ truncated: true, output: "trimmed" })),
 		writeArtifact: vi.fn(),
-		writeFileSync: vi.fn(),
 		writeMetadata: vi.fn(),
-		writePrompt: vi.fn(() => ({ dir: "/tmp/pi-prompt", path: "/tmp/pi-prompt/system.md" })),
+		truncateOutput: vi.fn(() => ({ truncated: true, output: "trimmed" })),
+		getSubagentDepthEnv: vi.fn(() => ({ PI_SUBAGENT_DEPTH: "1" })),
 	};
 });
 
-vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({ spawn: executionMocks.spawn }));
-vi.mock<typeof import("node:fs")>(import("node:fs"), () => ({
+vi.mock("node:child_process", () => ({ spawn: executionMocks.spawn }));
+vi.mock("node:fs", () => ({
 	mkdirSync: executionMocks.mkdirSync,
 	mkdtempSync: executionMocks.mkdtempSync,
-	rmSync: executionMocks.rmSync,
 	writeFileSync: executionMocks.writeFileSync,
+	rmSync: executionMocks.rmSync,
 }));
-vi.mock<typeof import("../artifacts.js")>(import("../artifacts.js"), () => ({
+vi.mock("../artifacts.js", () => ({
 	ensureArtifactsDir: executionMocks.ensureArtifactsDir,
 	getArtifactPaths: executionMocks.getArtifactPaths,
 	writeArtifact: executionMocks.writeArtifact,
 	writeMetadata: executionMocks.writeMetadata,
 }));
-vi.mock<typeof import("../types.js")>(import("../types.js"), () => ({
-	DEFAULT_IDLE_TIMEOUT_MS: 15 * 60 * 1000,
+vi.mock("../types.js", () => ({
 	DEFAULT_MAX_OUTPUT: { bytes: 200 * 1024, lines: 5000 },
-	getSubagentDepthEnv: executionMocks.getSubagentDepthEnv,
+	DEFAULT_IDLE_TIMEOUT_MS: 15 * 60 * 1000,
 	truncateOutput: executionMocks.truncateOutput,
+	getSubagentDepthEnv: executionMocks.getSubagentDepthEnv,
 }));
-vi.mock<typeof import("../utils.js")>(import("../utils.js"), () => ({
-	detectSubagentError: executionMocks.detectSubagentError,
-	extractTextFromContent: executionMocks.extractTextFromContent,
-	extractToolArgsPreview: executionMocks.extractToolArgsPreview,
-	findLatestSessionFile: executionMocks.findLatestSessionFile,
-	getFinalOutput: executionMocks.getFinalOutput,
+vi.mock("../utils.js", () => ({
 	writePrompt: executionMocks.writePrompt,
+	getFinalOutput: executionMocks.getFinalOutput,
+	findLatestSessionFile: executionMocks.findLatestSessionFile,
+	detectSubagentError: executionMocks.detectSubagentError,
+	extractToolArgsPreview: executionMocks.extractToolArgsPreview,
+	extractTextFromContent: executionMocks.extractTextFromContent,
 }));
-vi.mock<typeof import("../skills.js")>(import("../skills.js"), () => ({
+vi.mock("../skills.js", () => ({
 	buildSkillInjection: executionMocks.buildSkillInjection,
 	resolveSkills: executionMocks.resolveSkills,
 }));
-vi.mock<typeof import("../pi-spawn.js")>(import("../pi-spawn.js"), () => ({
+vi.mock("../pi-spawn.js", () => ({
 	getPiSpawnCommand: executionMocks.getPiSpawnCommand,
 }));
-vi.mock<typeof import("../jsonl-writer.js")>(import("../jsonl-writer.js"), () => ({
+vi.mock("../jsonl-writer.js", () => ({
 	createJsonlWriter: executionMocks.createJsonlWriter,
 }));
 
@@ -132,6 +134,43 @@ beforeEach(() => {
 	executionMocks.procs.length = 0;
 	executionMocks.spawn.mockImplementation(() => {
 		const proc = {
+			stdout: {
+				listeners: new Map<string, Array<(...args: any[]) => void>>(),
+				on(event: string, handler: (...args: any[]) => void) {
+					const handlers = this.listeners.get(event) ?? [];
+					handlers.push(handler);
+					this.listeners.set(event, handlers);
+					return this;
+				},
+				emit(event: string, ...args: any[]) {
+					for (const handler of this.listeners.get(event) ?? []) {
+						handler(...args);
+					}
+					return true;
+				},
+			},
+			stderr: {
+				listeners: new Map<string, Array<(...args: any[]) => void>>(),
+				on(event: string, handler: (...args: any[]) => void) {
+					const handlers = this.listeners.get(event) ?? [];
+					handlers.push(handler);
+					this.listeners.set(event, handlers);
+					return this;
+				},
+				emit(event: string, ...args: any[]) {
+					for (const handler of this.listeners.get(event) ?? []) {
+						handler(...args);
+					}
+					return true;
+				},
+			},
+			listeners: new Map<string, Array<(...args: any[]) => void>>(),
+			on(event: string, handler: (...args: any[]) => void) {
+				const handlers = this.listeners.get(event) ?? [];
+				handlers.push(handler);
+				this.listeners.set(event, handlers);
+				return this;
+			},
 			emit(event: string, ...args: any[]) {
 				for (const handler of this.listeners.get(event) ?? []) {
 					handler(...args);
@@ -140,58 +179,21 @@ beforeEach(() => {
 			},
 			kill: vi.fn(),
 			killed: false,
-			listeners: new Map<string, Array<(...args: any[]) => void>>(),
-			on(event: string, handler: (...args: any[]) => void) {
-				const handlers = this.listeners.get(event) ?? [];
-				handlers.push(handler);
-				this.listeners.set(event, handlers);
-				return this;
-			},
-			stderr: {
-				emit(event: string, ...args: any[]) {
-					for (const handler of this.listeners.get(event) ?? []) {
-						handler(...args);
-					}
-					return true;
-				},
-				listeners: new Map<string, Array<(...args: any[]) => void>>(),
-				on(event: string, handler: (...args: any[]) => void) {
-					const handlers = this.listeners.get(event) ?? [];
-					handlers.push(handler);
-					this.listeners.set(event, handlers);
-					return this;
-				},
-			},
-			stdout: {
-				emit(event: string, ...args: any[]) {
-					for (const handler of this.listeners.get(event) ?? []) {
-						handler(...args);
-					}
-					return true;
-				},
-				listeners: new Map<string, Array<(...args: any[]) => void>>(),
-				on(event: string, handler: (...args: any[]) => void) {
-					const handlers = this.listeners.get(event) ?? [];
-					handlers.push(handler);
-					this.listeners.set(event, handlers);
-					return this;
-				},
-			},
 		};
 		executionMocks.procs.push(proc);
 		return proc;
 	});
 	executionMocks.resolveSkills.mockImplementation((skills: string[]) => ({
-		missing: skills.filter((skill) => skill === "missing"),
 		resolved: skills.filter((skill) => skill !== "missing").map((name) => ({ name })),
+		missing: skills.filter((skill) => skill === "missing"),
 	}));
 	executionMocks.detectSubagentError.mockReturnValue({ hasError: false });
 	executionMocks.findLatestSessionFile.mockReturnValue("/tmp/session/run.jsonl");
-	executionMocks.createJsonlWriter.mockReturnValue({ close: vi.fn(async () => {}), writeLine: vi.fn() });
-	executionMocks.truncateOutput.mockReturnValue({ output: "trimmed", truncated: true });
+	executionMocks.createJsonlWriter.mockReturnValue({ writeLine: vi.fn(), close: vi.fn(async () => {}) });
+	executionMocks.truncateOutput.mockReturnValue({ truncated: true, output: "trimmed" });
 });
 
-describe(applyThinkingSuffix, () => {
+describe("applyThinkingSuffix", () => {
 	it("adds thinking levels when needed and preserves existing suffixes", () => {
 		expect(applyThinkingSuffix("anthropic/claude-sonnet-4", "high")).toBe("anthropic/claude-sonnet-4:high");
 		expect(applyThinkingSuffix("anthropic/claude-sonnet-4:low", "high")).toBe("anthropic/claude-sonnet-4:low");
@@ -199,19 +201,19 @@ describe(applyThinkingSuffix, () => {
 	});
 });
 
-describe(runSync, () => {
+describe("runSync", () => {
 	it("returns an explicit error for unknown agents", async () => {
 		await expect(runSync("/repo", [], "missing", "Inspect", { share: false })).resolves.toMatchObject({
 			agent: "missing",
-			error: "Unknown agent: missing",
 			exitCode: 1,
+			error: "Unknown agent: missing",
 		});
 	});
 
 	it("resolves skills against task cwd, not runtime cwd", async () => {
 		const runPromise = runSync(
 			"/runtime-dir",
-			[{ model: "anthropic/claude-sonnet-4", name: "reviewer", skills: ["ecsc-reviewer"] }],
+			[{ name: "reviewer", model: "anthropic/claude-sonnet-4", skills: ["ecsc-reviewer"] }],
 			"reviewer",
 			"Inspect",
 			{ cwd: "/legal/project", share: false },
@@ -231,50 +233,50 @@ describe(runSync, () => {
 			"/repo",
 			[
 				{
-					extensions: ["./extensions/extra.ts"],
-					mcpDirectTools: ["read"],
-					model: "anthropic/claude-sonnet-4",
 					name: "scout",
-					skills: ["git", "missing"],
-					systemPrompt: "Base prompt",
+					model: "anthropic/claude-sonnet-4",
 					thinking: "high",
 					tools: ["bash", "./tools/custom.ts"],
+					extensions: ["./extensions/extra.ts"],
+					systemPrompt: "Base prompt",
+					skills: ["git", "missing"],
+					mcpDirectTools: ["read"],
 				},
 			],
 			"scout",
 			longTask,
 			{
-				artifactConfig: { enabled: true },
-				artifactsDir: "/tmp/artifacts",
 				cwd: "/workspace",
+				onUpdate,
+				share: true,
+				sessionDir: "/tmp/session",
+				runId: "run-1",
 				index: 2,
+				artifactsDir: "/tmp/artifacts",
+				artifactConfig: { enabled: true },
 				maxOutput: { bytes: 100, lines: 10 },
-				modelCategory: "explicit",
 				modelOverride: "openai/gpt-5",
 				modelSource: "runtime-override",
-				onUpdate,
-				runId: "run-1",
-				sessionDir: "/tmp/session",
-				share: true,
+				modelCategory: "explicit",
 			},
 		);
 
 		const proc = executionMocks.procs[0];
 		emitStdoutLines(proc, [
-			JSON.stringify({ args: { cmd: "ls" }, toolName: "bash", type: "tool_execution_start" }),
+			JSON.stringify({ type: "tool_execution_start", toolName: "bash", args: { cmd: "ls" } }),
 			JSON.stringify({ type: "tool_execution_end" }),
 			JSON.stringify({
-				message: {
-					content: [{ type: "text", text: "Hello\nWorld" }],
-					model: "openai/gpt-5:high",
-					role: "assistant",
-					usage: { cacheRead: 1, cacheWrite: 2, cost: { total: 1.25 }, input: 10, output: 5 },
-				},
 				type: "message_end",
+				message: {
+					role: "assistant",
+					model: "openai/gpt-5:high",
+					content: [{ type: "text", text: "Hello\nWorld" }],
+					usage: { input: 10, output: 5, cacheRead: 1, cacheWrite: 2, cost: { total: 1.25 } },
+				},
 			}),
 			JSON.stringify({
-				message: { content: [{ type: "text", text: "Tool result" }], role: "assistant" },
 				type: "tool_result_end",
+				message: { role: "assistant", content: [{ type: "text", text: "Tool result" }] },
 			}),
 		]);
 		proc.emit("close", 0);
@@ -311,31 +313,31 @@ describe(runSync, () => {
 		);
 		expect(result).toMatchObject({
 			agent: "scout",
-			artifactPaths: {
-				inputPath: "/tmp/artifacts/input.md",
-				jsonlPath: "/tmp/artifacts/run.jsonl",
-				metadataPath: "/tmp/artifacts/metadata.json",
-				outputPath: "/tmp/artifacts/output.md",
-			},
 			exitCode: 0,
 			model: "openai/gpt-5:high",
-			modelCategory: "explicit",
 			modelSource: "runtime-override",
-			progressSummary: { durationMs: expect.any(Number), tokens: 15, toolCount: 1 },
-			sessionFile: "/tmp/session/run.jsonl",
+			modelCategory: "explicit",
 			skills: ["git"],
 			skillsWarning: "Skills not found: missing",
-			truncation: { output: "trimmed", truncated: true },
+			sessionFile: "/tmp/session/run.jsonl",
+			artifactPaths: {
+				inputPath: "/tmp/artifacts/input.md",
+				outputPath: "/tmp/artifacts/output.md",
+				metadataPath: "/tmp/artifacts/metadata.json",
+				jsonlPath: "/tmp/artifacts/run.jsonl",
+			},
+			truncation: { truncated: true, output: "trimmed" },
+			progressSummary: { toolCount: 1, tokens: 15, durationMs: expect.any(Number) },
 		});
-		expect(result.usage).toMatchObject({ cacheRead: 1, cacheWrite: 2, cost: 1.25, input: 10, output: 5, turns: 1 });
+		expect(result.usage).toMatchObject({ input: 10, output: 5, cacheRead: 1, cacheWrite: 2, cost: 1.25, turns: 1 });
 		expect(result.progress).toMatchObject({
+			status: "completed",
 			currentTool: undefined,
 			recentOutput: ["Hello", "World", "Tool result"],
-			status: "completed",
-			tokens: 15,
 			toolCount: 1,
+			tokens: 15,
 		});
-		expect(onUpdate).toHaveBeenCalledWith();
+		expect(onUpdate).toHaveBeenCalled();
 		expect(executionMocks.ensureArtifactsDir).toHaveBeenCalledWith("/tmp/artifacts");
 		expect(executionMocks.writeArtifact).toHaveBeenCalledWith(
 			"/tmp/artifacts/input.md",
@@ -344,26 +346,26 @@ describe(runSync, () => {
 		expect(executionMocks.writeArtifact).toHaveBeenCalledWith("/tmp/artifacts/output.md", "Hello\nWorld\nTool result");
 		expect(executionMocks.writeMetadata).toHaveBeenCalledWith(
 			"/tmp/artifacts/metadata.json",
-			expect.objectContaining({ agent: "scout", exitCode: 0, runId: "run-1", skills: ["git"] }),
+			expect.objectContaining({ runId: "run-1", agent: "scout", exitCode: 0, skills: ["git"] }),
 		);
-		expect(executionMocks.rmSync).toHaveBeenCalledWith("/tmp/pi-prompt", { force: true, recursive: true });
+		expect(executionMocks.rmSync).toHaveBeenCalledWith("/tmp/pi-prompt", { recursive: true, force: true });
 	});
 
 	it("captures parse errors, surfaces detected internal failures, and handles abort signals", async () => {
 		vi.useFakeTimers();
 		executionMocks.detectSubagentError.mockReturnValue({
-			details: "Tool crashed",
-			errorType: "tool_result",
-			exitCode: 9,
 			hasError: true,
+			exitCode: 9,
+			errorType: "tool_result",
+			details: "Tool crashed",
 		});
 		const controller = new AbortController();
 		const runPromise = runSync(
 			"/repo",
-			[{ model: "anthropic/claude-sonnet-4", name: "reviewer" }],
+			[{ name: "reviewer", model: "anthropic/claude-sonnet-4" }],
 			"reviewer",
 			"Inspect",
-			{ share: false, signal: controller.signal },
+			{ signal: controller.signal, share: false },
 		);
 
 		const proc = executionMocks.procs[0];
@@ -377,12 +379,12 @@ describe(runSync, () => {
 		expect(proc.kill).toHaveBeenCalledWith("SIGTERM");
 		expect(proc.kill).toHaveBeenCalledWith("SIGKILL");
 		expect(result).toMatchObject({
-			aborted: true,
-			error: "tool_result failed (exit 9): Tool crashed",
 			exitCode: 9,
+			aborted: true,
 			parseErrors: 1,
+			error: "tool_result failed (exit 9): Tool crashed",
 		});
-		expect(result.progress).toMatchObject({ error: "tool_result failed (exit 9): Tool crashed", status: "failed" });
+		expect(result.progress).toMatchObject({ status: "failed", error: "tool_result failed (exit 9): Tool crashed" });
 		vi.useRealTimers();
 	});
 });

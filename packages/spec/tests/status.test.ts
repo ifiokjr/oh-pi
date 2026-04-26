@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
+import { afterEach, describe, expect, it } from "vitest";
 import { buildWorkflowStatus, formatHelpReport, formatWorkflowStatus } from "../extension/status.js";
 import { buildWorkflowPaths } from "../extension/workspace.js";
 
@@ -15,7 +15,7 @@ function createTempDir(prefix: string): string {
 
 afterEach(() => {
 	for (const dir of tempDirs.splice(0)) {
-		rmSync(dir, { force: true, recursive: true });
+		rmSync(dir, { recursive: true, force: true });
 	}
 });
 
@@ -42,11 +42,11 @@ describe("spec status helpers", () => {
 		const repoRoot = createTempDir("pi-spec-status");
 		const uninitializedPaths = buildWorkflowPaths(repoRoot);
 		const uninitialized = buildWorkflowStatus({
+			repoRoot,
 			currentBranch: "main",
 			paths: uninitializedPaths,
-			repoRoot,
 		});
-		expect(uninitialized.nextSteps).toStrictEqual([
+		expect(uninitialized.nextSteps).toEqual([
 			"/spec:init",
 			"/spec:constitution <principles>",
 			"/spec:specify <feature description>",
@@ -54,11 +54,11 @@ describe("spec status helpers", () => {
 
 		mkdirSync(join(repoRoot, ".specify"), { recursive: true });
 		const initializedWithoutFeature = buildWorkflowStatus({
+			repoRoot,
 			currentBranch: "main",
 			paths: uninitializedPaths,
-			repoRoot,
 		});
-		expect(initializedWithoutFeature.nextSteps).toStrictEqual(["/spec:specify <feature description>", "/spec:list"]);
+		expect(initializedWithoutFeature.nextSteps).toEqual(["/spec:specify <feature description>", "/spec:list"]);
 
 		const featurePaths = buildWorkflowPaths(repoRoot, "001-auth-flow");
 		mkdirSync(featurePaths.featureDir!, { recursive: true });
@@ -66,20 +66,20 @@ describe("spec status helpers", () => {
 		const missingSpecPaths = buildWorkflowPaths(repoRoot, "002-missing-spec");
 		mkdirSync(missingSpecPaths.featureDir!, { recursive: true });
 		const missingSpec = buildWorkflowStatus({
-			activeFeature: "002-missing-spec",
+			repoRoot,
 			currentBranch: "002-missing-spec",
 			paths: missingSpecPaths,
-			repoRoot,
+			activeFeature: "002-missing-spec",
 		});
-		expect(missingSpec.nextSteps).toStrictEqual(["/spec:specify <feature description>"]);
+		expect(missingSpec.nextSteps).toEqual(["/spec:specify <feature description>"]);
 
 		const missingPlan = buildWorkflowStatus({
-			activeFeature: "001-auth-flow",
+			repoRoot,
 			currentBranch: "001-auth-flow",
 			paths: featurePaths,
-			repoRoot,
+			activeFeature: "001-auth-flow",
 		});
-		expect(missingPlan.nextSteps).toStrictEqual([
+		expect(missingPlan.nextSteps).toEqual([
 			"/spec:clarify",
 			"/spec:checklist quality",
 			"/spec:plan <technical context>",
@@ -87,23 +87,23 @@ describe("spec status helpers", () => {
 
 		writeFileSync(featurePaths.planFile!, "# Plan\n", "utf8");
 		const missingTasks = buildWorkflowStatus({
-			activeFeature: "001-auth-flow",
+			repoRoot,
 			currentBranch: "001-auth-flow",
 			paths: featurePaths,
-			repoRoot,
+			activeFeature: "001-auth-flow",
 		});
-		expect(missingTasks.nextSteps).toStrictEqual(["/spec:clarify", "/spec:checklist quality", "/spec:tasks"]);
+		expect(missingTasks.nextSteps).toEqual(["/spec:clarify", "/spec:checklist quality", "/spec:tasks"]);
 
 		writeFileSync(featurePaths.tasksFile!, "# Tasks\n", "utf8");
 		mkdirSync(featurePaths.checklistsDir!, { recursive: true });
 		writeFileSync(join(featurePaths.checklistsDir!, "quality.md"), "- [ ] CHK001\n", "utf8");
 		const incompleteChecklist = buildWorkflowStatus({
-			activeFeature: "001-auth-flow",
+			repoRoot,
 			currentBranch: "001-auth-flow",
 			paths: featurePaths,
-			repoRoot,
+			activeFeature: "001-auth-flow",
 		});
-		expect(incompleteChecklist.nextSteps).toStrictEqual([
+		expect(incompleteChecklist.nextSteps).toEqual([
 			"/spec:clarify",
 			"/spec:checklist quality",
 			"/spec:analyze",
@@ -112,12 +112,12 @@ describe("spec status helpers", () => {
 
 		writeFileSync(join(featurePaths.checklistsDir!, "quality.md"), "- [x] CHK001\n", "utf8");
 		const completeChecklist = buildWorkflowStatus({
-			activeFeature: "001-auth-flow",
+			repoRoot,
 			currentBranch: "001-auth-flow",
 			paths: featurePaths,
-			repoRoot,
+			activeFeature: "001-auth-flow",
 		});
-		expect(completeChecklist.nextSteps).toStrictEqual([
+		expect(completeChecklist.nextSteps).toEqual([
 			"/spec:clarify",
 			"/spec:checklist quality",
 			"/spec:analyze",

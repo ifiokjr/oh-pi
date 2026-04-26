@@ -1,3 +1,4 @@
+import { describe, expect, it, vi } from "vitest";
 import { PiWebClient } from "../src/client.js";
 
 // Minimal mock WebSocket
@@ -24,9 +25,9 @@ class MockWebSocket {
 			setTimeout(() => {
 				this.onmessage?.({
 					data: JSON.stringify({
-						instanceId: "test-fox-42",
-						session: { isStreaming: false, model: null, sessionId: "s1", thinkingLevel: "off" },
 						type: "auth_ok",
+						instanceId: "test-fox-42",
+						session: { sessionId: "s1", isStreaming: false, model: null, thinkingLevel: "off" },
 					}),
 				});
 			}, 0);
@@ -37,11 +38,11 @@ class MockWebSocket {
 			setTimeout(() => {
 				this.onmessage?.({
 					data: JSON.stringify({
+						type: "response",
 						command: msg.type,
+						success: true,
 						data: {},
 						id: msg.id,
-						success: true,
-						type: "response",
 					}),
 				});
 			}, 0);
@@ -54,12 +55,12 @@ class MockWebSocket {
 	}
 }
 
-describe(PiWebClient, () => {
+describe("PiWebClient", () => {
 	it("connects and authenticates", async () => {
 		const client = new PiWebClient({
-			autoReconnect: false,
-			token: "test-token",
 			url: "ws://localhost:3100/ws",
+			token: "test-token",
+			autoReconnect: false,
 			webSocket: MockWebSocket as unknown,
 		});
 
@@ -72,9 +73,9 @@ describe(PiWebClient, () => {
 
 	it("sends prompt command", async () => {
 		const client = new PiWebClient({
-			autoReconnect: false,
-			token: "test-token",
 			url: "ws://localhost:3100/ws",
+			token: "test-token",
+			autoReconnect: false,
 			webSocket: MockWebSocket as unknown,
 		});
 
@@ -94,9 +95,9 @@ describe(PiWebClient, () => {
 
 	it("subscribes to events", async () => {
 		const client = new PiWebClient({
-			autoReconnect: false,
-			token: "test-token",
 			url: "ws://localhost:3100/ws",
+			token: "test-token",
+			autoReconnect: false,
 			webSocket: MockWebSocket as unknown,
 		});
 
@@ -109,18 +110,18 @@ describe(PiWebClient, () => {
 		const ws = (client as unknown as { _ws: MockWebSocket })._ws;
 		ws.onmessage?.({ data: JSON.stringify({ type: "agent_start" }) });
 
-		expect(handler).toHaveBeenCalledOnce();
+		expect(handler).toHaveBeenCalledTimes(1);
 
 		unsub();
 		ws.onmessage?.({ data: JSON.stringify({ type: "agent_start" }) });
-		expect(handler).toHaveBeenCalledOnce(); // Not called again
+		expect(handler).toHaveBeenCalledTimes(1); // Not called again
 	});
 
 	it("disconnects cleanly", async () => {
 		const client = new PiWebClient({
-			autoReconnect: false,
-			token: "test-token",
 			url: "ws://localhost:3100/ws",
+			token: "test-token",
+			autoReconnect: false,
 			webSocket: MockWebSocket as unknown,
 		});
 

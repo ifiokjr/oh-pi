@@ -13,6 +13,7 @@ export default defineConfig({
 	},
 	root: rootDir,
 	test: {
+		globals: true,
 		coverage: {
 			all: true,
 			exclude: ["tests/**/*.test.ts"],

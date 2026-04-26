@@ -1,11 +1,12 @@
 import { completeSimple } from "@mariozechner/pi-ai";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({
+vi.mock("@mariozechner/pi-ai", () => ({
 	completeSimple: vi.fn(),
 	getEnvApiKey: vi.fn(),
 }));
 
-vi.mock<typeof import("@ifi/pi-shared-qna")>(import("@ifi/pi-shared-qna"), () => ({
+vi.mock("@ifi/pi-shared-qna", () => ({
 	QnATuiComponent: class QnATuiComponent {
 		constructor(
 			public questions: any[],
@@ -17,7 +18,7 @@ vi.mock<typeof import("@ifi/pi-shared-qna")>(import("@ifi/pi-shared-qna"), () =>
 	requirePiTuiModule: vi.fn(),
 }));
 
-vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
+vi.mock("@mariozechner/pi-coding-agent", () => ({
 	BorderedLoader: class BorderedLoader {
 		public onAbort?: () => void;
 		constructor(
@@ -48,37 +49,37 @@ import answerExtension, {
 const mockCompleteSimple = vi.mocked(completeSimple);
 
 const model = {
-	api: "anthropic-messages",
-	id: "claude-sonnet-4",
 	provider: "anthropic",
+	id: "claude-sonnet-4",
+	api: "anthropic-messages",
 };
 
 function makeAssistantMessage(text: string, stopReason = "stop") {
 	return {
-		api: "anthropic-messages",
-		content: [{ type: "text" as const, text }],
-		model: "claude-sonnet-4",
-		provider: "anthropic",
 		role: "assistant" as const,
+		content: [{ type: "text" as const, text }],
 		stopReason,
-		timestamp: Date.now(),
+		provider: "anthropic",
+		model: "claude-sonnet-4",
+		api: "anthropic-messages",
 		usage: {
-			cacheRead: 0,
-			cacheWrite: 0,
-			cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0, total: 0 },
 			input: 0,
 			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
 			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 		},
+		timestamp: Date.now(),
 	};
 }
 
 function makeBranchEntry(message: Record<string, unknown>) {
-	return { id: `entry-${Date.now()}`, message, type: "message" };
+	return { type: "message", message, id: `entry-${Date.now()}` };
 }
 
 function makeCustomEntry(customType: string, data?: unknown) {
-	return { customType, data, id: `entry-${Date.now()}`, type: "custom" };
+	return { type: "custom", customType, data, id: `entry-${Date.now()}` };
 }
 
 function setupHarnessWithAssistantMessage(text: string, stopReason = "stop") {
@@ -88,37 +89,37 @@ function setupHarnessWithAssistantMessage(text: string, stopReason = "stop") {
 	harness.ctx.sessionManager.getBranch = () => [makeBranchEntry(msg)];
 	harness.ctx.model = model as never;
 	harness.ctx.modelRegistry.getApiKeyAndHeaders = vi.fn().mockResolvedValue({
+		ok: true,
 		apiKey: "test-key",
 		headers: {},
-		ok: true,
 	});
 
 	return harness;
 }
 
 function makeExtractedQuestionsResponse(
-	questions: { question: string; context?: string; options?: Array<{ label: string; description: string }> }[],
+	questions: Array<{ question: string; context?: string; options?: Array<{ label: string; description: string }> }>,
 ) {
 	return {
-		content: [{ type: "text" as const, text: JSON.stringify(questions) }],
 		stopReason: "stop",
+		content: [{ type: "text" as const, text: JSON.stringify(questions) }],
 		usage: {
-			cacheRead: 0,
-			cacheWrite: 0,
-			cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0, total: 0 },
 			input: 0,
 			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
 			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 		},
 	};
 }
 
 function makeQnAResult(answers: string[], texts: string[]): any {
 	const responses = answers.map((_, i) => ({
-		committed: true,
-		customText: texts[i] ?? "",
 		selectedOptionIndex: 0,
+		customText: texts[i] ?? "",
 		selectionTouched: true,
+		committed: true,
 	}));
 	const textParts: string[] = [];
 	for (let i = 0; i < answers.length; i++) {
@@ -128,160 +129,156 @@ function makeQnAResult(answers: string[], texts: string[]): any {
 			textParts.push("");
 		}
 	}
-	return { answers, responses, text: textParts.join("\n").trim() };
+	return { text: textParts.join("\n").trim(), answers, responses };
 }
 
 // ── normalizeExtractedQuestions ────────────────────────────────────────────
 
-describe(normalizeExtractedQuestions, () => {
+describe("normalizeExtractedQuestions", () => {
 	it("returns empty array for non-array input", () => {
-		expect(normalizeExtractedQuestions(null)).toStrictEqual([]);
-		expect(normalizeExtractedQuestions("not an array")).toStrictEqual([]);
-		expect(normalizeExtractedQuestions(42)).toStrictEqual([]);
+		expect(normalizeExtractedQuestions(null)).toEqual([]);
+		expect(normalizeExtractedQuestions("not an array")).toEqual([]);
+		expect(normalizeExtractedQuestions(42)).toEqual([]);
 	});
 
 	it("filters entries without a question field", () => {
-		expect(normalizeExtractedQuestions([{ foo: "bar" }])).toStrictEqual([]);
+		expect(normalizeExtractedQuestions([{ foo: "bar" }])).toEqual([]);
 	});
 
 	it("filters entries with empty question", () => {
-		expect(normalizeExtractedQuestions([{ question: "" }])).toStrictEqual([]);
-		expect(normalizeExtractedQuestions([{ question: "   " }])).toStrictEqual([]);
+		expect(normalizeExtractedQuestions([{ question: "" }])).toEqual([]);
+		expect(normalizeExtractedQuestions([{ question: "   " }])).toEqual([]);
 	});
 
 	it("extracts a simple question", () => {
-		expect(normalizeExtractedQuestions([{ question: "What DB?" }])).toStrictEqual([{ question: "What DB?" }]);
+		expect(normalizeExtractedQuestions([{ question: "What DB?" }])).toEqual([{ question: "What DB?" }]);
 	});
 
 	it("extracts question with context", () => {
-		const result = normalizeExtractedQuestions([{ context: "We use Node.js", question: "Which ORM?" }]);
-		expect(result).toStrictEqual([{ context: "We use Node.js", question: "Which ORM?" }]);
+		const result = normalizeExtractedQuestions([{ question: "Which ORM?", context: "We use Node.js" }]);
+		expect(result).toEqual([{ question: "Which ORM?", context: "We use Node.js" }]);
 	});
 
 	it("extracts concise question plus options from a detailed section", () => {
 		const full =
 			"What is the most expensive bug?\n\nRank these:\n\na. Wrong version bump\nb. Missing package in release";
 		const result = normalizeExtractedQuestions([{ question: full }]);
-		//NormalizeExtractedQuestions passes through the LLM output; concise vs verbose is a prompt-level concern
-		expect(result).toStrictEqual([{ question: full }]);
+		//normalizeExtractedQuestions passes through the LLM output; concise vs verbose is a prompt-level concern
+		expect(result).toEqual([{ question: full }]);
 	});
 
 	it("extracts question with options", () => {
 		const result = normalizeExtractedQuestions([
 			{
+				question: "Database?",
 				options: [
 					{ label: "PostgreSQL", description: "Relational" },
 					{ label: "MongoDB", description: "Document" },
 				],
-				question: "Database?",
 			},
 		]);
-		expect(result).toStrictEqual([
+		expect(result).toEqual([
 			{
+				question: "Database?",
 				options: [
 					{ label: "PostgreSQL", description: "Relational", recommended: false },
 					{ label: "MongoDB", description: "Document", recommended: false },
 				],
-				question: "Database?",
 			},
 		]);
 	});
 
 	it("filters options without label", () => {
 		const result = normalizeExtractedQuestions([
-			{ options: [{ label: "A", description: "First" }, { description: "No label" }], question: "Pick one?" },
+			{ question: "Pick one?", options: [{ label: "A", description: "First" }, { description: "No label" }] },
 		]);
-		expect(result).toStrictEqual([
-			{ options: [{ label: "A", description: "First", recommended: false }], question: "Pick one?" },
+		expect(result).toEqual([
+			{ question: "Pick one?", options: [{ label: "A", description: "First", recommended: false }] },
 		]);
 	});
 
 	it("strips options entirely when none remain after filtering", () => {
-		const result = normalizeExtractedQuestions([{ options: [{ description: "No label" }], question: "Any thoughts?" }]);
-		expect(result).toStrictEqual([{ question: "Any thoughts?" }]);
+		const result = normalizeExtractedQuestions([{ question: "Any thoughts?", options: [{ description: "No label" }] }]);
+		expect(result).toEqual([{ question: "Any thoughts?" }]);
 	});
 
 	it("ignores empty context strings", () => {
-		const result = normalizeExtractedQuestions([{ context: "   ", question: "Q?" }]);
-		expect(result).toStrictEqual([{ question: "Q?" }]);
+		const result = normalizeExtractedQuestions([{ question: "Q?", context: "   " }]);
+		expect(result).toEqual([{ question: "Q?" }]);
 	});
 
 	it("extracts fullContext when present", () => {
 		const result = normalizeExtractedQuestions([
 			{
-				fullContext: "What is the most expensive bug?\\n\\na. Wrong version bump\\nb. Missing package in release",
 				question: "Most expensive bug?",
+				fullContext: "What is the most expensive bug?\\n\\na. Wrong version bump\\nb. Missing package in release",
 			},
 		]);
-		expect(result).toStrictEqual([
+		expect(result).toEqual([
 			{
-				fullContext: "What is the most expensive bug?\\n\\na. Wrong version bump\\nb. Missing package in release",
 				question: "Most expensive bug?",
+				fullContext: "What is the most expensive bug?\\n\\na. Wrong version bump\\nb. Missing package in release",
 			},
 		]);
 	});
 
 	it("ignores empty fullContext strings", () => {
-		const result = normalizeExtractedQuestions([{ fullContext: "   ", question: "Q?" }]);
-		expect(result).toStrictEqual([{ question: "Q?" }]);
+		const result = normalizeExtractedQuestions([{ question: "Q?", fullContext: "   " }]);
+		expect(result).toEqual([{ question: "Q?" }]);
 	});
 
 	it("ignores empty options arrays", () => {
-		const result = normalizeExtractedQuestions([{ options: [], question: "Q?" }]);
-		expect(result).toStrictEqual([{ question: "Q?" }]);
+		const result = normalizeExtractedQuestions([{ question: "Q?", options: [] }]);
+		expect(result).toEqual([{ question: "Q?" }]);
 	});
 
 	it("trim label whitespace in options", () => {
 		const result = normalizeExtractedQuestions([
-			{ options: [{ label: "  A  ", description: "  desc  " }], question: "Q?" },
+			{ question: "Q?", options: [{ label: "  A  ", description: "  desc  " }] },
 		]);
-		expect(result).toStrictEqual([
-			{ options: [{ label: "A", description: "desc", recommended: false }], question: "Q?" },
-		]);
+		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "desc", recommended: false }] }]);
 	});
 
 	it("uses empty string for non-string description in options", () => {
-		const result = normalizeExtractedQuestions([{ options: [{ label: "A", description: 123 }], question: "Q?" }]);
-		expect(result).toStrictEqual([{ options: [{ label: "A", description: "", recommended: false }], question: "Q?" }]);
+		const result = normalizeExtractedQuestions([{ question: "Q?", options: [{ label: "A", description: 123 }] }]);
+		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "", recommended: false }] }]);
 	});
 
 	it("preserves recommended flag on options", () => {
 		const result = normalizeExtractedQuestions([
 			{
+				question: "Pick one?",
 				options: [
 					{ label: "A", description: "First", recommended: true },
 					{ label: "B", description: "Second" },
 				],
-				question: "Pick one?",
 			},
 		]);
-		expect(result).toStrictEqual([
+		expect(result).toEqual([
 			{
+				question: "Pick one?",
 				options: [
 					{ label: "A", description: "First", recommended: true },
 					{ label: "B", description: "Second", recommended: false },
 				],
-				question: "Pick one?",
 			},
 		]);
 	});
 
 	it("defaults recommended to false when omitted", () => {
-		const result = normalizeExtractedQuestions([{ options: [{ label: "A", description: "Only" }], question: "Q?" }]);
-		expect(result).toStrictEqual([
-			{ options: [{ label: "A", description: "Only", recommended: false }], question: "Q?" },
-		]);
+		const result = normalizeExtractedQuestions([{ question: "Q?", options: [{ label: "A", description: "Only" }] }]);
+		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "Only", recommended: false }] }]);
 	});
 
 	it("synthesizes recommended option from recommendation string", () => {
 		const result = normalizeExtractedQuestions([
-			{ context: "I recommend Kani.", question: "Which tool?", recommendation: "Start with Kani" },
+			{ question: "Which tool?", context: "I recommend Kani.", recommendation: "Start with Kani" },
 		]);
-		expect(result).toStrictEqual([
+		expect(result).toEqual([
 			{
+				question: "Which tool?",
 				context: "I recommend Kani.",
 				options: [{ label: "Start with Kani", description: "", recommended: true }],
-				question: "Which tool?",
 			},
 		]);
 	});
@@ -289,15 +286,15 @@ describe(normalizeExtractedQuestions, () => {
 	it("prefers explicit options over recommendation string", () => {
 		const result = normalizeExtractedQuestions([
 			{
-				options: [{ label: "Kani", description: "Verifier", recommended: true }],
 				question: "Which tool?",
+				options: [{ label: "Kani", description: "Verifier", recommended: true }],
 				recommendation: "Use Kani",
 			},
 		]);
-		expect(result).toStrictEqual([
+		expect(result).toEqual([
 			{
-				options: [{ label: "Kani", description: "Verifier", recommended: true }],
 				question: "Which tool?",
+				options: [{ label: "Kani", description: "Verifier", recommended: true }],
 			},
 		]);
 	});
@@ -305,51 +302,51 @@ describe(normalizeExtractedQuestions, () => {
 
 // ── hasQuestionMarkers ──────────────────────────────────────────────────────
 
-describe(hasQuestionMarkers, () => {
+describe("hasQuestionMarkers", () => {
 	it("detects lines ending with question mark", () => {
-		expect(hasQuestionMarkers("What should we do?")).toBeTruthy();
+		expect(hasQuestionMarkers("What should we do?")).toBe(true);
 	});
 
 	it("detects question words", () => {
-		expect(hasQuestionMarkers("I suggest we use TypeScript")).toBeTruthy();
-		expect(hasQuestionMarkers("Which approach do you prefer?")).toBeTruthy();
-		expect(hasQuestionMarkers("Should we continue?")).toBeTruthy();
-		expect(hasQuestionMarkers("Would you like to proceed?")).toBeTruthy();
-		expect(hasQuestionMarkers("Do you want me to continue?")).toBeTruthy();
-		expect(hasQuestionMarkers("I recommend using SQLite")).toBeTruthy();
+		expect(hasQuestionMarkers("I suggest we use TypeScript")).toBe(true);
+		expect(hasQuestionMarkers("Which approach do you prefer?")).toBe(true);
+		expect(hasQuestionMarkers("Should we continue?")).toBe(true);
+		expect(hasQuestionMarkers("Would you like to proceed?")).toBe(true);
+		expect(hasQuestionMarkers("Do you want me to continue?")).toBe(true);
+		expect(hasQuestionMarkers("I recommend using SQLite")).toBe(true);
 	});
 
 	it("returns false for statements without questions", () => {
-		expect(hasQuestionMarkers("Here is the implementation.")).toBeFalsy();
-		expect(hasQuestionMarkers("The file has been updated.")).toBeFalsy();
+		expect(hasQuestionMarkers("Here is the implementation.")).toBe(false);
+		expect(hasQuestionMarkers("The file has been updated.")).toBe(false);
 	});
 
 	it("detects 'would you' pattern", () => {
-		expect(hasQuestionMarkers("Would you like me to proceed?")).toBeTruthy();
+		expect(hasQuestionMarkers("Would you like me to proceed?")).toBe(true);
 	});
 
 	it("detects 'pick' pattern", () => {
-		expect(hasQuestionMarkers("Pick the one you like")).toBeTruthy();
+		expect(hasQuestionMarkers("Pick the one you like")).toBe(true);
 	});
 
 	it("detects 'decide' pattern", () => {
-		expect(hasQuestionMarkers("Decide which one to use")).toBeTruthy();
+		expect(hasQuestionMarkers("Decide which one to use")).toBe(true);
 	});
 });
 
 // ── buildAnswerMessage ──────────────────────────────────────────────────────
 
-describe(buildAnswerMessage, () => {
+describe("buildAnswerMessage", () => {
 	it("returns empty string when no answers have content", () => {
-		const result = { answers: ["", "", ""], responses: [] as any[], text: "" };
+		const result = { text: "", answers: ["", "", ""], responses: [] as any[] };
 		expect(buildAnswerMessage(result)).toBe("");
 	});
 
 	it("returns the Q&A text when answers exist", () => {
 		const result = {
+			text: "Q: What DB?\nA: PostgreSQL",
 			answers: ["PostgreSQL"],
 			responses: [] as any[],
-			text: "Q: What DB?\nA: PostgreSQL",
 		};
 		expect(buildAnswerMessage(result)).toBe("Q: What DB?\nA: PostgreSQL");
 	});
@@ -357,7 +354,7 @@ describe(buildAnswerMessage, () => {
 
 // ── EXTRACTION_SYSTEM_PROMPT ────────────────────────────────────────────────
 
-describe(EXTRACTION_SYSTEM_PROMPT, () => {
+describe("EXTRACTION_SYSTEM_PROMPT", () => {
 	it("contains JSON extraction instructions", () => {
 		expect(EXTRACTION_SYSTEM_PROMPT).toContain("JSON array");
 		expect(EXTRACTION_SYSTEM_PROMPT).toContain("question");
@@ -400,7 +397,7 @@ describe(EXTRACTION_SYSTEM_PROMPT, () => {
 
 // ── extractQuestions ────────────────────────────────────────────────────────
 
-describe(extractQuestions, () => {
+describe("extractQuestions", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
@@ -416,8 +413,8 @@ describe(extractQuestions, () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = model as never;
 		harness.ctx.modelRegistry.getApiKeyAndHeaders = vi.fn().mockResolvedValue({
-			error: "No API key",
 			ok: false,
+			error: "No API key",
 		});
 
 		const result = await extractQuestions("Hello?", harness.ctx as never);
@@ -428,8 +425,8 @@ describe(extractQuestions, () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = model as never;
 		harness.ctx.modelRegistry.getApiKeyAndHeaders = vi.fn().mockResolvedValue({
-			apiKey: undefined,
 			ok: true,
+			apiKey: undefined,
 		});
 
 		const result = await extractQuestions("Hello?", harness.ctx as never);
@@ -439,9 +436,9 @@ describe(extractQuestions, () => {
 	it("returns null when LLM response is not stop", async () => {
 		const harness = setupHarnessWithAssistantMessage("Hello?");
 		mockCompleteSimple.mockResolvedValue({
-			content: [],
-			errorMessage: "Something went wrong",
 			stopReason: "error",
+			errorMessage: "Something went wrong",
+			content: [],
 		} as never);
 
 		const result = await extractQuestions("Hello?", harness.ctx as never);
@@ -451,8 +448,8 @@ describe(extractQuestions, () => {
 	it("returns null when LLM response is empty", async () => {
 		const harness = setupHarnessWithAssistantMessage("Hello?");
 		mockCompleteSimple.mockResolvedValue({
-			content: [{ type: "text" as const, text: "" }],
 			stopReason: "stop",
+			content: [{ type: "text" as const, text: "" }],
 		} as never);
 
 		const result = await extractQuestions("Hello?", harness.ctx as never);
@@ -462,8 +459,8 @@ describe(extractQuestions, () => {
 	it("returns null when LLM response is not valid JSON", async () => {
 		const harness = setupHarnessWithAssistantMessage("Hello?");
 		mockCompleteSimple.mockResolvedValue({
-			content: [{ type: "text" as const, text: "not json at all" }],
 			stopReason: "stop",
+			content: [{ type: "text" as const, text: "not json at all" }],
 		} as never);
 
 		const result = await extractQuestions("Hello?", harness.ctx as never);
@@ -475,7 +472,7 @@ describe(extractQuestions, () => {
 		mockCompleteSimple.mockResolvedValue(makeExtractedQuestionsResponse([{ question: "What DB?" }]) as never);
 
 		const result = await extractQuestions("Hello?", harness.ctx as never);
-		expect(result).toStrictEqual([{ question: "What DB?" }]);
+		expect(result).toEqual([{ question: "What DB?" }]);
 	});
 
 	it("extracts questions with options", async () => {
@@ -483,23 +480,23 @@ describe(extractQuestions, () => {
 		mockCompleteSimple.mockResolvedValue(
 			makeExtractedQuestionsResponse([
 				{
+					question: "Database?",
 					options: [
 						{ label: "PostgreSQL", description: "Relational" },
 						{ label: "SQLite", description: "Embedded" },
 					],
-					question: "Database?",
 				},
 			]) as never,
 		);
 
 		const result = await extractQuestions("Hello?", harness.ctx as never);
-		expect(result).toStrictEqual([
+		expect(result).toEqual([
 			{
+				question: "Database?",
 				options: [
 					{ label: "PostgreSQL", description: "Relational", recommended: false },
 					{ label: "SQLite", description: "Embedded", recommended: false },
 				],
-				question: "Database?",
 			},
 		]);
 	});
@@ -507,20 +504,20 @@ describe(extractQuestions, () => {
 	it("strips markdown code fences from LLM response", async () => {
 		const harness = setupHarnessWithAssistantMessage("Hello?");
 		mockCompleteSimple.mockResolvedValue({
-			content: [{ type: "text" as const, text: '```json\n[{"question": "Q?"}]\n```' }],
 			stopReason: "stop",
+			content: [{ type: "text" as const, text: '```json\n[{"question": "Q?"}]\n```' }],
 			usage: {
-				cacheRead: 0,
-				cacheWrite: 0,
-				cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0, total: 0 },
 				input: 0,
 				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
 				totalTokens: 0,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 			},
 		} as never);
 
 		const result = await extractQuestions("Hello?", harness.ctx as never);
-		expect(result).toStrictEqual([{ question: "Q?" }]);
+		expect(result).toEqual([{ question: "Q?" }]);
 	});
 
 	it("passes correct system prompt and user message to LLM", async () => {
@@ -529,7 +526,7 @@ describe(extractQuestions, () => {
 
 		await extractQuestions("What is your name?", harness.ctx as never);
 
-		expect(mockCompleteSimple).toHaveBeenCalledOnce();
+		expect(mockCompleteSimple).toHaveBeenCalledTimes(1);
 		const callArgs = mockCompleteSimple.mock.calls[0]!;
 
 		// Verify model
@@ -541,8 +538,8 @@ describe(extractQuestions, () => {
 		// Verify user message content
 		const userMsg = callArgs[1].messages.find((m: any) => m.role === "user");
 		expect(userMsg).toBeDefined();
-		expect(userMsg.content).toStrictEqual(
-			expect.arrayContaining([expect.objectContaining({ text: "What is your name?", type: "text" })]),
+		expect(userMsg.content).toEqual(
+			expect.arrayContaining([expect.objectContaining({ type: "text", text: "What is your name?" })]),
 		);
 
 		// Verify API key
@@ -561,8 +558,8 @@ describe("answer extension registration", () => {
 		const harness = createExtensionHarness();
 		answerExtension(harness.pi as never);
 
-		expect(harness.commands.has("answer")).toBeTruthy();
-		expect(harness.commands.has("answer:auto")).toBeTruthy();
+		expect(harness.commands.has("answer")).toBe(true);
+		expect(harness.commands.has("answer:auto")).toBe(true);
 	});
 
 	it("restores auto-detect state from session on session_start", async () => {
@@ -577,7 +574,7 @@ describe("answer extension registration", () => {
 		// Toggle should show "disabled" since it's already enabled
 		const cmd = harness.commands.get("answer:auto")!;
 		await cmd.handler("", harness.ctx as never);
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({ msg: "Auto-answer detection disabled", type: "info" }),
 		]);
 	});
@@ -590,7 +587,7 @@ describe("answer extension registration", () => {
 
 		const cmd = harness.commands.get("answer:auto")!;
 		await cmd.handler("", harness.ctx as never);
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({ msg: "Auto-answer detection enabled", type: "info" }),
 		]);
 	});
@@ -612,7 +609,7 @@ describe("/answer command", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(harness.notifications).toStrictEqual([expect.objectContaining({ msg: "No model selected", type: "error" })]);
+		expect(harness.notifications).toEqual([expect.objectContaining({ msg: "No model selected", type: "error" })]);
 	});
 
 	it("notifies when no UI is available", async () => {
@@ -625,7 +622,7 @@ describe("/answer command", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({ msg: "/answer requires interactive mode", type: "error" }),
 		]);
 	});
@@ -640,7 +637,7 @@ describe("/answer command", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({
 				msg: "No assistant messages found to extract questions from",
 				type: "warning",
@@ -661,7 +658,7 @@ describe("/answer command", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({ msg: "No questions found in the last message", type: "info" }),
 		]);
 	});
@@ -676,7 +673,7 @@ describe("/answer command", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({ msg: "No questions found in the last message", type: "info" }),
 		]);
 	});
@@ -692,7 +689,7 @@ describe("/answer command", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({
 				msg: "No assistant messages found to extract questions from",
 				type: "warning",
@@ -721,7 +718,7 @@ describe("/answer command", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(harness.notifications).toStrictEqual([expect.objectContaining({ msg: "Answer cancelled", type: "info" })]);
+		expect(harness.notifications).toEqual([expect.objectContaining({ msg: "Answer cancelled", type: "info" })]);
 	});
 
 	it("sends user message when answers are submitted while idle", async () => {
@@ -744,7 +741,7 @@ describe("/answer command", () => {
 		await cmd.handler("", harness.ctx as never);
 
 		expect(harness.userMessages).toContain("Q: Question 1\nA: Use TypeScript");
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({ msg: expect.stringContaining("Answers submitted"), type: "info" }),
 		]);
 	});
@@ -789,9 +786,7 @@ describe("/answer command", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(harness.notifications).toStrictEqual([
-			expect.objectContaining({ msg: "No answers provided", type: "info" }),
-		]);
+		expect(harness.notifications).toEqual([expect.objectContaining({ msg: "No answers provided", type: "info" })]);
 	});
 });
 
@@ -809,14 +804,14 @@ describe("/answer:auto command", () => {
 		const cmd = harness.commands.get("answer:auto")!;
 
 		await cmd.handler("", harness.ctx as never);
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({ msg: "Auto-answer detection enabled", type: "info" }),
 		]);
 
 		harness.notifications.length = 0;
 
 		await cmd.handler("", harness.ctx as never);
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({ msg: "Auto-answer detection disabled", type: "info" }),
 		]);
 	});
@@ -847,10 +842,10 @@ describe("agent_end auto-detect", () => {
 		const harness = createExtensionHarness();
 		answerExtension(harness.pi as never);
 
-		// Auto-detect is off by default
+		// auto-detect is off by default
 		await harness.emitAsync("agent_end", { messages: [] }, harness.ctx);
 		// Should not trigger any notifications or custom UI
-		expect(harness.notifications).toStrictEqual([]);
+		expect(harness.notifications).toEqual([]);
 	});
 
 	it("skips when no UI is available", async () => {
@@ -865,7 +860,7 @@ describe("agent_end auto-detect", () => {
 		harness.ctx.hasUI = false;
 
 		await harness.emitAsync("agent_end", { messages: [] }, harness.ctx);
-		expect(harness.notifications).toStrictEqual([]);
+		expect(harness.notifications).toEqual([]);
 	});
 
 	it("skips when no model is available", async () => {
@@ -879,7 +874,7 @@ describe("agent_end auto-detect", () => {
 		harness.ctx.model = undefined;
 
 		await harness.emitAsync("agent_end", { messages: [] }, harness.ctx);
-		expect(harness.notifications).toStrictEqual([]);
+		expect(harness.notifications).toEqual([]);
 	});
 
 	it("skips when messages have no question markers", async () => {
@@ -894,8 +889,8 @@ describe("agent_end auto-detect", () => {
 		harness.notifications.length = 0;
 
 		const msg = {
-			content: [{ type: "text", text: "Here is the implementation." }],
 			role: "assistant",
+			content: [{ type: "text", text: "Here is the implementation." }],
 			stopReason: "stop",
 		};
 
@@ -908,9 +903,9 @@ describe("agent_end auto-detect", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = model as never;
 		harness.ctx.modelRegistry.getApiKeyAndHeaders = vi.fn().mockResolvedValue({
+			ok: true,
 			apiKey: "test-key",
 			headers: {},
-			ok: true,
 		});
 		harness.ctx.sessionManager.getBranch = () => [makeBranchEntry(makeAssistantMessage("What should we do?"))];
 
@@ -928,8 +923,8 @@ describe("agent_end auto-detect", () => {
 		harness.notifications.length = 0;
 
 		const msg = {
-			content: [{ type: "text", text: "What should we do?" }],
 			role: "assistant",
+			content: [{ type: "text", text: "What should we do?" }],
 			stopReason: "stop",
 		};
 
@@ -953,8 +948,8 @@ describe("agent_end auto-detect", () => {
 		harness.notifications.length = 0;
 
 		const msg = {
-			content: [{ type: "text", text: "What should we do?" }],
 			role: "assistant",
+			content: [{ type: "text", text: "What should we do?" }],
 			stopReason: "tool_use",
 		};
 
@@ -997,8 +992,8 @@ describe("runAnswerFlow factory callbacks", () => {
 		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
 			const fakeTui = { requestRender: vi.fn() };
 			const fakeTheme = {
-				bold: vi.fn((text: string) => text),
 				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
 			};
 			const fakeKeybindings = {};
 			let resolveDone: (value: any) => void;
@@ -1028,8 +1023,8 @@ describe("runAnswerFlow factory callbacks", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(loaderFactoryInvoked).toBeTruthy();
-		expect(qnaFactoryInvoked).toBeTruthy();
+		expect(loaderFactoryInvoked).toBe(true);
+		expect(qnaFactoryInvoked).toBe(true);
 	});
 
 	it("handles BorderedLoader abort via onAbort", async () => {
@@ -1038,8 +1033,8 @@ describe("runAnswerFlow factory callbacks", () => {
 		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
 			const fakeTui = { requestRender: vi.fn() };
 			const fakeTheme = {
-				bold: vi.fn((text: string) => text),
 				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
 			};
 			const fakeKeybindings = {};
 			let resolveDone: (value: any) => void;
@@ -1066,7 +1061,7 @@ describe("runAnswerFlow factory callbacks", () => {
 		await cmd.handler("", harness.ctx as never);
 
 		// Aborted extraction should result in "No questions found" notification
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({ msg: "No questions found in the last message", type: "info" }),
 		]);
 	});
@@ -1078,8 +1073,8 @@ describe("runAnswerFlow factory callbacks", () => {
 		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
 			const fakeTui = { requestRender: vi.fn() };
 			const fakeTheme = {
-				bold: vi.fn((text: string) => text),
 				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
 			};
 			const fakeKeybindings = {};
 			let resolveDone: (value: any) => void;
@@ -1105,7 +1100,7 @@ describe("runAnswerFlow factory callbacks", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(harness.notifications).toStrictEqual([
+		expect(harness.notifications).toEqual([
 			expect.objectContaining({ msg: "No questions found in the last message", type: "info" }),
 		]);
 	});
@@ -1119,8 +1114,8 @@ describe("runAnswerFlow factory callbacks", () => {
 		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
 			const fakeTui = { requestRender: vi.fn() };
 			const fakeTheme = {
-				bold: vi.fn((text: string) => text),
 				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
 			};
 			const fakeKeybindings = {};
 			let resolveDone: (value: any) => void;
@@ -1166,8 +1161,8 @@ describe("runAnswerFlow factory callbacks", () => {
 		harness.ctx.ui.custom = vi.fn().mockImplementation((factory: any) => {
 			const fakeTui = { requestRender: vi.fn() };
 			const fakeTheme = {
-				bold: vi.fn((text: string) => text),
 				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
 			};
 			const fakeKeybindings = {};
 			let resolveDone: (value: any) => void;
@@ -1193,7 +1188,7 @@ describe("runAnswerFlow factory callbacks", () => {
 		await cmd.handler("", harness.ctx as never);
 
 		expect(sentMessages.length).toBeGreaterThan(0);
-		expect(sentMessages[0].opts).toStrictEqual({ deliverAs: "followUp" });
+		expect(sentMessages[0].opts).toEqual({ deliverAs: "followUp" });
 	});
 });
 
@@ -1209,8 +1204,8 @@ describe("runAnswerFlow with preextractedText", () => {
 
 		// Set up extraction to fail if called on the branch text
 		mockCompleteSimple.mockResolvedValue({
-			content: [{ type: "text", text: "No questions here" }],
 			stopReason: "stop",
+			content: [{ type: "text", text: "No questions here" }],
 		} as never);
 
 		// Set up extraction to succeed on the preextracted text
@@ -1221,8 +1216,8 @@ describe("runAnswerFlow with preextractedText", () => {
 			customCallCount++;
 			const fakeTui = { requestRender: vi.fn() };
 			const fakeTheme = {
-				bold: vi.fn((text: string) => text),
 				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
 			};
 			const fakeKeybindings = {};
 			let resolveDone: (value: any) => void;
@@ -1247,7 +1242,7 @@ describe("runAnswerFlow with preextractedText", () => {
 		// Call runAnswerFlow with preextracted text
 		await runAnswerFlow(harness.ctx as never, harness.pi, "What should we do?");
 
-		// Custom() should have been called (extraction phase)
+		// custom() should have been called (extraction phase)
 		expect(customCallCount).toBeGreaterThanOrEqual(1);
 	});
 
@@ -1260,8 +1255,8 @@ describe("runAnswerFlow with preextractedText", () => {
 			factoryInvoked = true;
 			const fakeTui = { requestRender: vi.fn() };
 			const fakeTheme = {
-				bold: vi.fn((text: string) => text),
 				fg: vi.fn((_: string, text: string) => text),
+				bold: vi.fn((text: string) => text),
 			};
 			const fakeKeybindings = {};
 			let resolveDone: (value: any) => void;
@@ -1279,7 +1274,7 @@ describe("runAnswerFlow with preextractedText", () => {
 		await runAnswerFlow(harness.ctx as never, harness.pi);
 
 		// The factory should be invoked (extraction from branch)
-		expect(factoryInvoked).toBeTruthy();
+		expect(factoryInvoked).toBe(true);
 	});
 
 	// Direct test of runAutoDetectFlow for V8 fork-pool coverage
@@ -1287,9 +1282,9 @@ describe("runAnswerFlow with preextractedText", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = model as never;
 		harness.ctx.modelRegistry.getApiKeyAndHeaders = vi.fn().mockResolvedValue({
+			ok: true,
 			apiKey: "test-key",
 			headers: {},
-			ok: true,
 		});
 		harness.ctx.sessionManager.getBranch = () => [makeBranchEntry(makeAssistantMessage("What?"))];
 		harness.ctx.ui.custom = vi.fn().mockResolvedValue(null);
@@ -1300,6 +1295,6 @@ describe("runAnswerFlow with preextractedText", () => {
 		await runAutoDetectFlow(harness.ctx as never, pi, "What should we do?", inProgressRef);
 
 		// After completion, in-progress should be reset to false
-		expect(inProgressRef.value).toBeFalsy();
+		expect(inProgressRef.value).toBe(false);
 	});
 });

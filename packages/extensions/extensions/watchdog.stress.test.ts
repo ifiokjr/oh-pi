@@ -1,27 +1,29 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 const { mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
 	mockExistsSync: vi.fn(() => false),
 	mockReadFileSync: vi.fn(),
 }));
 
 const histogram = {
-	disable: vi.fn(),
 	enable: vi.fn(),
-	max: 0,
-	mean: 0,
-	percentile: vi.fn(() => 0),
+	disable: vi.fn(),
 	reset: vi.fn(),
+	percentile: vi.fn(() => 0),
+	mean: 0,
+	max: 0,
 };
 
-vi.mock<typeof import("node:fs")>(import("node:fs"), () => ({
+vi.mock("node:fs", () => ({
 	existsSync: mockExistsSync,
 	readFileSync: mockReadFileSync,
 }));
 
-vi.mock<typeof import("node:perf_hooks")>(import("node:perf_hooks"), () => ({
+vi.mock("node:perf_hooks", () => ({
 	monitorEventLoopDelay: vi.fn(() => histogram),
 }));
 
-vi.mock<typeof import("node:os")>(import("node:os"), async (importOriginal) => {
+vi.mock("node:os", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:os")>();
 	return {
 		...actual,
@@ -29,7 +31,7 @@ vi.mock<typeof import("node:os")>(import("node:os"), async (importOriginal) => {
 	};
 });
 
-vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({}));
+vi.mock("@mariozechner/pi-coding-agent", () => ({}));
 
 import { resetSafeModeStateForTests } from "./runtime-mode";
 import watchdogExtension from "./watchdog";
@@ -41,26 +43,6 @@ function createMockPi() {
 	const tools = new Map<string, any>();
 
 	return {
-		_commands: commands,
-		async _emit(event: string, ...args: any[]) {
-			for (const handler of handlers.get(event) ?? []) {
-				await handler(...args);
-			}
-		},
-		_tools: tools,
-		events: {
-			emit(event: string, ...args: any[]) {
-				for (const handler of eventHandlers.get(event) ?? []) {
-					handler(...args);
-				}
-			},
-			on(event: string, handler: (...args: any[]) => any) {
-				if (!eventHandlers.has(event)) {
-					eventHandlers.set(event, []);
-				}
-				eventHandlers.get(event)?.push(handler);
-			},
-		},
 		on(event: string, handler: (...args: any[]) => any) {
 			if (!handlers.has(event)) {
 				handlers.set(event, []);
@@ -73,6 +55,26 @@ function createMockPi() {
 		registerTool(tool: { name: string }) {
 			tools.set(tool.name, tool);
 		},
+		events: {
+			on(event: string, handler: (...args: any[]) => any) {
+				if (!eventHandlers.has(event)) {
+					eventHandlers.set(event, []);
+				}
+				eventHandlers.get(event)?.push(handler);
+			},
+			emit(event: string, ...args: any[]) {
+				for (const handler of eventHandlers.get(event) ?? []) {
+					handler(...args);
+				}
+			},
+		},
+		_commands: commands,
+		_tools: tools,
+		async _emit(event: string, ...args: any[]) {
+			for (const handler of handlers.get(event) ?? []) {
+				await handler(...args);
+			}
+		},
 	};
 }
 
@@ -80,9 +82,9 @@ function createMockCtx() {
 	return {
 		hasUI: true,
 		ui: {
-			custom: vi.fn().mockResolvedValue(undefined),
 			notify: vi.fn(),
 			setStatus: vi.fn(),
+			custom: vi.fn().mockResolvedValue(undefined),
 		},
 	};
 }
@@ -118,10 +120,10 @@ describe("watchdog session churn", () => {
 			await pi._emit("session_switch", {}, ctx);
 		}
 
-		expect(setIntervalSpy).toHaveBeenCalledOnce();
+		expect(setIntervalSpy).toHaveBeenCalledTimes(1);
 
 		await pi._emit("session_shutdown");
-		expect(clearIntervalSpy).toHaveBeenCalledOnce();
+		expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
 	});
 
 	it("restarts cleanly after shutdown without accumulating timers", async () => {

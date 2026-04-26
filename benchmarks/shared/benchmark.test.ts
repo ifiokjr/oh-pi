@@ -1,3 +1,4 @@
+import { describe, expect, it, vi } from "vitest";
 import { runBenchmark } from "./benchmark";
 
 describe("benchmark helper", () => {
@@ -9,13 +10,13 @@ describe("benchmark helper", () => {
 			});
 
 			const result = await runBenchmark({
-				group: "unit",
 				id: "batched-fast-sample",
-				iterations: 4,
 				label: "batched fast sample",
+				group: "unit",
+				iterations: 4,
+				warmupIterations: 0,
 				minSampleTimeMs: 5,
 				run,
-				warmupIterations: 0,
 			});
 
 			expect(result.minSampleTimeMs).toBe(5);

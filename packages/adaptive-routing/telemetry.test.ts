@@ -1,12 +1,13 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { getAgentDir } = vi.hoisted(() => ({
 	getAgentDir: vi.fn(() => "/mock-home/.pi/agent"),
 }));
 
-vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
+vi.mock("@mariozechner/pi-coding-agent", () => ({
 	getAgentDir,
 }));
 
@@ -28,52 +29,52 @@ describe("adaptive routing telemetry", () => {
 	it("computes aggregate latency stats from route outcomes", () => {
 		const events: AdaptiveRoutingTelemetryEvent[] = [
 			{
+				type: "route_decision",
+				timestamp: 10,
 				decisionId: "d1",
-				explanationCodes: [],
-				fallbacks: [],
 				mode: "auto",
 				selected: { model: "openai/gpt-5.4", thinking: "high" },
-				timestamp: 10,
-				type: "route_decision",
+				fallbacks: [],
+				explanationCodes: [],
 			},
 			{
-				completed: true,
-				decisionId: "d1",
-				durationMs: 4_000,
-				selectedModel: "openai/gpt-5.4",
+				type: "route_outcome",
 				timestamp: 20,
-				turnCount: 2,
-				type: "route_outcome",
-				userOverrideOccurred: false,
-			},
-			{
-				completed: true,
-				decisionId: "d2",
-				durationMs: 6_000,
+				decisionId: "d1",
 				selectedModel: "openai/gpt-5.4",
-				timestamp: 30,
-				turnCount: 1,
-				type: "route_outcome",
+				turnCount: 2,
+				completed: true,
 				userOverrideOccurred: false,
+				durationMs: 4_000,
 			},
 			{
-				completed: true,
-				decisionId: "d3",
-				durationMs: 2_000,
-				selectedModel: "google/gemini-2.5-flash",
-				timestamp: 40,
-				turnCount: 1,
 				type: "route_outcome",
+				timestamp: 30,
+				decisionId: "d2",
+				selectedModel: "openai/gpt-5.4",
+				turnCount: 1,
+				completed: true,
 				userOverrideOccurred: false,
+				durationMs: 6_000,
+			},
+			{
+				type: "route_outcome",
+				timestamp: 40,
+				decisionId: "d3",
+				selectedModel: "google/gemini-2.5-flash",
+				turnCount: 1,
+				completed: true,
+				userOverrideOccurred: false,
+				durationMs: 2_000,
 			},
 		];
 
 		const stats = computeStats(events);
 		expect(stats.outcomes).toBe(3);
-		expect(stats.avgDurationMs).toBe(4000);
-		expect(stats.perModelLatencyMs["openai/gpt-5.4"]).toStrictEqual({ avgMs: 5_000, count: 2 });
-		expect(stats.perModelLatencyMs["google/gemini-2.5-flash"]).toStrictEqual({ avgMs: 2_000, count: 1 });
-		expect(formatStats(stats)).toStrictEqual(
+		expect(stats.avgDurationMs).toBe(4_000);
+		expect(stats.perModelLatencyMs["openai/gpt-5.4"]).toEqual({ count: 2, avgMs: 5_000 });
+		expect(stats.perModelLatencyMs["google/gemini-2.5-flash"]).toEqual({ count: 1, avgMs: 2_000 });
+		expect(formatStats(stats)).toEqual(
 			expect.arrayContaining([
 				"Outcomes: 3",
 				"Avg duration: 4000ms",
@@ -92,27 +93,27 @@ describe("adaptive routing telemetry", () => {
 			appendTelemetryEvent(
 				{ mode: "local", privacy: "minimal" },
 				{
-					completed: true,
-					decisionId,
-					durationMs: 3_500,
-					selectedModel: "openai/gpt-5.4",
-					timestamp: 100,
-					turnCount: 1,
 					type: "route_outcome",
+					timestamp: 100,
+					decisionId,
+					selectedModel: "openai/gpt-5.4",
+					turnCount: 1,
+					completed: true,
 					userOverrideOccurred: false,
+					durationMs: 3_500,
 				},
 			);
 
 			const events = readTelemetryEvents();
 			expect(events).toHaveLength(1);
-			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf8")) as {
+			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf-8")) as {
 				avgDurationMs?: number;
 				perModelLatencyMs?: Record<string, { avgMs: number }>;
 			};
-			expect(aggregates.avgDurationMs).toBe(3500);
-			expect(aggregates.perModelLatencyMs?.["openai/gpt-5.4"]?.avgMs).toBe(3500);
+			expect(aggregates.avgDurationMs).toBe(3_500);
+			expect(aggregates.perModelLatencyMs?.["openai/gpt-5.4"]?.avgMs).toBe(3_500);
 		} finally {
-			rmSync(tempAgentDir, { force: true, recursive: true });
+			rmSync(tempAgentDir, { recursive: true, force: true });
 		}
 	});
 
@@ -125,21 +126,21 @@ describe("adaptive routing telemetry", () => {
 			appendTelemetryEvent(
 				{ mode: "local", privacy: "minimal" },
 				{
+					type: "route_override",
+					timestamp: 100,
 					decisionId: "d1",
 					from: { model: "openai/gpt-4", thinking: "high" },
-					reason: "manual",
-					timestamp: 100,
 					to: { model: "anthropic/claude-3", thinking: "high" },
-					type: "route_override",
+					reason: "manual",
 				},
 			);
 
-			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf8")) as {
+			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf-8")) as {
 				overrides?: number;
 			};
 			expect(aggregates.overrides).toBe(1);
 		} finally {
-			rmSync(tempAgentDir, { force: true, recursive: true });
+			rmSync(tempAgentDir, { recursive: true, force: true });
 		}
 	});
 
@@ -152,20 +153,20 @@ describe("adaptive routing telemetry", () => {
 			appendTelemetryEvent(
 				{ mode: "local", privacy: "minimal" },
 				{
-					actual: { model: "openai/gpt-4", thinking: "high" },
+					type: "route_shadow_disagreement",
+					timestamp: 100,
 					decisionId: "d1",
 					suggested: { model: "anthropic/claude-3", thinking: "high" },
-					timestamp: 100,
-					type: "route_shadow_disagreement",
+					actual: { model: "openai/gpt-4", thinking: "high" },
 				},
 			);
 
-			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf8")) as {
+			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf-8")) as {
 				shadowDisagreements?: number;
 			};
 			expect(aggregates.shadowDisagreements).toBe(1);
 		} finally {
-			rmSync(tempAgentDir, { force: true, recursive: true });
+			rmSync(tempAgentDir, { recursive: true, force: true });
 		}
 	});
 
@@ -178,19 +179,19 @@ describe("adaptive routing telemetry", () => {
 			appendTelemetryEvent(
 				{ mode: "local", privacy: "minimal" },
 				{
-					category: "good",
-					decisionId: "d1",
-					timestamp: 100,
 					type: "route_feedback",
+					timestamp: 100,
+					decisionId: "d1",
+					category: "good",
 				},
 			);
 
-			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf8")) as {
+			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf-8")) as {
 				feedback?: Record<string, number>;
 			};
 			expect(aggregates.feedback?.["good"]).toBe(1);
 		} finally {
-			rmSync(tempAgentDir, { force: true, recursive: true });
+			rmSync(tempAgentDir, { recursive: true, force: true });
 		}
 	});
 });

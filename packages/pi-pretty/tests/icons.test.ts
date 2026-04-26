@@ -1,6 +1,7 @@
-import { areIconsEnabled, enableIcons, getDirectoryIcon, getFileIcon } from "../src/icons.js";
+import { describe, it, expect } from "vitest";
+import { getFileIcon, getDirectoryIcon, enableIcons, areIconsEnabled } from "../src/icons.js";
 
-describe(getFileIcon, () => {
+describe("getFileIcon", () => {
 	it("returns TypeScript icon", () => {
 		expect(getFileIcon("index.ts")).toContain("󰛦");
 	});
@@ -20,7 +21,7 @@ describe(getFileIcon, () => {
 	});
 });
 
-describe(getDirectoryIcon, () => {
+describe("getDirectoryIcon", () => {
 	it("returns directory icon", () => {
 		expect(getDirectoryIcon()).toContain("󰉋");
 	});
@@ -32,8 +33,8 @@ describe(getDirectoryIcon, () => {
 	});
 });
 
-describe(areIconsEnabled, () => {
+describe("areIconsEnabled", () => {
 	it("defaults to true", () => {
-		expect(areIconsEnabled()).toBeTruthy();
+		expect(areIconsEnabled()).toBe(true);
 	});
 });

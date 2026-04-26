@@ -1,6 +1,7 @@
+import { describe, expect, it } from "vitest";
 import { categorize } from "./welcome.js";
 
-describe(categorize, () => {
+describe("categorize", () => {
 	it("groups by directory", () => {
 		const result = categorize(["ext/a.ts", "ext/b.ts", "prompts/c.md"]);
 		expect(result).toContain("ext (2)");

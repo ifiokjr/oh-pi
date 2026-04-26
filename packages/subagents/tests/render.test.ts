@@ -1,15 +1,17 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 const renderMocks = vi.hoisted(() => ({
-	getDisplayItems: vi.fn(() => []),
 	getFinalOutput: vi.fn((messages: any[]) => messages.at(-1)?.content?.[0]?.text ?? ""),
-	getLastActivity: vi.fn(() => "recent activity"),
+	getDisplayItems: vi.fn(() => []),
 	getOutputTail: vi.fn(() => ["line a", "line b"]),
+	getLastActivity: vi.fn(() => "recent activity"),
 }));
 
-vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
+vi.mock("@mariozechner/pi-coding-agent", () => ({
 	getMarkdownTheme: () => ({ theme: "markdown" }),
 }));
 
-vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), () => ({
+vi.mock("@mariozechner/pi-tui", () => ({
 	Container: class {
 		children: unknown[] = [];
 		addChild(child: unknown) {
@@ -35,7 +37,7 @@ vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), (
 		) {}
 	},
 	truncateToWidth: (text: string, width: number) => (text.length <= width ? text : `${text.slice(0, width - 1)}…`),
-	visibleWidth: (text: string) => text.replaceAll("\u001B[0m", "").length,
+	visibleWidth: (text: string) => text.replaceAll("\u001b[0m", "").length,
 	wrapTextWithAnsi: (text: string, width: number) => {
 		if (text.length <= width) {
 			return [text];
@@ -48,19 +50,19 @@ vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), (
 	},
 }));
 
-vi.mock<typeof import("../formatters.js")>(import("../formatters.js"), () => ({
-	formatDuration: (value: number) => `${value}ms`,
+vi.mock("../formatters.js", () => ({
 	formatTokens: (value: number) => `${value}t`,
-	formatToolCall: (name: string) => `tool:${name}`,
 	formatUsage: (_usage: unknown, model?: string) => `usage:${model ?? "none"}`,
+	formatDuration: (value: number) => `${value}ms`,
+	formatToolCall: (name: string) => `tool:${name}`,
 	shortenPath: (value: string) => value.replace(process.env.HOME ?? "", "~"),
 }));
 
-vi.mock<typeof import("../utils.js")>(import("../utils.js"), () => ({
-	getDisplayItems: renderMocks.getDisplayItems,
+vi.mock("../utils.js", () => ({
 	getFinalOutput: renderMocks.getFinalOutput,
-	getLastActivity: renderMocks.getLastActivity,
+	getDisplayItems: renderMocks.getDisplayItems,
 	getOutputTail: renderMocks.getOutputTail,
+	getLastActivity: renderMocks.getLastActivity,
 }));
 
 import { renderSubagentResult, renderWidget } from "../render.js";
@@ -68,15 +70,15 @@ import { WIDGET_KEY } from "../types.js";
 
 function createTheme() {
 	return {
-		accent: (text: string) => text,
-		bold: (text: string) => `**${text}**`,
-		dim: (text: string) => text,
-		error: (text: string) => text,
 		fg: (_color: string, text: string) => text,
-		muted: (text: string) => text,
-		success: (text: string) => text,
+		bold: (text: string) => `**${text}**`,
+		accent: (text: string) => text,
 		toolTitle: (text: string) => text,
+		success: (text: string) => text,
+		error: (text: string) => text,
 		warning: (text: string) => text,
+		dim: (text: string) => text,
+		muted: (text: string) => text,
 	};
 }
 
@@ -86,13 +88,13 @@ function createCtx() {
 		widgets.set(key, value);
 	});
 	return {
-		_setWidget: setWidget,
-		_widgets: widgets,
 		hasUI: true,
 		ui: {
-			setWidget,
 			theme: createTheme(),
+			setWidget,
 		},
+		_widgets: widgets,
+		_setWidget: setWidget,
 	};
 }
 
@@ -111,12 +113,12 @@ describe("subagent async widget rendering", () => {
 			ctx as never,
 			[
 				{
-					asyncDir: "/tmp/run",
 					asyncId: "abc123",
-					mode: "single",
-					startedAt: Date.now() - 1000,
+					asyncDir: "/tmp/run",
 					status: "running",
+					mode: "single",
 					updatedAt: Date.now(),
+					startedAt: Date.now() - 1000,
 				},
 			],
 			{},
@@ -130,27 +132,27 @@ describe("subagent async widget rendering", () => {
 	it("renders running jobs with tail output and avoids redundant completed rerenders", () => {
 		const ctx = createCtx();
 		const completedJob = {
-			agents: ["scout", "planner"],
-			asyncDir: "/tmp/done",
 			asyncId: "done123",
-			mode: "chain",
-			startedAt: Date.now() - 2000,
+			asyncDir: "/tmp/done",
 			status: "complete",
-			totalTokens: { input: 10, output: 5, total: 15 },
+			mode: "chain",
+			agents: ["scout", "planner"],
 			updatedAt: Date.now(),
+			startedAt: Date.now() - 2000,
+			totalTokens: { input: 10, output: 5, total: 15 },
 		};
 
 		renderWidget(ctx as never, [
 			{
-				agents: ["scout"],
-				asyncDir: "/tmp/run",
 				asyncId: "abc123",
-				mode: "single",
-				outputFile: "/tmp/out.log",
-				startedAt: Date.now() - 1000,
+				asyncDir: "/tmp/run",
 				status: "running",
-				totalTokens: { input: 10, output: 5, total: 15 },
+				mode: "single",
+				agents: ["scout"],
 				updatedAt: Date.now(),
+				startedAt: Date.now() - 1000,
+				outputFile: "/tmp/out.log",
+				totalTokens: { input: 10, output: 5, total: 15 },
 			},
 		]);
 		const lines = ctx._widgets.get(WIDGET_KEY) as string[];
@@ -162,7 +164,7 @@ describe("subagent async widget rendering", () => {
 		const callsBefore = ctx._setWidget.mock.calls.length;
 		renderWidget(ctx as never, [completedJob]);
 		renderWidget(ctx as never, [completedJob]);
-		expect(ctx._setWidget.mock.calls).toHaveLength(callsBefore + 1);
+		expect(ctx._setWidget.mock.calls.length).toBe(callsBefore + 1);
 	});
 
 	it("wraps running debug tail lines while keeping the status header truncated", () => {
@@ -174,15 +176,15 @@ describe("subagent async widget rendering", () => {
 			const ctx = createCtx();
 			renderWidget(ctx as never, [
 				{
-					agents: ["very-long-agent-name"],
-					asyncDir: "/tmp/run",
 					asyncId: "abcdef123456",
-					mode: "single",
-					outputFile: "/tmp/out.log",
-					startedAt: Date.now() - 1000,
+					asyncDir: "/tmp/run",
 					status: "running",
-					totalTokens: { input: 10, output: 5, total: 15 },
+					mode: "single",
+					agents: ["very-long-agent-name"],
 					updatedAt: Date.now(),
+					startedAt: Date.now() - 1000,
+					outputFile: "/tmp/out.log",
+					totalTokens: { input: 10, output: 5, total: 15 },
 				},
 			]);
 
@@ -198,10 +200,10 @@ describe("subagent async widget rendering", () => {
 	});
 });
 
-describe(renderSubagentResult, () => {
+describe("renderSubagentResult", () => {
 	it("renders plain text when no detailed results are available", () => {
 		const widget: any = renderSubagentResult(
-			{ content: [{ text: "Fallback output", type: "text" }] } as never,
+			{ content: [{ type: "text", text: "Fallback output" }] } as never,
 			{ expanded: false },
 			createTheme() as never,
 		);
@@ -210,31 +212,31 @@ describe(renderSubagentResult, () => {
 	});
 
 	it("renders single-result details including tools, markdown, skills, and artifacts", () => {
-		renderMocks.getDisplayItems.mockReturnValue([{ args: { command: "ls" }, name: "bash", type: "tool" }]);
+		renderMocks.getDisplayItems.mockReturnValue([{ type: "tool", name: "bash", args: { command: "ls" } }]);
 		const widget: any = renderSubagentResult(
 			{
-				content: [{ text: "ok", type: "text" }],
+				content: [{ type: "text", text: "ok" }],
 				details: {
 					mode: "single",
 					results: [
 						{
 							agent: "scout",
-							artifactPaths: {
-								inputPath: "/tmp/artifacts/input.md",
-								jsonlPath: "/tmp/artifacts/run.jsonl",
-								metadataPath: "/tmp/artifacts/meta.json",
-								outputPath: "/tmp/artifacts/output.md",
-							},
+							task: "Inspect the repo carefully",
 							exitCode: 0,
 							messages: [{ role: "assistant", content: [{ type: "text", text: "Final answer" }] }],
+							usage: { input: 10, output: 5, cacheRead: 1, cacheWrite: 0, cost: 0.2, turns: 1 },
 							model: "anthropic/claude-sonnet-4",
-							progressSummary: { durationMs: 99, tokens: 15, toolCount: 2 },
-							sessionFile: "/tmp/session/run.jsonl",
 							skills: ["git"],
 							skillsWarning: "Missing: context7",
-							task: "Inspect the repo carefully",
+							sessionFile: "/tmp/session/run.jsonl",
+							artifactPaths: {
+								inputPath: "/tmp/artifacts/input.md",
+								outputPath: "/tmp/artifacts/output.md",
+								metadataPath: "/tmp/artifacts/meta.json",
+								jsonlPath: "/tmp/artifacts/run.jsonl",
+							},
 							truncation: { text: "Trimmed output", truncated: true },
-							usage: { cacheRead: 1, cacheWrite: 0, cost: 0.2, input: 10, output: 5, turns: 1 },
+							progressSummary: { toolCount: 2, tokens: 15, durationMs: 99 },
 						},
 					],
 				},
@@ -255,43 +257,19 @@ describe(renderSubagentResult, () => {
 		expect(childTexts).toContain("usage:anthropic/claude-sonnet-4");
 		expect(childTexts).toContain("Session: /tmp/session/run.jsonl");
 		expect(childTexts).toContain("Artifacts: /tmp/artifacts/output.md");
-		expect(widget.children.some((child: any) => child.text === "Trimmed output")).toBeTruthy();
-		expect(widget.children.some((child: any) => child.constructor.name === "Markdown")).toBeTruthy();
+		expect(widget.children.some((child: any) => child.text === "Trimmed output")).toBe(true);
+		expect(widget.children.some((child: any) => child.constructor.name === "Markdown")).toBe(true);
 	});
 
 	it("renders chain results with chain visualization, pending steps, running details, and artifact dirs", () => {
 		const widget: any = renderSubagentResult(
 			{
-				content: [{ text: "chain", type: "text" }],
+				content: [{ type: "text", text: "chain" }],
 				details: {
-					artifacts: { dir: "/tmp/artifacts", files: [] },
-					chainAgents: ["scout", "planner", "reviewer"],
-					currentStepIndex: 1,
 					mode: "chain",
-					progress: [
-						{
-							index: 0,
-							agent: "scout",
-							status: "completed",
-							task: "Collect facts",
-							recentTools: [],
-							recentOutput: [],
-							toolCount: 1,
-							tokens: 5,
-							durationMs: 20,
-						},
-						{
-							index: 1,
-							agent: "planner",
-							status: "running",
-							task: "Draft plan",
-							recentTools: [],
-							recentOutput: [],
-							toolCount: 2,
-							tokens: 10,
-							durationMs: 40,
-						},
-					],
+					chainAgents: ["scout", "planner", "reviewer"],
+					totalSteps: 3,
+					currentStepIndex: 1,
 					results: [
 						{
 							agent: "scout",
@@ -336,7 +314,31 @@ describe(renderSubagentResult, () => {
 							},
 						},
 					],
-					totalSteps: 3,
+					progress: [
+						{
+							index: 0,
+							agent: "scout",
+							status: "completed",
+							task: "Collect facts",
+							recentTools: [],
+							recentOutput: [],
+							toolCount: 1,
+							tokens: 5,
+							durationMs: 20,
+						},
+						{
+							index: 1,
+							agent: "planner",
+							status: "running",
+							task: "Draft plan",
+							recentTools: [],
+							recentOutput: [],
+							toolCount: 2,
+							tokens: 10,
+							durationMs: 40,
+						},
+					],
+					artifacts: { dir: "/tmp/artifacts", files: [] },
 				},
 			} as never,
 			{ expanded: true },

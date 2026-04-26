@@ -10,6 +10,7 @@ export default defineConfig({
 		},
 	},
 	test: {
+		globals: true,
 		coverage: {
 			all: true,
 			include: ["index.ts", "src/**/*.ts"],

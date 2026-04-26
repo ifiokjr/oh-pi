@@ -1,11 +1,12 @@
-import { PtyLiveWidgetController, buildWidgetLines, formatElapsedMmSs, widgetInternals } from "../src/widget.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { buildWidgetLines, formatElapsedMmSs, PtyLiveWidgetController, widgetInternals } from "../src/widget.js";
 
 const theme = {
-	bold: (text: string) => text,
 	fg: (_color: string, text: string) => text,
+	bold: (text: string) => text,
 };
 
-describe("pTY live widget", () => {
+describe("PTY live widget", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-04-21T12:00:00Z"));
@@ -26,25 +27,25 @@ describe("pTY live widget", () => {
 		const lines = buildWidgetLines(
 			theme,
 			{
-				ansiLines: ["line-1", "line-2", "line-3"],
 				command: "pnpm test --watch",
-				exitCode: null,
 				startedAt: Date.now() - 7_000,
+				ansiLines: ["line-1", "line-2", "line-3"],
 				status: "running",
+				exitCode: null,
 			},
 			{ maxLines: 2 },
 			Date.now(),
 		);
 		expect(lines[0]).toContain("🖥 Bash PTY");
 		expect(lines[0]).toContain("00:07");
-		expect(lines.slice(-2)).toStrictEqual(["line-2", "line-3"]);
+		expect(lines.slice(-2)).toEqual(["line-2", "line-3"]);
 		expect(
 			buildWidgetLines(theme, {
-				ansiLines: [],
 				command: "echo ready",
-				exitCode: 0,
 				startedAt: Date.now(),
+				ansiLines: [],
 				status: "completed",
+				exitCode: 0,
 			}),
 		).toContain("(waiting for output)");
 	});
@@ -60,21 +61,21 @@ describe("pTY live widget", () => {
 		);
 
 		controller.update({
-			ansiLines: ["booting"],
 			command: "pnpm dev",
-			exitCode: null,
 			startedAt: Date.now() - 2_000,
+			ansiLines: ["booting"],
 			status: "running",
+			exitCode: null,
 		});
 		controller.update({
-			ansiLines: ["booting", "ready"],
 			command: "pnpm dev",
-			exitCode: null,
 			startedAt: Date.now() - 2_000,
+			ansiLines: ["booting", "ready"],
 			status: "running",
+			exitCode: null,
 		});
 
-		expect(setWidget).toHaveBeenCalledOnce();
+		expect(setWidget).toHaveBeenCalledTimes(1);
 		const widgetFactory = setWidget.mock.calls[0][1] as (
 			tui: { requestRender: () => void },
 			themeArg: { fg: (color: string, text: string) => string; bold: (text: string) => string },
@@ -87,25 +88,25 @@ describe("pTY live widget", () => {
 		await vi.advanceTimersByTimeAsync(119);
 		expect(requestRender).not.toHaveBeenCalled();
 		await vi.advanceTimersByTimeAsync(1);
-		expect(requestRender).toHaveBeenCalledOnce();
+		expect(requestRender).toHaveBeenCalledTimes(1);
 
-		await vi.advanceTimersByTimeAsync(1000);
+		await vi.advanceTimersByTimeAsync(1_000);
 		expect(requestRender).toHaveBeenCalledTimes(2);
 
 		controller.update({
-			ansiLines: ["done"],
 			command: "pnpm dev",
-			exitCode: 0,
 			startedAt: Date.now() - 2_000,
+			ansiLines: ["done"],
 			status: "completed",
+			exitCode: 0,
 		});
 		await vi.advanceTimersByTimeAsync(120);
 		expect(requestRender).toHaveBeenCalledTimes(3);
-		await vi.advanceTimersByTimeAsync(1000);
+		await vi.advanceTimersByTimeAsync(1_000);
 		expect(requestRender).toHaveBeenCalledTimes(3);
 
 		controller.clear();
-		expect(setWidget).toHaveBeenLastCalledWith("pty-widget");
+		expect(setWidget).toHaveBeenLastCalledWith("pty-widget", undefined);
 		widget.dispose();
 
 		controller.dispose();
@@ -114,11 +115,11 @@ describe("pTY live widget", () => {
 	it("becomes a no-op when the context has no UI", () => {
 		const controller = new PtyLiveWidgetController({ hasUI: false }, { key: "no-ui" });
 		controller.update({
-			ansiLines: ["hi"],
 			command: "echo hi",
-			exitCode: null,
 			startedAt: Date.now(),
+			ansiLines: ["hi"],
 			status: "running",
+			exitCode: null,
 		});
 		controller.clear();
 		controller.dispose();
@@ -126,13 +127,13 @@ describe("pTY live widget", () => {
 		const setWidget = vi.fn();
 		const controllerWithDefaultKey = new PtyLiveWidgetController({ hasUI: true, ui: { setWidget } });
 		controllerWithDefaultKey.update({
-			ansiLines: ["hi"],
 			command: "echo hi",
-			exitCode: 0,
 			startedAt: Date.now(),
+			ansiLines: ["hi"],
 			status: "completed",
+			exitCode: 0,
 		});
 		controllerWithDefaultKey.clear();
-		expect(setWidget).toHaveBeenCalledWith();
+		expect(setWidget).toHaveBeenCalled();
 	});
 });

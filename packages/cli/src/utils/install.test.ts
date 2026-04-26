@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
+import { afterEach, describe, expect, it } from "vitest";
 import { cleanupManagedConfig } from "./install.js";
 
 const tempDirs: string[] = [];
@@ -14,11 +14,11 @@ function makeTempDir(): string {
 
 afterEach(() => {
 	for (const dir of tempDirs.splice(0)) {
-		rmSync(dir, { force: true, recursive: true });
+		rmSync(dir, { recursive: true, force: true });
 	}
 });
 
-describe(cleanupManagedConfig, () => {
+describe("cleanupManagedConfig", () => {
 	it("removes managed files and directories while preserving unmanaged data", () => {
 		const dir = makeTempDir();
 
@@ -43,17 +43,17 @@ describe(cleanupManagedConfig, () => {
 
 		cleanupManagedConfig(dir);
 
-		expect(existsSync(join(dir, "auth.json"))).toBeFalsy();
-		expect(existsSync(join(dir, "settings.json"))).toBeFalsy();
-		expect(existsSync(join(dir, "models.json"))).toBeFalsy();
-		expect(existsSync(join(dir, "keybindings.json"))).toBeFalsy();
-		expect(existsSync(join(dir, "AGENTS.md"))).toBeFalsy();
-		expect(existsSync(join(dir, "extensions"))).toBeFalsy();
-		expect(existsSync(join(dir, "prompts"))).toBeFalsy();
-		expect(existsSync(join(dir, "skills"))).toBeFalsy();
-		expect(existsSync(join(dir, "themes"))).toBeFalsy();
+		expect(existsSync(join(dir, "auth.json"))).toBe(false);
+		expect(existsSync(join(dir, "settings.json"))).toBe(false);
+		expect(existsSync(join(dir, "models.json"))).toBe(false);
+		expect(existsSync(join(dir, "keybindings.json"))).toBe(false);
+		expect(existsSync(join(dir, "AGENTS.md"))).toBe(false);
+		expect(existsSync(join(dir, "extensions"))).toBe(false);
+		expect(existsSync(join(dir, "prompts"))).toBe(false);
+		expect(existsSync(join(dir, "skills"))).toBe(false);
+		expect(existsSync(join(dir, "themes"))).toBe(false);
 
-		expect(existsSync(join(dir, "sessions", "keep.json"))).toBeTruthy();
-		expect(existsSync(join(dir, "pi-crash.log"))).toBeTruthy();
+		expect(existsSync(join(dir, "sessions", "keep.json"))).toBe(true);
+		expect(existsSync(join(dir, "pi-crash.log"))).toBe(true);
 	});
 });

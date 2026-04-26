@@ -1,4 +1,6 @@
-vi.mock<typeof import("../pi-tui-loader.js")>(import("../pi-tui-loader.js"), () => {
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../pi-tui-loader.js", () => {
 	class FakeEditor {
 		disableSubmit?: boolean;
 		onChange?: () => void;
@@ -32,13 +34,13 @@ vi.mock<typeof import("../pi-tui-loader.js")>(import("../pi-tui-loader.js"), () 
 		requirePiTuiModule: () => ({
 			Editor: FakeEditor,
 			Key: {
-				ctrl: (key: string) => `<ctrl-${key}>`,
-				down: "<down>",
 				enter: "<enter>",
-				escape: "<escape>",
-				shift: (key: string) => `<shift-${key}>`,
 				tab: "<tab>",
+				escape: "<escape>",
 				up: "<up>",
+				down: "<down>",
+				ctrl: (key: string) => `<ctrl-${key}>`,
+				shift: (key: string) => `<shift-${key}>`,
 			},
 			matchesKey: (input: string, key: string) => input === key,
 			truncateToWidth: (text: string, width: number) => (text.length <= width ? text : text.slice(0, width)),
@@ -82,11 +84,11 @@ describe("qna helpers", () => {
 	it("normalizes responses, clones state, and derives answers", () => {
 		const questions = [
 			{
+				question: "Choose a runtime",
 				options: [
 					{ label: "Node", description: "Default" },
 					{ label: "Bun", description: "Fast" },
 				],
-				question: "Choose a runtime",
 			},
 			{ question: "Any rollout notes?" },
 		] as const;
@@ -94,67 +96,67 @@ describe("qna helpers", () => {
 		const normalized = normalizeResponses(
 			questions,
 			[
-				{ committed: true, selectedOptionIndex: 99, selectionTouched: true },
-				{ committed: true, customText: "Ship behind a flag" },
+				{ selectedOptionIndex: 99, selectionTouched: true, committed: true },
+				{ customText: "Ship behind a flag", committed: true },
 			],
 			undefined,
 			true,
 		);
 
-		expect(normalized[0]).toStrictEqual({
-			committed: true,
-			customText: "",
+		expect(normalized[0]).toEqual({
 			selectedOptionIndex: 2,
+			customText: "",
 			selectionTouched: true,
+			committed: true,
 		});
-		expect(cloneResponses(normalized)).toStrictEqual(normalized);
-		expect(deriveAnswersFromResponses(questions, normalized)).toStrictEqual(["", "Ship behind a flag"]);
-		expect(getQuestionOptions({ question: "Freeform only" })).toStrictEqual([]);
-		expect(hasResponseContent(questions[1], normalized[1])).toBeTruthy();
+		expect(cloneResponses(normalized)).toEqual(normalized);
+		expect(deriveAnswersFromResponses(questions, normalized)).toEqual(["", "Ship behind a flag"]);
+		expect(getQuestionOptions({ question: "Freeform only" })).toEqual([]);
+		expect(hasResponseContent(questions[1], normalized[1])).toBe(true);
 	});
 
 	it("formats option answers, custom answers, and inferred fallback selections", () => {
 		const question = {
+			question: "Choose a runtime",
 			options: [
 				{ label: "Node", description: "Default" },
 				{ label: "Bun", description: "Fast" },
 			],
-			question: "Choose a runtime",
 		};
 		expect(
 			formatResponseAnswer(question, {
-				committed: true,
-				customText: "",
 				selectedOptionIndex: 1,
+				customText: "",
 				selectionTouched: true,
+				committed: true,
 			}),
 		).toBe("Bun");
 		expect(normalizeResponseForQuestion(question, undefined, "Deno", true)).toMatchObject({
-			committed: true,
-			customText: "Deno",
 			selectedOptionIndex: 2,
+			customText: "Deno",
+			committed: true,
 		});
 		expect(normalizeResponseForQuestion({ question: "Notes" }, undefined, "Roll out slowly", true)).toMatchObject({
-			committed: true,
-			customText: "Roll out slowly",
 			selectedOptionIndex: 0,
+			customText: "Roll out slowly",
+			committed: true,
 		});
 	});
 });
 
-describe(QnATuiComponent, () => {
+describe("QnATuiComponent", () => {
 	it("renders the current question and reuses cached output for the same width", () => {
 		const done = vi.fn();
 		const component = new QnATuiComponent(
 			[
 				{
-					context: "Pick the default environment for production.",
 					header: "Deployment",
+					question: "Choose a runtime",
+					context: "Pick the default environment for production.",
 					options: [
 						{ label: "Node", description: "Use Node.js" },
 						{ label: "Bun", description: "Use Bun" },
 					],
-					question: "Choose a runtime",
 				},
 			],
 			createTui(),
@@ -181,20 +183,20 @@ describe(QnATuiComponent, () => {
 		const component = new QnATuiComponent(
 			[
 				{
+					question: "Choose a runtime",
 					options: [
 						{ label: "Node", description: "Use Node.js" },
 						{ label: "Bun", description: "Use Bun" },
 					],
-					question: "Choose a runtime",
 				},
 				{ question: "Any rollout notes?" },
 			],
 			tui,
 			done,
 			{
+				templates: [{ label: "Brief", template: "{{index}}/{{total}} {{question}} => {{answer}}" }],
 				onResponsesChange,
 				questionSummaryLabel: (_question, index) => `Prompt ${index + 1}`,
-				templates: [{ label: "Brief", template: "{{index}}/{{total}} {{question}} => {{answer}}" }],
 			},
 		);
 
@@ -221,12 +223,12 @@ describe(QnATuiComponent, () => {
 
 		component.handleInput("<enter>");
 		const result = done.mock.calls[0]?.[0];
-		expect(result.answers).toStrictEqual(["Bun", "2/2 Any rollout notes? => !\nR"]);
+		expect(result.answers).toEqual(["Bun", "2/2 Any rollout notes? => !\nR"]);
 		expect(result.text).toContain("Q: Choose a runtime");
 		expect(result.text).toContain("A: Bun");
 		expect(result.text).toContain("Q: Any rollout notes?");
 		expect(result.responses[1]).toMatchObject({ committed: true, selectionTouched: true });
-		expect(tui.requestRender).toHaveBeenCalledWith();
+		expect(tui.requestRender).toHaveBeenCalled();
 	});
 
 	it("switches to custom input for printable text and can navigate back from an empty other answer", () => {
@@ -234,11 +236,11 @@ describe(QnATuiComponent, () => {
 		const component = new QnATuiComponent(
 			[
 				{
+					question: "Choose a runtime",
 					options: [
 						{ label: "Node", description: "Use Node.js" },
 						{ label: "Bun", description: "Use Bun" },
 					],
-					question: "Choose a runtime",
 				},
 			],
 			createTui(),
@@ -248,16 +250,16 @@ describe(QnATuiComponent, () => {
 
 		component.handleInput("x");
 		expect(onResponsesChange.mock.calls.at(-1)?.[0][0]).toMatchObject({
-			customText: "x",
 			selectedOptionIndex: 2,
+			customText: "x",
 			selectionTouched: true,
 		});
 
 		component.handleInput("<backspace>");
 		component.handleInput("<up>");
 		expect(onResponsesChange.mock.calls.at(-1)?.[0][0]).toMatchObject({
-			customText: "",
 			selectedOptionIndex: 1,
+			customText: "",
 			selectionTouched: true,
 		});
 
@@ -270,16 +272,16 @@ describe(QnATuiComponent, () => {
 		const component = new QnATuiComponent(
 			[
 				{
+					question: "Which strategy?",
 					options: [
 						{ label: "Kani", description: "Formal verification" },
 						{ label: "Proptest", description: "Finds more bugs per hour", recommended: true },
 					],
-					question: "Which strategy?",
 				},
 			],
 			createTui(),
 			done,
-			{ initialResponses: [{ committed: false, selectedOptionIndex: 0, selectionTouched: true }] },
+			{ initialResponses: [{ selectedOptionIndex: 0, selectionTouched: true, committed: false }] },
 		);
 
 		const rendered = component.render(80).join("\n");
@@ -294,8 +296,8 @@ describe(QnATuiComponent, () => {
 		const component = new QnATuiComponent(
 			[
 				{
-					options: [{ label: "Start with Kani", description: "Recommended approach", recommended: true }],
 					question: "Which tool?",
+					options: [{ label: "Start with Kani", description: "Recommended approach", recommended: true }],
 				},
 			],
 			createTui(),
@@ -312,8 +314,8 @@ describe(QnATuiComponent, () => {
 		const component = new QnATuiComponent(
 			[
 				{
-					fullContext: "What is the most expensive bug?\n\na. Wrong version bump\nb. Missing package in release",
 					question: "Most expensive bug?",
+					fullContext: "What is the most expensive bug?\n\na. Wrong version bump\nb. Missing package in release",
 				},
 			],
 			createTui(),
@@ -342,8 +344,8 @@ describe(QnATuiComponent, () => {
 		const component = new QnATuiComponent(
 			[
 				{
-					fullContext: "What is the most expensive bug?\\n\\na. Wrong version bump\\nb. Missing package",
 					question: "Most expensive bug?",
+					fullContext: "What is the most expensive bug?\\n\\na. Wrong version bump\\nb. Missing package",
 				},
 			],
 			createTui(),

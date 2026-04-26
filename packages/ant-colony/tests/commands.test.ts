@@ -1,96 +1,91 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import antColonyExtension from "../extensions/ant-colony/index.js";
 
 const { runColonyMock, resumeColonyMock } = vi.hoisted(() => {
 	const runColonyMock = vi.fn(async (opts: any) => ({
-		ants: [],
-		concurrency: {
-			current: 1,
-			history: [],
-			max: 1,
-			min: 1,
-			optimal: 1,
-		},
-		createdAt: Date.now(),
-		finishedAt: Date.now(),
-		goal: String(opts.goal ?? "goal"),
 		id: `stable-${String(opts.goal ?? "goal")
 			.toLowerCase()
 			.replace(/\s+/g, "-")}`,
-		maxCost: null,
-		metrics: {
-			antsSpawned: 0,
-			startTime: Date.now(),
-			tasksDone: 0,
-			tasksFailed: 0,
-			tasksTotal: 0,
-			throughputHistory: [],
-			totalCost: 0,
-			totalTokens: 0,
-		},
-		modelOverrides: {},
-		pheromones: [],
+		goal: String(opts.goal ?? "goal"),
 		status: "done",
 		tasks: [],
+		ants: [],
+		pheromones: [],
+		concurrency: {
+			current: 1,
+			min: 1,
+			max: 1,
+			optimal: 1,
+			history: [],
+		},
+		metrics: {
+			tasksTotal: 0,
+			tasksDone: 0,
+			tasksFailed: 0,
+			antsSpawned: 0,
+			totalCost: 0,
+			totalTokens: 0,
+			startTime: Date.now(),
+			throughputHistory: [],
+		},
+		modelOverrides: {},
+		maxCost: null,
 		workspace: {
-			baseBranch: null,
-			branch: null,
-			executionCwd: opts.cwd,
 			mode: "shared",
-			note: null,
 			originCwd: opts.cwd,
+			executionCwd: opts.cwd,
 			repoRoot: null,
 			worktreeRoot: null,
+			branch: null,
+			baseBranch: null,
+			note: null,
 		},
+		createdAt: Date.now(),
+		finishedAt: Date.now(),
 	}));
 
 	const resumeColonyMock = vi.fn(runColonyMock);
-	return { resumeColonyMock, runColonyMock };
+	return { runColonyMock, resumeColonyMock };
 });
 
-vi.mock<typeof import("../extensions/ant-colony/queen.js")>(
-	import("../extensions/ant-colony/queen.js"),
-	async (importActual) => {
-		const actual = await importActual<typeof import("../extensions/ant-colony/queen.js")>();
-		return {
-			...actual,
-			resumeColony: resumeColonyMock,
-			runColony: runColonyMock,
-		};
-	},
-);
+vi.mock("../extensions/ant-colony/queen.js", async (importActual) => {
+	const actual = await importActual<typeof import("../extensions/ant-colony/queen.js")>();
+	return {
+		...actual,
+		runColony: runColonyMock,
+		resumeColony: resumeColonyMock,
+	};
+});
 
-vi.mock<typeof import("../extensions/ant-colony/worktree.js")>(
-	import("../extensions/ant-colony/worktree.js"),
-	async (importActual) => {
-		const actual = await importActual<typeof import("../extensions/ant-colony/worktree.js")>();
+vi.mock("../extensions/ant-colony/worktree.js", async (importActual) => {
+	const actual = await importActual<typeof import("../extensions/ant-colony/worktree.js")>();
 
-		const mkShared = (cwd: string) => ({
-			baseBranch: null,
-			branch: null,
-			executionCwd: cwd,
-			mode: "shared" as const,
-			note: null,
-			originCwd: cwd,
-			repoRoot: null,
-			worktreeRoot: null,
-		});
+	const mkShared = (cwd: string) => ({
+		mode: "shared" as const,
+		originCwd: cwd,
+		executionCwd: cwd,
+		repoRoot: null,
+		worktreeRoot: null,
+		branch: null,
+		baseBranch: null,
+		note: null,
+	});
 
-		return {
-			...actual,
-			cleanupIsolatedWorktree: () => null,
-			prepareColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
-			resumeColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
-		};
-	},
-);
+	return {
+		...actual,
+		prepareColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
+		resumeColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
+		cleanupIsolatedWorktree: () => null,
+	};
+});
 
-interface CommandSpec {
+type CommandSpec = {
 	description?: string;
 	getArgumentCompletions?: (prefix: string) => Array<{ value: string; label?: string }> | null;
 	handler?: (args: string, ctx: any) => Promise<void> | void;
-}
+};
 
-interface PiMock {
+type PiMock = {
 	commands: Map<string, CommandSpec>;
 	on: ReturnType<typeof vi.fn>;
 	events: {
@@ -103,18 +98,18 @@ interface PiMock {
 	registerShortcut: ReturnType<typeof vi.fn>;
 	registerTool: ReturnType<typeof vi.fn>;
 	sendMessage: ReturnType<typeof vi.fn>;
-}
+};
 
 function createPiMock(): PiMock {
 	const commands = new Map<string, CommandSpec>();
 	return {
 		commands,
-		events: {
-			emit: vi.fn(),
-			off: vi.fn(),
-			on: vi.fn(),
-		},
 		on: vi.fn(),
+		events: {
+			on: vi.fn(),
+			off: vi.fn(),
+			emit: vi.fn(),
+		},
 		registerCommand(name, spec) {
 			commands.set(name, spec);
 		},
@@ -127,9 +122,9 @@ function createPiMock(): PiMock {
 
 function createCtx(overrides: Partial<any> = {}): any {
 	return {
-		currentModel: "openai/gpt-5-mini",
 		cwd: process.cwd(),
-		model: { id: "gpt-5-mini", provider: "openai" },
+		model: { provider: "openai", id: "gpt-5-mini" },
+		currentModel: "openai/gpt-5-mini",
 		modelRegistry: {},
 		ui: { notify: vi.fn() },
 		...overrides,
@@ -158,8 +153,8 @@ describe("colony command argument completions", () => {
 	it("/colony-stop returns static `all` completion and prefix filtering when no colonies exist", () => {
 		const stop = pi.commands.get("colony-stop");
 		expect(stop?.getArgumentCompletions).toBeTypeOf("function");
-		expect(stop?.getArgumentCompletions?.("")).toStrictEqual([expect.objectContaining({ value: "all" })]);
-		expect(stop?.getArgumentCompletions?.("a")).toStrictEqual([expect.objectContaining({ value: "all" })]);
+		expect(stop?.getArgumentCompletions?.("")).toEqual([expect.objectContaining({ value: "all" })]);
+		expect(stop?.getArgumentCompletions?.("a")).toEqual([expect.objectContaining({ value: "all" })]);
 		expect(stop?.getArgumentCompletions?.("c")).toBeNull();
 	});
 
@@ -175,17 +170,17 @@ describe("colony command argument completions", () => {
 		const status = pi.commands.get("colony-status");
 		const stop = pi.commands.get("colony-stop");
 
-		expect(status?.getArgumentCompletions?.("c")).toStrictEqual([
+		expect(status?.getArgumentCompletions?.("c")).toEqual([
 			expect.objectContaining({ value: "c1" }),
 			expect.objectContaining({ value: "c2" }),
 		]);
-		expect(status?.getArgumentCompletions?.("c2")).toStrictEqual([expect.objectContaining({ value: "c2" })]);
+		expect(status?.getArgumentCompletions?.("c2")).toEqual([expect.objectContaining({ value: "c2" })]);
 
-		expect(stop?.getArgumentCompletions?.("c")).toStrictEqual([
+		expect(stop?.getArgumentCompletions?.("c")).toEqual([
 			expect.objectContaining({ value: "c1" }),
 			expect.objectContaining({ value: "c2" }),
 		]);
-		expect(stop?.getArgumentCompletions?.("all")).toStrictEqual([expect.objectContaining({ value: "all" })]);
+		expect(stop?.getArgumentCompletions?.("all")).toEqual([expect.objectContaining({ value: "all" })]);
 	});
 
 	it("/colony-resume has no argument completion callback", () => {

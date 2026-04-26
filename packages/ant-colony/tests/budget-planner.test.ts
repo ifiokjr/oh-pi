@@ -11,20 +11,20 @@
  * - Edge cases: no data, empty providers, infinite budget, zero remaining
  */
 
+import { describe, expect, it } from "vitest";
+
 import {
 	applyConcurrencyCap,
+	type BudgetPlan,
 	buildBudgetPromptSection,
 	buildBudgetSummary,
 	buildRoutingTelemetrySnapshot,
+	type CasteBudget,
 	classifySeverity,
 	getLowestRateLimitPct,
+	type ProviderRateLimits,
 	planBudget,
-} from "../extensions/ant-colony/budget-planner.js";
-import type {
-	BudgetPlan,
-	CasteBudget,
-	ProviderRateLimits,
-	UsageLimitsEvent,
+	type UsageLimitsEvent,
 } from "../extensions/ant-colony/budget-planner.js";
 import type { ColonyMetrics, ConcurrencyConfig } from "../extensions/ant-colony/types.js";
 
@@ -32,63 +32,63 @@ import type { ColonyMetrics, ConcurrencyConfig } from "../extensions/ant-colony/
 
 function makeProvider(
 	name: string,
-	windows: { label: string; percentLeft: number; resetDescription?: string | null }[],
+	windows: Array<{ label: string; percentLeft: number; resetDescription?: string | null }>,
 	opts?: { error?: string; credits?: number },
 ): ProviderRateLimits {
 	return {
-		credits: opts?.credits ?? null,
-		error: opts?.error ?? null,
-		probedAt: Date.now(),
 		provider: name,
 		windows: windows.map((w) => ({
 			label: w.label,
 			percentLeft: w.percentLeft,
 			resetDescription: w.resetDescription ?? null,
 		})),
+		credits: opts?.credits ?? null,
+		probedAt: Date.now(),
+		error: opts?.error ?? null,
 	};
 }
 
 function makeMetrics(overrides: Partial<ColonyMetrics> = {}): ColonyMetrics {
 	return {
-		antsSpawned: overrides.antsSpawned ?? 5,
-		routingTelemetry: overrides.routingTelemetry ?? [],
-		startTime: overrides.startTime ?? Date.now() - 60000,
+		tasksTotal: overrides.tasksTotal ?? 10,
 		tasksDone: overrides.tasksDone ?? 3,
 		tasksFailed: overrides.tasksFailed ?? 0,
-		tasksTotal: overrides.tasksTotal ?? 10,
-		throughputHistory: overrides.throughputHistory ?? [],
+		antsSpawned: overrides.antsSpawned ?? 5,
 		totalCost: overrides.totalCost ?? 0.5,
 		totalTokens: overrides.totalTokens ?? 15000,
+		startTime: overrides.startTime ?? Date.now() - 60000,
+		throughputHistory: overrides.throughputHistory ?? [],
+		routingTelemetry: overrides.routingTelemetry ?? [],
 	};
 }
 
 function makeConcurrency(overrides: Partial<ConcurrencyConfig> = {}): ConcurrencyConfig {
 	return {
 		current: overrides.current ?? 3,
-		history: overrides.history ?? [],
-		max: overrides.max ?? 6,
 		min: overrides.min ?? 1,
+		max: overrides.max ?? 6,
 		optimal: overrides.optimal ?? 3,
+		history: overrides.history ?? [],
 	};
 }
 
 function makeUsageLimits(providers: Record<string, ProviderRateLimits>, sessionCost = 0.5): UsageLimitsEvent {
 	return {
-		perModel: {},
 		providers,
 		sessionCost,
+		perModel: {},
 	};
 }
 
 // ─── getLowestRateLimitPct ───────────────────────────────────────────────────
 
-describe(getLowestRateLimitPct, () => {
+describe("getLowestRateLimitPct", () => {
 	it("returns 100 when providers is null", () => {
 		expect(getLowestRateLimitPct(null)).toBe(100);
 	});
 
 	it("returns 100 when providers is undefined", () => {
-		expect(getLowestRateLimitPct()).toBe(100);
+		expect(getLowestRateLimitPct(undefined)).toBe(100);
 	});
 
 	it("returns 100 when providers is an empty Map", () => {
@@ -168,7 +168,7 @@ describe(getLowestRateLimitPct, () => {
 
 // ─── classifySeverity ────────────────────────────────────────────────────────
 
-describe(classifySeverity, () => {
+describe("classifySeverity", () => {
 	it("returns comfortable when rate limit is high and no cost cap", () => {
 		expect(classifySeverity(80, 0, null)).toBe("comfortable");
 	});
@@ -221,7 +221,7 @@ describe(classifySeverity, () => {
 	});
 
 	it("handles zero maxCost", () => {
-		// MaxCost=0 should be treated as if unlimited (avoid division by zero)
+		// maxCost=0 should be treated as if unlimited (avoid division by zero)
 		expect(classifySeverity(80, 0, 0)).toBe("comfortable");
 	});
 
@@ -237,24 +237,24 @@ describe(classifySeverity, () => {
 
 // ─── buildBudgetSummary ──────────────────────────────────────────────────────
 
-describe(buildRoutingTelemetrySnapshot, () => {
+describe("buildRoutingTelemetrySnapshot", () => {
 	it("aggregates latency, outcomes, and escalation reasons", () => {
 		const metrics = makeMetrics({
 			routingTelemetry: [
 				{
-					caste: "worker",
-					escalationReasons: [],
-					latencyMs: 250,
-					outcome: "completed",
 					taskId: "t1",
+					caste: "worker",
+					outcome: "completed",
+					latencyMs: 250,
+					escalationReasons: [],
 					timestamp: Date.now(),
 				},
 				{
-					caste: "worker",
-					escalationReasons: ["risk_flag", "low_confidence"],
-					latencyMs: 750,
-					outcome: "escalated",
 					taskId: "t2",
+					caste: "worker",
+					outcome: "escalated",
+					latencyMs: 750,
+					escalationReasons: ["risk_flag", "low_confidence"],
 					timestamp: Date.now(),
 				},
 			],
@@ -270,7 +270,7 @@ describe(buildRoutingTelemetrySnapshot, () => {
 	});
 });
 
-describe(buildBudgetSummary, () => {
+describe("buildBudgetSummary", () => {
 	it("includes rate limit info when below 100%", () => {
 		const summary = buildBudgetSummary("moderate", 45, 0, null, 0, 0);
 		expect(summary).toContain("45% remaining");
@@ -317,10 +317,10 @@ describe(buildBudgetSummary, () => {
 
 	it("includes routing telemetry rollup when available", () => {
 		const summary = buildBudgetSummary("moderate", 35, 4, 10, 3, 10, {
-			avgLatencyMs: 420,
-			escalationReasonCounts: { low_confidence: 1 },
-			outcomeCounts: { claimed: 1, completed: 2, escalated: 1, failed: 0 },
 			totalRoutes: 4,
+			avgLatencyMs: 420,
+			outcomeCounts: { claimed: 1, completed: 2, failed: 0, escalated: 1 },
+			escalationReasonCounts: { low_confidence: 1 },
 		});
 		expect(summary).toContain("Routing: 4 outcomes");
 		expect(summary).toContain("420ms");
@@ -337,7 +337,7 @@ describe(buildBudgetSummary, () => {
 
 // ─── planBudget ──────────────────────────────────────────────────────────────
 
-describe(planBudget, () => {
+describe("planBudget", () => {
 	it("returns a valid plan with all caste allocations", () => {
 		const plan = planBudget(null, makeMetrics(), null, makeConcurrency());
 		expect(plan.castes.scout).toBeDefined();
@@ -396,8 +396,8 @@ describe(planBudget, () => {
 			claude: makeProvider("claude", [{ label: "Session", percentLeft: 18 }]),
 		});
 		const plan = planBudget(limits, makeMetrics(), null, makeConcurrency());
-		expect(plan.castes.worker.maxTurns).toBeLessThan(15); // Default is 15
-		expect(plan.castes.scout.maxTurns).toBeLessThan(8); // Default is 8
+		expect(plan.castes.worker.maxTurns).toBeLessThan(15); // default is 15
+		expect(plan.castes.scout.maxTurns).toBeLessThan(8); // default is 8
 	});
 
 	it("turns are halved when budget is critical", () => {
@@ -479,14 +479,14 @@ describe(planBudget, () => {
 
 // ─── applyConcurrencyCap ─────────────────────────────────────────────────────
 
-describe(applyConcurrencyCap, () => {
+describe("applyConcurrencyCap", () => {
 	it("caps max to the plan recommendation", () => {
 		const config = makeConcurrency({ current: 4, max: 6, optimal: 4 });
 		const plan: BudgetPlan = {
 			castes: {} as Record<string, CasteBudget>,
-			lowestRateLimitPct: 18,
 			recommendedMaxConcurrency: 2,
 			severity: "tight",
+			lowestRateLimitPct: 18,
 			summary: "",
 		};
 		const result = applyConcurrencyCap(config, plan);
@@ -497,9 +497,9 @@ describe(applyConcurrencyCap, () => {
 		const config = makeConcurrency({ current: 5, max: 6 });
 		const plan: BudgetPlan = {
 			castes: {} as Record<string, CasteBudget>,
-			lowestRateLimitPct: 40,
 			recommendedMaxConcurrency: 3,
 			severity: "moderate",
+			lowestRateLimitPct: 40,
 			summary: "",
 		};
 		const result = applyConcurrencyCap(config, plan);
@@ -510,9 +510,9 @@ describe(applyConcurrencyCap, () => {
 		const config = makeConcurrency({ current: 2, max: 6, optimal: 5 });
 		const plan: BudgetPlan = {
 			castes: {} as Record<string, CasteBudget>,
-			lowestRateLimitPct: 40,
 			recommendedMaxConcurrency: 3,
 			severity: "moderate",
+			lowestRateLimitPct: 40,
 			summary: "",
 		};
 		const result = applyConcurrencyCap(config, plan);
@@ -523,26 +523,26 @@ describe(applyConcurrencyCap, () => {
 		const config = makeConcurrency({ current: 2, max: 3, optimal: 2 });
 		const plan: BudgetPlan = {
 			castes: {} as Record<string, CasteBudget>,
-			lowestRateLimitPct: 80,
 			recommendedMaxConcurrency: 6,
 			severity: "comfortable",
+			lowestRateLimitPct: 80,
 			summary: "",
 		};
 		const result = applyConcurrencyCap(config, plan);
-		expect(result.max).toBe(3); // Hardware cap wins
+		expect(result.max).toBe(3); // hardware cap wins
 		expect(result.current).toBe(2);
 	});
 
 	it("preserves min and history", () => {
 		const config = makeConcurrency({
-			history: [{ timestamp: 1, concurrency: 2, cpuLoad: 0.3, memFree: 8e9, throughput: 1 }],
 			min: 1,
+			history: [{ timestamp: 1, concurrency: 2, cpuLoad: 0.3, memFree: 8e9, throughput: 1 }],
 		});
 		const plan: BudgetPlan = {
 			castes: {} as Record<string, CasteBudget>,
-			lowestRateLimitPct: 20,
 			recommendedMaxConcurrency: 2,
 			severity: "tight",
+			lowestRateLimitPct: 20,
 			summary: "",
 		};
 		const result = applyConcurrencyCap(config, plan);
@@ -553,13 +553,13 @@ describe(applyConcurrencyCap, () => {
 
 // ─── buildBudgetPromptSection ────────────────────────────────────────────────
 
-describe(buildBudgetPromptSection, () => {
+describe("buildBudgetPromptSection", () => {
 	it("returns empty string for comfortable severity", () => {
 		const plan: BudgetPlan = {
 			castes: {} as Record<string, CasteBudget>,
-			lowestRateLimitPct: 80,
 			recommendedMaxConcurrency: 4,
 			severity: "comfortable",
+			lowestRateLimitPct: 80,
 			summary: "All good.",
 		};
 		expect(buildBudgetPromptSection(plan)).toBe("");
@@ -568,9 +568,9 @@ describe(buildBudgetPromptSection, () => {
 	it("returns non-empty string for tight severity", () => {
 		const plan: BudgetPlan = {
 			castes: {} as Record<string, CasteBudget>,
-			lowestRateLimitPct: 18,
 			recommendedMaxConcurrency: 2,
 			severity: "tight",
+			lowestRateLimitPct: 18,
 			summary: "Budget is tight. Be efficient.",
 		};
 		const section = buildBudgetPromptSection(plan);
@@ -581,9 +581,9 @@ describe(buildBudgetPromptSection, () => {
 	it("returns non-empty string for critical severity", () => {
 		const plan: BudgetPlan = {
 			castes: {} as Record<string, CasteBudget>,
-			lowestRateLimitPct: 5,
 			recommendedMaxConcurrency: 1,
 			severity: "critical",
+			lowestRateLimitPct: 5,
 			summary: "CRITICAL: Resources nearly exhausted.",
 		};
 		const section = buildBudgetPromptSection(plan);
@@ -594,9 +594,9 @@ describe(buildBudgetPromptSection, () => {
 	it("returns non-empty string for moderate severity", () => {
 		const plan: BudgetPlan = {
 			castes: {} as Record<string, CasteBudget>,
-			lowestRateLimitPct: 40,
 			recommendedMaxConcurrency: 3,
 			severity: "moderate",
+			lowestRateLimitPct: 40,
 			summary: "Budget is moderate.",
 		};
 		const section = buildBudgetPromptSection(plan);
@@ -613,7 +613,7 @@ describe("integration: plan → prompt → concurrency pipeline", () => {
 		expect(plan.recommendedMaxConcurrency).toBe(6);
 		expect(buildBudgetPromptSection(plan)).toBe("");
 
-		const concurrency = applyConcurrencyCap(makeConcurrency({ current: 4, max: 6 }), plan);
+		const concurrency = applyConcurrencyCap(makeConcurrency({ max: 6, current: 4 }), plan);
 		expect(concurrency.max).toBe(6);
 		expect(concurrency.current).toBe(4);
 	});
@@ -631,7 +631,7 @@ describe("integration: plan → prompt → concurrency pipeline", () => {
 		expect(plan.castes.worker.maxTurns).toBeLessThan(15);
 		expect(buildBudgetPromptSection(plan)).toContain("Budget Awareness");
 
-		const concurrency = applyConcurrencyCap(makeConcurrency({ current: 5, max: 6 }), plan);
+		const concurrency = applyConcurrencyCap(makeConcurrency({ max: 6, current: 5 }), plan);
 		expect(concurrency.max).toBeLessThanOrEqual(2);
 		expect(concurrency.current).toBeLessThanOrEqual(2);
 	});
@@ -650,7 +650,7 @@ describe("integration: plan → prompt → concurrency pipeline", () => {
 		const section = buildBudgetPromptSection(plan);
 		expect(section).toContain("CRITICAL");
 
-		const concurrency = applyConcurrencyCap(makeConcurrency({ current: 4, max: 6 }), plan);
+		const concurrency = applyConcurrencyCap(makeConcurrency({ max: 6, current: 4 }), plan);
 		expect(concurrency.max).toBe(1);
 		expect(concurrency.current).toBe(1);
 	});
