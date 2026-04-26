@@ -386,15 +386,14 @@ export function resolveSubagentModelResolution(
 		}
 	}
 
-	const delegatedModel = resolveDelegatedAgentModel(agent, availableModels, options);
-	if (delegatedModel) {
-		return { model: delegatedModel, source: "delegated-category", category };
-	}
-
-	// Fall back to current session model if it's available
 	const sessionModel = findAvailableModel(options.currentModel, availableModels);
 	if (sessionModel) {
 		return { model: sessionModel, source: "session-default", category };
+	}
+
+	const delegatedModel = resolveDelegatedAgentModel(agent, availableModels, options);
+	if (delegatedModel) {
+		return { model: delegatedModel, source: "delegated-category", category };
 	}
 
 	return { source: "session-default", category };

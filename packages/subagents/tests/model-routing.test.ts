@@ -414,6 +414,54 @@ describe("resolveSubagentModelResolution", () => {
 			expect(result.category).toBeUndefined();
 		});
 
+		it("prefers the current session model over delegated routing", () => {
+			const tempAgentDir = mkdtempSync(join(tmpdir(), "subagent-routing-"));
+			getAgentDir.mockReturnValue(tempAgentDir);
+			mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+			writeFileSync(
+				join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
+				JSON.stringify(
+					{
+						delegatedRouting: {
+							enabled: true,
+							categories: {
+								"quick-discovery": {
+									candidates: ["google/gemini-2.5-flash"],
+									preferredProviders: ["google"],
+								},
+							},
+						},
+					},
+					null,
+					2,
+				),
+			);
+
+			try {
+				const result = resolveSubagentModelResolution(
+					{
+						name: "scout",
+						description: "Scout",
+						systemPrompt: "Prompt",
+						source: "builtin",
+						filePath: "/tmp/scout.md",
+						extraFields: { category: "quick-discovery" },
+					},
+					sampleModels,
+					undefined,
+					{ currentModel: "openai/gpt-5-mini" },
+				);
+
+				expect(result).toEqual({
+					model: "openai/gpt-5-mini",
+					source: "session-default",
+					category: "quick-discovery",
+				});
+			} finally {
+				rmSync(tempAgentDir, { recursive: true, force: true });
+			}
+		});
+
 		it("rejects unavailable session-default currentModel", () => {
 			const result = resolveSubagentModelResolution(
 				{
