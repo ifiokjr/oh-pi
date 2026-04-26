@@ -1,4 +1,4 @@
-import type { ExtensionAPI, AgentToolResult } from "@mariozechner/pi-coding-agent";
+import type { AgentToolResult, ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createBashTool } from "@mariozechner/pi-coding-agent";
 import { FG_GREEN, FG_RED, FG_YELLOW, fillToolBackground, resolveBaseBackground } from "./theme.js";
 
@@ -9,7 +9,6 @@ export function enhanceBashTool(pi: ExtensionAPI): void {
 
 	pi.registerTool({
 		...original,
-		name: PRETTY_BASH_TOOL,
 		async execute(toolCallId, params, signal, onUpdate): Promise<AgentToolResult<unknown>> {
 			resolveBaseBackground(null);
 			const result = await original.execute(toolCallId, params, signal, onUpdate);
@@ -24,7 +23,8 @@ export function enhanceBashTool(pi: ExtensionAPI): void {
 
 			const lines = output.split("\n");
 			const previewLines = lines.slice(0, 20).join("\n");
-			const truncated = lines.length > 20 ? `${previewLines}\n\n${FG_YELLOW}… ${lines.length - 20} more lines\x1b[0m` : previewLines;
+			const truncated =
+				lines.length > 20 ? `${previewLines}\n\n${FG_YELLOW}… ${lines.length - 20} more lines\x1b[0m` : previewLines;
 
 			const body = fillToolBackground(`\n${truncated}\n\n${summary}`);
 
@@ -33,5 +33,6 @@ export function enhanceBashTool(pi: ExtensionAPI): void {
 				content: [{ type: "text", text: body }],
 			};
 		},
+		name: PRETTY_BASH_TOOL,
 	});
 }

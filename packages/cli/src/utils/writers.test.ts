@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+
 import type { OhPConfigWithRouting } from "../types.js";
 import {
 	writeAdaptiveRoutingConfig,
@@ -21,12 +21,12 @@ function makeTempDir(): string {
 
 function makeConfig(overrides: Partial<OhPConfigWithRouting>): OhPConfigWithRouting {
 	return {
+		agents: "general-developer",
+		extensions: [],
+		keybindings: "default",
+		prompts: [],
 		providers: [],
 		theme: "dark",
-		keybindings: "default",
-		extensions: [],
-		prompts: [],
-		agents: "general-developer",
 		thinking: "medium",
 		...overrides,
 	};
@@ -34,11 +34,11 @@ function makeConfig(overrides: Partial<OhPConfigWithRouting>): OhPConfigWithRout
 
 afterEach(() => {
 	for (const dir of tempDirs.splice(0)) {
-		rmSync(dir, { recursive: true, force: true });
+		rmSync(dir, { force: true, recursive: true });
 	}
 });
 
-describe("writeExtensions", () => {
+describe(writeExtensions, () => {
 	it("copies the dedicated plan package into the local extensions directory with vendored runtime deps", () => {
 		const dir = makeTempDir();
 		writeExtensions(
@@ -48,12 +48,12 @@ describe("writeExtensions", () => {
 			}),
 		);
 
-		expect(existsSync(join(dir, "extensions", "plan", "index.ts"))).toBe(true);
-		expect(existsSync(join(dir, "extensions", "plan", "prompts", "PLAN.prompt.md"))).toBe(true);
-		expect(existsSync(join(dir, "extensions", "plan", "node_modules", "@ifi", "pi-shared-qna", "index.ts"))).toBe(true);
+		expect(existsSync(join(dir, "extensions", "plan", "index.ts"))).toBeTruthy();
+		expect(existsSync(join(dir, "extensions", "plan", "prompts", "PLAN.prompt.md"))).toBeTruthy();
+		expect(existsSync(join(dir, "extensions", "plan", "node_modules", "@ifi", "pi-shared-qna", "index.ts"))).toBeTruthy();
 		expect(
 			existsSync(join(dir, "extensions", "plan", "node_modules", "@ifi", "pi-extension-subagents", "execution.ts")),
-		).toBe(true);
+		).toBeTruthy();
 	});
 
 	it("copies the dedicated spec package into the local extensions directory", () => {
@@ -65,8 +65,8 @@ describe("writeExtensions", () => {
 			}),
 		);
 
-		expect(existsSync(join(dir, "extensions", "spec", "index.ts"))).toBe(true);
-		expect(existsSync(join(dir, "extensions", "spec", "assets", "templates", "spec-template.md"))).toBe(true);
+		expect(existsSync(join(dir, "extensions", "spec", "index.ts"))).toBeTruthy();
+		expect(existsSync(join(dir, "extensions", "spec", "assets", "templates", "spec-template.md"))).toBeTruthy();
 	});
 
 	it("copies the dedicated diagnostics package into the local extensions directory", () => {
@@ -78,29 +78,29 @@ describe("writeExtensions", () => {
 			}),
 		);
 
-		expect(existsSync(join(dir, "extensions", "diagnostics", "index.ts"))).toBe(true);
-		expect(existsSync(join(dir, "extensions", "diagnostics", "diagnostics-shared.ts"))).toBe(true);
+		expect(existsSync(join(dir, "extensions", "diagnostics", "index.ts"))).toBeTruthy();
+		expect(existsSync(join(dir, "extensions", "diagnostics", "diagnostics-shared.ts"))).toBeTruthy();
 	});
 });
 
-describe("writeAdaptiveRoutingConfig", () => {
+describe(writeAdaptiveRoutingConfig, () => {
 	it("writes delegated provider assignments for adaptive routing", () => {
 		const dir = makeTempDir();
 		writeAdaptiveRoutingConfig(
 			dir,
 			makeConfig({
 				adaptiveRouting: {
-					mode: "shadow",
 					categories: {
-						"quick-discovery": ["groq", "openai"],
 						"implementation-default": ["openai", "ollama-cloud"],
+						"quick-discovery": ["groq", "openai"],
 					},
+					mode: "shadow",
 				},
 			}),
 		);
 
 		const configPath = join(dir, "extensions", "adaptive-routing", "config.json");
-		expect(existsSync(configPath)).toBe(true);
+		expect(existsSync(configPath)).toBeTruthy();
 		const text = readFileSync(configPath, "utf8");
 		expect(text).toContain('"mode": "shadow"');
 		expect(text).toContain('"quick-discovery"');
@@ -109,7 +109,7 @@ describe("writeAdaptiveRoutingConfig", () => {
 	});
 });
 
-describe("writeAgents", () => {
+describe(writeAgents, () => {
 	it("appends ant-colony auto-trigger guidance for non-colony operator agents", () => {
 		const dir = makeTempDir();
 		writeAgents(
@@ -161,8 +161,8 @@ describe("provider keep strategy", () => {
 		const dir = makeTempDir();
 		const settingsPath = join(dir, "settings.json");
 		const authPath = join(dir, "auth.json");
-		const originalSettings = JSON.stringify({ defaultProvider: "openai", defaultModel: "gpt-4o" }, null, 2);
-		const originalAuth = JSON.stringify({ openai: { type: "api_key", key: "OPENAI_API_KEY" } }, null, 2);
+		const originalSettings = JSON.stringify({ defaultModel: "gpt-4o", defaultProvider: "openai" }, null, 2);
+		const originalAuth = JSON.stringify({ openai: { key: "OPENAI_API_KEY", type: "api_key" } }, null, 2);
 		writeFileSync(settingsPath, originalSettings);
 		writeFileSync(authPath, originalAuth);
 
@@ -184,7 +184,7 @@ describe("provider keep strategy", () => {
 		const originalModels = JSON.stringify(
 			{
 				providers: {
-					openai: { baseUrl: "https://api.openai.com", api: "openai-responses" },
+					openai: { api: "openai-responses", baseUrl: "https://api.openai.com" },
 				},
 			},
 			null,
@@ -211,18 +211,18 @@ describe("provider keep strategy", () => {
 				providerStrategy: "replace",
 				providers: [
 					{
-						name: "custom-openai",
+						api: "openai-responses",
 						apiKey: "OPENAI_API_KEY",
 						baseUrl: "https://api.openai.com",
 						defaultModel: "gpt-4o",
-						api: "openai-responses",
+						name: "custom-openai",
 					},
 				],
 			}),
 		);
 
 		const modelsPath = join(dir, "models.json");
-		expect(existsSync(modelsPath)).toBe(true);
+		expect(existsSync(modelsPath)).toBeTruthy();
 		const text = readFileSync(modelsPath, "utf8");
 		expect(text).toContain('"custom-openai"');
 		expect(text).toContain('"openai-responses"');
@@ -236,17 +236,17 @@ describe("provider keep strategy", () => {
 				providerStrategy: "replace",
 				providers: [
 					{
-						name: "openai",
+						api: "openai-responses",
 						apiKey: "OPENAI_API_KEY",
 						defaultModel: "gpt-5",
-						api: "openai-responses",
+						name: "openai",
 					},
 				],
 			}),
 		);
 
 		const modelsPath = join(dir, "models.json");
-		expect(existsSync(modelsPath)).toBe(true);
+		expect(existsSync(modelsPath)).toBeTruthy();
 		const models = JSON.parse(readFileSync(modelsPath, "utf8"));
 		expect(models.providers.openai.api).toBe("openai-responses");
 		expect(models.providers.openai.baseUrl).toBeUndefined();
@@ -260,18 +260,18 @@ describe("provider keep strategy", () => {
 				providerStrategy: "replace",
 				providers: [
 					{
-						name: "openai",
+						api: "openai-responses",
 						apiKey: "OPENAI_API_KEY",
 						baseUrl: "https://api.openai.com/v1",
 						defaultModel: "gpt-4o",
-						api: "openai-responses",
+						name: "openai",
 					},
 				],
 			}),
 		);
 
 		const modelsPath = join(dir, "models.json");
-		expect(existsSync(modelsPath)).toBe(true);
+		expect(existsSync(modelsPath)).toBeTruthy();
 		const models = JSON.parse(readFileSync(modelsPath, "utf8"));
 		expect(models.providers.openai.baseUrl).toBe("https://api.openai.com/v1");
 		expect(models.providers.openai.api).toBe("openai-responses");
@@ -285,8 +285,8 @@ describe("provider keep strategy", () => {
 			settingsPath,
 			JSON.stringify(
 				{
-					defaultProvider: "anthropic",
 					defaultModel: "claude-sonnet-4-20250514",
+					defaultProvider: "anthropic",
 					enabledModels: ["claude-sonnet-4-20250514"],
 					theme: "dark",
 				},
@@ -298,7 +298,7 @@ describe("provider keep strategy", () => {
 			authPath,
 			JSON.stringify(
 				{
-					anthropic: { type: "api_key", key: "ANTHROPIC_API_KEY" },
+					anthropic: { key: "ANTHROPIC_API_KEY", type: "api_key" },
 				},
 				null,
 				2,
@@ -309,7 +309,6 @@ describe("provider keep strategy", () => {
 			dir,
 			makeConfig({
 				providerStrategy: "add",
-				theme: "light",
 				providers: [
 					{
 						name: "openai",
@@ -320,6 +319,7 @@ describe("provider keep strategy", () => {
 						],
 					},
 				],
+				theme: "light",
 			}),
 		);
 
@@ -330,8 +330,8 @@ describe("provider keep strategy", () => {
 		expect(settings.theme).toBe("light");
 		expect(settings.enabledModels).toContain("claude-sonnet-4-20250514");
 		expect(settings.enabledModels).toContain("gpt-4o");
-		expect(auth.anthropic).toBeTruthy();
-		expect(auth.openai).toEqual({ type: "api_key", key: "OPENAI_API_KEY" });
+		expect(auth.anthropic).toBe(true);
+		expect(auth.openai).toStrictEqual({ key: "OPENAI_API_KEY", type: "api_key" });
 	});
 
 	it("writeModelConfig merges custom providers when strategy is add", () => {
@@ -342,7 +342,7 @@ describe("provider keep strategy", () => {
 			JSON.stringify(
 				{
 					providers: {
-						existing: { baseUrl: "https://example.com/v1", api: "openai-completions" },
+						existing: { api: "openai-completions", baseUrl: "https://example.com/v1" },
 					},
 				},
 				null,
@@ -356,19 +356,19 @@ describe("provider keep strategy", () => {
 				providerStrategy: "add",
 				providers: [
 					{
-						name: "custom-openai",
+						api: "openai-responses",
 						apiKey: "OPENAI_API_KEY",
 						baseUrl: "https://api.openai.com",
 						defaultModel: "gpt-4o",
-						api: "openai-responses",
+						name: "custom-openai",
 					},
 				],
 			}),
 		);
 
 		const models = JSON.parse(readFileSync(modelsPath, "utf8"));
-		expect(models.providers.existing).toBeTruthy();
-		expect(models.providers["custom-openai"]).toBeTruthy();
+		expect(models.providers.existing).toBe(true);
+		expect(models.providers["custom-openai"]).toBe(true);
 		expect(JSON.stringify(models.providers["custom-openai"])).toContain("openai-responses");
 	});
 });

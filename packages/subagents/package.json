@@ -1,53 +1,53 @@
 {
-  "name": "@ifi/pi-extension-subagents",
-  "version": "0.4.4",
-  "description": "Full-featured subagent orchestration extension for pi, built on top of nicobailon/pi-subagents.",
-  "type": "module",
-  "keywords": [
-    "pi-package",
-    "pi",
-    "pi-coding-agent",
-    "subagents",
-    "multi-agent",
-    "chains",
-    "delegation"
-  ],
-  "bin": {
-    "pi-extension-subagents": "install.mjs"
-  },
-  "pi": {
-    "extensions": [
-      "./index.ts",
-      "./notify.ts"
-    ]
-  },
-  "files": [
-    "*.ts",
-    "*.mjs",
-    "agents",
-    "README.md",
-    "banner.png",
-    "!*.test.ts",
-    "!test/**"
-  ],
-  "license": "MIT",
-  "dependencies": {
-    "@ifi/oh-pi-core": "0.4.4"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/subagents"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/subagents",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  },
-  "peerDependencies": {
-    "@mariozechner/pi-agent-core": ">=0.56.1",
-    "@mariozechner/pi-ai": ">=0.56.1",
-    "@mariozechner/pi-coding-agent": ">=0.56.1",
-    "@mariozechner/pi-tui": ">=0.56.1",
-    "@sinclair/typebox": "*"
-  }
+	"name": "@ifi/pi-extension-subagents",
+	"version": "0.4.4",
+	"description": "Full-featured subagent orchestration extension for pi, built on top of nicobailon/pi-subagents.",
+	"keywords": [
+		"chains",
+		"delegation",
+		"multi-agent",
+		"pi",
+		"pi-coding-agent",
+		"pi-package",
+		"subagents"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/subagents",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/subagents"
+	},
+	"bin": {
+		"pi-extension-subagents": "install.mjs"
+	},
+	"files": [
+		"*.ts",
+		"*.mjs",
+		"agents",
+		"README.md",
+		"banner.png",
+		"!*.test.ts",
+		"!test/**"
+	],
+	"type": "module",
+	"dependencies": {
+		"@ifi/oh-pi-core": "0.4.4"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-agent-core": ">=0.56.1",
+		"@mariozechner/pi-ai": ">=0.56.1",
+		"@mariozechner/pi-coding-agent": ">=0.56.1",
+		"@mariozechner/pi-tui": ">=0.56.1",
+		"@sinclair/typebox": "*"
+	},
+	"pi": {
+		"extensions": [
+			"./index.ts",
+			"./notify.ts"
+		]
+	}
 }

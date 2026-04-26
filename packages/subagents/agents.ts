@@ -65,15 +65,15 @@ export interface AgentDiscoveryResult {
 
 function parseFrontmatter(content: string): { frontmatter: Record<string, string>; body: string } {
 	const frontmatter: Record<string, string> = {};
-	const normalized = content.replace(/\r\n/g, "\n");
+	const normalized = content.replaceAll(/\r\n/g, "\n");
 
 	if (!normalized.startsWith("---")) {
-		return { frontmatter, body: normalized };
+		return { body: normalized, frontmatter };
 	}
 
 	const endIndex = normalized.indexOf("\n---", 3);
 	if (endIndex === -1) {
-		return { frontmatter, body: normalized };
+		return { body: normalized, frontmatter };
 	}
 
 	const frontmatterBlock = normalized.slice(4, endIndex);
@@ -90,7 +90,7 @@ function parseFrontmatter(content: string): { frontmatter: Record<string, string
 		}
 	}
 
-	return { frontmatter, body };
+	return { body, frontmatter };
 }
 
 function loadAgentsFromDir(dir: string, source: AgentSource): AgentConfig[] {
@@ -108,14 +108,14 @@ function loadAgentsFromDir(dir: string, source: AgentSource): AgentConfig[] {
 	}
 
 	for (const entry of entries) {
-		if (!entry.name.endsWith(".md")) continue;
-		if (entry.name.endsWith(".chain.md")) continue;
-		if (!entry.isFile() && !entry.isSymbolicLink()) continue;
+		if (!entry.name.endsWith(".md")) {continue;}
+		if (entry.name.endsWith(".chain.md")) {continue;}
+		if (!entry.isFile() && !entry.isSymbolicLink()) {continue;}
 
 		const filePath = path.join(dir, entry.name);
 		let content: string;
 		try {
-			content = fs.readFileSync(filePath, "utf-8");
+			content = fs.readFileSync(filePath, "utf8");
 		} catch {
 			continue;
 		}
@@ -165,7 +165,7 @@ function loadAgentsFromDir(dir: string, source: AgentSource): AgentConfig[] {
 
 		const extraFields: Record<string, string> = {};
 		for (const [key, value] of Object.entries(frontmatter)) {
-			if (!KNOWN_FIELDS.has(key)) extraFields[key] = value;
+			if (!KNOWN_FIELDS.has(key)) {extraFields[key] = value;}
 		}
 
 		agents.push({
@@ -208,13 +208,13 @@ function loadChainsFromDir(dir: string, source: AgentSource): ChainConfig[] {
 	}
 
 	for (const entry of entries) {
-		if (!entry.name.endsWith(".chain.md")) continue;
-		if (!entry.isFile() && !entry.isSymbolicLink()) continue;
+		if (!entry.name.endsWith(".chain.md")) {continue;}
+		if (!entry.isFile() && !entry.isSymbolicLink()) {continue;}
 
 		const filePath = path.join(dir, entry.name);
 		let content: string;
 		try {
-			content = fs.readFileSync(filePath, "utf-8");
+			content = fs.readFileSync(filePath, "utf8");
 		} catch {
 			continue;
 		}
@@ -229,7 +229,7 @@ function loadChainsFromDir(dir: string, source: AgentSource): ChainConfig[] {
 	return chains;
 }
 
-const BUILTIN_AGENTS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "agents");
+const BUILTIN_AGENTS_DIR = path.join(import.meta.dirname, "agents");
 
 function mergeNamedConfigs<T extends { name: string }>(groups: T[][]): T[] {
 	const merged = new Map<string, T>();
@@ -240,7 +240,7 @@ function mergeNamedConfigs<T extends { name: string }>(groups: T[][]): T[] {
 			}
 		}
 	}
-	return Array.from(merged.values());
+	return [...merged.values()];
 }
 
 function loadAgentsFromDirs(dirs: string[], source: AgentSource): AgentConfig[] {
@@ -287,10 +287,7 @@ export function discoverAgentsAll(cwd: string): {
 	const builtin = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
 	const user = loadAgentsFromDir(userDir, "user");
 	const project = loadAgentsFromDirs(projectDirs, "project");
-	const chains = mergeNamedConfigs([
-		loadChainsFromDir(userDir, "user"),
-		loadChainsFromDirs(projectDirs, "project"),
-	]);
+	const chains = mergeNamedConfigs([loadChainsFromDir(userDir, "user"), loadChainsFromDirs(projectDirs, "project")]);
 
-	return { builtin, user, project, chains, userDir, projectDir };
+	return { builtin, chains, project, projectDir, user, userDir };
 }

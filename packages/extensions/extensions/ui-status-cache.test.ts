@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+
 
 import { createStatusBarState } from "./ui-status-cache";
 
-describe("createStatusBarState", () => {
+describe(createStatusBarState, () => {
 	it("skips initial undefined clears for unseen keys", () => {
 		const setStatus = vi.fn();
 		const statusBar = createStatusBarState();
@@ -11,7 +11,7 @@ describe("createStatusBarState", () => {
 			ui: { setStatus },
 		};
 
-		expect(statusBar.set(target, "watchdog", undefined)).toBe(false);
+		expect(statusBar.set(target, "watchdog", undefined)).toBeFalsy();
 		expect(setStatus).not.toHaveBeenCalled();
 	});
 
@@ -23,10 +23,10 @@ describe("createStatusBarState", () => {
 			ui: { setStatus },
 		};
 
-		expect(statusBar.set(target, "watchdog", "lag p99 80ms")).toBe(true);
-		expect(statusBar.set(target, "watchdog", undefined)).toBe(true);
+		expect(statusBar.set(target, "watchdog", "lag p99 80ms")).toBeTruthy();
+		expect(statusBar.set(target, "watchdog", undefined)).toBeTruthy();
 		expect(setStatus).toHaveBeenNthCalledWith(1, "watchdog", "lag p99 80ms");
-		expect(setStatus).toHaveBeenNthCalledWith(2, "watchdog", undefined);
+		expect(setStatus).toHaveBeenNthCalledWith(2, "watchdog");
 	});
 
 	it("keeps targets isolated when the active UI target changes", () => {
@@ -42,10 +42,10 @@ describe("createStatusBarState", () => {
 			ui: { setStatus: secondSetStatus },
 		};
 
-		expect(statusBar.set(firstTarget, "watchdog", "active")).toBe(true);
-		expect(statusBar.set(secondTarget, "watchdog", undefined)).toBe(false);
-		expect(statusBar.set(secondTarget, "watchdog", "active")).toBe(true);
-		expect(firstSetStatus).toHaveBeenCalledTimes(1);
-		expect(secondSetStatus).toHaveBeenCalledTimes(1);
+		expect(statusBar.set(firstTarget, "watchdog", "active")).toBeTruthy();
+		expect(statusBar.set(secondTarget, "watchdog", undefined)).toBeFalsy();
+		expect(statusBar.set(secondTarget, "watchdog", "active")).toBeTruthy();
+		expect(firstSetStatus).toHaveBeenCalledOnce();
+		expect(secondSetStatus).toHaveBeenCalledOnce();
 	});
 });

@@ -1,4 +1,4 @@
-/* c8 ignore file */
+/* C8 ignore file */
 import { MODEL_INTELLIGENCE_RUNTIME_SNAPSHOT } from "./model-intelligence.generated.js";
 
 export type ModelTaskProfile = "design" | "planning" | "writing" | "coding" | "all";
@@ -102,7 +102,7 @@ export interface DelegatedSelectionResult {
 	minimumContextWindow: number;
 	taskSize: TaskSizeTier;
 	taskProfile: ModelTaskProfile;
-	rejected: Array<{ model: string; reason: string }>;
+	rejected: { model: string; reason: string }[];
 }
 
 const DEFAULT_CONTEXT_WINDOW = 128_000;
@@ -146,21 +146,21 @@ export function mergeDelegatedSelectionPolicies(
 	}
 
 	return {
+		allowSmallContextForSmallTasks: override?.allowSmallContextForSmallTasks ?? base?.allowSmallContextForSmallTasks,
+		blockedModels: mergeStringLists(base?.blockedModels, override?.blockedModels),
+		blockedProviders: mergeStringLists(base?.blockedProviders, override?.blockedProviders),
 		candidateModels: mergeStringLists(base?.candidateModels, override?.candidateModels, { overrideFirst: true }),
+		minContextWindow: override?.minContextWindow ?? base?.minContextWindow,
+		preferFastModels: override?.preferFastModels ?? base?.preferFastModels,
+		preferLowCost: override?.preferLowCost ?? base?.preferLowCost,
+		preferLowerUsage: override?.preferLowerUsage ?? base?.preferLowerUsage,
 		preferredModels: mergeStringLists(base?.preferredModels, override?.preferredModels, { overrideFirst: true }),
 		preferredProviders: mergeStringLists(base?.preferredProviders, override?.preferredProviders, {
 			overrideFirst: true,
 		}),
-		blockedModels: mergeStringLists(base?.blockedModels, override?.blockedModels),
-		blockedProviders: mergeStringLists(base?.blockedProviders, override?.blockedProviders),
-		taskProfile: override?.taskProfile ?? base?.taskProfile,
-		preferFastModels: override?.preferFastModels ?? base?.preferFastModels,
-		preferLowCost: override?.preferLowCost ?? base?.preferLowCost,
-		preferLowerUsage: override?.preferLowerUsage ?? base?.preferLowerUsage,
-		requireReasoning: override?.requireReasoning ?? base?.requireReasoning,
 		requireMultimodal: override?.requireMultimodal ?? base?.requireMultimodal,
-		minContextWindow: override?.minContextWindow ?? base?.minContextWindow,
-		allowSmallContextForSmallTasks: override?.allowSmallContextForSmallTasks ?? base?.allowSmallContextForSmallTasks,
+		requireReasoning: override?.requireReasoning ?? base?.requireReasoning,
+		taskProfile: override?.taskProfile ?? base?.taskProfile,
 	};
 }
 
@@ -212,14 +212,14 @@ export function selectDelegatedModel(params: {
 		}
 
 		candidates.push({
-			model,
+			contextWindow,
+			costScore: estimateCostScore(model),
+			fastScore: estimateFastScore(model),
 			fullId,
 			intelligence: findModelIntelligence(fullId),
-			contextWindow,
+			model,
 			multimodal,
 			reasoning,
-			fastScore: estimateFastScore(model),
-			costScore: estimateCostScore(model),
 		});
 	}
 
@@ -227,23 +227,23 @@ export function selectDelegatedModel(params: {
 		.map((candidate) =>
 			rankCandidate(candidate, {
 				currentModel: params.currentModel,
+				latency: params.latency,
+				minimumContextWindow,
 				policy,
 				taskProfile,
 				taskSize,
-				minimumContextWindow,
 				usage: params.usage,
-				latency: params.latency,
 			}),
 		)
-		.sort((left, right) => right.score - left.score || left.model.localeCompare(right.model));
+		.toSorted((left, right) => right.score - left.score || left.model.localeCompare(right.model));
 
 	return {
-		selectedModel: ranked[0]?.model,
-		ranked,
 		minimumContextWindow,
-		taskSize,
-		taskProfile,
+		ranked,
 		rejected,
+		selectedModel: ranked[0]?.model,
+		taskProfile,
+		taskSize,
 	};
 }
 
@@ -265,7 +265,7 @@ function rankCandidate(
 
 	const candidateRefs = policy.candidateModels ?? [];
 	const candidateIndex = candidateRefs.findIndex((reference) => matchesModelReference(reference, candidate));
-	if (candidateIndex >= 0) {
+	if (candidateIndex !== -1) {
 		score += Math.max(36 - candidateIndex * 4, 18);
 		reasons.push(`candidate:${candidateIndex + 1}`);
 	}
@@ -273,13 +273,13 @@ function rankCandidate(
 	const preferredModelIndex = (policy.preferredModels ?? []).findIndex((reference) =>
 		matchesModelReference(reference, candidate),
 	);
-	if (preferredModelIndex >= 0) {
+	if (preferredModelIndex !== -1) {
 		score += Math.max(48 - preferredModelIndex * 6, 20);
 		reasons.push(`preferred-model:${preferredModelIndex + 1}`);
 	}
 
 	const preferredProviderIndex = (policy.preferredProviders ?? []).indexOf(candidate.model.provider);
-	if (preferredProviderIndex >= 0) {
+	if (preferredProviderIndex !== -1) {
 		score += Math.max(18 - preferredProviderIndex * 3, 6);
 		reasons.push(`preferred-provider:${preferredProviderIndex + 1}`);
 	}
@@ -341,10 +341,10 @@ function rankCandidate(
 	}
 
 	return {
-		model: candidate.fullId,
-		score: Math.round(score * 10) / 10,
-		reasons,
 		intelligenceId: candidate.intelligence?.id,
+		model: candidate.fullId,
+		reasons,
+		score: Math.round(score * 10) / 10,
 	};
 }
 
@@ -354,18 +354,24 @@ function heuristicCapabilityScore(candidate: DelegatedSelectionCandidate, taskPr
 	const name = candidate.model.name.toLowerCase();
 
 	switch (taskProfile) {
-		case "design":
+		case "design": {
 			return (candidate.multimodal ? 10 : 0) + (provider === "google" ? 4 : 0) + (id.includes("gpt-5") ? 3 : 0);
-		case "planning":
+		}
+		case "planning": {
 			return (candidate.reasoning ? 8 : 0) + (id.includes("reason") || name.includes("think") ? 4 : 0);
-		case "writing":
+		}
+		case "writing": {
 			return (provider === "anthropic" ? 6 : 0) + (provider === "google" ? 4 : 0) + (candidate.reasoning ? 2 : 0);
-		case "coding":
+		}
+		case "coding": {
 			return /coder|code|codex|gemma|qwen|glm|kimi|gpt-5/i.test(id) ? 10 : 4;
-		case "all":
+		}
+		case "all": {
 			return candidate.reasoning ? 6 : 3;
-		default:
+		}
+		default: {
 			return 0;
+		}
 	}
 }
 
@@ -375,14 +381,18 @@ function resolveMinimumContextWindow(policy: DelegatedSelectionPolicy, taskSize:
 	}
 
 	switch (taskSize) {
-		case "small":
+		case "small": {
 			return policy.allowSmallContextForSmallTasks === false ? MEDIUM_CONTEXT_WINDOW : SMALL_CONTEXT_WINDOW;
-		case "medium":
+		}
+		case "medium": {
 			return MEDIUM_CONTEXT_WINDOW;
-		case "large":
+		}
+		case "large": {
 			return LARGE_CONTEXT_WINDOW;
-		case "xlarge":
+		}
+		case "xlarge": {
 			return XLARGE_CONTEXT_WINDOW;
+		}
 	}
 }
 
@@ -439,10 +449,10 @@ function scoreMeasuredLatency(
 		return 0;
 	}
 
-	if (entry.avgMs <= 2_500) {
+	if (entry.avgMs <= 2500) {
 		return 8;
 	}
-	if (entry.avgMs <= 5_000) {
+	if (entry.avgMs <= 5000) {
 		return 5;
 	}
 	if (entry.avgMs <= 10_000) {
@@ -490,10 +500,10 @@ function estimateTaskSize(taskText: string | undefined): TaskSizeTier {
 	if (length <= 800) {
 		return "small";
 	}
-	if (length <= 3_000) {
+	if (length <= 3000) {
 		return "medium";
 	}
-	if (length <= 8_000) {
+	if (length <= 8000) {
 		return "large";
 	}
 	return "xlarge";
@@ -551,7 +561,7 @@ function mergeStringLists(
 	const values = options.overrideFirst
 		? [...(override ?? []), ...(base ?? [])]
 		: [...(base ?? []), ...(override ?? [])];
-	const unique = Array.from(new Set(values.filter((value) => typeof value === "string" && value.trim().length > 0)));
+	const unique = [...new Set(values.filter((value) => typeof value === 'string' && value.trim().length > 0))];
 	return unique.length > 0 ? unique : undefined;
 }
 

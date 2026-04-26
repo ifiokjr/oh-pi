@@ -1,4 +1,4 @@
-/* c8 ignore file */
+/* C8 ignore file */
 /**
  * Queen — Colony scheduling core.
  *
@@ -18,20 +18,17 @@ import { existsSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import type { DelegatedSelectionUsageSnapshot } from "@ifi/oh-pi-core";
 import type { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
-import {
-	applyConcurrencyCap,
-	type BudgetPlan,
-	buildBudgetPromptSection,
-	planBudget,
-	type UsageLimitsEvent,
-} from "./budget-planner.js";
+import { applyConcurrencyCap, buildBudgetPromptSection, planBudget } from './budget-planner.js';
+import type { BudgetPlan, UsageLimitsEvent } from './budget-planner.js';
 import { adapt, defaultConcurrency, sampleSystem } from "./concurrency.js";
-import { buildImportGraph, type ImportGraph, taskDependsOn } from "./deps.js";
+import { buildImportGraph, taskDependsOn } from './deps.js';
+import type { ImportGraph } from './deps.js';
 import { preprocessMultimodalTask, shouldEscalateMultimodalRoute } from "./multimodal-routing.js";
 import { Nest } from "./nest.js";
 import { DEFAULT_COLONY_CATEGORIES, resolveColonyCategoryModel, toAvailableModelRefs } from "./routing-config.js";
 import { makePheromoneId, makeTaskId, resetAntCounter, runDrone, spawnAnt } from "./spawner.js";
-import { type ColonyStorageOptions, cleanupEmptyColonyStorageDirs, resolveColonyStorageOptions } from "./storage.js";
+import { cleanupEmptyColonyStorageDirs, resolveColonyStorageOptions } from './storage.js';
+import type { ColonyStorageOptions } from './storage.js';
 import type {
 	Ant,
 	AntCaste,
@@ -110,8 +107,8 @@ export interface UsageLimitsTracker {
 export function createUsageLimitsTracker(eventBus?: ColonyEventBus): UsageLimitsTracker {
 	if (!eventBus) {
 		return {
-			requestSnapshot: () => null,
 			dispose: () => undefined,
+			requestSnapshot: () => null,
 		};
 	}
 
@@ -130,11 +127,6 @@ export function createUsageLimitsTracker(eventBus?: ColonyEventBus): UsageLimits
 	};
 
 	return {
-		requestSnapshot() {
-			subscribeIfNeeded();
-			eventBus.emit("usage:query");
-			return latestLimits;
-		},
 		dispose() {
 			if (!subscribed) {
 				return;
@@ -145,6 +137,11 @@ export function createUsageLimitsTracker(eventBus?: ColonyEventBus): UsageLimits
 			}
 			// If `off` is unavailable, keep the subscription active on this tracker
 			// instance to avoid duplicate listeners on subsequent requestSnapshot() calls.
+		},
+		requestSnapshot() {
+			subscribeIfNeeded();
+			eventBus.emit("usage:query");
+			return latestLimits;
 		},
 	};
 }
@@ -164,8 +161,8 @@ function toDelegatedUsageSnapshot(
 			.map((window) => window.percentLeft)
 			.filter((percent): percent is number => Number.isFinite(percent));
 		snapshot[provider] = {
-			remainingPct: percentages.length > 0 ? Math.min(...percentages) : undefined,
 			confidence: limits.error ? "unknown" : percentages.length > 0 ? "estimated" : "unknown",
+			remainingPct: percentages.length > 0 ? Math.min(...percentages) : undefined,
 		};
 	}
 
@@ -176,12 +173,12 @@ const REVIEW_TYPECHECK_CONFIG_FILES = ["tsconfig.json", "tsconfig.base.json", "j
 const REVIEW_TYPECHECK_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"]);
 const REVIEW_TYPECHECK_TIMEOUT_MS = 30_000;
 
-type ReviewTypecheckInvocation = {
+interface ReviewTypecheckInvocation {
 	command: string;
 	args: string[];
 	cwd: string;
 	projectFiles: string[];
-};
+}
 
 function isTypeScriptPath(file: string): boolean {
 	return REVIEW_TYPECHECK_EXTENSIONS.has(extname(file).toLowerCase());
@@ -239,7 +236,7 @@ export function collectReviewTypecheckProjects(executionCwd: string, tasks: Pick
 		}
 	}
 
-	return [...projectFiles].sort((left, right) => left.localeCompare(right));
+	return [...projectFiles].toSorted((left, right) => left.localeCompare(right));
 }
 
 export function resolveReviewTypecheckInvocation(
@@ -260,8 +257,8 @@ export function resolveReviewTypecheckInvocation(
 		: ["tsc", "--noEmit", ...projectFiles.flatMap((projectFile) => ["--project", projectFile])];
 
 	return {
-		command,
 		args,
+		command,
 		cwd: normalizedCwd,
 		projectFiles,
 	};
@@ -276,8 +273,8 @@ export function runReviewTypecheck(executionCwd: string, tasks: Pick<Task, "file
 	try {
 		execFileSync(invocation.command, invocation.args, {
 			cwd: invocation.cwd,
-			timeout: REVIEW_TYPECHECK_TIMEOUT_MS,
 			stdio: "pipe",
+			timeout: REVIEW_TYPECHECK_TIMEOUT_MS,
 		});
 		return true;
 	} catch {
@@ -287,21 +284,21 @@ export function runReviewTypecheck(executionCwd: string, tasks: Pick<Task, "file
 
 function makeInitialScoutTask(goal: string): Task {
 	return {
+		caste: "scout",
+		claimedBy: null,
+		createdAt: Date.now(),
+		description: `Explore the codebase and identify all files, modules, and dependencies relevant to this goal:\n\n${goal}\n\nBe thorough. The colony depends on your intelligence.`,
+		error: null,
+		files: [],
+		finishedAt: null,
 		id: makeTaskId(),
 		parentId: null,
-		title: "Scout: explore codebase for goal",
-		description: `Explore the codebase and identify all files, modules, and dependencies relevant to this goal:\n\n${goal}\n\nBe thorough. The colony depends on your intelligence.`,
-		caste: "scout",
-		status: "pending",
 		priority: 1,
-		files: [],
-		claimedBy: null,
 		result: null,
-		error: null,
 		spawnedTasks: [],
-		createdAt: Date.now(),
 		startedAt: null,
-		finishedAt: null,
+		status: "pending",
+		title: "Scout: explore codebase for goal",
 	};
 }
 
@@ -335,24 +332,24 @@ function childTaskFromParsed(
 	},
 ): Task {
 	return {
+		caste: parsed.caste,
+		claimedBy: null,
+		context: parsed.context || undefined,
+		createdAt: Date.now(),
+		description: parsed.description,
+		error: null,
+		files: parsed.files,
+		finishedAt: null,
 		id: makeTaskId(),
 		parentId,
-		title: parsed.title,
-		description: parsed.description,
-		caste: parsed.caste,
-		status: "pending",
 		priority: parsed.priority,
-		files: parsed.files,
-		context: parsed.context || undefined,
+		result: null,
+		spawnedTasks: [],
+		startedAt: null,
+		status: "pending",
+		title: parsed.title,
 		workerClass:
 			parsed.caste === "worker" ? classifyWorkerClass(parsed.title, parsed.description, parsed.files) : undefined,
-		claimedBy: null,
-		result: null,
-		error: null,
-		spawnedTasks: [],
-		createdAt: Date.now(),
-		startedAt: null,
-		finishedAt: null,
 	};
 }
 
@@ -371,7 +368,7 @@ export function quorumMergeTasks(nest: Nest): void {
 	// Group by file set (sorted and joined as key)
 	const groups = new Map<string, Task[]>();
 	for (const t of tasks) {
-		const key = [...t.files].sort().join("|") || t.title;
+		const key = [...t.files].toSorted().join("|") || t.title;
 		const arr = groups.get(key) ?? [];
 		arr.push(t);
 		groups.set(key, arr);
@@ -432,8 +429,8 @@ export function decidePromoteOrFinalize(input: PromoteFinalizeGateInput): Promot
 	if (escalationReasons.length > 0) {
 		return {
 			action: "promote",
-			escalationReasons,
 			cheapPassSummary: input.cheapPassSummary,
+			escalationReasons,
 		};
 	}
 
@@ -449,7 +446,7 @@ export function validateExecutionPlan(tasks: Task[]): PlanValidation {
 
 	if (tasks.length === 0) {
 		issues.push("no_pending_worker_tasks");
-		return { ok: false, issues, warnings };
+		return { issues, ok: false, warnings };
 	}
 
 	for (const t of tasks) {
@@ -470,7 +467,7 @@ export function validateExecutionPlan(tasks: Task[]): PlanValidation {
 		}
 	}
 
-	return { ok: issues.length === 0, issues, warnings };
+	return { issues, ok: issues.length === 0, warnings };
 }
 
 function collectScoutIntelligence(nest: Nest, maxChars = 6000): string {
@@ -486,9 +483,9 @@ function makeRecoveryScoutTask(goal: string, attempt: number, planIssues: string
 	const issueText =
 		planIssues.length > 0 ? planIssues.map((i) => `- ${i}`).join("\n") : "- no parseable worker/drone tasks generated";
 	return {
-		id: makeTaskId(),
-		parentId: null,
-		title: `Scout recovery ${attempt}: structure executable plan`,
+		caste: "scout",
+		claimedBy: null,
+		createdAt: Date.now(),
 		description: [
 			"Previous scout output could not pass plan validation.",
 			"Transform existing intelligence into a VALID structured execution plan.",
@@ -512,46 +509,46 @@ function makeRecoveryScoutTask(goal: string, attempt: number, planIssues: string
 			"",
 			"Do NOT execute changes. Only planning.",
 		].join("\n"),
-		caste: "scout",
-		status: "pending",
-		priority: 1,
-		files: [],
-		claimedBy: null,
-		result: null,
 		error: null,
-		spawnedTasks: [],
-		createdAt: Date.now(),
-		startedAt: null,
+		files: [],
 		finishedAt: null,
+		id: makeTaskId(),
+		parentId: null,
+		priority: 1,
+		result: null,
+		spawnedTasks: [],
+		startedAt: null,
+		status: "pending",
+		title: `Scout recovery ${attempt}: structure executable plan`,
 	};
 }
 
 function makeReviewTask(completedTasks: Task[]): Task {
 	const files = [...new Set(completedTasks.flatMap((t) => t.files))];
 	return {
+		caste: "soldier",
+		claimedBy: null,
+		createdAt: Date.now(),
+		description: `Review all changes made by worker ants. Files changed:\n${files.map((f) => `- ${f}`).join("\n")}`,
+		error: null,
+		files,
+		finishedAt: null,
 		id: makeTaskId(),
 		parentId: null,
-		title: "Soldier: review all changes",
-		description: `Review all changes made by worker ants. Files changed:\n${files.map((f) => `- ${f}`).join("\n")}`,
-		caste: "soldier",
-		status: "pending",
 		priority: 1,
-		files,
-		claimedBy: null,
 		result: null,
-		error: null,
 		spawnedTasks: [],
-		createdAt: Date.now(),
 		startedAt: null,
-		finishedAt: null,
+		status: "pending",
+		title: "Soldier: review all changes",
 	};
 }
 
 function updateMetrics(nest: Nest): ColonyMetrics {
 	const state = nest.getStateLight();
-	const tasks = state.tasks;
+	const {tasks} = state;
 	const now = Date.now();
-	const elapsed = (now - state.metrics.startTime) / 60000; // minutes
+	const elapsed = (now - state.metrics.startTime) / 60_000; // Minutes
 
 	let totalCost = 0;
 	let totalTokens = 0;
@@ -561,14 +558,14 @@ function updateMetrics(nest: Nest): ColonyMetrics {
 	}
 	const doneCount = tasks.filter((t) => t.status === "done").length;
 	const metrics: ColonyMetrics = {
-		tasksTotal: tasks.length,
+		antsSpawned: state.ants.length,
+		startTime: state.metrics.startTime,
 		tasksDone: doneCount,
 		tasksFailed: tasks.filter((t) => t.status === "failed").length,
-		antsSpawned: state.ants.length,
+		tasksTotal: tasks.length,
+		throughputHistory: [...state.metrics.throughputHistory, elapsed > 0 ? doneCount / elapsed : 0].slice(-20),
 		totalCost,
 		totalTokens,
-		startTime: state.metrics.startTime,
-		throughputHistory: [...state.metrics.throughputHistory, elapsed > 0 ? doneCount / elapsed : 0].slice(-20),
 	};
 
 	nest.updateState({ metrics });
@@ -628,29 +625,29 @@ export function classifyError(errStr: string): string {
  * Execute a wave of ants concurrently with adaptive concurrency control.
  * Manages rate limiting, error recovery, file locking, and budget enforcement.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Wave scheduler coordinates retries, budgets, and parallelism.
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Wave scheduler coordinates retries, budgets, and parallelism.
 async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 	const { nest, cwd, caste, signal, callbacks, currentModel, emitSignal } = opts;
 	const availableModels = opts.modelRegistry
 		? toAvailableModelRefs(
 				opts.modelRegistry.getAvailable().map((model) => ({
-					provider: model.provider,
-					id: model.id,
-					name: model.name,
-					reasoning: model.reasoning,
-					input: [...model.input],
 					contextWindow: model.contextWindow,
-					maxTokens: model.maxTokens,
 					cost: { ...model.cost },
+					id: model.id,
+					input: [...model.input],
+					maxTokens: model.maxTokens,
+					name: model.name,
+					provider: model.provider,
+					reasoning: model.reasoning,
 				})),
 			)
 		: [];
 	const casteCategory = DEFAULT_COLONY_CATEGORIES[caste];
 	const casteDelegatedModel = resolveColonyCategoryModel(casteCategory, availableModels, {
 		currentModel,
+		roleKeys: [`colony:${caste}`],
 		taskText: nest.getStateLight().goal,
 		usage: opts.usageSnapshot,
-		roleKeys: [`colony:${caste}`],
 	});
 	const casteModel = opts.modelOverrides?.[caste] || casteDelegatedModel.model || currentModel;
 	const baseConfig = { ...DEFAULT_ANT_CONFIGS[caste], model: casteModel };
@@ -665,13 +662,13 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 
 	let backoffMs = 0; // 429 backoff duration
 	let consecutiveRateLimits = 0; // Consecutive rate limit counter
-	const retryCount = new Map<string, number>(); // taskId → retry count
+	const retryCount = new Map<string, number>(); // TaskId → retry count
 	const MAX_RETRIES = 2;
 
 	// Bio 6: Corpse cleanup — error pattern tracking
 	const errorPatterns = new Map<string, { count: number; files: Set<string>; errors: string[] }>();
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Single-ant dispatch path handles many failure and retry modes.
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Single-ant dispatch path handles many failure and retry modes.
 	const runOne = async (): Promise<"done" | "empty" | "rate_limited" | "budget"> => {
 		// Budget brake: don't dispatch if budget exhausted (drones are free, skip check)
 		const state = nest.getStateLight();
@@ -709,9 +706,9 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 		const workerClassCategory = task.workerClass ? DEFAULT_COLONY_CATEGORIES[task.workerClass] : undefined;
 		const workerClassDelegatedModel = resolveColonyCategoryModel(workerClassCategory, availableModels, {
 			currentModel,
+			roleKeys: [`colony:${caste}`, ...(task.workerClass ? [`colony:${task.workerClass}`] : [])],
 			taskText: `${task.title}\n\n${task.description}`,
 			usage: opts.usageSnapshot,
-			roleKeys: [`colony:${caste}`, ...(task.workerClass ? [`colony:${task.workerClass}`] : [])],
 		});
 		let selectedModel =
 			caste === "worker"
@@ -723,22 +720,22 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 			selectedModel = opts.modelOverrides.multimodal;
 		}
 		const ant: Ant = {
-			id: "",
 			caste,
-			status: "idle",
-			taskId: task.id,
-			pid: null,
+			finishedAt: null,
+			id: "",
 			model: selectedModel,
+			pid: null,
+			routeCategory: workerClassDelegatedModel.model ? workerClassCategory : casteCategory,
 			routeSource:
 				(task.workerClass ? opts.modelOverrides?.[task.workerClass] : undefined) || opts.modelOverrides?.[caste]
 					? "override"
 					: workerClassDelegatedModel.model || casteDelegatedModel.model
 						? "delegated-category"
 						: "session-default",
-			routeCategory: workerClassDelegatedModel.model ? workerClassCategory : casteCategory,
-			usage: { input: 0, output: 0, cost: 0, turns: 0 },
 			startedAt: Date.now(),
-			finishedAt: null,
+			status: "idle",
+			taskId: task.id,
+			usage: { cost: 0, input: 0, output: 0, turns: 0 },
 		};
 		callbacks.onAntSpawn?.(ant, task);
 
@@ -833,17 +830,17 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 
 			// Path reinforcement: successful completion releases pheromone proportional to task scope (recruitment signal)
 			if (task.files.length > 0) {
-				const recruitStrength = Math.min(1.0, 0.5 + task.files.length * 0.1 + result.newTasks.length * 0.15);
+				const recruitStrength = Math.min(1, 0.5 + task.files.length * 0.1 + result.newTasks.length * 0.15);
 				nest.dropPheromone({
-					id: makePheromoneId(),
-					type: "completion",
-					antId: result.ant.id,
 					antCaste: caste,
-					taskId: task.id,
+					antId: result.ant.id,
 					content: `Success: ${task.title}`,
-					files: task.files,
-					strength: recruitStrength,
 					createdAt: Date.now(),
+					files: task.files,
+					id: makePheromoneId(),
+					strength: recruitStrength,
+					taskId: task.id,
+					type: "completion",
 				});
 			}
 
@@ -853,8 +850,8 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 			emitSignal("working", `${metrics.tasksDone}/${metrics.tasksTotal} tasks done`);
 
 			return "done";
-		} catch (e) {
-			const errStr = String(e);
+		} catch (error) {
+			const errStr = String(error);
 			const isRetryable =
 				errStr.includes("timeout") ||
 				errStr.includes("Timeout") ||
@@ -876,21 +873,21 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 						antId: "queen",
 						antCaste: caste,
 						taskId: task.id,
-						content: `Failed: ${task.title} — ${String(e).slice(0, 300)}`,
+						content: `Failed: ${task.title} — ${String(error).slice(0, 300)}`,
 						files: task.files,
 						strength: warnStrength,
 						createdAt: Date.now(),
 					});
 				}
 				// Preserve full error with stack trace for debugging
-				const fullError = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
+				const fullError = error instanceof Error ? `${error.message}\n${error.stack || ""}` : String(error);
 				nest.updateTaskStatus(task.id, "failed", undefined, fullError.slice(0, 2000));
 				// Surface the failure so it's not silent
 				emitSignal("working", `Task failed: ${task.title.slice(0, 60)} — ${errStr.slice(0, 120)}`);
 
 				// Bio 6: Corpse cleanup — error pattern tracking + diagnostic task
 				const pattern = classifyError(errStr);
-				const entry = errorPatterns.get(pattern) ?? { count: 0, files: new Set<string>(), errors: [] };
+				const entry = errorPatterns.get(pattern) ?? { count: 0, errors: [], files: new Set<string>() };
 				entry.count++;
 				for (const f of task.files) {
 					entry.files.add(f);
@@ -902,34 +899,34 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 					const affectedFiles = [...entry.files];
 					// Release repellent pheromone
 					nest.dropPheromone({
-						id: makePheromoneId(),
-						type: "repellent",
-						antId: "queen",
 						antCaste: caste,
-						taskId: task.id,
+						antId: "queen",
 						content: `Recurring ${pattern} errors (${entry.count}x): ${entry.errors[0]?.slice(0, 80)}`,
-						files: affectedFiles,
-						strength: 1.0,
 						createdAt: Date.now(),
+						files: affectedFiles,
+						id: makePheromoneId(),
+						strength: 1.0,
+						taskId: task.id,
+						type: "repellent",
 					});
 					// Generate diagnostic task (first occurrence only)
 					if (entry.count === 2 && nest.getAllTasks().length < 30) {
 						const diagTask: Task = {
+							caste: "scout",
+							claimedBy: null,
+							createdAt: Date.now(),
+							description: `Multiple ants failed with ${pattern} errors on these files:\n${affectedFiles.map((f) => `- ${f}`).join("\n")}\n\nErrors:\n${entry.errors.map((e) => `- ${e}`).join("\n")}\n\nInvestigate root cause and generate fix tasks.`,
+							error: null,
+							files: affectedFiles,
+							finishedAt: null,
 							id: makeTaskId(),
 							parentId: null,
-							title: `Diagnose recurring ${pattern} errors`,
-							description: `Multiple ants failed with ${pattern} errors on these files:\n${affectedFiles.map((f) => `- ${f}`).join("\n")}\n\nErrors:\n${entry.errors.map((e) => `- ${e}`).join("\n")}\n\nInvestigate root cause and generate fix tasks.`,
-							caste: "scout",
-							status: "pending",
 							priority: 1,
-							files: affectedFiles,
-							claimedBy: null,
 							result: null,
-							error: null,
 							spawnedTasks: [],
-							createdAt: Date.now(),
 							startedAt: null,
-							finishedAt: null,
+							status: "pending",
+							title: `Diagnose recurring ${pattern} errors`,
 						};
 						nest.writeTask(diagTask);
 						emitSignal("working", `Diagnosing recurring ${pattern} errors...`);
@@ -972,7 +969,7 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 		if (now - lastSampleTime >= 2000) {
 			lastSampleTime = now;
 			const completedRecently = state.tasks.filter(
-				(t) => t.status === "done" && t.finishedAt && t.finishedAt > now - 120000,
+				(t) => t.status === "done" && t.finishedAt && t.finishedAt > now - 120_000,
 			).length;
 			const sample = sampleSystem(state.ants.filter((a) => a.status === "working").length, completedRecently, 2);
 			nest.recordSample(sample);
@@ -1012,7 +1009,7 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 			const cur = nest.getStateLight().concurrency;
 			const reduced = Math.max(cur.min, cur.current - 1); // Reduce by 1, don't halve
 			nest.updateState({ concurrency: { ...cur, current: reduced, lastRateLimitAt: Date.now() } });
-			backoffMs = Math.min(consecutiveRateLimits * 2000, 10000);
+			backoffMs = Math.min(consecutiveRateLimits * 2000, 10_000);
 		} else {
 			consecutiveRateLimits = 0;
 			backoffMs = 0;
@@ -1025,7 +1022,7 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
  * Queen main loop — orchestrates the full colony lifecycle:
  * scouting → plan validation → working → reviewing → done/failed.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Top-level colony lifecycle orchestration across phases.
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Top-level colony lifecycle orchestration across phases.
 export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 	if (!opts.goal?.trim()) {
 		throw new Error("Colony goal is empty or undefined. Please provide a clear goal.");
@@ -1037,28 +1034,28 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 	const nest = new Nest(opts.cwd, colonyId, storageOptions);
 
 	const initialState: ColonyState = {
-		id: colonyId,
-		goal: opts.goal,
-		status: "scouting",
-		tasks: [makeInitialScoutTask(opts.goal)],
 		ants: [],
-		pheromones: [],
 		concurrency: defaultConcurrency(),
-		metrics: {
-			tasksTotal: 1,
-			tasksDone: 0,
-			tasksFailed: 0,
-			antsSpawned: 0,
-			totalCost: 0,
-			totalTokens: 0,
-			startTime: Date.now(),
-			throughputHistory: [],
-		},
-		maxCost: opts.maxCost ?? null,
-		modelOverrides: {},
-		workspace: opts.workspace,
 		createdAt: Date.now(),
 		finishedAt: null,
+		goal: opts.goal,
+		id: colonyId,
+		maxCost: opts.maxCost ?? null,
+		metrics: {
+			antsSpawned: 0,
+			startTime: Date.now(),
+			tasksDone: 0,
+			tasksFailed: 0,
+			tasksTotal: 1,
+			throughputHistory: [],
+			totalCost: 0,
+			totalTokens: 0,
+		},
+		modelOverrides: {},
+		pheromones: [],
+		status: "scouting",
+		tasks: [makeInitialScoutTask(opts.goal)],
+		workspace: opts.workspace,
 	};
 
 	if (opts.maxAnts) {
@@ -1078,19 +1075,19 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		const m = state.metrics;
 		const active = state.ants.filter((a) => a.status === "working").length;
 		const progress = m.tasksTotal > 0 ? m.tasksDone / m.tasksTotal : 0;
-		callbacks.onSignal?.({ phase, progress, active, cost: m.totalCost, message, colonyId: state.id, ...extras });
+		callbacks.onSignal?.({ active, colonyId: state.id, cost: m.totalCost, message, phase, progress, ...extras });
 	};
 
 	const waveBase: Omit<WaveOptions, "caste"> & { importGraph?: ImportGraph } = {
-		nest,
-		cwd: executionCwd,
-		signal,
-		callbacks,
-		emitSignal,
-		currentModel: opts.currentModel,
-		modelOverrides: opts.modelOverrides,
 		authStorage: opts.authStorage,
+		callbacks,
+		currentModel: opts.currentModel,
+		cwd: executionCwd,
+		emitSignal,
+		modelOverrides: opts.modelOverrides,
 		modelRegistry: opts.modelRegistry,
+		nest,
+		signal,
 	};
 
 	// ═══ Usage-aware budget planning ═══
@@ -1109,27 +1106,27 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		waveBase.budgetPlan = refreshBudgetPlan();
 
 		// ═══ Phase 1: Scouting (Bio 5: Colony voting — complex goals get multiple scouts) ═══
-		const scoutCountBase = opts.goal.length > 500 ? 3 : opts.goal.length > 200 ? 2 : 1;
+		const scoutCountBase = opts.goal.length > 500 ? 3 : (opts.goal.length > 200 ? 2 : 1);
 		const scoutCount = shouldUseScoutQuorum(opts.goal) ? Math.max(2, scoutCountBase) : scoutCountBase;
 		if (scoutCount > 1) {
 			// Multiple scouts in parallel: create independent tasks for each scout
 			for (let i = 1; i < scoutCount; i++) {
 				const extraScout: Task = {
+					caste: "scout",
+					claimedBy: null,
+					createdAt: Date.now(),
+					description: `Explore the codebase from a different angle and identify files, modules, and dependencies relevant to this goal:\n\n${opts.goal}\n\nFocus on areas other scouts might miss. Be thorough.`,
+					error: null,
+					files: [],
+					finishedAt: null,
 					id: makeTaskId(),
 					parentId: null,
-					title: `Scout ${i + 1}: explore codebase for goal`,
-					description: `Explore the codebase from a different angle and identify files, modules, and dependencies relevant to this goal:\n\n${opts.goal}\n\nFocus on areas other scouts might miss. Be thorough.`,
-					caste: "scout",
-					status: "pending",
 					priority: 1,
-					files: [],
-					claimedBy: null,
 					result: null,
-					error: null,
 					spawnedTasks: [],
-					createdAt: Date.now(),
 					startedAt: null,
-					finishedAt: null,
+					status: "pending",
+					title: `Scout ${i + 1}: explore codebase for goal`,
 				};
 				nest.writeTask(extraScout);
 			}
@@ -1177,7 +1174,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 			const issueDetail = plan.issues.join(", ");
 			const warningDetail = plan.warnings.length > 0 ? ` | warnings: ${plan.warnings.join(", ")}` : "";
 			const failureContext = `No valid execution plan after ${recoveryRound} recovery rounds. Issues: ${issueDetail}${warningDetail}. Scout intel (${intel.length} chars): ${intel.slice(0, 300)}`;
-			nest.updateState({ status: "failed", finishedAt: Date.now() });
+			nest.updateState({ finishedAt: Date.now(), status: "failed" });
 			const finalState = nest.getState();
 			callbacks.onComplete?.(finalState);
 			emitSignal("failed", failureContext.slice(0, 500));
@@ -1200,7 +1197,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 				waveBase.importGraph = importGraph;
 			}
 		} catch {
-			/* graph build failed, proceed without */
+			/* Graph build failed, proceed without */
 		}
 
 		// Execute drone tasks first (zero LLM cost)
@@ -1232,7 +1229,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 			callbacks.onPhase?.("working", `${remaining.length} sub-tasks from workers...`);
 			const result = await runAntWave({ ...waveBase, caste: "worker" });
 			if (result === "budget") {
-				nest.updateState({ status: "budget_exceeded", finishedAt: Date.now() });
+				nest.updateState({ finishedAt: Date.now(), status: "budget_exceeded" });
 				emitSignal(
 					"budget_exceeded",
 					`Budget exhausted: ${updateMetrics(nest).tasksDone}/${updateMetrics(nest).tasksTotal} tasks completed before limit`,
@@ -1269,7 +1266,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 					emitSignal("working", `${newTasks.length} new tasks`);
 					const result = await runAntWave({ ...waveBase, caste: "worker" });
 					if (result === "budget") {
-						nest.updateState({ status: "budget_exceeded", finishedAt: Date.now() });
+						nest.updateState({ finishedAt: Date.now(), status: "budget_exceeded" });
 						emitSignal(
 							"budget_exceeded",
 							`Budget exhausted: ${updateMetrics(nest).tasksDone}/${updateMetrics(nest).tasksTotal} tasks completed before limit`,
@@ -1309,14 +1306,14 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 
 		// ═══ Phase 4: Complete ═══
 		const finalMetrics = updateMetrics(nest);
-		nest.updateState({ status: "done", finishedAt: Date.now(), metrics: finalMetrics });
+		nest.updateState({ finishedAt: Date.now(), metrics: finalMetrics, status: "done" });
 		const finalState = nest.getState();
 		callbacks.onComplete?.(finalState);
 		emitSignal("done", `${finalMetrics.tasksDone}/${finalMetrics.tasksTotal} tasks done`);
 		return finalState;
-	} catch (e) {
-		const fullError = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
-		nest.updateState({ status: "failed", finishedAt: Date.now() });
+	} catch (error) {
+		const fullError = error instanceof Error ? `${error.message}\n${error.stack || ""}` : String(error);
+		nest.updateState({ finishedAt: Date.now(), status: "failed" });
 		const failState = nest.getState();
 		callbacks.onComplete?.(failState);
 		const m = failState.metrics;
@@ -1356,19 +1353,19 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		const m = state.metrics;
 		const active = state.ants.filter((a) => a.status === "working").length;
 		const progress = m.tasksTotal > 0 ? m.tasksDone / m.tasksTotal : 0;
-		callbacks.onSignal?.({ phase, progress, active, cost: m.totalCost, message, colonyId: state.id, ...extras });
+		callbacks.onSignal?.({ active, colonyId: state.id, cost: m.totalCost, message, phase, progress, ...extras });
 	};
 
 	const waveBase: Omit<WaveOptions, "caste"> & { budgetPlan?: BudgetPlan | null } = {
-		nest,
-		cwd: executionCwd,
-		signal,
-		callbacks,
-		emitSignal,
-		currentModel: opts.currentModel,
-		modelOverrides: opts.modelOverrides,
 		authStorage: opts.authStorage,
+		callbacks,
+		currentModel: opts.currentModel,
+		cwd: executionCwd,
+		emitSignal,
+		modelOverrides: opts.modelOverrides,
 		modelRegistry: opts.modelRegistry,
+		nest,
+		signal,
 	};
 
 	// Budget plan for resumed colony
@@ -1398,7 +1395,7 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		if (pendingWorkers.length > 0) {
 			const result = await runAntWave({ ...waveBase, caste: "worker" });
 			if (result === "budget") {
-				nest.updateState({ status: "budget_exceeded", finishedAt: Date.now() });
+				nest.updateState({ finishedAt: Date.now(), status: "budget_exceeded" });
 				emitSignal(
 					"budget_exceeded",
 					`Budget exhausted: ${updateMetrics(nest).tasksDone}/${updateMetrics(nest).tasksTotal} tasks completed before limit`,
@@ -1427,14 +1424,14 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		}
 
 		const finalMetrics = updateMetrics(nest);
-		nest.updateState({ status: "done", finishedAt: Date.now(), metrics: finalMetrics });
+		nest.updateState({ finishedAt: Date.now(), metrics: finalMetrics, status: "done" });
 		const finalState = nest.getState();
 		callbacks.onComplete?.(finalState);
 		emitSignal("done", `Resumed: ${finalMetrics.tasksDone}/${finalMetrics.tasksTotal} tasks done`);
 		return finalState;
-	} catch (e) {
-		const fullError = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
-		nest.updateState({ status: "failed", finishedAt: Date.now() });
+	} catch (error) {
+		const fullError = error instanceof Error ? `${error.message}\n${error.stack || ""}` : String(error);
+		nest.updateState({ finishedAt: Date.now(), status: "failed" });
 		const failState = nest.getState();
 		callbacks.onComplete?.(failState);
 		const m = failState.metrics;

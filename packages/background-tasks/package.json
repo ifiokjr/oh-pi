@@ -1,52 +1,52 @@
 {
-  "name": "@ifi/pi-background-tasks",
-  "version": "0.4.4",
-  "description": "Reactive background shell tasks for pi with /bg, Ctrl+Shift+B, log viewing, and agent wakeups on output.",
-  "type": "module",
-  "keywords": [
-    "pi-package",
-    "pi",
-    "pi-coding-agent",
-    "background-tasks",
-    "shell",
-    "automation",
-    "watch"
-  ],
-  "bin": {
-    "pi-background-tasks": "install.mjs"
-  },
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
-  },
-  "files": [
-    "*.ts",
-    "*.mjs",
-    "README.md",
-    "!**/*.test.ts",
-    "!tests/**"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/background-tasks"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/background-tasks",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  },
-  "scripts": {
-    "build": "pnpm run typecheck && pnpm run test:worktree",
-    "typecheck": "tsgo --project ./tsconfig.json --noEmit",
-    "test:worktree": "vitest run --config ./vitest.worktree.config.ts"
-  },
-  "peerDependencies": {
-    "@mariozechner/pi-agent-core": ">=0.56.1",
-    "@mariozechner/pi-ai": ">=0.56.1",
-    "@mariozechner/pi-coding-agent": ">=0.56.1",
-    "@mariozechner/pi-tui": ">=0.56.1",
-    "@sinclair/typebox": "*"
-  }
+	"name": "@ifi/pi-background-tasks",
+	"version": "0.4.4",
+	"description": "Reactive background shell tasks for pi with /bg, Ctrl+Shift+B, log viewing, and agent wakeups on output.",
+	"keywords": [
+		"automation",
+		"background-tasks",
+		"pi",
+		"pi-coding-agent",
+		"pi-package",
+		"shell",
+		"watch"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/background-tasks",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/background-tasks"
+	},
+	"bin": {
+		"pi-background-tasks": "install.mjs"
+	},
+	"files": [
+		"*.ts",
+		"*.mjs",
+		"README.md",
+		"!**/*.test.ts",
+		"!tests/**"
+	],
+	"type": "module",
+	"scripts": {
+		"build": "pnpm run typecheck && pnpm run test:worktree",
+		"typecheck": "tsgo --project ./tsconfig.json --noEmit",
+		"test:worktree": "vitest run --config ./vitest.worktree.config.ts"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-agent-core": ">=0.56.1",
+		"@mariozechner/pi-ai": ">=0.56.1",
+		"@mariozechner/pi-coding-agent": ">=0.56.1",
+		"@mariozechner/pi-tui": ">=0.56.1",
+		"@sinclair/typebox": "*"
+	},
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	}
 }

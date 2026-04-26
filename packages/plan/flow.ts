@@ -1,15 +1,11 @@
 import path from "node:path";
+import { BorderedLoader } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from '@mariozechner/pi-coding-agent';
 import {
-	BorderedLoader,
-	type ExtensionAPI,
-	type ExtensionCommandContext,
-	type ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
-import {
-	buildImplementationPrefill,
 	PLAN_MODE_END_OPTIONS,
 	PLAN_MODE_START_OPTIONS,
 	PLAN_MODE_SUMMARY_PROMPT,
+	buildImplementationPrefill,
 } from "./utils";
 import {
 	createFreshPlanFilePath,
@@ -17,14 +13,14 @@ import {
 	movePlanFile,
 	pathExists,
 	readPlanFile,
+	resetPlanFile,
 	resolveActivePlanFilePath,
 	resolvePlanLocationInput,
-	resetPlanFile,
 } from "./plan-files";
 import { getFirstUserMessageId, hasEntryInSession } from "./state";
 import type { PlanModeState } from "./types";
 
-type PlanModeStateManager = {
+interface PlanModeStateManager {
 	getState: () => PlanModeState;
 	setState: (ctx: ExtensionContext, nextState: PlanModeState) => void;
 	startPlanMode: (
@@ -34,17 +30,14 @@ type PlanModeStateManager = {
 			planFilePath: string;
 		},
 	) => void;
-};
+}
 
-type PlanModeExitSummary = {
+interface PlanModeExitSummary {
 	planFilePath: string;
 	planText?: string;
-};
+}
 
-async function navigateToFreshPlanningBranch(
-	ctx: ExtensionContext,
-	cancelMessage: string,
-): Promise<boolean> {
+async function navigateToFreshPlanningBranch(ctx: ExtensionContext, cancelMessage: string): Promise<boolean> {
 	const firstUserMessageId = getFirstUserMessageId(ctx);
 	if (!firstUserMessageId) {
 		ctx.ui.notify("No user message found to branch planning from.", "error");
@@ -53,8 +46,8 @@ async function navigateToFreshPlanningBranch(
 
 	try {
 		const navigateResult = await ctx.navigateTree(firstUserMessageId, {
-			summarize: false,
 			label: "plan",
+			summarize: false,
 		});
 		if (navigateResult.cancelled) {
 			ctx.ui.notify(cancelMessage, "info");
@@ -93,8 +86,8 @@ async function navigateToSavedPlanningBranch(
 
 	try {
 		const navigateResult = await ctx.navigateTree(options.savedLeafId, {
-			summarize: false,
 			label: "plan",
+			summarize: false,
 		});
 		if (navigateResult.cancelled) {
 			ctx.ui.notify(options.cancelMessage, "info");
@@ -129,10 +122,7 @@ async function confirmMoveOverwriteIfNeeded(
 	}
 
 	if (!ctx.hasUI) {
-		ctx.ui.notify(
-			`Refusing to overwrite existing plan file without interactive confirmation: ${targetPath}`,
-			"error",
-		);
+		ctx.ui.notify(`Refusing to overwrite existing plan file without interactive confirmation: ${targetPath}`, "error");
 		return false;
 	}
 
@@ -175,10 +165,7 @@ async function updateActivePlanFileLocation(
 	try {
 		shouldMove = await confirmMoveOverwriteIfNeeded(ctx, previousPath, nextPath);
 	} catch (error) {
-		ctx.ui.notify(
-			`Failed to check target path: ${error instanceof Error ? error.message : String(error)}`,
-			"error",
-		);
+		ctx.ui.notify(`Failed to check target path: ${error instanceof Error ? error.message : String(error)}`, "error");
 		return undefined;
 	}
 	if (!shouldMove) {
@@ -201,8 +188,8 @@ async function updateActivePlanFileLocation(
 	}
 
 	return {
-		previousPath,
 		nextPath,
+		previousPath,
 	};
 }
 
@@ -224,7 +211,7 @@ async function exitPlanMode(
 
 	const activeState = state;
 	const planningLeafId = ctx.sessionManager.getLeafId();
-	const originLeafId = activeState.originLeafId;
+	const {originLeafId} = activeState;
 	const planFilePath = resolveActivePlanFilePath(ctx, activeState.planFilePath);
 
 	const canNavigateToOrigin = Boolean(originLeafId && hasEntryInSession(ctx, originLeafId));
@@ -234,11 +221,12 @@ async function exitPlanMode(
 				const loader = new BorderedLoader(tui, theme, "Summarizing planning branch...");
 				loader.onAbort = () => done(null);
 
-				ctx.navigateTree(originLeafId, {
-					summarize: true,
-					customInstructions: PLAN_MODE_SUMMARY_PROMPT,
-					replaceInstructions: true,
-				})
+				ctx
+					.navigateTree(originLeafId, {
+						customInstructions: PLAN_MODE_SUMMARY_PROMPT,
+						replaceInstructions: true,
+						summarize: true,
+					})
 					.then(done)
 					.catch((error) => done({ cancelled: false, error: error instanceof Error ? error.message : String(error) }));
 
@@ -277,10 +265,10 @@ async function exitPlanMode(
 	}
 
 	stateManager.setState(ctx, {
-		version: activeState.version,
 		active: false,
-		planFilePath,
 		lastPlanLeafId: planningLeafId ?? activeState.lastPlanLeafId,
+		planFilePath,
+		version: activeState.version,
 	});
 	const planText = (await readPlanFile(planFilePath))?.trim();
 	if (planText) {
@@ -370,14 +358,14 @@ async function navigateTreeInShortcutContext(
 	const sessionManager = ctx.sessionManager as ExtensionContext["sessionManager"] & {
 		getEntry?: (entryId: string) =>
 			| {
-				type?: string;
-				parentId?: string | null;
-				message?: {
-					role?: string;
+					type?: string;
+					parentId?: string | null;
+					message?: {
+						role?: string;
+						content?: unknown;
+					};
 					content?: unknown;
-				};
-				content?: unknown;
-			}
+			  }
 			| undefined;
 		branch?: (entryId: string) => void;
 		resetLeaf?: () => void;
@@ -430,14 +418,14 @@ async function navigateTreeInShortcutContext(
 function createShortcutCommandContext(ctx: ExtensionContext): ExtensionCommandContext {
 	return {
 		...ctx,
+		fork: async () => ({ cancelled: true }),
+		navigateTree: async (targetId, options) => navigateTreeInShortcutContext(ctx, targetId, options),
+		newSession: async () => ({ cancelled: true }),
+		reload: async () => {},
+		switchSession: async () => ({ cancelled: true }),
 		waitForIdle: async () => {
 			await waitForIdleInShortcutContext(ctx);
 		},
-		newSession: async () => ({ cancelled: true }),
-		fork: async () => ({ cancelled: true }),
-		navigateTree: async (targetId, options) => navigateTreeInShortcutContext(ctx, targetId, options),
-		switchSession: async () => ({ cancelled: true }),
-		reload: async () => {},
 	};
 }
 
@@ -531,9 +519,9 @@ export function registerPlanModeCommand(
 
 		if (startIntent === "continue") {
 			const resumedSavedPlanningBranch = await navigateToSavedPlanningBranch(ctx, {
-				savedLeafId: savedPlanLeafId,
-				currentLeafId: originLeafId,
 				cancelMessage: "Plan mode activation cancelled.",
+				currentLeafId: originLeafId,
+				savedLeafId: savedPlanLeafId,
 			});
 			if (!resumedSavedPlanningBranch) {
 				return;

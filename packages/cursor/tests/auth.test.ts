@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+
 import { createCursorOAuthProvider, generateCursorAuthParams, getTokenExpiry, refreshCursorToken } from "../auth.js";
 import { createTestCursorBackend } from "./test-backend.js";
 
@@ -40,10 +40,20 @@ describe("cursor auth", () => {
 		backend.setDiscoveredModels([]);
 
 		const refreshed = await refreshCursorToken({
-			refresh: "valid-refresh",
 			access: "expired-access",
 			expires: Date.now() - 1000,
-			models: [{ id: "composer-2", name: "Composer 2", reasoning: true, input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 200000, maxTokens: 64000 }],
+			models: [
+				{
+					id: "composer-2",
+					name: "Composer 2",
+					reasoning: true,
+					input: ["text"],
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+					contextWindow: 200000,
+					maxTokens: 64000,
+				},
+			],
+			refresh: "valid-refresh",
 		} as never);
 
 		expect(refreshed.access).not.toBe("expired-access");
@@ -55,16 +65,37 @@ describe("cursor auth", () => {
 		const provider = createCursorOAuthProvider();
 		const modified = provider.modifyModels?.(
 			[
-				{ id: "placeholder", name: "Placeholder", api: "cursor-agent", provider: "cursor", baseUrl: "https://example.com", reasoning: false, input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 1, maxTokens: 1 },
+				{
+					api: "cursor-agent",
+					baseUrl: "https://example.com",
+					contextWindow: 1,
+					cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0 },
+					id: "placeholder",
+					input: ["text"],
+					maxTokens: 1,
+					name: "Placeholder",
+					provider: "cursor",
+					reasoning: false,
+				},
 			],
 			{
-				refresh: "r",
 				access: "a",
 				expires: Date.now() + 1000,
-				models: [{ id: "composer-2", name: "Composer 2", reasoning: true, input: ["text"], cost: { input: 0.5, output: 2.5, cacheRead: 0.2, cacheWrite: 0 }, contextWindow: 200000, maxTokens: 64000 }],
+				models: [
+					{
+						id: "composer-2",
+						name: "Composer 2",
+						reasoning: true,
+						input: ["text"],
+						cost: { input: 0.5, output: 2.5, cacheRead: 0.2, cacheWrite: 0 },
+						contextWindow: 200000,
+						maxTokens: 64000,
+					},
+				],
+				refresh: "r",
 			} as never,
 		);
 
-		expect(modified?.map((model) => model.id)).toEqual(["composer-2"]);
+		expect(modified?.map((model) => model.id)).toStrictEqual(["composer-2"]);
 	});
 });

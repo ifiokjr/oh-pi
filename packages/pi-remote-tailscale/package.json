@@ -1,56 +1,56 @@
 {
-  "name": "@ifi/pi-remote-tailscale",
-  "version": "0.4.4",
-  "description": "Pi extension for secure remote session sharing with Tailscale URLs, QR codes, and TUI status widgets.",
-  "type": "module",
-  "keywords": [
-    "pi-package",
-    "pi",
-    "pi-coding-agent",
-    "remote",
-    "tailscale",
-    "websocket",
-    "qr-code"
-  ],
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
-  },
-  "files": [
-    "index.ts",
-    "src",
-    "README.md",
-    "!**/*.test.ts",
-    "!tests/**"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/pi-remote-tailscale"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/pi-remote-tailscale",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  },
-  "dependencies": {
-    "@ifi/pi-web-server": "0.4.4"
-  },
-  "optionalDependencies": {
-    "node-pty": "^1.0.0",
-    "qrcode-terminal": "^0.12.0"
-  },
-  "scripts": {
-    "build": "pnpm run typecheck && pnpm run test:package",
-    "typecheck": "tsgo --project ./tsconfig.json --noEmit",
-    "test:package": "vitest run --config ./vitest.config.ts"
-  },
-  "peerDependencies": {
-    "@mariozechner/pi-agent-core": ">=0.56.1",
-    "@mariozechner/pi-ai": ">=0.56.1",
-    "@mariozechner/pi-coding-agent": ">=0.56.1",
-    "@mariozechner/pi-tui": ">=0.56.1",
-    "@sinclair/typebox": "*"
-  }
+	"name": "@ifi/pi-remote-tailscale",
+	"version": "0.4.4",
+	"description": "Pi extension for secure remote session sharing with Tailscale URLs, QR codes, and TUI status widgets.",
+	"keywords": [
+		"pi",
+		"pi-coding-agent",
+		"pi-package",
+		"qr-code",
+		"remote",
+		"tailscale",
+		"websocket"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/pi-remote-tailscale",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/pi-remote-tailscale"
+	},
+	"files": [
+		"index.ts",
+		"src",
+		"README.md",
+		"!**/*.test.ts",
+		"!tests/**"
+	],
+	"type": "module",
+	"scripts": {
+		"build": "pnpm run typecheck && pnpm run test:package",
+		"typecheck": "tsgo --project ./tsconfig.json --noEmit",
+		"test:package": "vitest run --config ./vitest.config.ts"
+	},
+	"dependencies": {
+		"@ifi/pi-web-server": "0.4.4"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-agent-core": ">=0.56.1",
+		"@mariozechner/pi-ai": ">=0.56.1",
+		"@mariozechner/pi-coding-agent": ">=0.56.1",
+		"@mariozechner/pi-tui": ">=0.56.1",
+		"@sinclair/typebox": "*"
+	},
+	"optionalDependencies": {
+		"node-pty": "^1.0.0",
+		"qrcode-terminal": "^0.12.0"
+	},
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	}
 }

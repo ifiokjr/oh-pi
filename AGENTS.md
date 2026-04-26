@@ -12,6 +12,7 @@ reuse commands pinned to the repo's declared `@ifi/mdt` version and makes local 
 instructions consistent.
 
 <!-- {/repoMdtUsageRuleDocs} -->
+
 - Non-standard repo commands:
   - `pnpm typecheck` — type-checks the repo with `tsgo` (`@typescript/native-preview`)
   - `pnpm build` — runs every workspace package build script
@@ -33,6 +34,7 @@ pnpm docs:check
 ```
 
 <!-- {/repoMdtCommandsDocs} -->
+
 - Read only the detailed file that matches the current task:
   - [Engineering rules](docs/agent-rules/engineering.md)
   - [Packaging and release rules](docs/agent-rules/packaging-and-release.md)
@@ -49,16 +51,14 @@ Never create `new RegExp(...)` inside a function that runs repeatedly (event han
 ```ts
 // ❌ Slow — compiles on every call
 function extractPheromones(output: string) {
-  for (const section of sections) {
-    const regex = new RegExp(`#{1,2} ${section}\\n([\\s\\S]*?)(?=\\n#{1,2} |$)`, "i");
-    // ...
-  }
+	for (const section of sections) {
+		const regex = new RegExp(`#{1,2} ${section}\\n([\\s\\S]*?)(?=\\n#{1,2} |$)`, "i");
+		// ...
+	}
 }
 
 // ✅ Fast — compile once at module scope
-const SECTION_REGEXES = SECTIONS.map(
-  (s) => new RegExp(`#{1,2} ${s}\\n([\\s\\S]*?)(?=\\n#{1,2} |$)`, "i"),
-);
+const SECTION_REGEXES = SECTIONS.map((s) => new RegExp(`#{1,2} ${s}\\n([\\s\\S]*?)(?=\\n#{1,2} |$)`, "i"));
 ```
 
 ### 2. Debounce disk writes from hot paths
@@ -68,8 +68,8 @@ Extensions that write to disk on every usage sample, event, or tick must debounc
 ```ts
 // ❌ Slow — writes to disk per event
 function recordUsage(sample) {
-  rollingHistory.push(sample);
-  saveRollingHistory(); // writeFileSync on every call!
+	rollingHistory.push(sample);
+	saveRollingHistory(); // writeFileSync on every call!
 }
 
 // ✅ Fast — debounce disk writes
@@ -78,16 +78,16 @@ let rollingHistoryDirty = false;
 let rollingHistorySaveTimer: ReturnType<typeof setTimeout> | null = null;
 
 function scheduleRollingHistorySave() {
-  rollingHistoryDirty = true;
-  if (rollingHistorySaveTimer) return;
-  rollingHistorySaveTimer = setTimeout(() => {
-    rollingHistorySaveTimer = null;
-    if (rollingHistoryDirty) {
-      rollingHistoryDirty = false;
-      saveRollingHistory();
-    }
-  }, PERSIST_DEBOUNCE_MS);
-  rollingHistorySaveTimer.unref?.();
+	rollingHistoryDirty = true;
+	if (rollingHistorySaveTimer) return;
+	rollingHistorySaveTimer = setTimeout(() => {
+		rollingHistorySaveTimer = null;
+		if (rollingHistoryDirty) {
+			rollingHistoryDirty = false;
+			saveRollingHistory();
+		}
+	}, PERSIST_DEBOUNCE_MS);
+	rollingHistorySaveTimer.unref?.();
 }
 ```
 
@@ -98,13 +98,13 @@ When pruning aged items from an array, use a write-pointer instead of repeated `
 ```ts
 // ❌ O(n²) — each splice shifts elements
 for (let i = arr.length - 1; i >= 0; i--) {
-  if (shouldRemove(arr[i])) arr.splice(i, 1);
+	if (shouldRemove(arr[i])) arr.splice(i, 1);
 }
 
 // ✅ O(n) — single pass with write pointer
 let write = 0;
 for (let read = 0; read < arr.length; read++) {
-  if (!shouldRemove(arr[read])) arr[write++] = arr[read];
+	if (!shouldRemove(arr[read])) arr[write++] = arr[read];
 }
 arr.length = write;
 ```
@@ -133,10 +133,10 @@ const firstMatch = items.filter(predicate).map(transform)[0];
 
 // ✅ No intermediate allocation
 for (const item of items) {
-  if (predicate(item)) {
-    firstMatch = transform(item);
-    break;
-  }
+	if (predicate(item)) {
+		firstMatch = transform(item);
+		break;
+	}
 }
 ```
 
@@ -193,6 +193,7 @@ for (const item of items) result[item.id] = item;
 ### 9. Bounds-check unbounded caches
 
 In-memory Maps or objects used as caches must have either:
+
 - A bounded size (evict stale entries when full), or
 - A known finite domain (e.g., model IDs from a static catalog)
 
@@ -219,10 +220,14 @@ let dueCount = 0;
 let scheduledCount = 0;
 let nextRunAt = Infinity;
 for (const task of tasks.values()) {
-  if (!task.enabled) continue;
-  enabledCount++;
-  if (task.resumeRequired) { dueCount++; }
-  else { scheduledCount++; nextRunAt = Math.min(nextRunAt, task.nextRunAt); }
+	if (!task.enabled) continue;
+	enabledCount++;
+	if (task.resumeRequired) {
+		dueCount++;
+	} else {
+		scheduledCount++;
+		nextRunAt = Math.min(nextRunAt, task.nextRunAt);
+	}
 }
 ```
 
@@ -233,14 +238,14 @@ To find the minimum element by a key, do a single-pass scan instead of allocatin
 ```ts
 // ❌ Allocates array + sorts entire collection
 const nextTask = Array.from(tasks.values())
-  .filter((t) => t.enabled && t.pending)
-  .sort((a, b) => a.nextRunAt - b.nextRunAt)[0];
+	.filter((t) => t.enabled && t.pending)
+	.sort((a, b) => a.nextRunAt - b.nextRunAt)[0];
 
 // ✅ Single-pass with early-exit, zero allocation
 let best: ScheduleTask | undefined;
 for (const task of tasks.values()) {
-  if (!task.enabled || !task.pending) continue;
-  if (!best || task.nextRunAt < best.nextRunAt) best = task;
+	if (!task.enabled || !task.pending) continue;
+	if (!best || task.nextRunAt < best.nextRunAt) best = task;
 }
 ```
 
@@ -251,13 +256,13 @@ Never delete from a Map during `for...of map.values()` iteration. Instead of cre
 ```ts
 // ❌ Allocates full snapshot just to safely delete
 for (const task of Array.from(tasks.values())) {
-  if (shouldDelete(task)) tasks.delete(task.id);
+	if (shouldDelete(task)) tasks.delete(task.id);
 }
 
 // ✅ No snapshot — collect then delete
 const deleteIds: string[] = [];
 for (const task of tasks.values()) {
-  if (shouldDelete(task)) deleteIds.push(task.id);
+	if (shouldDelete(task)) deleteIds.push(task.id);
 }
 for (const id of deleteIds) tasks.delete(id);
 ```

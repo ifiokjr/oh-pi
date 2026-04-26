@@ -97,37 +97,45 @@ export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
 
 export function getStepNotes(step: WorkflowPromptContext["step"]): string[] {
 	switch (step) {
-		case "constitution":
+		case "constitution": {
 			return [
 				"Keep the constitution in `.specify/memory/constitution.md` as the canonical governance file.",
 				"When propagating changes, prefer updating `.specify/templates/*` and `.specify/memory/pi-agent.md` over agent-specific script outputs.",
 			];
-		case "specify":
+		}
+		case "specify": {
 			return [
 				"The native /spec runtime has already generated the feature number, branch name, feature directory, and spec scaffold.",
 				"Do not create a second feature branch or rerun any feature-creation shell scripts.",
 			];
-		case "clarify":
+		}
+		case "clarify": {
 			return [
 				"Ask at most five high-impact clarification questions and update the spec incrementally after each accepted answer.",
 			];
-		case "checklist":
+		}
+		case "checklist": {
 			return ["Generate checklist items that test requirement quality, not implementation behavior."];
-		case "plan":
+		}
+		case "plan": {
 			return [
 				"The native /spec runtime has already scaffolded `plan.md` if it was missing.",
 				"Use `.specify/memory/pi-agent.md` as the pi-native output in place of agent-specific update scripts.",
 			];
-		case "tasks":
+		}
+		case "tasks": {
 			return [
 				"Organize tasks by independently testable user stories and preserve the strict checkbox format from the template.",
 			];
-		case "analyze":
+		}
+		case "analyze": {
 			return ["Keep the analysis strictly read-only; do not edit files during this step."];
-		case "implement":
+		}
+		case "implement": {
 			return [
 				"Mark completed tasks as `[x]` in tasks.md as you implement them.",
 				"If checklists are incomplete, respect the user's decision about whether to proceed.",
 			];
+		}
 	}
 }

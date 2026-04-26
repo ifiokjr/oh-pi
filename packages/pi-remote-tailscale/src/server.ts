@@ -1,12 +1,8 @@
-import {
-	createPiWebServer,
-	getLanIp,
-	type AgentSessionLike,
-	type PiWebServer,
-	validateToken,
-} from "@ifi/pi-web-server";
-import type { DiscoveryService, DiscoveryRecord } from "./discovery.js";
-import { startTailscaleServe, type TailscaleServeSession } from "./tailscale.js";
+import { createPiWebServer, getLanIp, validateToken } from '@ifi/pi-web-server';
+import type { AgentSessionLike, PiWebServer } from '@ifi/pi-web-server';
+import type { DiscoveryRecord, DiscoveryService } from "./discovery.js";
+import { startTailscaleServe } from './tailscale.js';
+import type { TailscaleServeSession } from './tailscale.js';
 
 export const DEFAULT_HOSTED_UI_URL = "https://pi-remote.dev";
 export const REMOTE_MODE_ENV = "PI_REMOTE_TAILSCALE_MODE";
@@ -106,7 +102,9 @@ export function renderErrorPage(status: 403 | 404, title?: string, detail?: stri
 	const resolvedTitle = title ?? (status === 403 ? "Forbidden" : "Not found");
 	const resolvedDetail =
 		detail ??
-		(status === 403 ? "A valid token is required to view this remote session." : "The requested remote resource does not exist.");
+		(status === 403
+			? "A valid token is required to view this remote session."
+			: "The requested remote resource does not exist.");
 
 	return `<!doctype html>
 <html lang="en">

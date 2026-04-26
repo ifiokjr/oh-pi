@@ -13,7 +13,7 @@ let cachedPiTui:
 			truncateToWidth: (text: string, width: number) => string;
 			visibleWidth: (text: string) => number;
 			wrapTextWithAnsi: (text: string, width: number) => string[];
-		}
+	  }
 	| undefined;
 
 function getPiTui() {
@@ -61,9 +61,14 @@ export interface ScrollSelectConfig<T> {
 	search?: ScrollSelectSearchConfig<T>;
 }
 
-type ScrollSelectUi = {
+interface ScrollSelectUi {
 	custom?: <T>(
-		factory: (tui: { requestRender: () => void }, theme: ScrollSelectTheme, keybindings: unknown, done: (value: T) => void) => {
+		factory: (
+			tui: { requestRender: () => void },
+			theme: ScrollSelectTheme,
+			keybindings: unknown,
+			done: (value: T) => void,
+		) => {
 			render: (width: number) => string[];
 			handleInput: (data: string) => void;
 			dispose?: () => void;
@@ -73,13 +78,13 @@ type ScrollSelectUi = {
 	select?: (title: string, options: string[]) => Promise<string | null | undefined>;
 	input?: (title: string, placeholder?: string) => Promise<string | null | undefined>;
 	notify?: (message: string, type?: "error" | "info" | "warning") => void;
-};
+}
 
-type ScrollSelectTheme = {
+interface ScrollSelectTheme {
 	fg: (color: string, text: string) => string;
 	bg?: (color: string, text: string) => string;
 	bold: (text: string) => string;
-};
+}
 
 class ScrollSelectComponent<T> {
 	focused = false;
@@ -246,19 +251,19 @@ class ScrollSelectComponent<T> {
 		}
 
 		const index = this.baseOptions.findIndex((option) => Object.is(option.value, initialValue));
-		return index >= 0 ? index : 0;
+		return Math.max(index, 0);
 	}
 
 	private getVisibleRange(): { start: number; end: number } {
 		const count = this.options.length;
 		const visible = Math.min(this.maxVisibleOptions, count);
 		if (count <= visible) {
-			return { start: 0, end: count };
+			return { end: count, start: 0 };
 		}
 
 		let start = Math.max(0, this.cursorIndex - Math.floor(visible / 2));
 		start = Math.min(start, count - visible);
-		return { start, end: Math.min(count, start + visible) };
+		return { end: Math.min(count, start + visible), start };
 	}
 
 	private moveCursor(delta: number): void {
@@ -330,18 +335,18 @@ export async function openScrollableSelect<T>(ui: ScrollSelectUi, config: Scroll
 	return await ui.custom<T | null>(
 		(tui, theme, _keybindings, done) =>
 			new ScrollSelectComponent(config, {
-				tui,
-				theme,
 				done,
 				input: ui.input,
 				notify: ui.notify,
+				theme,
+				tui,
 			}),
 		{
 			overlay: true,
 			overlayOptions: {
 				anchor: "center",
-				width: config.overlayWidth ?? 84,
 				maxHeight: config.overlayMaxHeight ?? "75%",
+				width: config.overlayWidth ?? 84,
 			},
 		},
 	);

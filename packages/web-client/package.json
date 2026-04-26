@@ -1,46 +1,46 @@
 {
-  "name": "@ifi/pi-web-client",
-  "version": "0.4.4",
-  "description": "Platform-agnostic TypeScript client for pi-web remote sessions. Zero dependencies.",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "scripts": {
-    "clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist',{ recursive: true, force: true }))\"",
-    "build": "pnpm clean && tsc --project tsconfig.json",
-    "build:fast": "pnpm clean && tsgo --project tsconfig.json",
-    "typecheck": "tsgo --project tsconfig.json --noEmit"
-  },
-  "license": "MIT",
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "keywords": [
-    "pi",
-    "pi-coding-agent",
-    "web",
-    "remote",
-    "client",
-    "websocket",
-    "typescript"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/web-client"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/web-client",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  }
+	"name": "@ifi/pi-web-client",
+	"version": "0.4.4",
+	"description": "Platform-agnostic TypeScript client for pi-web remote sessions. Zero dependencies.",
+	"keywords": [
+		"client",
+		"pi",
+		"pi-coding-agent",
+		"remote",
+		"typescript",
+		"web",
+		"websocket"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/web-client",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/web-client"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist',{ recursive: true, force: true }))\"",
+		"build": "pnpm clean && tsc --project tsconfig.json",
+		"build:fast": "pnpm clean && tsgo --project tsconfig.json",
+		"typecheck": "tsgo --project tsconfig.json --noEmit"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	}
 }

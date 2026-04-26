@@ -1,45 +1,45 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { Nest } from "../extensions/ant-colony/nest.js";
 import type { ColonyState, Pheromone } from "../extensions/ant-colony/types.js";
 
 const mkState = (overrides: Partial<ColonyState> = {}): ColonyState => ({
-	id: "test-colony",
-	goal: "test",
-	status: "working",
-	tasks: [],
 	ants: [],
-	pheromones: [],
-	concurrency: { current: 2, min: 1, max: 4, optimal: 3, history: [] },
-	metrics: {
-		tasksTotal: 0,
-		tasksDone: 0,
-		tasksFailed: 0,
-		antsSpawned: 0,
-		totalCost: 0,
-		totalTokens: 0,
-		startTime: Date.now(),
-		throughputHistory: [],
-	},
-	maxCost: null,
-	modelOverrides: {},
+	concurrency: { current: 2, history: [], max: 4, min: 1, optimal: 3 },
 	createdAt: Date.now(),
 	finishedAt: null,
+	goal: "test",
+	id: "test-colony",
+	maxCost: null,
+	metrics: {
+		antsSpawned: 0,
+		startTime: Date.now(),
+		tasksDone: 0,
+		tasksFailed: 0,
+		tasksTotal: 0,
+		throughputHistory: [],
+		totalCost: 0,
+		totalTokens: 0,
+	},
+	modelOverrides: {},
+	pheromones: [],
+	status: "working",
+	tasks: [],
 	...overrides,
 });
 
 const mkPheromone = (overrides: Partial<Pheromone> = {}): Pheromone => ({
-	id: `p-${Math.random().toString(36).slice(2)}`,
-	type: "warning",
-	antId: "ant-1",
 	antCaste: "worker",
-	taskId: "t-1",
+	antId: "ant-1",
 	content: "test",
-	files: ["a.ts"],
-	strength: 1.0,
 	createdAt: Date.now(),
+	files: ["a.ts"],
+	id: `p-${Math.random().toString(36).slice(2)}`,
+	strength: 1.0,
+	taskId: "t-1",
+	type: "warning",
 	...overrides,
 });
 
@@ -54,9 +54,9 @@ beforeEach(() => {
 
 afterEach(() => {
 	try {
-		fs.rmSync(tmpDir, { recursive: true, force: true });
+		fs.rmSync(tmpDir, { force: true, recursive: true });
 	} catch {
-		/* ignore */
+		/* Ignore */
 	}
 });
 
@@ -65,28 +65,28 @@ describe("getStateLight", () => {
 		nest.dropPheromone(mkPheromone());
 		const light = nest.getStateLight();
 		expect(light.id).toBe("test-colony");
-		expect(light.tasks).toEqual([]);
-		// pheromones should not be populated by getStateLight
+		expect(light.tasks).toStrictEqual([]);
+		// Pheromones should not be populated by getStateLight
 		// (it returns stateCache which has empty pheromones from init)
 	});
 
 	it("includes tasks from cache", () => {
 		nest.writeTask({
+			caste: "worker",
+			claimedBy: null,
+			createdAt: Date.now(),
+			description: "desc",
+			error: null,
+			files: [],
+			finishedAt: null,
 			id: "t-1",
 			parentId: null,
-			title: "Test",
-			description: "desc",
-			caste: "worker",
-			status: "pending",
 			priority: 3,
-			files: [],
-			claimedBy: null,
 			result: null,
-			error: null,
 			spawnedTasks: [],
-			createdAt: Date.now(),
 			startedAt: null,
-			finishedAt: null,
+			status: "pending",
+			title: "Test",
 		});
 		const light = nest.getStateLight();
 		expect(light.tasks).toHaveLength(1);
@@ -100,37 +100,37 @@ describe("countWarnings", () => {
 	});
 
 	it("counts warning pheromones for matching files", () => {
-		nest.dropPheromone(mkPheromone({ type: "warning", files: ["a.ts"] }));
-		nest.dropPheromone(mkPheromone({ type: "warning", files: ["a.ts"] }));
-		nest.dropPheromone(mkPheromone({ type: "completion", files: ["a.ts"] }));
+		nest.dropPheromone(mkPheromone({ files: ["a.ts"], type: "warning" }));
+		nest.dropPheromone(mkPheromone({ files: ["a.ts"], type: "warning" }));
+		nest.dropPheromone(mkPheromone({ files: ["a.ts"], type: "completion" }));
 		expect(nest.countWarnings(["a.ts"])).toBe(2);
 	});
 
 	it("counts repellent pheromones", () => {
-		nest.dropPheromone(mkPheromone({ type: "repellent", files: ["b.ts"] }));
+		nest.dropPheromone(mkPheromone({ files: ["b.ts"], type: "repellent" }));
 		expect(nest.countWarnings(["b.ts"])).toBe(1);
 	});
 
 	it("returns 0 for unrelated files", () => {
-		nest.dropPheromone(mkPheromone({ type: "warning", files: ["a.ts"] }));
+		nest.dropPheromone(mkPheromone({ files: ["a.ts"], type: "warning" }));
 		expect(nest.countWarnings(["c.ts"])).toBe(0);
 	});
 });
 
 describe("pheromone dirty flag", () => {
 	it("rebuilds index after dropPheromone", () => {
-		nest.dropPheromone(mkPheromone({ type: "discovery", files: ["x.ts"] }));
+		nest.dropPheromone(mkPheromone({ files: ["x.ts"], type: "discovery" }));
 		const pheromones = nest.getAllPheromones();
-		expect(pheromones.length).toBe(1);
+		expect(pheromones).toHaveLength(1);
 		expect(pheromones[0].type).toBe("discovery");
 	});
 
 	it("does not rebuild index when nothing changed", () => {
 		nest.dropPheromone(mkPheromone({ files: ["x.ts"] }));
-		nest.getAllPheromones(); // builds index, clears dirty
+		nest.getAllPheromones(); // Builds index, clears dirty
 		// Second call should use cached index (no new data, no GC)
 		const p2 = nest.getAllPheromones();
-		expect(p2.length).toBe(1);
+		expect(p2).toHaveLength(1);
 	});
 });
 
@@ -138,38 +138,38 @@ describe("claimNextTask", () => {
 	it("claims highest scored pending task", () => {
 		const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5);
 		nest.writeTask({
+			caste: "worker",
+			claimedBy: null,
+			createdAt: Date.now(),
+			description: "",
+			error: null,
+			files: [],
+			finishedAt: null,
 			id: "t-low",
 			parentId: null,
-			title: "Low",
-			description: "",
-			caste: "worker",
-			status: "pending",
 			priority: 5,
-			files: [],
-			claimedBy: null,
 			result: null,
-			error: null,
 			spawnedTasks: [],
-			createdAt: Date.now(),
 			startedAt: null,
-			finishedAt: null,
+			status: "pending",
+			title: "Low",
 		});
 		nest.writeTask({
+			caste: "worker",
+			claimedBy: null,
+			createdAt: Date.now(),
+			description: "",
+			error: null,
+			files: [],
+			finishedAt: null,
 			id: "t-high",
 			parentId: null,
-			title: "High",
-			description: "",
-			caste: "worker",
-			status: "pending",
 			priority: 1,
-			files: [],
-			claimedBy: null,
 			result: null,
-			error: null,
 			spawnedTasks: [],
-			createdAt: Date.now(),
 			startedAt: null,
-			finishedAt: null,
+			status: "pending",
+			title: "High",
 		});
 		try {
 			const claimed = nest.claimNextTask("worker", "ant-1");
@@ -198,22 +198,22 @@ describe("withStateLock spin", () => {
 		fs.writeFileSync(lockFile, `999999:${Date.now()}`);
 
 		expect(() => nest.updateState({ status: "reviewing" })).not.toThrow();
-		expect(fs.existsSync(lockFile)).toBe(false);
+		expect(fs.existsSync(lockFile)).toBeFalsy();
 		expect(nest.getStateLight().status).toBe("reviewing");
 	});
 
 	it("recovers from directory removal by recreating it", () => {
-		fs.rmSync(nest.dir, { recursive: true, force: true });
+		fs.rmSync(nest.dir, { force: true, recursive: true });
 
 		// The lock should recover by recreating the directory (robustness fix)
 		expect(() => nest.updateState({ status: "reviewing" })).not.toThrow();
-		expect(fs.existsSync(nest.dir)).toBe(true);
+		expect(fs.existsSync(nest.dir)).toBeTruthy();
 	});
 
 	it("times out cleanly when another live process keeps the state lock", () => {
-		const lockFile = (nest as { lockFile: string }).lockFile;
-		fs.writeFileSync(lockFile, `${process.pid}:invalid`, "utf-8");
-		const nowSpy = vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValueOnce(0).mockReturnValueOnce(3_001);
+		const {lockFile} = (nest as { lockFile: string });
+		fs.writeFileSync(lockFile, `${process.pid}:invalid`, "utf8");
+		const nowSpy = vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValueOnce(0).mockReturnValueOnce(3001);
 
 		try {
 			expect(() => nest.updateState({ status: "reviewing" })).toThrow(/withStateLock timeout/);

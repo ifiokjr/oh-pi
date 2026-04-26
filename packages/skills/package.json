@@ -1,27 +1,27 @@
 {
-  "name": "@ifi/oh-pi-skills",
-  "version": "0.4.4",
-  "description": "On-demand skill packs for pi: web-search, debug-helper, git-workflow, and more.",
-  "keywords": [
-    "pi-package"
-  ],
-  "pi": {
-    "skills": [
-      "./skills"
-    ]
-  },
-  "files": [
-    "skills",
-    "README.md"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/skills"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/skills",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  }
+	"name": "@ifi/oh-pi-skills",
+	"version": "0.4.4",
+	"description": "On-demand skill packs for pi: web-search, debug-helper, git-workflow, and more.",
+	"keywords": [
+		"pi-package"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/skills",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/skills"
+	},
+	"files": [
+		"skills",
+		"README.md"
+	],
+	"pi": {
+		"skills": [
+			"./skills"
+		]
+	}
 }

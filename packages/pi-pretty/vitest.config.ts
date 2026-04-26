@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
-const packageRoot = fileURLToPath(new URL(".", import.meta.url));
+const packageRoot = import.meta.dirname;
 
 export default defineConfig({
 	resolve: {
@@ -10,14 +10,14 @@ export default defineConfig({
 		},
 	},
 	test: {
-		include: ["**/*.test.ts"],
-		exclude: ["dist/**", "node_modules/**"],
 		coverage: {
-			provider: "v8",
 			all: true,
 			include: ["index.ts", "src/**/*.ts"],
+			provider: "v8",
 			reporter: ["text", "html", "json-summary", "lcovonly"],
 			reportsDirectory: "./coverage",
 		},
+		exclude: ["dist/**", "node_modules/**"],
+		include: ["**/*.test.ts"],
 	},
 });

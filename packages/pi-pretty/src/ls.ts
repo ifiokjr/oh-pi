@@ -1,6 +1,6 @@
-import type { ExtensionAPI, AgentToolResult } from "@mariozechner/pi-coding-agent";
+import type { AgentToolResult, ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createLsTool } from "@mariozechner/pi-coding-agent";
-import { getFileIcon, getDirectoryIcon } from "./icons.js";
+import { getDirectoryIcon, getFileIcon } from "./icons.js";
 import { FG_DIM, FG_MUTED, fillToolBackground } from "./theme.js";
 
 const TREE_PIPE = "│ ";
@@ -15,14 +15,14 @@ interface FileEntry {
 }
 
 function sortEntries(a: FileEntry, b: FileEntry): number {
-	if (a.isDirectory && !b.isDirectory) return -1;
-	if (!a.isDirectory && b.isDirectory) return 1;
+	if (a.isDirectory && !b.isDirectory) {return -1;}
+	if (!a.isDirectory && b.isDirectory) {return 1;}
 	return a.name.localeCompare(b.name);
 }
 
 function renderTree(entries: FileEntry[], prefix = ""): string {
 	const lines: string[] = [];
-	const sorted = [...entries].sort(sortEntries);
+	const sorted = [...entries].toSorted(sortEntries);
 	for (let i = 0; i < sorted.length; i++) {
 		const entry = sorted[i];
 		const last = i === sorted.length - 1;
@@ -52,7 +52,7 @@ export function enhanceLsTool(pi: ExtensionAPI): void {
 			if (text.startsWith("[") || text.startsWith("{")) {
 				try {
 					const parsed = JSON.parse(text);
-					entries = Array.isArray(parsed) ? parsed : parsed.files ?? [];
+					entries = Array.isArray(parsed) ? parsed : (parsed.files ?? []);
 				} catch {
 					// Fallback to plain text
 				}
@@ -63,7 +63,7 @@ export function enhanceLsTool(pi: ExtensionAPI): void {
 				const output = fillToolBackground(treeLines);
 				return {
 					...result,
-					content: [{ type: "text" as const, text: output }],
+					content: [{ text: output, type: "text" as const }],
 				};
 			}
 
@@ -76,7 +76,7 @@ export function enhanceLsTool(pi: ExtensionAPI): void {
 			});
 			return {
 				...result,
-				content: [{ type: "text" as const, text: fillToolBackground(withIcons.join("\n")) }],
+				content: [{ text: fillToolBackground(withIcons.join("\n")), type: "text" as const }],
 			};
 		},
 	});

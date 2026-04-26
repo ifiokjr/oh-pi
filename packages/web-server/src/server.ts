@@ -1,9 +1,13 @@
-import { createServer, type IncomingMessage, type Server } from "node:http";
-import { type WebSocket, WebSocketServer } from "ws";
-import { createRoutes, type RoutesOptions } from "./routes.js";
+import { createServer } from 'node:http';
+import type { IncomingMessage, Server } from 'node:http';
+import { WebSocketServer } from 'ws';
+import type { WebSocket } from 'ws';
+import { createRoutes } from './routes.js';
+import type { RoutesOptions } from './routes.js';
 import { generateInstanceId, generateToken, loadOrCreateToken } from "./token.js";
 import type { TunnelInfo } from "./tunnel.js";
-import { type AgentSessionLike, handleWebSocketConnection, type WsSession } from "./ws-handler.js";
+import { handleWebSocketConnection } from './ws-handler.js';
+import type { AgentSessionLike, WsSession } from './ws-handler.js';
 
 export interface PiWebServerOptions {
 	port?: number;
@@ -32,7 +36,7 @@ export class PiWebServer {
 	private _server: Server | undefined;
 	private _wss: WebSocketServer | undefined;
 	private _session: AgentSessionLike | undefined;
-	private _clients: Map<string, WsSession> = new Map();
+	private _clients = new Map<string, WsSession>();
 	private _tunnel: TunnelInfo | undefined;
 	private _isRunning = false;
 	private _url = "";
@@ -45,10 +49,10 @@ export class PiWebServer {
 
 		if (options.tokenFile) {
 			const info = loadOrCreateToken(options.tokenFile);
-			token = info.token;
-			instanceId = info.instanceId;
+			({ token } = info);
+			({ instanceId } = info);
 		} else if (options.token) {
-			token = options.token;
+			({ token } = options);
 			instanceId = generateInstanceId(token);
 		} else {
 			token = generateToken();
@@ -56,11 +60,11 @@ export class PiWebServer {
 		}
 
 		this._options = {
-			port: options.port ?? 3100,
 			host: options.host ?? "0.0.0.0",
-			maxClients: options.maxClients ?? 5,
-			token,
 			instanceId,
+			maxClients: options.maxClients ?? 5,
+			port: options.port ?? 3100,
+			token,
 		};
 	}
 
@@ -105,11 +109,11 @@ export class PiWebServer {
 
 	async start(): Promise<ServerStartResult> {
 		const routesOptions: RoutesOptions = {
-			token: this._options.token,
+			getConnectedClients: () => this._clients.size,
+			getSession: () => this._session,
 			instanceId: this._options.instanceId,
 			startTime: Date.now(),
-			getSession: () => this._session,
-			getConnectedClients: () => this._clients.size,
+			token: this._options.token,
 		};
 
 		const app = createRoutes(routesOptions);
@@ -121,8 +125,8 @@ export class PiWebServer {
 				// Let Hono handle the request
 				const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
 				const honoReq = new Request(url.toString(), {
-					method: req.method,
 					headers: req.headers as Record<string, string>,
+					method: req.method,
 				});
 				const honoRes = await app.fetch(honoReq);
 				res.writeHead(honoRes.status, Object.fromEntries(honoRes.headers.entries()));
@@ -139,9 +143,8 @@ export class PiWebServer {
 				}
 
 				const wsSession = handleWebSocketConnection(ws, {
-					token: this._options.token,
-					instanceId: this._options.instanceId,
 					getSession: () => this._session,
+					instanceId: this._options.instanceId,
 					onClientConnect: (clientId) => {
 						this._clients.set(clientId, wsSession);
 						for (const handler of this._connectHandlers) {
@@ -154,6 +157,7 @@ export class PiWebServer {
 							handler(clientId);
 						}
 					},
+					token: this._options.token,
 				});
 			});
 
@@ -163,9 +167,9 @@ export class PiWebServer {
 				this._url = `http://${this._options.host === "0.0.0.0" ? "localhost" : this._options.host}:${port}`;
 
 				resolve({
-					url: this._url,
-					token: this._options.token,
 					instanceId: this._options.instanceId,
+					token: this._options.token,
+					url: this._url,
 				});
 			});
 

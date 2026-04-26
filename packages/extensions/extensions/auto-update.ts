@@ -1,5 +1,5 @@
 /**
- * oh-pi Auto Update Extension
+ * Oh-pi Auto Update Extension
  *
  * Checks for new oh-pi versions on session start (at most once every 24h).
  * If a newer version is found, shows a toast notification with upgrade instructions.
@@ -10,7 +10,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { type ExtensionAPI, getAgentDir } from "@mariozechner/pi-coding-agent";
+import { getAgentDir } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 
 const IS_WINDOWS = process.platform === "win32";
 
@@ -20,14 +21,14 @@ const CHECK_INTERVAL = 24 * 60 * 60 * 1000;
 /** Stamp file path — stores the timestamp of the last version check. */
 const STAMP_FILE = join(getAgentDir(), ".update-check");
 
-export type AutoUpdateCheckDependencies = {
+export interface AutoUpdateCheckDependencies {
 	readStamp?: () => number;
 	writeStamp?: () => void;
 	getCurrentVersion?: () => Promise<string | null> | string | null;
 	getLatestVersion?: () => Promise<string | null> | string | null;
 	now?: () => number;
 	notify?: (message: string) => void;
-};
+}
 
 /** Read the last-check timestamp from the stamp file. Returns 0 if missing or unreadable. */
 function readStamp(): number {
@@ -48,9 +49,9 @@ function writeStamp(): void {
 	}
 }
 
-function execFileText(command: string, args: string[], timeout = 8_000): Promise<string | null> {
+function execFileText(command: string, args: string[], timeout = 8000): Promise<string | null> {
 	return new Promise((resolve) => {
-		execFile(command, args, { encoding: "utf8", timeout, shell: IS_WINDOWS }, (error, stdout) => {
+		execFile(command, args, { encoding: "utf8", shell: IS_WINDOWS, timeout }, (error, stdout) => {
 			if (error) {
 				resolve(null);
 				return;
@@ -73,14 +74,14 @@ async function getLatestVersion(): Promise<string | null> {
  */
 async function getCurrentVersion(): Promise<string | null> {
 	try {
-		const currentDir = dirname(fileURLToPath(import.meta.url));
+		const currentDir = import.meta.dirname;
 		const pkgPath = join(currentDir, "..", "..", "package.json");
 		if (existsSync(pkgPath)) {
 			const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: unknown };
 			return typeof pkg.version === "string" ? pkg.version : null;
 		}
 	} catch {
-		// package.json not found at expected location
+		// Package.json not found at expected location
 	}
 
 	const output = await execFileText("npm", ["list", "-g", "oh-pi", "--json", "--depth=0"]);

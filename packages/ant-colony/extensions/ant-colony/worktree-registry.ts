@@ -69,7 +69,7 @@ function normalizePath(value: string): string {
 
 function git(cwd: string, args: string[]): string {
 	return execFileSync("git", ["-C", cwd, ...args], {
-		encoding: "utf-8",
+		encoding: "utf8",
 		stdio: ["ignore", "pipe", "pipe"],
 	}).trim();
 }
@@ -86,8 +86,8 @@ function gitOk(cwd: string, args: string[]): boolean {
 function sanitizeSegment(value: string): string {
 	const cleaned = value
 		.toLowerCase()
-		.replace(/[^a-z0-9._-]+/g, "-")
-		.replace(/^-+|-+$/g, "");
+		.replaceAll(/[^a-z0-9._-]+/g, "-")
+		.replaceAll(/^-+|-+$/g, "");
 	return cleaned || "worktree";
 }
 
@@ -117,19 +117,19 @@ function getWorktreeRegistryPath(repoRoot: string): string {
 
 function emptyRegistry(repoRoot: string): WorktreeRegistry {
 	return {
-		version: 1,
+		managedWorktrees: [],
 		repoRoot: normalizePath(repoRoot),
 		updatedAt: nowIso(),
-		managedWorktrees: [],
+		version: 1,
 	};
 }
 
 function normalizeOwner(value: ManagedWorktreeOwner): ManagedWorktreeOwner {
 	return {
-		instanceId: value.instanceId.trim(),
-		hostname: value.hostname.trim(),
-		pid: value.pid,
 		createdFromCwd: normalizePath(value.createdFromCwd),
+		hostname: value.hostname.trim(),
+		instanceId: value.instanceId.trim(),
+		pid: value.pid,
 		sessionFile: value.sessionFile ? normalizePath(value.sessionFile) : null,
 		sessionId: value.sessionId?.trim() || null,
 		sessionName: value.sessionName?.trim() || null,
@@ -138,16 +138,16 @@ function normalizeOwner(value: ManagedWorktreeOwner): ManagedWorktreeOwner {
 
 function normalizeManagedMetadata(value: ManagedWorktreeMetadata): ManagedWorktreeMetadata {
 	return {
-		id: value.id.trim(),
-		repoRoot: normalizePath(value.repoRoot),
-		worktreePath: normalizePath(value.worktreePath),
 		branch: value.branch.trim(),
-		purpose: value.purpose.trim(),
 		createdAt: value.createdAt,
-		lastSeenAt: value.lastSeenAt,
-		owner: normalizeOwner(value.owner),
 		createdFromBranch: value.createdFromBranch?.trim() || null,
 		createdFromRef: value.createdFromRef.trim(),
+		id: value.id.trim(),
+		lastSeenAt: value.lastSeenAt,
+		owner: normalizeOwner(value.owner),
+		purpose: value.purpose.trim(),
+		repoRoot: normalizePath(value.repoRoot),
+		worktreePath: normalizePath(value.worktreePath),
 	};
 }
 
@@ -159,16 +159,16 @@ export function loadWorktreeRegistry(repoRoot: string): WorktreeRegistry {
 	}
 
 	try {
-		const parsed = JSON.parse(fs.readFileSync(registryPath, "utf-8")) as Partial<WorktreeRegistry>;
+		const parsed = JSON.parse(fs.readFileSync(registryPath, "utf8")) as Partial<WorktreeRegistry>;
 		return {
-			version: 1,
-			repoRoot: normalizePath(typeof parsed.repoRoot === "string" ? parsed.repoRoot : normalizedRepoRoot),
-			updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : nowIso(),
 			managedWorktrees: Array.isArray(parsed.managedWorktrees)
 				? parsed.managedWorktrees
 						.filter((entry): entry is ManagedWorktreeMetadata => !!entry && typeof entry === "object")
 						.map((entry) => normalizeManagedMetadata(entry))
 				: [],
+			repoRoot: normalizePath(typeof parsed.repoRoot === "string" ? parsed.repoRoot : normalizedRepoRoot),
+			updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : nowIso(),
+			version: 1,
 		};
 	} catch {
 		return emptyRegistry(normalizedRepoRoot);
@@ -183,15 +183,15 @@ function saveWorktreeRegistry(registry: WorktreeRegistry): void {
 		registryPath,
 		JSON.stringify(
 			{
-				version: 1,
+				managedWorktrees: registry.managedWorktrees.map((entry) => normalizeManagedMetadata(entry)),
 				repoRoot: normalizedRepoRoot,
 				updatedAt: nowIso(),
-				managedWorktrees: registry.managedWorktrees.map((entry) => normalizeManagedMetadata(entry)),
+				version: 1,
 			},
 			null,
 			2,
 		),
-		"utf-8",
+		"utf8",
 	);
 }
 
@@ -229,10 +229,10 @@ export function createOwnerMetadata(input: {
 	const sessionFile = input.sessionFile ? normalizePath(input.sessionFile) : null;
 	const sessionId = sessionFile ? path.basename(sessionFile).replace(/\.[^.]+$/, "") : null;
 	return {
-		instanceId: input.instanceId,
-		hostname: hostname(),
-		pid: process.pid,
 		createdFromCwd: normalizePath(input.cwd),
+		hostname: hostname(),
+		instanceId: input.instanceId,
+		pid: process.pid,
 		sessionFile,
 		sessionId,
 		sessionName: input.sessionName?.trim() || null,
@@ -264,16 +264,16 @@ export function createManagedWorktree(options: CreateManagedWorktreeOptions): Cr
 	}
 
 	const metadata: ManagedWorktreeMetadata = {
-		id: `${sanitizeSegment(branch)}-${randomSuffix()}`,
-		repoRoot,
-		worktreePath: normalizePath(worktreePath),
 		branch,
-		purpose,
 		createdAt: nowIso(),
-		lastSeenAt: null,
-		owner: normalizeOwner(options.owner),
 		createdFromBranch,
 		createdFromRef,
+		id: `${sanitizeSegment(branch)}-${randomSuffix()}`,
+		lastSeenAt: null,
+		owner: normalizeOwner(options.owner),
+		purpose,
+		repoRoot,
+		worktreePath: normalizePath(worktreePath),
 	};
 
 	const registry = loadWorktreeRegistry(repoRoot);
@@ -282,11 +282,11 @@ export function createManagedWorktree(options: CreateManagedWorktreeOptions): Cr
 	saveWorktreeRegistry(registry);
 
 	return {
-		repoRoot,
-		worktreePath: metadata.worktreePath,
 		branch,
 		createdBranch,
 		metadata,
+		repoRoot,
+		worktreePath: metadata.worktreePath,
 	};
 }
 
@@ -308,7 +308,7 @@ export function removeManagedWorktree(metadata: ManagedWorktreeMetadata): { note
 	try {
 		git(repoRoot, ["worktree", "prune"]);
 	} catch {
-		// ignore best-effort cleanup failures
+		// Ignore best-effort cleanup failures
 	}
 
 	try {
@@ -317,7 +317,7 @@ export function removeManagedWorktree(metadata: ManagedWorktreeMetadata): { note
 			fs.rmdirSync(parentDir);
 		}
 	} catch {
-		// ignore best-effort cleanup failures
+		// Ignore best-effort cleanup failures
 	}
 
 	const registry = loadWorktreeRegistry(repoRoot);

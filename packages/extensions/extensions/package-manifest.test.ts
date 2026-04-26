@@ -1,19 +1,19 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
 
-type PiPackageManifest = {
+
+interface PiPackageManifest {
 	pi?: {
 		extensions?: string[];
 	};
-};
+}
 
-const extensionsDir = path.dirname(fileURLToPath(import.meta.url));
+const extensionsDir = import.meta.dirname;
 
 function readPackageJson(relativePath: string): PiPackageManifest {
 	return JSON.parse(
-		readFileSync(path.resolve(extensionsDir, "..", "..", "..", relativePath), "utf-8"),
+		readFileSync(path.resolve(extensionsDir, "..", "..", "..", relativePath), "utf8"),
 	) as PiPackageManifest;
 }
 
@@ -34,8 +34,8 @@ describe("pi package extension entrypoints", () => {
 			const manifest = readPackageJson(packagePath);
 			const entries = manifest.pi?.extensions ?? [];
 			expect(entries.length).toBeGreaterThan(0);
-			expect(entries.every((entry) => entry.endsWith(".ts"))).toBe(true);
-			expect(entries.every((entry) => !(entry.endsWith("/extensions") || entry.endsWith("/extension")))).toBe(true);
+			expect(entries.every((entry) => entry.endsWith(".ts"))).toBeTruthy();
+			expect(entries.every((entry) => !(entry.endsWith("/extensions") || entry.endsWith("/extension")))).toBeTruthy();
 		}
 	});
 });

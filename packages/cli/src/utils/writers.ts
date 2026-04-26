@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { KEYBINDING_SCHEMES, MODEL_CAPABILITIES, PROVIDERS } from "@ifi/oh-pi-core";
 import type { AdaptiveRoutingSetupConfig, OhPConfigWithRouting } from "../types.js";
@@ -43,13 +43,13 @@ function syncPackageRoot(src: string, dest: string, excludedEntries: string[]) {
 
 	for (const entry of readdirSync(dest, { withFileTypes: true })) {
 		if (!allowedEntries.has(entry.name)) {
-			rmSync(join(dest, entry.name), { recursive: true, force: true });
+			rmSync(join(dest, entry.name), { force: true, recursive: true });
 		}
 	}
 }
 
 /** Generate auth.json (API keys) and settings.json (model, theme, compaction). */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Provider setup must handle many strategy/override combinations
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Provider setup must handle many strategy/override combinations
 export function writeProviderEnv(agentDir: string, config: OhPConfigWithRouting) {
 	if (config.providerStrategy === "keep") {
 		return;
@@ -58,46 +58,46 @@ export function writeProviderEnv(agentDir: string, config: OhPConfigWithRouting)
 	const authPath = join(agentDir, "auth.json");
 	const settingsPath = join(agentDir, "settings.json");
 
-	// auth.json
+	// Auth.json
 	const authProviders = config.providers.filter((p) => !p.baseUrl && p.apiKey !== "none");
 	if (authProviders.length > 0) {
 		const auth: Record<string, { type: string; key: string }> =
 			strategy === "add" ? (readJson<Record<string, { type: string; key: string }>>(authPath) ?? {}) : {};
 		for (const p of authProviders) {
-			auth[p.name] = { type: "api_key", key: p.apiKey };
+			auth[p.name] = { key: p.apiKey, type: "api_key" };
 		}
 		writeFileSync(authPath, JSON.stringify(auth, null, 2), { mode: 0o600 });
 	}
 
-	// settings.json
+	// Settings.json
 	const existingSettings = strategy === "add" ? (readJson<Record<string, unknown>>(settingsPath) ?? {}) : {};
 	const primary = config.providers.find((p) => p.baseUrl && p.defaultModel) ?? config.providers[0];
 	const providerInfo = primary ? PROVIDERS[primary.name] : undefined;
 	const primaryModelId = primary?.defaultModel ?? providerInfo?.models[0];
 	const caps = primaryModelId ? MODEL_CAPABILITIES[primaryModelId] : undefined;
-	const ctxWindow = caps?.contextWindow ?? primary?.contextWindow ?? 128000;
-	const reserveTokens = Math.max(16384, Math.round(ctxWindow * 0.15));
-	const keepRecentTokens = Math.max(16384, Math.round(ctxWindow * 0.15));
+	const ctxWindow = caps?.contextWindow ?? primary?.contextWindow ?? 128_000;
+	const reserveTokens = Math.max(16_384, Math.round(ctxWindow * 0.15));
+	const keepRecentTokens = Math.max(16_384, Math.round(ctxWindow * 0.15));
 	const primaryModel = primary?.defaultModel ?? providerInfo?.models[0];
 
 	const defaultProviderModel =
 		strategy === "add"
-			? !existingSettings.defaultProvider && primary
+			? (!existingSettings.defaultProvider && primary
 				? { defaultProvider: primary.name, defaultModel: primaryModel }
-				: {}
-			: primary
+				: {})
+			: (primary
 				? { defaultProvider: primary.name, defaultModel: primaryModel }
-				: {};
+				: {});
 
 	const settings: Record<string, unknown> = {
 		...existingSettings,
 		...defaultProviderModel,
+		compaction: { enabled: true, keepRecentTokens, reserveTokens },
 		defaultThinkingLevel: config.thinking,
-		theme: config.theme,
 		enableSkillCommands: true,
-		compaction: { enabled: true, reserveTokens, keepRecentTokens },
-		retry: { enabled: true, maxRetries: 3 },
 		quietStartup: true,
+		retry: { enabled: true, maxRetries: 3 },
+		theme: config.theme,
 	};
 
 	const nextEnabledModels = config.providers.flatMap((p) => {
@@ -122,7 +122,7 @@ export function writeProviderEnv(agentDir: string, config: OhPConfigWithRouting)
 }
 
 /** Generate models.json for custom endpoints and API mode overrides. */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Model config must handle builtin/custom/discovered model combinations
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Model config must handle builtin/custom/discovered model combinations
 export function writeModelConfig(agentDir: string, config: OhPConfigWithRouting) {
 	if (config.providerStrategy === "keep") {
 		return;
@@ -131,7 +131,7 @@ export function writeModelConfig(agentDir: string, config: OhPConfigWithRouting)
 	const modelsPath = join(agentDir, "models.json");
 
 	// Persist custom endpoints and API mode overrides (e.g. built-in OpenAI responses/completions choice).
-	const modelProviders = config.providers.filter((p) => p.baseUrl || (!!p.api && !!PROVIDERS[p.name]));
+	const modelProviders = config.providers.filter((p) => p.baseUrl || (Boolean(p.api) && Boolean(PROVIDERS[p.name])));
 	if (modelProviders.length === 0) {
 		return;
 	}
@@ -140,7 +140,7 @@ export function writeModelConfig(agentDir: string, config: OhPConfigWithRouting)
 		strategy === "add" ? (readJson<{ providers?: Record<string, unknown> }>(modelsPath)?.providers ?? {}) : {};
 
 	for (const cp of modelProviders) {
-		const isBuiltin = !!PROVIDERS[cp.name];
+		const isBuiltin = Boolean(PROVIDERS[cp.name]);
 		if (!cp.baseUrl && isBuiltin && cp.api) {
 			providers[cp.name] = { api: cp.api };
 			continue;
@@ -161,8 +161,8 @@ export function writeModelConfig(agentDir: string, config: OhPConfigWithRouting)
 			providers[cp.name] = entry;
 		} else {
 			const entry: Record<string, unknown> = {
-				baseUrl: cp.baseUrl,
 				api: cp.api ?? "openai-completions",
+				baseUrl: cp.baseUrl,
 			};
 			if (cp.apiKey !== "none") {
 				entry.apiKey = cp.apiKey;
@@ -170,25 +170,25 @@ export function writeModelConfig(agentDir: string, config: OhPConfigWithRouting)
 
 			if (cp.discoveredModels?.length) {
 				entry.models = cp.discoveredModels.map((m) => ({
+					contextWindow: m.contextWindow,
+					cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0 },
 					id: m.id,
+					input: m.input,
+					maxTokens: m.maxTokens,
 					name: m.id,
 					reasoning: m.reasoning,
-					input: m.input,
-					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-					contextWindow: m.contextWindow,
-					maxTokens: m.maxTokens,
 				}));
 			} else if (cp.defaultModel) {
 				const caps = MODEL_CAPABILITIES[cp.defaultModel];
 				entry.models = [
 					{
+						contextWindow: cp.contextWindow ?? caps?.contextWindow ?? 128000,
+						cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0 },
 						id: cp.defaultModel,
+						input: cp.multimodal ? ["text", "image"] : (caps?.input ?? ["text"]),
+						maxTokens: cp.maxTokens ?? caps?.maxTokens ?? 8192,
 						name: cp.defaultModel,
 						reasoning: cp.reasoning ?? caps?.reasoning ?? false,
-						input: cp.multimodal ? ["text", "image"] : (caps?.input ?? ["text"]),
-						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-						contextWindow: cp.contextWindow ?? caps?.contextWindow ?? 128000,
-						maxTokens: cp.maxTokens ?? caps?.maxTokens ?? 8192,
 					},
 				];
 			}
@@ -223,7 +223,7 @@ export function writeAgents(agentDir: string, config: OhPConfigWithRouting) {
 
 		writeFileSync(join(agentDir, "AGENTS.md"), content);
 	} catch {
-		/* template not found, skip */
+		/* Template not found, skip */
 	}
 }
 
@@ -291,7 +291,7 @@ export function writeExtensions(agentDir: string, config: OhPConfigWithRouting) 
 			try {
 				copyFileSync(fileSrc, join(extDir, `${ext}.ts`));
 			} catch {
-				/* skip */
+				/* Skip */
 			}
 		}
 	}
@@ -307,11 +307,11 @@ function buildAdaptiveRoutingConfig(config: AdaptiveRoutingSetupConfig) {
 		]),
 	);
 	return {
-		mode: config.mode,
 		delegatedRouting: {
-			enabled: true,
 			categories,
+			enabled: true,
 		},
+		mode: config.mode,
 	};
 }
 
@@ -337,7 +337,7 @@ export function writePrompts(agentDir: string, config: OhPConfigWithRouting) {
 		try {
 			copyFileSync(src, join(promptDir, `${promptName}.md`));
 		} catch {
-			/* skip */
+			/* Skip */
 		}
 	}
 }
@@ -351,7 +351,7 @@ export function writeSkills(agentDir: string, _config: OhPConfigWithRouting) {
 			syncDir(skillsSrcDir, skillDir);
 		}
 	} catch {
-		/* skills dir not found, skip */
+		/* Skills dir not found, skip */
 	}
 }
 
@@ -363,6 +363,6 @@ export function writeTheme(agentDir: string, config: OhPConfigWithRouting) {
 	try {
 		copyFileSync(themeSrc, join(themeDir, `${config.theme}.json`));
 	} catch {
-		/* built-in theme */
+		/* Built-in theme */
 	}
 }

@@ -22,7 +22,7 @@ export function parseChangelog(content: string): ChangelogEntry[] {
 			if (current) {
 				entries.push(current);
 			}
-			current = { version: match[1], date: match[2], lines: [] };
+			current = { date: match[2], lines: [], version: match[1] };
 		} else if (current) {
 			current.lines.push(line);
 		}
@@ -37,7 +37,7 @@ export function parseChangelog(content: string): ChangelogEntry[] {
 export function readChangelog(): string {
 	// In dist, this file is under packages/cli/dist/utils/changelog.js
 	// Monorepo root is at packages/cli/../../
-	const here = dirname(fileURLToPath(import.meta.url));
+	const here = import.meta.dirname;
 	const root = join(here, "..", "..", "..", "..");
 	return readFileSync(join(root, "CHANGELOG.md"), "utf8");
 }

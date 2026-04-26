@@ -1,7 +1,6 @@
 ---
 name: claymorphism
-description:
-  Claymorphism design system skill. Use when building soft, puffy, clay-like UI components with
+description: Claymorphism design system skill. Use when building soft, puffy, clay-like UI components with
   large radii, dual inner shadows, and offset outer shadows.
 version: 1.0.0
 tags: [design, css, ui, claymorphism]
@@ -24,10 +23,10 @@ Reference: [references/tokens.css](references/tokens.css)
 @import "references/tokens.css";
 
 .clay-card {
-  background: var(--clay-bg-card);
-  border-radius: var(--clay-radius-lg);
-  box-shadow: var(--clay-shadow);
-  color: var(--clay-text);
+	background: var(--clay-bg-card);
+	border-radius: var(--clay-radius-lg);
+	box-shadow: var(--clay-shadow);
+	color: var(--clay-text);
 }
 ```
 
@@ -37,11 +36,11 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ```css
 .clay-card {
-  background: var(--clay-bg-card);
-  border-radius: var(--clay-radius-lg);
-  box-shadow: var(--clay-shadow);
-  padding: 1.5rem;
-  color: var(--clay-text);
+	background: var(--clay-bg-card);
+	border-radius: var(--clay-radius-lg);
+	box-shadow: var(--clay-shadow);
+	padding: 1.5rem;
+	color: var(--clay-text);
 }
 ```
 
@@ -49,20 +48,20 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ```css
 .clay-btn {
-  background: var(--clay-bg-button);
-  border: none;
-  border-radius: var(--clay-radius-pill);
-  box-shadow: var(--clay-shadow);
-  padding: 0.75rem 1.5rem;
-  color: var(--clay-text);
-  cursor: pointer;
-  transition: box-shadow 0.2s;
+	background: var(--clay-bg-button);
+	border: none;
+	border-radius: var(--clay-radius-pill);
+	box-shadow: var(--clay-shadow);
+	padding: 0.75rem 1.5rem;
+	color: var(--clay-text);
+	cursor: pointer;
+	transition: box-shadow 0.2s;
 }
 .clay-btn:hover {
-  box-shadow: var(--clay-shadow-elevated);
+	box-shadow: var(--clay-shadow-elevated);
 }
 .clay-btn:active {
-  box-shadow: var(--clay-shadow-pressed);
+	box-shadow: var(--clay-shadow-pressed);
 }
 ```
 
@@ -70,16 +69,16 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ```css
 .clay-input {
-  background: var(--clay-bg);
-  border: none;
-  border-radius: var(--clay-radius);
-  box-shadow: var(--clay-shadow-pressed);
-  padding: 0.75rem 1rem;
-  color: var(--clay-text);
+	background: var(--clay-bg);
+	border: none;
+	border-radius: var(--clay-radius);
+	box-shadow: var(--clay-shadow-pressed);
+	padding: 0.75rem 1rem;
+	color: var(--clay-text);
 }
 .clay-input:focus {
-  outline: 2px solid var(--clay-accent);
-  outline-offset: 2px;
+	outline: 2px solid var(--clay-accent);
+	outline-offset: 2px;
 }
 ```
 
@@ -87,19 +86,19 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ```css
 .clay-toggle {
-  width: 56px;
-  height: 30px;
-  background: var(--clay-bg-card);
-  border-radius: var(--clay-radius-pill);
-  box-shadow: var(--clay-shadow-pressed);
+	width: 56px;
+	height: 30px;
+	background: var(--clay-bg-card);
+	border-radius: var(--clay-radius-pill);
+	box-shadow: var(--clay-shadow-pressed);
 }
 .clay-toggle-knob {
-  width: 24px;
-  height: 24px;
-  background: var(--clay-bg);
-  border-radius: 50%;
-  box-shadow: var(--clay-shadow);
-  transition: transform 0.2s;
+	width: 24px;
+	height: 24px;
+	background: var(--clay-bg);
+	border-radius: 50%;
+	box-shadow: var(--clay-shadow);
+	transition: transform 0.2s;
 }
 ```
 
@@ -120,8 +119,8 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ```css
 @media (prefers-contrast: more) {
-  .clay-card {
-    box-shadow: 0 0 0 2px var(--clay-text);
-  }
+	.clay-card {
+		box-shadow: 0 0 0 2px var(--clay-text);
+	}
 }
 ```

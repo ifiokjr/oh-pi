@@ -29,9 +29,9 @@ The built-in `bash` tool is great for batch output, but it does not preserve a t
 
 ```ts
 await bash_live_view({
-  command: "pnpm test --watch",
-  timeout: 30,
-  usePTY: true,
+	command: "pnpm test --watch",
+	timeout: 30,
+	usePTY: true,
 });
 ```
 

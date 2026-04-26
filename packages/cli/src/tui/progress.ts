@@ -19,12 +19,12 @@ export function renderProgress(state: ProgressState, deps: ProgressBarDeps = { s
 	const pct = Math.round((state.current / state.total) * 100);
 	const line = `${chalk.bold("Installing:")} ${bar} ${pct}% ${chalk.dim(state.label)}`;
 	// Clear line and rewrite
-	stdout.write(`\r\x1B[K${line}`);
+	stdout.write(`\r\u001B[K${line}`);
 }
 
 /** Clear the progress bar line. */
 export function clearProgressLine(deps: ProgressBarDeps = { stdout: process.stdout }): void {
-	deps.stdout.write("\r\x1B[K");
+	deps.stdout.write("\r\u001B[K");
 }
 
 /** Simulate an async installation with progressive updates. */
@@ -33,9 +33,9 @@ export async function runWithProgress(
 	deps: ProgressBarDeps = { stdout: process.stdout },
 ): Promise<void> {
 	for (let i = 0; i < tasks.length; i++) {
-		renderProgress({ total: tasks.length, current: i, label: tasks[i].label }, deps);
+		renderProgress({ current: i, label: tasks[i].label, total: tasks.length }, deps);
 		await tasks[i].fn();
 	}
-	renderProgress({ total: tasks.length, current: tasks.length, label: "Done" }, deps);
+	renderProgress({ current: tasks.length, label: "Done", total: tasks.length }, deps);
 	deps.stdout.write("\n");
 }

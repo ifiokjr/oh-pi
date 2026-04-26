@@ -1,19 +1,12 @@
-/* c8 ignore file */
+/* C8 ignore file */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-	type DelegatedAvailableModel,
-	type DelegatedSelectionLatencySnapshot,
-	type DelegatedSelectionPolicy,
-	type DelegatedSelectionUsageSnapshot,
-	type ModelTaskProfile,
-	mergeDelegatedSelectionPolicies,
-	selectDelegatedModel,
-} from "@ifi/oh-pi-core";
+import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from '@ifi/oh-pi-core';
+import type { DelegatedAvailableModel, DelegatedSelectionLatencySnapshot, DelegatedSelectionPolicy, DelegatedSelectionUsageSnapshot, ModelTaskProfile } from '@ifi/oh-pi-core';
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import type { AntCaste, WorkerClass } from "./types.js";
 
-export type AvailableModelRef = {
+export interface AvailableModelRef {
 	provider: string;
 	id: string;
 	fullId: string;
@@ -28,9 +21,9 @@ export type AvailableModelRef = {
 		cacheRead: number;
 		cacheWrite: number;
 	};
-};
+}
 
-type DelegatedCategoryPolicy = {
+interface DelegatedCategoryPolicy {
 	candidates?: string[];
 	preferredProviders?: string[];
 	fallbackGroup?: string;
@@ -41,9 +34,9 @@ type DelegatedCategoryPolicy = {
 	requireMultimodal?: boolean;
 	minContextWindow?: number;
 	allowSmallContextForSmallTasks?: boolean;
-};
+}
 
-type DelegatedModelSelectionConfig = {
+interface DelegatedModelSelectionConfig {
 	disabledProviders?: string[];
 	excludedProviders?: string[];
 	disabledModels?: string[];
@@ -51,40 +44,40 @@ type DelegatedModelSelectionConfig = {
 	preferLowerUsage?: boolean;
 	allowSmallContextForSmallTasks?: boolean;
 	roleOverrides?: Record<string, DelegatedSelectionPolicy>;
-};
+}
 
-type AdaptiveRoutingConfig = {
+interface AdaptiveRoutingConfig {
 	fallbackGroups?: Record<string, { candidates?: string[] } | string[]>;
 	delegatedRouting?: {
 		enabled?: boolean;
 		categories?: Record<string, DelegatedCategoryPolicy>;
 	};
 	delegatedModelSelection?: DelegatedModelSelectionConfig;
-};
+}
 
 export const DEFAULT_COLONY_CATEGORIES: Record<AntCaste | WorkerClass, string> = {
-	scout: "quick-discovery",
-	worker: "implementation-default",
-	soldier: "review-critical",
-	drone: "implementation-default",
-	design: "visual-engineering",
-	multimodal: "multimodal-default",
 	backend: "implementation-default",
+	design: "visual-engineering",
+	drone: "implementation-default",
+	multimodal: "multimodal-default",
 	review: "review-critical",
+	scout: "quick-discovery",
+	soldier: "review-critical",
+	worker: "implementation-default",
 };
 
 const DEFAULT_CATEGORY_TASK_PROFILES: Record<string, ModelTaskProfile> = {
-	"quick-discovery": "planning",
 	"implementation-default": "coding",
+	"multimodal-default": "design",
+	"quick-discovery": "planning",
 	"review-critical": "planning",
 	"visual-engineering": "design",
-	"multimodal-default": "design",
 };
 
 const DEFAULT_CATEGORY_MIN_CONTEXT: Partial<Record<string, number>> = {
+	"multimodal-default": 128_000,
 	"review-critical": 128_000,
 	"visual-engineering": 128_000,
-	"multimodal-default": 128_000,
 };
 
 function getAdaptiveRoutingConfigPath(): string {
@@ -101,7 +94,7 @@ function readAdaptiveRoutingConfig(): AdaptiveRoutingConfig {
 		return {};
 	}
 	try {
-		return JSON.parse(readFileSync(configPath, "utf-8")) as AdaptiveRoutingConfig;
+		return JSON.parse(readFileSync(configPath, "utf8")) as AdaptiveRoutingConfig;
 	} catch {
 		return {};
 	}
@@ -127,7 +120,7 @@ function readMeasuredLatencySnapshot(): Record<string, DelegatedSelectionLatency
 	}
 
 	try {
-		const raw = JSON.parse(readFileSync(aggregatesPath, "utf-8")) as {
+		const raw = JSON.parse(readFileSync(aggregatesPath, "utf8")) as {
 			perModelLatencyMs?: Record<string, { avgMs?: unknown; count?: unknown }>;
 		};
 		if (!raw.perModelLatencyMs || typeof raw.perModelLatencyMs !== "object") {
@@ -171,28 +164,28 @@ function buildBasePolicy(
 	if (!(candidateModels.length > 0 || categoryPolicy || blockedProviders.length > 0 || blockedModels.length > 0)) {
 		return category
 			? {
-					taskProfile: DEFAULT_CATEGORY_TASK_PROFILES[category] ?? "all",
-					preferLowerUsage: selectionConfig?.preferLowerUsage ?? true,
 					allowSmallContextForSmallTasks: selectionConfig?.allowSmallContextForSmallTasks ?? true,
+					preferLowerUsage: selectionConfig?.preferLowerUsage ?? true,
+					taskProfile: DEFAULT_CATEGORY_TASK_PROFILES[category] ?? "all",
 				}
 			: undefined;
 	}
 
 	return {
-		candidateModels: candidateModels.length > 0 ? candidateModels : undefined,
-		preferredProviders: categoryPolicy?.preferredProviders,
-		blockedProviders: blockedProviders.length > 0 ? blockedProviders : undefined,
+		allowSmallContextForSmallTasks:
+			categoryPolicy?.allowSmallContextForSmallTasks ?? selectionConfig?.allowSmallContextForSmallTasks ?? true,
 		blockedModels: blockedModels.length > 0 ? blockedModels : undefined,
-		taskProfile: category ? (categoryPolicy?.taskProfile ?? DEFAULT_CATEGORY_TASK_PROFILES[category] ?? "all") : "all",
+		blockedProviders: blockedProviders.length > 0 ? blockedProviders : undefined,
+		candidateModels: candidateModels.length > 0 ? candidateModels : undefined,
+		minContextWindow:
+			categoryPolicy?.minContextWindow ?? (category ? DEFAULT_CATEGORY_MIN_CONTEXT[category] : undefined),
 		preferFastModels: categoryPolicy?.preferFastModels ?? category === "quick-discovery",
 		preferLowCost: categoryPolicy?.preferLowCost,
 		preferLowerUsage: selectionConfig?.preferLowerUsage ?? true,
-		requireReasoning: categoryPolicy?.requireReasoning,
+		preferredProviders: categoryPolicy?.preferredProviders,
 		requireMultimodal: categoryPolicy?.requireMultimodal,
-		minContextWindow:
-			categoryPolicy?.minContextWindow ?? (category ? DEFAULT_CATEGORY_MIN_CONTEXT[category] : undefined),
-		allowSmallContextForSmallTasks:
-			categoryPolicy?.allowSmallContextForSmallTasks ?? selectionConfig?.allowSmallContextForSmallTasks ?? true,
+		requireReasoning: categoryPolicy?.requireReasoning,
+		taskProfile: category ? (categoryPolicy?.taskProfile ?? DEFAULT_CATEGORY_TASK_PROFILES[category] ?? "all") : "all",
 	};
 }
 
@@ -218,14 +211,14 @@ export function toAvailableModelRefs(models: DelegatedAvailableModel[]): Availab
 
 function normalizeAvailableModels(models: AvailableModelRef[]): DelegatedAvailableModel[] {
 	return models.map((model) => ({
-		provider: model.provider,
-		id: model.id,
-		name: model.name ?? model.id,
-		reasoning: model.reasoning ?? false,
-		input: model.input ? [...model.input] : ["text"],
 		contextWindow: model.contextWindow ?? 128_000,
-		maxTokens: model.maxTokens ?? 16_384,
 		cost: model.cost ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+		id: model.id,
+		input: model.input ? [...model.input] : ["text"],
+		maxTokens: model.maxTokens ?? 16_384,
+		name: model.name ?? model.id,
+		provider: model.provider,
+		reasoning: model.reasoning ?? false,
 	}));
 }
 
@@ -257,13 +250,13 @@ export function resolveColonyCategoryModel(
 	const selection = selectDelegatedModel({
 		availableModels: normalizeAvailableModels(availableModels),
 		currentModel: options.currentModel,
+		latency: readMeasuredLatencySnapshot(),
 		policy,
 		taskText: options.taskText,
 		usage: options.usage,
-		latency: readMeasuredLatencySnapshot(),
 	});
 	if (selection.selectedModel) {
-		return { model: selection.selectedModel, category, source: "delegated-category" };
+		return { category, model: selection.selectedModel, source: "delegated-category" };
 	}
 	return { category, source: "session-default" };
 }

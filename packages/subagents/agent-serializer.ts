@@ -17,7 +17,7 @@ export const KNOWN_FIELDS = new Set([
 ]);
 
 function joinComma(values: string[] | undefined): string | undefined {
-	if (!values || values.length === 0) return undefined;
+	if (!values || values.length === 0) {return undefined;}
 	return values.join(", ");
 }
 
@@ -29,30 +29,30 @@ export function serializeAgent(config: AgentConfig): string {
 
 	const tools = [...(config.tools ?? []), ...(config.mcpDirectTools ?? []).map((tool) => `mcp:${tool}`)];
 	const toolsValue = joinComma(tools);
-	if (toolsValue) lines.push(`tools: ${toolsValue}`);
+	if (toolsValue) {lines.push(`tools: ${toolsValue}`);}
 
-	if (config.model) lines.push(`model: ${config.model}`);
-	if (config.thinking && config.thinking !== "off") lines.push(`thinking: ${config.thinking}`);
+	if (config.model) {lines.push(`model: ${config.model}`);}
+	if (config.thinking && config.thinking !== "off") {lines.push(`thinking: ${config.thinking}`);}
 
 	const skillsValue = joinComma(config.skills);
-	if (skillsValue) lines.push(`skills: ${skillsValue}`);
+	if (skillsValue) {lines.push(`skills: ${skillsValue}`);}
 
 	if (config.extensions !== undefined) {
 		const extensionsValue = joinComma(config.extensions);
 		lines.push(`extensions: ${extensionsValue ?? ""}`);
 	}
 
-	if (config.output) lines.push(`output: ${config.output}`);
+	if (config.output) {lines.push(`output: ${config.output}`);}
 
 	const readsValue = joinComma(config.defaultReads);
-	if (readsValue) lines.push(`defaultReads: ${readsValue}`);
+	if (readsValue) {lines.push(`defaultReads: ${readsValue}`);}
 
-	if (config.defaultProgress) lines.push("defaultProgress: true");
-	if (config.interactive) lines.push("interactive: true");
+	if (config.defaultProgress) {lines.push("defaultProgress: true");}
+	if (config.interactive) {lines.push("interactive: true");}
 
 	if (config.extraFields) {
 		for (const [key, value] of Object.entries(config.extraFields)) {
-			if (KNOWN_FIELDS.has(key)) continue;
+			if (KNOWN_FIELDS.has(key)) {continue;}
 			lines.push(`${key}: ${value}`);
 		}
 	}
@@ -64,8 +64,8 @@ export function serializeAgent(config: AgentConfig): string {
 }
 
 export function updateFrontmatterField(filePath: string, field: string, value: string | undefined): void {
-	const raw = fs.readFileSync(filePath, "utf-8");
-	const normalized = raw.replace(/\r\n/g, "\n");
+	const raw = fs.readFileSync(filePath, "utf8");
+	const normalized = raw.replaceAll(/\r\n/g, "\n");
 	if (!normalized.startsWith("---")) {
 		throw new Error("Frontmatter not found");
 	}
@@ -88,7 +88,7 @@ export function updateFrontmatterField(filePath: string, field: string, value: s
 		const match = line.match(/^([\w-]+):\s*(.*)$/);
 		if (match && targetKeys.has(match[1])) {
 			if (value !== undefined) {
-				if (!found) updated.push(`${normalizedField}: ${value}`);
+				if (!found) {updated.push(`${normalizedField}: ${value}`);}
 				found = true;
 			}
 			continue;
@@ -101,5 +101,5 @@ export function updateFrontmatterField(filePath: string, field: string, value: s
 	}
 
 	const frontmatter = `---\n${updated.join("\n")}\n---`;
-	fs.writeFileSync(filePath, frontmatter + rest, "utf-8");
+	fs.writeFileSync(filePath, frontmatter + rest, "utf8");
 }

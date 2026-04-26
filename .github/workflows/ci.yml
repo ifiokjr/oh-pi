@@ -230,8 +230,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Biome check (lint + format, warnings fail)
-        run: pnpm exec biome ci --error-on-warnings .
+    - name: Format check (oxfmt)
+      run: pnpm format:check
+
+    - name: Lint (oxlint, strict)
+      run: pnpm lint
 
   typecheck:
     name: Type Check (tsgo)
@@ -458,3 +461,6 @@ jobs:
 
       - name: Verify all published packages pack successfully
         run: pnpm verify:published-packages
+
+      - name: Publish dry-run
+        run: pnpm -r publish --dry-run --no-git-checks

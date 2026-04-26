@@ -8,23 +8,23 @@ export function normalizeRouteCandidates(models: Model<Api>[]): NormalizedRouteC
 		const fullId = `${provider}/${modelId}`;
 		const tags = deriveCandidateTags(model);
 		return {
-			fullId,
-			provider,
-			modelId,
-			label: model.name || fullId,
-			reasoning: model.reasoning,
-			maxThinkingLevel: deriveMaxThinkingLevel(model),
-			tier: deriveCandidateTier(model),
-			contextWindow: model.contextWindow,
-			maxTokens: model.maxTokens,
-			input: [...model.input],
-			costKnown: hasKnownCost(model),
-			tags,
-			family: deriveCandidateFamily(model),
-			fallbackGroups: deriveFallbackGroups(model),
-			available: true,
 			authenticated: true,
+			available: true,
+			contextWindow: model.contextWindow,
+			costKnown: hasKnownCost(model),
+			fallbackGroups: deriveFallbackGroups(model),
+			family: deriveCandidateFamily(model),
+			fullId,
+			input: [...model.input],
+			label: model.name || fullId,
+			maxThinkingLevel: deriveMaxThinkingLevel(model),
+			maxTokens: model.maxTokens,
 			model,
+			modelId,
+			provider,
+			reasoning: model.reasoning,
+			tags,
+			tier: deriveCandidateTier(model),
 		};
 	});
 }
@@ -100,7 +100,7 @@ export function deriveCandidateTags(model: Model<Api>): string[] {
 		tags.add("premium");
 	}
 
-	return Array.from(tags);
+	return [...tags];
 }
 
 export function deriveCandidateFamily(model: Model<Api>): string | undefined {
@@ -151,7 +151,7 @@ export function deriveFallbackGroups(model: Model<Api>): string[] {
 		groups.add("peak-reasoning");
 	}
 
-	return Array.from(groups);
+	return [...groups];
 }
 
 export function matchesModelRef(

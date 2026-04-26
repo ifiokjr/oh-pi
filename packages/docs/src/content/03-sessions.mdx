@@ -3,6 +3,7 @@ title: "Session Management"
 order: 3
 description: "JSONL tree structure, entry types, branching, context compaction, branch summaries."
 ---
+
 ## 1. Session Storage
 
 Sessions are stored as JSONL (JSON Lines) files using a tree structure. Each entry has an `id` and
@@ -37,11 +38,11 @@ pi --session <path>    # Use specific session file or ID
 
 ```json
 {
-  "type": "session",
-  "version": 3,
-  "id": "uuid",
-  "timestamp": "...",
-  "cwd": "/path"
+	"type": "session",
+	"version": 3,
+	"id": "uuid",
+	"timestamp": "...",
+	"cwd": "/path"
 }
 ```
 
@@ -155,11 +156,11 @@ Or manually: `/compact [instructions]`
 
 ```json
 {
-  "compaction": {
-    "enabled": true,
-    "reserveTokens": 16384,
-    "keepRecentTokens": 20000
-  }
+	"compaction": {
+		"enabled": true,
+		"reserveTokens": 16384,
+		"keepRecentTokens": 20000
+	}
 }
 ```
 

@@ -1,25 +1,25 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
 
-type PiManifest = {
+
+interface PiManifest {
 	extensions?: string[];
 	prompts?: string[];
 	skills?: string[];
 	themes?: string[];
-};
+}
 
-type PackageManifest = {
+interface PackageManifest {
 	workspaces?: string[];
 	pi?: PiManifest;
 	dependencies?: Record<string, string>;
 	devDependencies?: Record<string, string>;
 	peerDependencies?: Record<string, string>;
 	optionalDependencies?: Record<string, string>;
-};
+}
 
-const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
+const scriptsDir = import.meta.dirname;
 const repoRoot = path.resolve(scriptsDir, "..");
 
 function readPackageJson(relativePath: string): PackageManifest {
@@ -52,15 +52,15 @@ describe("git-install package manifest", () => {
 			return (manifest.pi?.extensions ?? []).map((entry) => toRootRelative(packageJsonPath, entry));
 		});
 
-		expect(rootManifest.workspaces).toEqual(["packages/*"]);
-		expect(rootManifest.pi?.extensions).toEqual(expectedExtensionEntries);
-		expect(rootManifest.pi?.prompts).toEqual(["./packages/prompts/prompts"]);
-		expect(rootManifest.pi?.skills).toEqual(["./packages/skills/skills"]);
-		expect(rootManifest.pi?.themes).toEqual(["./packages/themes/themes"]);
+		expect(rootManifest.workspaces).toStrictEqual(["packages/*"]);
+		expect(rootManifest.pi?.extensions).toStrictEqual(expectedExtensionEntries);
+		expect(rootManifest.pi?.prompts).toStrictEqual(["./packages/prompts/prompts"]);
+		expect(rootManifest.pi?.skills).toStrictEqual(["./packages/skills/skills"]);
+		expect(rootManifest.pi?.themes).toStrictEqual(["./packages/themes/themes"]);
 
 		for (const extensionEntry of rootManifest.pi?.extensions ?? []) {
-			expect(extensionEntry.endsWith(".ts")).toBe(true);
-			expect(extensionEntry.includes("node_modules")).toBe(false);
+			expect(extensionEntry.endsWith(".ts")).toBeTruthy();
+			expect(extensionEntry).not.toContain('node_modules');
 		}
 	});
 
@@ -71,12 +71,7 @@ describe("git-install package manifest", () => {
 				.filter((entry) => entry.isDirectory())
 				.map((entry) => path.posix.join("packages", entry.name, "package.json")),
 		];
-		const dependencyKeys = [
-			"dependencies",
-			"devDependencies",
-			"peerDependencies",
-			"optionalDependencies",
-		] as const;
+		const dependencyKeys = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
 
 		for (const manifestPath of manifestPaths) {
 			const manifest = readPackageJson(manifestPath);
@@ -85,7 +80,7 @@ describe("git-install package manifest", () => {
 					expect(
 						version.startsWith("workspace:"),
 						`${manifestPath} uses unsupported ${dependencyKey}.${dependencyName}=${version}`,
-					).toBe(false);
+					).toBeFalsy();
 				}
 			}
 		}

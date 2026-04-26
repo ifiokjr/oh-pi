@@ -3,13 +3,8 @@ import type { ProviderConfig } from "@ifi/oh-pi-core";
 import type { AdaptiveRoutingModeConfig, AdaptiveRoutingSetupConfig } from "../types.js";
 import type { WritablePiPackageInstallScope } from "../utils/pi-packages.js";
 import { installPiPackages } from "../utils/pi-packages.js";
-import {
-	buildRoutingDashboard,
-	detectOptionalRoutingPackages,
-	type PendingOptionalRoutingPackageSelection,
-	ROUTING_CATEGORIES,
-	suggestOptionalRoutingPackages,
-} from "./routing-dashboard.js";
+import { buildRoutingDashboard, detectOptionalRoutingPackages, ROUTING_CATEGORIES, suggestOptionalRoutingPackages } from './routing-dashboard.js';
+import type { PendingOptionalRoutingPackageSelection } from './routing-dashboard.js';
 
 interface SetupAdaptiveRoutingOptions {
 	piInstalled?: boolean;
@@ -63,8 +58,8 @@ async function maybeInstallOptionalPackages(
 	const suggestedPackages = new Set(suggestOptionalRoutingPackages(providerNames, config));
 	const shouldInstall = exitOnCancel(
 		await p.confirm({
-			message: "Install missing optional routing/provider packages from this dashboard?",
 			initialValue: suggestedPackages.size > 0,
+			message: "Install missing optional routing/provider packages from this dashboard?",
 		}),
 	);
 	if (!shouldInstall) {
@@ -73,15 +68,15 @@ async function maybeInstallOptionalPackages(
 
 	const selectedPackages = exitOnCancel(
 		await p.multiselect<string>({
+			initialValues: missingPackages
+				.filter((pkg) => suggestedPackages.has(pkg.packageName))
+				.map((pkg) => pkg.packageName),
 			message: "Select optional packages to install",
 			options: missingPackages.map((pkg) => ({
 				value: pkg.packageName,
 				label: pkg.label,
 				hint: pkg.hint,
 			})),
-			initialValues: missingPackages
-				.filter((pkg) => suggestedPackages.has(pkg.packageName))
-				.map((pkg) => pkg.packageName),
 		}),
 	);
 	if (selectedPackages.length === 0) {
@@ -90,12 +85,12 @@ async function maybeInstallOptionalPackages(
 
 	const installScope = exitOnCancel(
 		await p.select<WritablePiPackageInstallScope>({
+			initialValue: "user",
 			message: "Install selected optional packages for which scope?",
 			options: [
 				{ value: "user", label: "User", hint: "Install into your user pi settings for all repos" },
 				{ value: "project", label: "Project", hint: "Install into .pi/settings.json for this repo only" },
 			],
-			initialValue: "user",
 		}),
 	);
 	const pendingSelections: PendingOptionalRoutingPackageSelection[] = selectedPackages.map((packageName) => ({
@@ -104,9 +99,9 @@ async function maybeInstallOptionalPackages(
 	}));
 	p.note(
 		buildRoutingDashboard({
-			providers,
 			config,
 			packageStates: detectOptionalRoutingPackages(undefined, pendingSelections),
+			providers,
 		}),
 		"Provider & Routing Dashboard",
 	);
@@ -125,8 +120,8 @@ async function maybeInstallOptionalPackages(
 
 	p.note(
 		buildRoutingDashboard({
-			providers,
 			config,
+			providers,
 		}),
 		"Provider & Routing Dashboard",
 	);
@@ -144,8 +139,8 @@ export async function setupAdaptiveRouting(
 
 	p.note(
 		buildRoutingDashboard({
-			providers,
 			config: currentConfig,
+			providers,
 		}),
 		"Provider & Routing Dashboard",
 	);
@@ -154,12 +149,12 @@ export async function setupAdaptiveRouting(
 
 	const shouldConfigure = exitOnCancel(
 		await p.confirm({
+			initialValue: currentConfig ? true : providerNames.length > 1,
 			message: currentConfig
 				? "Edit startup provider assignments for session, subagents, and ant-colony?"
 				: providerNames.length > 1
 					? "Configure startup provider assignments for session, subagents, and ant-colony?"
 					: `Use ${providerNames[0]} for delegated subagent and colony routing?`,
-			initialValue: currentConfig ? true : providerNames.length > 1,
 		}),
 	);
 	if (!shouldConfigure) {
@@ -171,9 +166,9 @@ export async function setupAdaptiveRouting(
 			initialValue: currentConfig?.mode ?? "off",
 			message: "Prompt routing mode for the optional adaptive-routing package:",
 			options: [
-				{ value: "off", label: "Off", hint: "Only delegated startup assignments; no per-prompt auto routing" },
-				{ value: "shadow", label: "Shadow", hint: "Suggest routes without switching models automatically" },
-				{ value: "auto", label: "Auto", hint: "Automatically switch models before each turn" },
+				{ hint: "Only delegated startup assignments; no per-prompt auto routing", label: "Off", value: "off" },
+				{ hint: "Suggest routes without switching models automatically", label: "Shadow", value: "shadow" },
+				{ hint: "Automatically switch models before each turn", label: "Auto", value: "auto" },
 			],
 		}),
 	);
@@ -182,25 +177,25 @@ export async function setupAdaptiveRouting(
 	for (const category of ROUTING_CATEGORIES) {
 		const preferred = exitOnCancel(
 			await p.select<string>({
+				initialValue: currentConfig?.categories[category.name]?.[0] ?? suggestedProvider(category, providerNames),
 				message: `${category.label} should prefer which provider?`,
 				options: providerNames.map((provider) => ({
 					value: provider,
 					label: provider,
 					hint: `Fallback order: ${orderProviders(provider, providerNames).join(" → ")}`,
 				})),
-				initialValue: currentConfig?.categories[category.name]?.[0] ?? suggestedProvider(category, providerNames),
 			}),
 		);
 		categories[category.name] = orderProviders(preferred, providerNames);
 	}
 
-	const config = { mode, categories };
+	const config = { categories, mode };
 	await maybeInstallOptionalPackages(providers, config, providerNames, options);
 
 	p.note(
 		buildRoutingDashboard({
-			providers,
 			config,
+			providers,
 		}),
 		"Provider & Routing Dashboard",
 	);

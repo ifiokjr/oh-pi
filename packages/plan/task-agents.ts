@@ -18,7 +18,7 @@ import type {
 } from "./types.js";
 import { resolveTaskAgentConcurrency } from "./utils.js";
 
-type PlanningAgentConfig = {
+interface PlanningAgentConfig {
 	name: string;
 	description: string;
 	systemPrompt: string;
@@ -30,15 +30,15 @@ type PlanningAgentConfig = {
 	skills?: string[];
 	extensions?: string[];
 	mcpDirectTools?: string[];
-};
+}
 
-type TaskAgentProgressSnapshot = {
+interface TaskAgentProgressSnapshot {
 	currentTool?: string;
 	currentToolArgs?: string;
 	recentOutput?: string[];
-};
+}
 
-type RunTaskAgentTaskOptions = {
+interface RunTaskAgentTaskOptions {
 	signal?: AbortSignal;
 	onActivity?: (activity: TaskAgentActivity) => void;
 	steeringInstruction?: string;
@@ -46,7 +46,7 @@ type RunTaskAgentTaskOptions = {
 	steeringNotes?: string[];
 	runId: string;
 	index: number;
-};
+}
 
 function createRenderText(text: string) {
 	const { Text } = requirePiTuiModule() as {
@@ -57,8 +57,8 @@ function createRenderText(text: string) {
 
 function createTextContent(text: string) {
 	return {
-		type: "text" as const,
 		text,
+		type: "text" as const,
 	};
 }
 
@@ -79,7 +79,7 @@ const PLANNING_AGENT_TOOL_ALLOWLIST = [
 ] as const;
 
 function summarizeSnippet(text: string, maxLength: number = 120): string {
-	const singleLine = text.replace(/\s+/g, " ").trim();
+	const singleLine = text.replaceAll(/\s+/g, " ").trim();
 	if (!singleLine) {
 		return "";
 	}
@@ -90,32 +90,40 @@ function summarizeSnippet(text: string, maxLength: number = 120): string {
 }
 
 function indentMultiline(text: string, indent: string): string[] {
-	return text.replace(/\r\n/g, "\n").split("\n").map((line) => `${indent}${line}`);
+	return text
+		.replaceAll(/\r\n/g, "\n")
+		.split("\n")
+		.map((line) => `${indent}${line}`);
 }
 
 function formatTaskAgentDuration(result: TaskAgentTaskResult): string {
 	const durationMs = Math.max(0, result.finishedAt - result.startedAt);
-	if (durationMs < 1_000) {
+	if (durationMs < 1000) {
 		return `${durationMs}ms`;
 	}
 	if (durationMs < 60_000) {
-		return `${(durationMs / 1_000).toFixed(1)}s`;
+		return `${(durationMs / 1000).toFixed(1)}s`;
 	}
 	return `${(durationMs / 60_000).toFixed(1)}m`;
 }
 
 function formatTaskAgentActivity(activity: TaskAgentActivity): string {
 	switch (activity.kind) {
-		case "tool":
+		case "tool": {
 			return `→ ${activity.text}`;
-		case "assistant":
+		}
+		case "assistant": {
 			return `✎ ${activity.text}`;
-		case "toolResult":
+		}
+		case "toolResult": {
 			return `↳ ${activity.text}`;
-		case "stderr":
+		}
+		case "stderr": {
 			return `! ${activity.text}`;
-		default:
+		}
+		default: {
 			return `• ${activity.text}`;
+		}
 	}
 }
 
@@ -146,8 +154,10 @@ function resolvePlanningAgentTools(pi: ExtensionAPI): string[] | undefined {
 
 function buildPlanningAgentConfig(pi: ExtensionAPI): PlanningAgentConfig {
 	return {
-		name: PLANNING_AGENT_NAME,
 		description: PLANNING_AGENT_DESCRIPTION,
+		filePath: PLANNING_AGENT_FILE_PATH,
+		name: PLANNING_AGENT_NAME,
+		source: "builtin",
 		systemPrompt: [
 			"You are a focused research subagent working for a planning workflow.",
 			"Stay read-only. Do not edit files or write patches.",
@@ -155,8 +165,6 @@ function buildPlanningAgentConfig(pi: ExtensionAPI): PlanningAgentConfig {
 			"Return markdown with the sections: Summary and References.",
 			"In References, include concrete file paths, symbols, commands, and URLs you relied on. If none, write 'None'.",
 		].join("\n\n"),
-		source: "builtin",
-		filePath: PLANNING_AGENT_FILE_PATH,
 		tools: resolvePlanningAgentTools(pi),
 	};
 }
@@ -167,7 +175,7 @@ function extractReferences(text: string): string[] {
 		references.add(match[0].replace(/[),.;]+$/, ""));
 	}
 
-	const lines = text.replace(/\r\n/g, "\n").split("\n");
+	const lines = text.replaceAll(/\r\n/g, "\n").split("\n");
 	let insideReferences = false;
 	for (const line of lines) {
 		const trimmed = line.trim();
@@ -187,7 +195,7 @@ function extractReferences(text: string): string[] {
 		}
 	}
 
-	return Array.from(references);
+	return [...references];
 }
 
 function createTaskAgentRunId(): string {
@@ -200,9 +208,9 @@ function normalizeTaskAgentTaskId(rawId: string | undefined, index: number, used
 		rawId
 			?.trim()
 			.toLowerCase()
-			.replace(/[^a-z0-9_-]+/g, "-")
-			.replace(/-+/g, "-")
-			.replace(/^[-_]+|[-_]+$/g, "") || fallback;
+			.replaceAll(/[^a-z0-9_-]+/g, "-")
+			.replaceAll(/-+/g, "-")
+			.replaceAll(/^[-_]+|[-_]+$/g, "") || fallback;
 
 	let id = base;
 	let suffix = 2;
@@ -218,9 +226,9 @@ function normalizeTaskAgentTaskId(rawId: string | undefined, index: number, used
 export function normalizeTaskAgentTasks(tasks: TaskAgentTask[]): NormalizedTaskAgentTask[] {
 	const used = new Set<string>();
 	return tasks.map((task, index) => ({
+		cwd: task.cwd,
 		id: normalizeTaskAgentTaskId(task.id, index, used),
 		prompt: task.prompt,
-		cwd: task.cwd,
 	}));
 }
 
@@ -280,7 +288,7 @@ function recordTaskAgentActivity(
 	if (!normalized) {
 		return;
 	}
-	const last = activities[activities.length - 1];
+	const last = activities.at(-1);
 	if (last?.kind === kind && last.text === normalized) {
 		return;
 	}
@@ -317,9 +325,7 @@ async function runTaskAgentTask(
 		buildTaskAgentPrompt(task, options),
 		{
 			cwd,
-			runId: `${options.runId}-${task.id}`,
 			index: options.index,
-			signal: options.signal,
 			onUpdate: (update) => {
 				const details = update.details as { progress?: TaskAgentProgressSnapshot[] } | undefined;
 				const progress = details?.progress?.[0];
@@ -340,6 +346,8 @@ async function runTaskAgentTask(
 
 				latestProgress = progress;
 			},
+			runId: `${options.runId}-${task.id}`,
+			signal: options.signal,
 		},
 	);
 
@@ -361,17 +369,17 @@ async function runTaskAgentTask(
 	);
 
 	return {
-		taskId: task.id,
-		task: task.prompt,
+		activities,
 		cwd,
+		exitCode: result.exitCode,
+		finishedAt: Date.now(),
 		output,
 		references: extractReferences(output),
-		exitCode: result.exitCode,
-		stderr: result.error?.trim() ?? "",
-		activities,
 		startedAt,
-		finishedAt: Date.now(),
+		stderr: result.error?.trim() ?? "",
 		steeringNotes: options.steeringNotes ?? [],
+		task: task.prompt,
+		taskId: task.id,
 	};
 }
 
@@ -398,8 +406,8 @@ export function buildTaskAgentRunDetails(runId: string, results: TaskAgentTaskRe
 	const successCount = results.filter((result) => result.exitCode === 0).length;
 	return {
 		runId,
-		tasks: results,
 		successCount,
+		tasks: results,
 		totalCount: results.length,
 	};
 }
@@ -432,14 +440,18 @@ function isTaskAgentRunDetails(details: unknown): details is TaskAgentRunDetails
 
 function statusIcon(status: TaskAgentTaskProgress["status"]): string {
 	switch (status) {
-		case "completed":
+		case "completed": {
 			return "+";
-		case "failed":
+		}
+		case "failed": {
 			return "x";
-		case "running":
+		}
+		case "running": {
 			return "..";
-		default:
+		}
+		default: {
 			return "○";
+		}
 	}
 }
 
@@ -465,112 +477,8 @@ export function registerTaskAgentTools(
 	};
 
 	pi.registerTool({
-		name: "task_agents",
-		label: "task agents",
 		description:
 			"Run one or more isolated research task agents in parallel using the bundled subagent runtime, with activity traces and run IDs for follow-up steering.",
-		parameters: dependencies.taskAgentsSchema,
-		renderCall(args, theme) {
-			const tasks = (args.tasks as TaskAgentTask[] | undefined) ?? [];
-			const lines: string[] = [
-				`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg("accent", `${tasks.length} task${tasks.length === 1 ? "" : "s"}`)}`,
-			];
-			for (const task of tasks.slice(0, TASK_AGENT_PREVIEW_LIMIT)) {
-				const taskId = task.id?.trim() || "(auto-id)";
-				lines.push(`${theme.fg("muted", `- ${taskId}:`)} ${summarizeSnippet(task.prompt, 90)}`);
-			}
-			if (tasks.length > TASK_AGENT_PREVIEW_LIMIT) {
-				lines.push(theme.fg("muted", `... +${tasks.length - TASK_AGENT_PREVIEW_LIMIT} more (Ctrl+O to expand after start)`));
-			}
-			return createRenderText(lines.join("\n"));
-		},
-		renderResult(result, { expanded, isPartial }, theme) {
-			const details = result.details;
-			if (isPartial && isTaskAgentProgressDetails(details)) {
-				const lines: string[] = [
-					`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg("accent", details.runId)} ${theme.fg("muted", `${details.completed}/${details.total}`)}`,
-				];
-				const visibleTasks = expanded ? details.tasks : details.tasks.slice(0, TASK_AGENT_PREVIEW_LIMIT);
-				for (const task of visibleTasks) {
-					const color = task.status === "failed" ? "error" : task.status === "completed" ? "success" : "warning";
-					const suffix = task.latestActivity ? ` ${theme.fg("dim", summarizeSnippet(task.latestActivity, 80))}` : "";
-					lines.push(`${theme.fg(color, statusIcon(task.status))} ${theme.fg("accent", task.taskId)} ${theme.fg("muted", task.status)}${suffix}`);
-				}
-				if (!expanded && details.tasks.length > TASK_AGENT_PREVIEW_LIMIT) {
-					lines.push(theme.fg("muted", `... +${details.tasks.length - TASK_AGENT_PREVIEW_LIMIT} more running tasks`));
-					lines.push(theme.fg("muted", "Press Ctrl+O to expand and show every task."));
-				}
-				return createRenderText(lines.join("\n"));
-			}
-
-			if (!isTaskAgentRunDetails(details)) {
-				const text = result.content.find((item) => item.type === "text");
-				return createRenderText(text?.type === "text" ? text.text : "(no output)");
-			}
-
-			const lines: string[] = [
-				`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg("accent", details.runId)} ${theme.fg("muted", `${details.successCount}/${details.totalCount} succeeded`)}`,
-			];
-			const visibleTasks = expanded ? details.tasks : details.tasks.slice(0, TASK_AGENT_PREVIEW_LIMIT);
-			for (const task of visibleTasks) {
-				const icon = task.exitCode === 0 ? theme.fg("success", "+") : theme.fg("error", "x");
-				if (!expanded) {
-					lines.push(`${icon} ${theme.fg("accent", task.taskId)} ${theme.fg("muted", summarizeSnippet(task.task, 80))}`);
-					continue;
-				}
-
-				const taskStatus = task.exitCode === 0 ? theme.fg("success", "completed") : theme.fg("error", "failed");
-				lines.push(`${icon} ${theme.fg("accent", task.taskId)} ${taskStatus}`);
-				lines.push(...indentMultiline(`Prompt: ${task.task}`, "  "));
-				lines.push(`  ${theme.fg("muted", "CWD:")} ${task.cwd}`);
-				lines.push(`  ${theme.fg("muted", "Duration:")} ${formatTaskAgentDuration(task)}`);
-
-				if (task.steeringNotes.length > 0) {
-					lines.push(`  ${theme.fg("muted", "Steering notes:")}`);
-					for (const note of task.steeringNotes) {
-						lines.push(...indentMultiline(`- ${note}`, "    "));
-					}
-				}
-
-				lines.push(`  ${theme.fg("muted", "Activity:")}`);
-				if (task.activities.length === 0) {
-					lines.push(`    ${theme.fg("dim", "(no activity captured)")}`);
-				} else {
-					for (const activity of task.activities) {
-						lines.push(`    ${theme.fg("dim", formatTaskAgentActivity(activity))}`);
-					}
-				}
-
-				if (task.exitCode !== 0) {
-					const stderr = task.stderr.trim().length > 0 ? task.stderr.trim() : "unknown error";
-					lines.push(`  ${theme.fg("error", "Error:")}`);
-					lines.push(...indentMultiline(stderr, "    "));
-					continue;
-				}
-
-				const output = task.output.trim().length > 0 ? task.output.trim() : "(no output)";
-				lines.push(`  ${theme.fg("muted", "Output:")}`);
-				lines.push(...indentMultiline(output, "    "));
-				lines.push(`  ${theme.fg("muted", "References:")}`);
-				if (task.references.length === 0) {
-					lines.push("    - None");
-				} else {
-					for (const reference of task.references) {
-						lines.push(`    - ${reference}`);
-					}
-				}
-			}
-
-			if (!expanded) {
-				if (details.tasks.length > TASK_AGENT_PREVIEW_LIMIT) {
-					lines.push(theme.fg("muted", `... +${details.tasks.length - TASK_AGENT_PREVIEW_LIMIT} more tasks`));
-				}
-				lines.push(theme.fg("muted", "Press Ctrl+O to expand and show all tasks, outputs, and activity traces."));
-			} else {
-				lines.push(theme.fg("muted", "Ctrl+O to collapse."));
-			}
-			return createRenderText(lines.join("\n"));
-		},
 		async execute(_toolCallId, params, signal, onUpdate, ctx): Promise<AgentToolResult<TaskAgentRunDetails>> {
 			if (!dependencies.getState().active) {
 				return {
@@ -652,8 +560,7 @@ export function registerTaskAgentTools(
 
 			const formatted = results.map((result, index) => formatTaskAgentResult(result, index)).join("\n\n---\n\n");
 			const summaryHeader = `Task agent research run ${runId}: ${details.successCount}/${details.totalCount} tasks succeeded.`;
-			const steeringHint =
-				`Use steer_task_agent with runId "${runId}" and a taskId to rerun a specific task with extra instruction.`;
+			const steeringHint = `Use steer_task_agent with runId "${runId}" and a taskId to rerun a specific task with extra instruction.`;
 
 			return {
 				content: [createTextContent(`${summaryHeader}\n${steeringHint}\n\n${formatted}`)],
@@ -661,20 +568,121 @@ export function registerTaskAgentTools(
 				isError: details.successCount !== details.totalCount,
 			};
 		},
+		label: "task agents",
+		name: "task_agents",
+		parameters: dependencies.taskAgentsSchema,
+		renderCall(args, theme) {
+			const tasks = (args.tasks as TaskAgentTask[] | undefined) ?? [];
+			const lines: string[] = [
+				`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg("accent", `${tasks.length} task${tasks.length === 1 ? "" : "s"}`)}`,
+			];
+			for (const task of tasks.slice(0, TASK_AGENT_PREVIEW_LIMIT)) {
+				const taskId = task.id?.trim() || "(auto-id)";
+				lines.push(`${theme.fg("muted", `- ${taskId}:`)} ${summarizeSnippet(task.prompt, 90)}`);
+			}
+			if (tasks.length > TASK_AGENT_PREVIEW_LIMIT) {
+				lines.push(
+					theme.fg("muted", `... +${tasks.length - TASK_AGENT_PREVIEW_LIMIT} more (Ctrl+O to expand after start)`),
+				);
+			}
+			return createRenderText(lines.join("\n"));
+		},
+		renderResult(result, { expanded, isPartial }, theme) {
+			const details = result.details;
+			if (isPartial && isTaskAgentProgressDetails(details)) {
+				const lines: string[] = [
+					`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg("accent", details.runId)} ${theme.fg("muted", `${details.completed}/${details.total}`)}`,
+				];
+				const visibleTasks = expanded ? details.tasks : details.tasks.slice(0, TASK_AGENT_PREVIEW_LIMIT);
+				for (const task of visibleTasks) {
+					const color = task.status === "failed" ? "error" : task.status === "completed" ? "success" : "warning";
+					const suffix = task.latestActivity ? ` ${theme.fg("dim", summarizeSnippet(task.latestActivity, 80))}` : "";
+					lines.push(
+						`${theme.fg(color, statusIcon(task.status))} ${theme.fg("accent", task.taskId)} ${theme.fg("muted", task.status)}${suffix}`,
+					);
+				}
+				if (!expanded && details.tasks.length > TASK_AGENT_PREVIEW_LIMIT) {
+					lines.push(theme.fg("muted", `... +${details.tasks.length - TASK_AGENT_PREVIEW_LIMIT} more running tasks`));
+					lines.push(theme.fg("muted", "Press Ctrl+O to expand and show every task."));
+				}
+				return createRenderText(lines.join("\n"));
+			}
+
+			if (!isTaskAgentRunDetails(details)) {
+				const text = result.content.find((item) => item.type === "text");
+				return createRenderText(text?.type === "text" ? text.text : "(no output)");
+			}
+
+			const lines: string[] = [
+				`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg("accent", details.runId)} ${theme.fg("muted", `${details.successCount}/${details.totalCount} succeeded`)}`,
+			];
+			const visibleTasks = expanded ? details.tasks : details.tasks.slice(0, TASK_AGENT_PREVIEW_LIMIT);
+			for (const task of visibleTasks) {
+				const icon = task.exitCode === 0 ? theme.fg("success", "+") : theme.fg("error", "x");
+				if (!expanded) {
+					lines.push(
+						`${icon} ${theme.fg("accent", task.taskId)} ${theme.fg("muted", summarizeSnippet(task.task, 80))}`,
+					);
+					continue;
+				}
+
+				const taskStatus = task.exitCode === 0 ? theme.fg("success", "completed") : theme.fg("error", "failed");
+				lines.push(`${icon} ${theme.fg("accent", task.taskId)} ${taskStatus}`);
+				lines.push(...indentMultiline(`Prompt: ${task.task}`, "  "));
+				lines.push(`  ${theme.fg("muted", "CWD:")} ${task.cwd}`);
+				lines.push(`  ${theme.fg("muted", "Duration:")} ${formatTaskAgentDuration(task)}`);
+
+				if (task.steeringNotes.length > 0) {
+					lines.push(`  ${theme.fg("muted", "Steering notes:")}`);
+					for (const note of task.steeringNotes) {
+						lines.push(...indentMultiline(`- ${note}`, "    "));
+					}
+				}
+
+				lines.push(`  ${theme.fg("muted", "Activity:")}`);
+				if (task.activities.length === 0) {
+					lines.push(`    ${theme.fg("dim", "(no activity captured)")}`);
+				} else {
+					for (const activity of task.activities) {
+						lines.push(`    ${theme.fg("dim", formatTaskAgentActivity(activity))}`);
+					}
+				}
+
+				if (task.exitCode !== 0) {
+					const stderr = task.stderr.trim().length > 0 ? task.stderr.trim() : "unknown error";
+					lines.push(`  ${theme.fg("error", "Error:")}`);
+					lines.push(...indentMultiline(stderr, "    "));
+					continue;
+				}
+
+				const output = task.output.trim().length > 0 ? task.output.trim() : "(no output)";
+				lines.push(`  ${theme.fg("muted", "Output:")}`);
+				lines.push(...indentMultiline(output, "    "));
+				lines.push(`  ${theme.fg("muted", "References:")}`);
+				if (task.references.length === 0) {
+					lines.push("    - None");
+				} else {
+					for (const reference of task.references) {
+						lines.push(`    - ${reference}`);
+					}
+				}
+			}
+
+			if (!expanded) {
+				if (details.tasks.length > TASK_AGENT_PREVIEW_LIMIT) {
+					lines.push(theme.fg("muted", `... +${details.tasks.length - TASK_AGENT_PREVIEW_LIMIT} more tasks`));
+				}
+				lines.push(theme.fg("muted", "Press Ctrl+O to expand and show all tasks, outputs, and activity traces."));
+			} else {
+				lines.push(theme.fg("muted", "Ctrl+O to collapse."));
+			}
+			return createRenderText(lines.join("\n"));
+		},
 	});
 
 	pi.registerTool({
-		name: "steer_task_agent",
-		label: "steer task agent",
 		description:
 			"Rerun one task from a previous task_agents run using the subagent runtime with an extra steering instruction.",
-		parameters: dependencies.steerTaskAgentSchema,
-		renderCall(args, theme) {
-			const instruction = summarizeSnippet(args.instruction ?? "", 90);
-			return createRenderText(
-				`${theme.fg("toolTitle", theme.bold("steer task agent "))}${theme.fg("accent", `${args.runId}/${args.taskId}`)}\n${theme.fg("muted", instruction)}`,
-			);
-		},
 		async execute(_toolCallId, params, signal, onUpdate, ctx): Promise<AgentToolResult<TaskAgentRunDetails>> {
 			if (!dependencies.getState().active) {
 				return {
@@ -765,6 +773,15 @@ export function registerTaskAgentTools(
 				details,
 				isError: rerunResult.exitCode !== 0,
 			};
+		},
+		label: "steer task agent",
+		name: "steer_task_agent",
+		parameters: dependencies.steerTaskAgentSchema,
+		renderCall(args, theme) {
+			const instruction = summarizeSnippet(args.instruction ?? "", 90);
+			return createRenderText(
+				`${theme.fg("toolTitle", theme.bold("steer task agent "))}${theme.fg("accent", `${args.runId}/${args.taskId}`)}\n${theme.fg("muted", instruction)}`,
+			);
 		},
 	});
 }

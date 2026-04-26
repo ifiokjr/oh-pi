@@ -52,9 +52,9 @@ function syncSymlink(srcPath: string, destPath: string) {
 			return;
 		}
 	} catch {
-		/* recreate below */
+		/* Recreate below */
 	}
-	rmSync(destPath, { recursive: true, force: true });
+	rmSync(destPath, { force: true, recursive: true });
 	symlinkSync(linkTarget, destPath);
 }
 
@@ -81,7 +81,7 @@ export function syncDir(src: string, dest: string) {
 				continue;
 			}
 		} catch {
-			/* copy anyway */
+			/* Copy anyway */
 		}
 		copyFileSync(srcPath, destPath);
 	}
@@ -92,7 +92,7 @@ export function syncDir(src: string, dest: string) {
 			}
 		}
 	} catch {
-		/* skip */
+		/* Skip */
 	}
 }
 
@@ -142,7 +142,7 @@ export function applyConfig(config: OhPConfigWithRouting) {
  */
 export function cleanupManagedConfig(agentDir: string) {
 	for (const entry of MANAGED_CONFIG_ENTRIES) {
-		rmSync(join(agentDir, entry), { recursive: true, force: true });
+		rmSync(join(agentDir, entry), { force: true, recursive: true });
 	}
 }
 
@@ -151,7 +151,7 @@ export function cleanupManagedConfig(agentDir: string) {
  */
 export function installPi() {
 	try {
-		execSync("npm install -g @mariozechner/pi-coding-agent", { stdio: "pipe", timeout: 120000 });
+		execSync("npm install -g @mariozechner/pi-coding-agent", { stdio: "pipe", timeout: 120_000 });
 	} catch {
 		throw new Error("Failed to install pi-coding-agent");
 	}
@@ -166,7 +166,7 @@ export function backupConfig(): string {
 	if (!existsSync(agentDir)) {
 		return "";
 	}
-	const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+	const ts = new Date().toISOString().replaceAll(/[:.]/g, "-").slice(0, 19);
 	const backupDir = join(dirname(agentDir), `${basename(agentDir)}.bak-${ts}`);
 	copyDir(agentDir, backupDir);
 	return backupDir;

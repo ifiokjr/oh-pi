@@ -46,67 +46,67 @@ export function formatTokens(n: number): string {
 	if (n < 1000) {
 		return `${n}`;
 	}
-	return n < 1000000 ? `${(n / 1000).toFixed(1)}k` : `${(n / 1000000).toFixed(1)}M`;
+	return n < 1_000_000 ? `${(n / 1000).toFixed(1)}k` : `${(n / 1_000_000).toFixed(1)}M`;
 }
 
 const EMOJI_STATUS_ICONS: Record<string, string> = {
 	launched: "🚀",
 	scouting: "🔍",
-	// biome-ignore lint/style/useNamingConvention: Wire-format protocol key
+	// Biome-ignore lint/style/useNamingConvention: Wire-format protocol key
 	planning_recovery: "♻️",
 	working: "⚒️",
 	reviewing: "🛡️",
-	// biome-ignore lint/style/useNamingConvention: Wire-format protocol key
+	// Biome-ignore lint/style/useNamingConvention: Wire-format protocol key
 	task_done: "✅",
 	done: "✅",
 	complete: "✅",
 	failed: "❌",
-	// biome-ignore lint/style/useNamingConvention: Wire-format protocol key
+	// Biome-ignore lint/style/useNamingConvention: Wire-format protocol key
 	budget_exceeded: "💰",
 };
 
 const PLAIN_STATUS_ICONS: Record<string, string> = {
 	launched: "[>>]",
 	scouting: "[?]",
-	// biome-ignore lint/style/useNamingConvention: Wire-format protocol key
+	// Biome-ignore lint/style/useNamingConvention: Wire-format protocol key
 	planning_recovery: "[~]",
 	working: "[w]",
 	reviewing: "[!]",
-	// biome-ignore lint/style/useNamingConvention: Wire-format protocol key
+	// Biome-ignore lint/style/useNamingConvention: Wire-format protocol key
 	task_done: "[ok]",
 	done: "[ok]",
 	complete: "[ok]",
 	failed: "[ERR]",
-	// biome-ignore lint/style/useNamingConvention: Wire-format protocol key
+	// Biome-ignore lint/style/useNamingConvention: Wire-format protocol key
 	budget_exceeded: "[$]",
 };
 
 const STATUS_LABELS: Record<string, string> = {
 	launched: "LAUNCHED",
 	scouting: "SCOUTING",
-	// biome-ignore lint/style/useNamingConvention: Wire-format protocol key
+	// Biome-ignore lint/style/useNamingConvention: Wire-format protocol key
 	planning_recovery: "PLANNING_RECOVERY",
 	working: "WORKING",
 	reviewing: "REVIEWING",
-	// biome-ignore lint/style/useNamingConvention: Wire-format protocol key
+	// Biome-ignore lint/style/useNamingConvention: Wire-format protocol key
 	task_done: "TASK_DONE",
 	done: "DONE",
 	complete: "COMPLETE",
 	failed: "FAILED",
-	// biome-ignore lint/style/useNamingConvention: Wire-format protocol key
+	// Biome-ignore lint/style/useNamingConvention: Wire-format protocol key
 	budget_exceeded: "BUDGET_EXCEEDED",
 };
 
 const EMOJI_CASTE_ICONS: Record<string, string> = {
+	drone: "⚙️",
 	scout: "🔍",
 	soldier: "🛡️",
-	drone: "⚙️",
 };
 
 const PLAIN_CASTE_ICONS: Record<string, string> = {
+	drone: "[d]",
 	scout: "[?]",
 	soldier: "[!]",
-	drone: "[d]",
 };
 
 /**
@@ -175,16 +175,7 @@ export function boltIcon(): string {
 export function buildReport(state: ColonyState): string {
 	const m = state.metrics;
 	const elapsed = state.finishedAt ? formatDuration(state.finishedAt - state.createdAt) : "?";
-	const routingSummary = Array.from(
-		new Set(
-			state.ants
-				.filter((ant) => ant.model)
-				.map(
-					(ant) =>
-						`${ant.caste}: ${ant.model}${ant.routeSource ? ` (${ant.routeSource}${ant.routeCategory ? `:${ant.routeCategory}` : ""})` : ""}`,
-				),
-		),
-	);
+	const routingSummary = [...new Set(state.ants.filter((ant) => ant.model).map((ant) => `${ant.caste}: ${ant.model}${ant.routeSource ? ` (${ant.routeSource}${ant.routeCategory ? `:${ant.routeCategory}` : ''})` : ''}`))];
 	return [
 		`## ${antIcon()} Ant Colony Report`,
 		`**Goal:** ${state.goal}`,

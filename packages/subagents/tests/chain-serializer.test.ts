@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+
 import { parseChain, serializeChain } from "../chain-serializer.js";
 
-describe("parseChain", () => {
+describe(parseChain, () => {
 	it("parses frontmatter and step configuration", () => {
 		const content = `---
 name: scout-plan
@@ -27,21 +27,21 @@ Plan using {previous}
 		const chain = parseChain(content, "project", "/tmp/scout-plan.chain.md");
 		expect(chain.name).toBe("scout-plan");
 		expect(chain.description).toBe("Gather context then plan");
-		expect(chain.extraFields).toEqual({ category: "analysis" });
-		expect(chain.steps).toEqual([
+		expect(chain.extraFields).toStrictEqual({ category: "analysis" });
+		expect(chain.steps).toStrictEqual([
 			{
 				agent: "scout",
-				task: "Analyze {task}",
 				output: "context.md",
 				progress: true,
+				task: "Analyze {task}",
 			},
 			{
 				agent: "planner",
-				task: "Plan using {previous}",
-				reads: ["context.md"],
 				model: "anthropic/claude-sonnet-4-5:high",
-				skills: ["planning", "review"],
 				progress: false,
+				reads: ["context.md"],
+				skills: ["planning", "review"],
+				task: "Plan using {previous}",
 			},
 		]);
 	});
@@ -61,13 +61,13 @@ Do the work
 `;
 
 		const chain = parseChain(content, "user", "/tmp/no-defaults.chain.md");
-		expect(chain.steps).toEqual([
+		expect(chain.steps).toStrictEqual([
 			{
 				agent: "worker",
-				task: "Do the work",
 				output: false,
 				reads: false,
 				skills: false,
+				task: "Do the work",
 			},
 		]);
 	});
@@ -79,14 +79,14 @@ Do the work
 	});
 });
 
-describe("serializeChain", () => {
+describe(serializeChain, () => {
 	it("serializes chain config into markdown frontmatter and steps", () => {
 		const markdown = serializeChain({
-			name: "review-pipeline",
 			description: "Scout and review",
-			source: "project",
-			filePath: "/tmp/review-pipeline.chain.md",
 			extraFields: { category: "qa" },
+			filePath: "/tmp/review-pipeline.chain.md",
+			name: "review-pipeline",
+			source: "project",
 			steps: [
 				{
 					agent: "scout",
@@ -114,15 +114,15 @@ describe("serializeChain", () => {
 		expect(markdown).toContain("reads: context.md");
 		expect(markdown).toContain("skills: review");
 		expect(markdown).toContain("progress: false");
-		expect(markdown.endsWith("\n")).toBe(true);
+		expect(markdown.endsWith("\n")).toBeTruthy();
 	});
 
 	it("round-trips through parseChain", () => {
 		const original = {
-			name: "roundtrip",
 			description: "Round trip",
-			source: "user" as const,
 			filePath: "/tmp/roundtrip.chain.md",
+			name: "roundtrip",
+			source: "user" as const,
 			steps: [
 				{ agent: "scout", task: "Inspect {task}", output: "context.md" },
 				{ agent: "planner", task: "Plan {previous}", reads: ["context.md"] },
@@ -133,6 +133,6 @@ describe("serializeChain", () => {
 		const parsed = parseChain(serialized, "user", original.filePath);
 		expect(parsed.name).toBe(original.name);
 		expect(parsed.description).toBe(original.description);
-		expect(parsed.steps).toEqual(original.steps);
+		expect(parsed.steps).toStrictEqual(original.steps);
 	});
 });

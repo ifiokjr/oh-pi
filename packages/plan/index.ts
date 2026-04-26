@@ -1,7 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import { keyHint, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { keyHint } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI, ExtensionContext } from '@mariozechner/pi-coding-agent';
 import { Text } from "@mariozechner/pi-tui";
 import { registerPlanModeCommand } from "./flow";
 import { resolveActivePlanFilePath } from "./plan-files";
@@ -12,7 +13,7 @@ import { CONTEXT_ENTRY_TYPE, createPlanModeStateManager } from "./state";
 import { registerTaskAgentTools } from "./task-agents";
 
 function summarizeSnippet(text: string, maxLength: number = 120): string {
-	const singleLine = text.replace(/\s+/g, " ").trim();
+	const singleLine = text.replaceAll(/\s+/g, " ").trim();
 	if (!singleLine) {
 		return "";
 	}
@@ -64,41 +65,15 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
-		name: "set_plan",
-		label: "set_plan",
 		description:
 			"Overwrite the plan file with the full latest plan text. Call this whenever the plan changes so the plan file stays canonical.",
-		parameters: SetPlanSchema,
-		renderCall(args, theme) {
-			const preview = summarizeSnippet(String(args.plan ?? ""), 90);
-			return new Text(
-				`${theme.fg("toolTitle", theme.bold("set_plan "))}${theme.fg("muted", preview || "(empty)")}`,
-				0,
-				0,
-			);
-		},
-		renderResult(result, { expanded, isPartial }, theme) {
-			if (isPartial) {
-				return new Text(theme.fg("muted", "Writing plan..."), 0, 0);
-			}
-
-			const details = result.details as SetPlanDetails | undefined;
-			if (!details?.plan) {
-				const text = result.content.find((item) => item.type === "text");
-				return new Text(text?.type === "text" ? text.text : "(no output)", 0, 0);
-			}
-
-			if (!expanded) {
-				return new Text(
-					`${theme.fg("success", "Plan written.")}\n${theme.fg("dim", keyHint("expandTools", "to view plan"))}`,
-					0,
-					0,
-				);
-			}
-
-			return new Text(`${theme.fg("success", "Plan written.")}\n${details.plan}`, 0, 0);
-		},
-		async execute(_toolCallId, params: { plan: string }, _signal, _onUpdate, ctx): Promise<AgentToolResult<SetPlanDetails>> {
+		async execute(
+			_toolCallId,
+			params: { plan: string },
+			_signal,
+			_onUpdate,
+			ctx,
+		): Promise<AgentToolResult<SetPlanDetails>> {
 			if (!stateManager.getState().active) {
 				return {
 					isError: true,
@@ -138,6 +113,38 @@ export default function (pi: ExtensionAPI) {
 				},
 			};
 		},
+		label: "set_plan",
+		name: "set_plan",
+		parameters: SetPlanSchema,
+		renderCall(args, theme) {
+			const preview = summarizeSnippet(String(args.plan ?? ""), 90);
+			return new Text(
+				`${theme.fg("toolTitle", theme.bold("set_plan "))}${theme.fg("muted", preview || "(empty)")}`,
+				0,
+				0,
+			);
+		},
+		renderResult(result, { expanded, isPartial }, theme) {
+			if (isPartial) {
+				return new Text(theme.fg("muted", "Writing plan..."), 0, 0);
+			}
+
+			const details = result.details as SetPlanDetails | undefined;
+			if (!details?.plan) {
+				const text = result.content.find((item) => item.type === "text");
+				return new Text(text?.type === "text" ? text.text : "(no output)", 0, 0);
+			}
+
+			if (!expanded) {
+				return new Text(
+					`${theme.fg("success", "Plan written.")}\n${theme.fg("dim", keyHint("expandTools", "to view plan"))}`,
+					0,
+					0,
+				);
+			}
+
+			return new Text(`${theme.fg("success", "Plan written.")}\n${details.plan}`, 0, 0);
+		},
 	});
 
 	registerRequestUserInputTool(pi, {
@@ -147,12 +154,11 @@ export default function (pi: ExtensionAPI) {
 
 	registerTaskAgentTools(pi, {
 		getState: stateManager.getState,
-		taskAgentsSchema: TaskAgentsSchema,
 		steerTaskAgentSchema: SteerTaskAgentSchema,
+		taskAgentsSchema: TaskAgentsSchema,
 	});
 
 	registerPlanModeCommand(pi, {
-		stateManager,
 		onPlanModeExited: ({ planFilePath, planText }) => {
 			pi.sendMessage({
 				customType: PLAN_MODE_EXIT_ENTRY_TYPE,
@@ -164,6 +170,7 @@ export default function (pi: ExtensionAPI) {
 				},
 			});
 		},
+		stateManager,
 	});
 
 	pi.on("before_agent_start", async () => {
@@ -175,8 +182,8 @@ export default function (pi: ExtensionAPI) {
 		const prompt = await loadPlanModePrompt();
 		return {
 			message: {
-				customType: CONTEXT_ENTRY_TYPE,
 				content: prompt,
+				customType: CONTEXT_ENTRY_TYPE,
 				display: false,
 			},
 		};

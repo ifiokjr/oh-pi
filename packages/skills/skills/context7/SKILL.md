@@ -1,7 +1,6 @@
 ---
 name: context7
-description:
-  Search and query up-to-date documentation for any programming library via Context7 API. Use when
+description: Search and query up-to-date documentation for any programming library via Context7 API. Use when
   you need current docs, code examples, or API references for libraries and frameworks.
 ---
 

@@ -1,12 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+
 
 const discoverAgentsMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../agents.js", () => ({
+vi.mock<typeof import('../agents.js')>(import('../agents.js'), () => ({
 	discoverAgents: discoverAgentsMock,
 }));
 
-vi.mock("../types.js", () => ({
+vi.mock<typeof import('../types.js')>(import('../types.js'), () => ({
 	MAX_PARALLEL: 2,
 }));
 
@@ -25,18 +25,18 @@ function createPi() {
 }
 
 function createCtx() {
-	const notifications: Array<{ msg: string; level: string }> = [];
+	const notifications: { msg: string; level: string }[] = [];
 	return {
 		notifications,
 		ui: {
 			notify: (msg: string, level: string) => {
-				notifications.push({ msg, level });
+				notifications.push({ level, msg });
 			},
 		},
 	};
 }
 
-describe("registerSubagentCommands", () => {
+describe(registerSubagentCommands, () => {
 	it("opens the agent manager and offers agent completions", async () => {
 		discoverAgentsMock.mockReturnValue({
 			agents: [{ name: "scout" }, { name: "planner" }, { name: "reviewer" }],
@@ -49,10 +49,10 @@ describe("registerSubagentCommands", () => {
 		});
 
 		await pi.commands.get("agents").handler("", {});
-		expect(openAgentManager).toHaveBeenCalledTimes(1);
+		expect(openAgentManager).toHaveBeenCalledOnce();
 
 		const completions = pi.commands.get("run").getArgumentCompletions("pl");
-		expect(completions).toEqual([{ value: "planner", label: "planner" }]);
+		expect(completions).toStrictEqual([{ label: "planner", value: "planner" }]);
 	});
 
 	it("validates /run and sends exact single-agent tool calls", async () => {
@@ -65,7 +65,7 @@ describe("registerSubagentCommands", () => {
 		});
 
 		await pi.commands.get("run").handler("unknown investigate", ctx);
-		expect(ctx.notifications.at(-1)).toEqual({ msg: "Unknown agent: unknown", level: "error" });
+		expect(ctx.notifications.at(-1)).toStrictEqual({ level: "error", msg: "Unknown agent: unknown" });
 
 		await pi.commands
 			.get("run")
@@ -76,7 +76,7 @@ describe("registerSubagentCommands", () => {
 
 		const sent = pi.sendUserMessage.mock.calls.at(-1)?.[0];
 		expect(sent).toContain('"agent":"scout"');
-		expect(sent).toContain('"task":"[Read from: spec.md, design.md]\\n\\ninspect api"');
+		expect(sent).toContain(String.raw`"task":"[Read from: spec.md, design.md]\n\ninspect api"`);
 		expect(sent).toContain('"output":"notes.md"');
 		expect(sent).toContain('"skill":["context7","git"]');
 		expect(sent).toContain('"model":"anthropic/claude-sonnet-4"');
@@ -107,7 +107,7 @@ describe("registerSubagentCommands", () => {
 		);
 
 		const completions = pi.commands.get("chain").getArgumentCompletions("scout -> pl");
-		expect(completions).toEqual([{ value: "scout -> planner", label: "planner" }]);
+		expect(completions).toStrictEqual([{ label: "planner", value: "scout -> planner" }]);
 	});
 
 	it("builds parallel chain calls and enforces the parallel cap", async () => {
@@ -122,7 +122,7 @@ describe("registerSubagentCommands", () => {
 		});
 
 		await pi.commands.get("parallel").handler('scout "inspect" -> planner "plan" -> reviewer "review"', ctx);
-		expect(ctx.notifications.at(-1)).toEqual({ msg: "Max 2 parallel tasks", level: "error" });
+		expect(ctx.notifications.at(-1)).toStrictEqual({ level: "error", msg: "Max 2 parallel tasks" });
 
 		await pi.commands
 			.get("parallel")

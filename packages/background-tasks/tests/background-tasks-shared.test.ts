@@ -1,7 +1,7 @@
 import { delimiter, join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+
+vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
 	getAgentDir: () => "/mock-home/.pi/agent",
 }));
 
@@ -43,24 +43,24 @@ describe("background task shared helpers", () => {
 	});
 
 	it("parses output matchers as regex or substring tests", () => {
-		expect(parseOutputMatcher("ready")?.("server READY now")).toBe(true);
-		expect(parseOutputMatcher("/done\\s+now/i")?.("DONE now")).toBe(true);
-		expect(parseOutputMatcher("/(/")?.("/(/")).toBe(true);
+		expect(parseOutputMatcher("ready")?.("server READY now")).toBeTruthy();
+		expect(parseOutputMatcher(String.raw`/done\s+now/i`)?.("DONE now")).toBeTruthy();
+		expect(parseOutputMatcher("/(/")?.("/(/")).toBeTruthy();
 		expect(parseOutputMatcher("   ")).toBeNull();
-		expect(parseOutputMatcher(undefined)).toBeNull();
+		expect(parseOutputMatcher()).toBeNull();
 	});
 
 	it("formats durations, ages, and status summaries", () => {
 		expect(formatDuration(-1)).toBe("0ms");
 		expect(formatDuration(950)).toBe("950ms");
-		expect(formatDuration(9_500)).toBe("9.5s");
+		expect(formatDuration(9500)).toBe("9.5s");
 		expect(formatDuration(10_000)).toBe("10s");
 		expect(formatDuration(60_000)).toBe("1m");
 		expect(formatDuration(90_000)).toBe("1m 30s");
 		expect(formatDuration(3_600_000)).toBe("1h");
 		expect(formatDuration(7_200_000)).toBe("2h");
 		expect(formatRelativeTime(Date.now(), Date.now())).toBe("just now");
-		expect(formatRelativeTime(Date.now() - 5_000, Date.now())).toBe("5s ago");
+		expect(formatRelativeTime(Date.now() - 5000, Date.now())).toBe("5s ago");
 		expect(formatRelativeTime(Date.now() - 120_000, Date.now())).toBe("2m ago");
 		expect(formatRelativeTime(Date.now() - 7_200_000, Date.now())).toBe("2h ago");
 		expect(formatRelativeTime(Date.now() - 172_800_000, Date.now())).toBe("2d ago");
@@ -75,46 +75,46 @@ describe("background task shared helpers", () => {
 		const trimmed = trimOutputBuffer("0123456789", 8, 6);
 		expect(trimmed.output).toBe("456789");
 		expect(trimmed.lastAlertLength).toBe(4);
-		expect(trimOutputBuffer("abc", 2, 6)).toEqual({ output: "abc", lastAlertLength: 2 });
-		expect(taskDisplayName({ title: "   ", command: "pnpm test --watch" })).toBe("pnpm test --watch");
+		expect(trimOutputBuffer("abc", 2, 6)).toStrictEqual({ lastAlertLength: 2, output: "abc" });
+		expect(taskDisplayName({ command: "pnpm test --watch", title: "   " })).toBe("pnpm test --watch");
 
 		expect(
 			buildTaskSummaryLine({
-				id: "bg-1",
-				title: "gh pr checks",
 				command: "gh pr checks 123 --watch",
 				cwd: "/repo",
-				pid: 1234,
-				logFile: "/tmp/bg.log",
-				startedAt: Date.now() - 10_000,
-				updatedAt: Date.now() - 1_000,
-				lastOutputAt: Date.now() - 2_000,
-				expiresAt: Date.now() + 590_000,
-				status: "running",
 				exitCode: null,
-				reactToOutput: true,
+				expiresAt: Date.now() + 590_000,
+				id: "bg-1",
+				lastOutputAt: Date.now() - 2_000,
+				logFile: "/tmp/bg.log",
 				notifyPattern: undefined,
 				outputBytes: 42,
+				pid: 1234,
+				reactToOutput: true,
+				startedAt: Date.now() - 10_000,
+				status: "running",
+				title: "gh pr checks",
+				updatedAt: Date.now() - 1_000,
 			}),
 		).toContain("bg-1 · running · pid 1234");
 	});
 
 	it("validates event payloads and resolves tasks by id or pid", () => {
-		expect(isBackgroundTaskEventDetails(null)).toBe(false);
-		expect(isBackgroundTaskEventDetails({ eventType: "noop", task: {}, outputTail: "x" })).toBe(false);
+		expect(isBackgroundTaskEventDetails(null)).toBeFalsy();
+		expect(isBackgroundTaskEventDetails({ eventType: "noop", outputTail: "x", task: {} })).toBeFalsy();
 		expect(
 			isBackgroundTaskEventDetails({
 				eventType: "output",
-				task: { id: "bg-1" },
 				outputTail: "ready",
+				task: { id: "bg-1" },
 			}),
-		).toBe(true);
+		).toBeTruthy();
 
 		const tasks = [
 			{ id: "bg-1", pid: 123 },
 			{ id: "bg-2", pid: 456 },
 		];
-		expect(resolveTaskByToken(tasks, undefined)).toBeNull();
+		expect(resolveTaskByToken(tasks)).toBeNull();
 		expect(resolveTaskByToken(tasks, "   ")).toBeNull();
 		expect(resolveTaskByToken(tasks, "bg-2")).toBe(tasks[1]);
 		expect(resolveTaskByToken(tasks, 123)).toBe(tasks[0]);

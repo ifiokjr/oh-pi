@@ -16,7 +16,8 @@ import {
 	formatWorkflowStatus,
 	summarizeChecklists,
 } from "./status.js";
-import { SPEC_SUBCOMMANDS, type SpecSubcommand, type WorkflowPaths, type WorkflowStep } from "./types.js";
+import { SPEC_SUBCOMMANDS } from './types.js';
+import type { SpecSubcommand, WorkflowPaths, WorkflowStep } from './types.js';
 import {
 	buildWorkflowPaths,
 	findRepoRoot,
@@ -32,18 +33,18 @@ const PROMPT_OPTIONAL_STEPS = new Set<WorkflowStep>(["clarify", "tasks", "analyz
 function tokenize(input: string): { subcommand: SpecSubcommand | null; remainder: string } {
 	const trimmed = input.trim();
 	if (!trimmed) {
-		return { subcommand: "status", remainder: "" };
+		return { remainder: "", subcommand: "status" };
 	}
 	const [raw, ...rest] = trimmed.split(/\s+/);
 	const normalized = raw.toLowerCase();
 	if ((SPEC_SUBCOMMANDS as readonly string[]).includes(normalized)) {
-		return { subcommand: normalized as SpecSubcommand, remainder: rest.join(" ").trim() };
+		return { remainder: rest.join(" ").trim(), subcommand: normalized as SpecSubcommand };
 	}
-	return { subcommand: null, remainder: trimmed };
+	return { remainder: trimmed, subcommand: null };
 }
 
 function sendReport(pi: ExtensionAPI, content: string): void {
-	pi.sendMessage({ customType: REPORT_MESSAGE_TYPE, content, display: true });
+	pi.sendMessage({ content, customType: REPORT_MESSAGE_TYPE, display: true });
 }
 
 function isWorkflowStep(subcommand: SpecSubcommand): subcommand is WorkflowStep {
@@ -87,9 +88,9 @@ async function resolveActiveFeatureName(
 	}
 
 	// When git is available, the current branch is the source of truth for the
-	// active feature — matching upstream spec-kit behavior.  The specs/ directory
-	// scan is only a fallback for non-git repositories where branch detection is
-	// unavailable.
+	// Active feature — matching upstream spec-kit behavior.  The specs/ directory
+	// Scan is only a fallback for non-git repositories where branch detection is
+	// Unavailable.
 	if (hasGit) {
 		return undefined;
 	}
@@ -130,13 +131,13 @@ function queueWorkflow(
 	input: string,
 ): void {
 	const prompt = buildWorkflowPrompt({
-		step,
+		checklists: step === "implement" ? summarizeChecklists(paths.checklistsDir) : undefined,
+		currentBranch,
 		input,
 		paths,
-		currentBranch,
-		workflowTemplatePath: getWorkflowTemplatePath(paths, step),
+		step,
 		stepNotes: getStepNotes(step),
-		checklists: step === "implement" ? summarizeChecklists(paths.checklistsDir) : undefined,
+		workflowTemplatePath: getWorkflowTemplatePath(paths, step),
 	});
 	pi.sendUserMessage(prompt);
 }
@@ -147,14 +148,14 @@ async function collectStepInput(ctx: ExtensionCommandContext, step: WorkflowStep
 	}
 
 	const titleByStep: Record<WorkflowStep, string> = {
-		constitution: "Describe the constitution principles",
-		specify: "Describe the feature to specify",
-		clarify: "Optional clarification focus",
-		checklist: "Optional checklist focus or domain",
-		plan: "Describe the technical context",
-		tasks: "Optional task-generation context",
 		analyze: "Optional analysis focus",
+		checklist: "Optional checklist focus or domain",
+		clarify: "Optional clarification focus",
+		constitution: "Describe the constitution principles",
 		implement: "Optional implementation focus",
+		plan: "Describe the technical context",
+		specify: "Describe the feature to specify",
+		tasks: "Optional task-generation context",
 	};
 
 	return (
@@ -166,7 +167,7 @@ function makeEnv(ctx: ExtensionCommandContext, git = createGitClient()) {
 	const { repoRoot, hasGit } = findRepoRoot(ctx.cwd, git);
 	const currentBranch = git.getCurrentBranch(repoRoot) ?? process.env.SPECIFY_FEATURE ?? "main";
 	const basePaths = buildWorkflowPaths(repoRoot);
-	return { git, repoRoot, hasGit, currentBranch, basePaths };
+	return { basePaths, currentBranch, git, hasGit, repoRoot };
 }
 
 function handleInit(pi: ExtensionAPI, repoRoot: string, created: string[]): void {
@@ -195,10 +196,10 @@ async function handleStatus(
 		pi,
 		formatWorkflowStatus(
 			buildWorkflowStatus({
-				repoRoot,
+				activeFeature,
 				currentBranch,
 				paths: buildWorkflowPaths(repoRoot, activeFeature),
-				activeFeature,
+				repoRoot,
 			}),
 		),
 	);
@@ -213,10 +214,10 @@ async function handleNext(
 ): Promise<void> {
 	const activeFeature = await resolveActiveFeatureName(ctx, repoRoot, currentBranch, hasGit);
 	const status = buildWorkflowStatus({
-		repoRoot,
+		activeFeature,
 		currentBranch,
 		paths: buildWorkflowPaths(repoRoot, activeFeature),
-		activeFeature,
+		repoRoot,
 	});
 	sendReport(pi, `# Next /spec steps\n\n${status.nextSteps.map((step) => `- ${step}`).join("\n")}`);
 }
@@ -234,11 +235,11 @@ function handleSpecify(
 
 	try {
 		const prepared = prepareFeatureWorkspace({
-			repoRoot: env.repoRoot,
+			currentBranch: env.currentBranch,
 			description: input,
 			git: env.git,
-			currentBranch: env.currentBranch,
 			hasGit: env.hasGit,
+			repoRoot: env.repoRoot,
 		});
 		const paths = buildWorkflowPaths(env.repoRoot, prepared.branchName);
 		ensureWorkflowScaffold(paths);
@@ -335,8 +336,8 @@ export default function specExtension(pi: ExtensionAPI) {
 				return null;
 			}
 			const values = SPEC_SUBCOMMANDS.filter((command) => command.startsWith(trimmed)).map((command) => ({
-				value: command,
 				label: command,
+				value: command,
 			}));
 			return values.length > 0 ? values : null;
 		},

@@ -1,5 +1,5 @@
 /**
- * oh-pi Compact Header — table-style startup info with dynamic column widths
+ * Oh-pi Compact Header — table-style startup info with dynamic column widths
  *
  * Also bootstraps the plain-icons setting: reads `plainIcons` from
  * settings.json and/or the `--plain-icons` CLI flag, and bridges it
@@ -8,7 +8,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { getAgentDir, VERSION } from "@mariozechner/pi-coding-agent";
+import { VERSION, getAgentDir } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode";
 
@@ -24,13 +24,13 @@ function loadPlainIconsSetting(): boolean {
 				return true;
 			}
 		} catch {
-			/* file missing or unparseable — skip */
+			/* File missing or unparseable — skip */
 		}
 	}
 	return false;
 }
 
-export function buildCommandCatalog(commands: ReadonlyArray<{ name: string; source?: string }>): {
+export function buildCommandCatalog(commands: readonly { name: string; source?: string }[]): {
 	prompts: string;
 	skills: string;
 } {
@@ -72,9 +72,9 @@ export default function (pi: ExtensionAPI) {
 	};
 	// Register --plain-icons CLI flag
 	pi.registerFlag("plain-icons", {
+		default: false,
 		description: "Use ASCII-safe icons instead of emoji (same as OH_PI_PLAIN_ICONS=1 or plainIcons in settings.json)",
 		type: "boolean",
-		default: false,
 	});
 
 	// Bridge settings.json and --plain-icons flag to the env var
@@ -141,7 +141,7 @@ export default function (pi: ExtensionAPI) {
 
 					// Left column gets remaining space
 					const leftW = Math.max(20, width - rightW);
-					const lk = 9; // label width
+					const lk = 9; // Label width
 
 					const lCol = [
 						[d("version"), a(`v${VERSION}  ${provider}`)],
@@ -170,7 +170,7 @@ export default function (pi: ExtensionAPI) {
 
 					return lines;
 				},
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: Required by header interface
+				// Biome-ignore lint/suspicious/noEmptyBlockStatements: Required by header interface
 				invalidate() {},
 			};
 		});

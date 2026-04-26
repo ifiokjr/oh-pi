@@ -105,11 +105,11 @@ in
 
 Each script in the `scripts` block accepts:
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `exec` | Yes | Shell command body. Use `"$@"` to forward arguments. |
-| `description` | Recommended | Short description shown by `devenv scan`. |
-| `binary` | Optional | Shell binary (default: `bash`). |
+| Field         | Required    | Description                                          |
+| ------------- | ----------- | ---------------------------------------------------- |
+| `exec`        | Yes         | Shell command body. Use `"$@"` to forward arguments. |
+| `description` | Recommended | Short description shown by `devenv scan`.            |
+| `binary`      | Optional    | Shell binary (default: `bash`).                      |
 
 ## Key variables available in `exec`
 
@@ -128,15 +128,15 @@ Each script in the `scripts` block accepts:
 
 Git hooks are defined under `git-hooks.hooks`. Each hook accepts:
 
-| Field | Description |
-|-------|-------------|
-| `enable` | Whether the hook is active |
-| `verbose` | Print hook output |
-| `pass_filenames` | Pass staged filenames to the entry command |
-| `name` | Display name |
-| `description` | What the hook does |
-| `entry` | Command to run (can reference `${pkgs.tool}/bin/tool`) |
-| `stages` | `pre-commit` or `pre-push` |
+| Field            | Description                                            |
+| ---------------- | ------------------------------------------------------ |
+| `enable`         | Whether the hook is active                             |
+| `verbose`        | Print hook output                                      |
+| `pass_filenames` | Pass staged filenames to the entry command             |
+| `name`           | Display name                                           |
+| `description`    | What the hook does                                     |
+| `entry`          | Command to run (can reference `${pkgs.tool}/bin/tool`) |
+| `stages`         | `pre-commit` or `pre-push`                             |
 
 ### Common hook patterns
 
@@ -200,15 +200,15 @@ Then reference them in `devenv.nix` as `inputs.ifiokjr-nixpkgs.packages.${pkgs.s
 
 ## Common commands reference
 
-| Command | Purpose |
-|---------|---------|
-| `devenv test` | Enter the development shell |
-| `devenv shell <cmd>` | Run a single command in the shell |
-| `devenv up` | Start processes and services |
-| `devenv update` | Update flake inputs |
-| `devenv gc` | Garbage collect old generations |
-| `devenv processes status` | Show running processes |
-| `devenv scan` | List available scripts |
+| Command                   | Purpose                           |
+| ------------------------- | --------------------------------- |
+| `devenv test`             | Enter the development shell       |
+| `devenv shell <cmd>`      | Run a single command in the shell |
+| `devenv up`               | Start processes and services      |
+| `devenv update`           | Update flake inputs               |
+| `devenv gc`               | Garbage collect old generations   |
+| `devenv processes status` | Show running processes            |
+| `devenv scan`             | List available scripts            |
 
 ## Troubleshooting
 

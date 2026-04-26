@@ -4,10 +4,10 @@ const MAX_NAME_LEN = 72;
 const FOCUS_SHIFT_THRESHOLD = 0.35;
 const AUTO_CONTINUE_TEXT = "continue";
 
-type MessageLike = {
+interface MessageLike {
 	role?: string;
 	content?: string | Array<{ type?: string; text?: string }>;
-};
+}
 
 function toText(content: MessageLike["content"]): string {
 	if (!content) {
@@ -87,8 +87,8 @@ function chooseName(messages: MessageLike[], currentName: string): string | unde
 		.filter(Boolean);
 
 	const firstUser = userTexts[0] ?? "";
-	const latestUser = userTexts[userTexts.length - 1] ?? "";
-	const latestAssistant = assistantTexts[assistantTexts.length - 1] ?? "";
+	const latestUser = userTexts.at(-1) ?? "";
+	const latestAssistant = assistantTexts.at(-1) ?? "";
 
 	if (!currentName) {
 		return normalizeLabel(latestUser || firstUser || latestAssistant);
@@ -118,8 +118,8 @@ export default function autoSessionNameExtension(pi: ExtensionAPI) {
 
 		const prefix = reason === "shutdown" ? "Session saved." : "Session switched.";
 		pi.sendMessage({
-			customType: "session-resume-hint",
 			content: `${prefix}\n${buildResumeCommandHint(normalizedSessionFile)}`,
+			customType: "session-resume-hint",
 			display: true,
 		});
 	};
@@ -160,7 +160,7 @@ export default function autoSessionNameExtension(pi: ExtensionAPI) {
 		} finally {
 			setTimeout(() => {
 				compactContinuationQueued = false;
-			}, 1_000);
+			}, 1000);
 		}
 	});
 

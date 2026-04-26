@@ -1,5 +1,5 @@
 /**
-oh-pi Scheduler Extension
+Oh-pi Scheduler Extension
 
 Based on pi-scheduler by @manojlds (MIT).
 
@@ -26,7 +26,8 @@ instance changes in the same repository.
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { openScrollableSelect, type ScrollSelectOption } from "@ifi/pi-shared-qna";
+import { openScrollableSelect } from '@ifi/pi-shared-qna';
+import type { ScrollSelectOption } from '@ifi/pi-shared-qna';
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import {
@@ -37,32 +38,8 @@ import {
 	parseDuration,
 } from "./scheduler-parsing.js";
 import { registerCommands, registerEvents, registerTools } from "./scheduler-registration.js";
-import {
-	DEFAULT_LOOP_INTERVAL,
-	DEFAULT_RECURRING_EXPIRY_MS,
-	DISPATCH_RATE_LIMIT_WINDOW_MS,
-	FIFTEEN_MINUTES,
-	getLegacySchedulerStoragePath,
-	getSchedulerLeasePath,
-	getSchedulerStoragePath,
-	getSchedulerStorageRoot,
-	MAX_DISPATCH_TIMESTAMPS,
-	MAX_DISPATCHES_PER_WINDOW,
-	MAX_RECURRING_EXPIRY_MS,
-	MAX_TASKS,
-	MIN_RECURRING_INTERVAL,
-	ONE_HOUR,
-	ONE_MINUTE,
-	type ResumeReason,
-	SCHEDULER_DISPATCHED_MESSAGE_TYPE,
-	SCHEDULER_LEASE_HEARTBEAT_MS,
-	SCHEDULER_LEASE_STALE_AFTER_MS,
-	SCHEDULER_SAFE_MODE_HEARTBEAT_MS,
-	type SchedulerLease,
-	type ScheduleScope,
-	type ScheduleTask,
-	THREE_DAYS,
-} from "./scheduler-shared.js";
+import { DEFAULT_LOOP_INTERVAL, DEFAULT_RECURRING_EXPIRY_MS, DISPATCH_RATE_LIMIT_WINDOW_MS, FIFTEEN_MINUTES, getLegacySchedulerStoragePath, getSchedulerLeasePath, getSchedulerStoragePath, getSchedulerStorageRoot, MAX_DISPATCH_TIMESTAMPS, MAX_DISPATCHES_PER_WINDOW, MAX_RECURRING_EXPIRY_MS, MAX_TASKS, MIN_RECURRING_INTERVAL, ONE_HOUR, ONE_MINUTE, SCHEDULER_DISPATCHED_MESSAGE_TYPE, SCHEDULER_LEASE_HEARTBEAT_MS, SCHEDULER_LEASE_STALE_AFTER_MS, SCHEDULER_SAFE_MODE_HEARTBEAT_MS, THREE_DAYS } from './scheduler-shared.js';
+import type { ResumeReason, SchedulerLease, ScheduleScope, ScheduleTask } from './scheduler-shared.js';
 import { createStatusBarState } from "./ui-status-cache.js";
 import { RUNTIME_DIAGNOSTICS_EVENT } from "./watchdog-runtime-diagnostics.js";
 
@@ -119,19 +96,19 @@ interface SchedulerStore {
 
 type SchedulerDispatchMode = "auto" | "observer";
 
-type TaskMutationResult = {
+interface TaskMutationResult {
 	count: number;
 	otherCount?: number;
 	legacyCount?: number;
 	error?: string;
-};
+}
 
-type CompletionOptions = {
+interface CompletionOptions {
 	continueUntilComplete?: boolean;
 	completionSignal?: string;
 	retryIntervalMs?: number;
 	maxAttempts?: number;
-};
+}
 
 type TaskManagerSelection =
 	| { kind: "task"; taskId: string }
@@ -167,7 +144,7 @@ export class SchedulerRuntime {
 	// Debounced task persistence to avoid blocking the event loop
 	private tasksDirty = false;
 	private tasksSaveTimer: ReturnType<typeof setTimeout> | null = null;
-	private static readonly TASKS_PERSIST_DEBOUNCE_MS = 2_000;
+	private static readonly TASKS_PERSIST_DEBOUNCE_MS = 2000;
 
 	constructor(private readonly pi: ExtensionAPI) {}
 
@@ -266,7 +243,7 @@ export class SchedulerRuntime {
 	}
 
 	getSortedTasks(): ScheduleTask[] {
-		return Array.from(this.tasks.values()).sort((a, b) => a.nextRunAt - b.nextRunAt);
+		return [...this.tasks.values()].toSorted((a, b) => a.nextRunAt - b.nextRunAt);
 	}
 
 	getTask(id: string): ScheduleTask | undefined {
@@ -356,7 +333,7 @@ export class SchedulerRuntime {
 			this.updateStatus();
 		}
 
-		return { count, otherCount, legacyCount };
+		return { count, legacyCount, otherCount };
 	}
 
 	adoptTasks(target = "all"): TaskMutationResult {
@@ -485,23 +462,23 @@ export class SchedulerRuntime {
 		const nextRunAt = createdAt + safeIntervalMs + jitterMs;
 		const expiresInMs = this.resolveRecurringExpiryMs(options.expiresInMs);
 		const task: ScheduleTask = {
-			id,
-			prompt,
-			kind: "recurring",
-			scope: options.scope ?? "instance",
-			enabled: true,
-			createdAt,
-			nextRunAt,
-			intervalMs: safeIntervalMs,
-			expiresAt: createdAt + expiresInMs,
-			jitterMs,
-			runCount: 0,
-			pending: false,
-			continueUntilComplete: options.continueUntilComplete ?? false,
-			completionSignal: options.completionSignal?.trim() || undefined,
-			retryIntervalMs: options.retryIntervalMs,
-			maxAttempts: options.maxAttempts,
 			awaitingCompletion: false,
+			completionSignal: options.completionSignal?.trim() || undefined,
+			continueUntilComplete: options.continueUntilComplete ?? false,
+			createdAt,
+			enabled: true,
+			expiresAt: createdAt + expiresInMs,
+			id,
+			intervalMs: safeIntervalMs,
+			jitterMs,
+			kind: "recurring",
+			maxAttempts: options.maxAttempts,
+			nextRunAt,
+			pending: false,
+			prompt,
+			retryIntervalMs: options.retryIntervalMs,
+			runCount: 0,
+			scope: options.scope ?? "instance",
 		};
 		this.assignCreator(task);
 		this.assignOwner(task, task.scope ?? "instance");
@@ -531,23 +508,23 @@ export class SchedulerRuntime {
 
 		const expiresInMs = this.resolveRecurringExpiryMs(options.expiresInMs);
 		const task: ScheduleTask = {
-			id,
-			prompt,
-			kind: "recurring",
-			scope: options.scope ?? "instance",
-			enabled: true,
-			createdAt,
-			nextRunAt,
-			cronExpression: normalizedCron.expression,
-			expiresAt: createdAt + expiresInMs,
-			jitterMs: 0,
-			runCount: 0,
-			pending: false,
-			continueUntilComplete: options.continueUntilComplete ?? false,
-			completionSignal: options.completionSignal?.trim() || undefined,
-			retryIntervalMs: options.retryIntervalMs,
-			maxAttempts: options.maxAttempts,
 			awaitingCompletion: false,
+			completionSignal: options.completionSignal?.trim() || undefined,
+			continueUntilComplete: options.continueUntilComplete ?? false,
+			createdAt,
+			cronExpression: normalizedCron.expression,
+			enabled: true,
+			expiresAt: createdAt + expiresInMs,
+			id,
+			jitterMs: 0,
+			kind: "recurring",
+			maxAttempts: options.maxAttempts,
+			nextRunAt,
+			pending: false,
+			prompt,
+			retryIntervalMs: options.retryIntervalMs,
+			runCount: 0,
+			scope: options.scope ?? "instance",
 		};
 		this.assignCreator(task);
 		this.assignOwner(task, task.scope ?? "instance");
@@ -566,21 +543,21 @@ export class SchedulerRuntime {
 		const id = this.createId();
 		const createdAt = Date.now();
 		const task: ScheduleTask = {
-			id,
-			prompt,
-			kind: "once",
-			scope: options.scope ?? "instance",
-			enabled: true,
-			createdAt,
-			nextRunAt: createdAt + delayMs,
-			jitterMs: 0,
-			runCount: 0,
-			pending: false,
-			continueUntilComplete: options.continueUntilComplete ?? false,
-			completionSignal: options.completionSignal?.trim() || undefined,
-			retryIntervalMs: options.retryIntervalMs,
-			maxAttempts: options.maxAttempts,
 			awaitingCompletion: false,
+			completionSignal: options.completionSignal?.trim() || undefined,
+			continueUntilComplete: options.continueUntilComplete ?? false,
+			createdAt,
+			enabled: true,
+			id,
+			jitterMs: 0,
+			kind: "once",
+			maxAttempts: options.maxAttempts,
+			nextRunAt: createdAt + delayMs,
+			pending: false,
+			prompt,
+			retryIntervalMs: options.retryIntervalMs,
+			runCount: 0,
+			scope: options.scope ?? "instance",
 		};
 		this.assignCreator(task);
 		this.assignOwner(task, task.scope ?? "instance");
@@ -639,12 +616,12 @@ export class SchedulerRuntime {
 			}
 		}
 		this.pi.events.emit(RUNTIME_DIAGNOSTICS_EVENT, {
-			extensionId: "scheduler",
-			pendingTasks: this.tasks.size,
 			activeTasks: enabledTasks,
 			dueTasks,
+			extensionId: "scheduler",
 			mode: this.dispatchMode,
 			note,
+			pendingTasks: this.tasks.size,
 		});
 	}
 
@@ -716,7 +693,7 @@ export class SchedulerRuntime {
 		const cutoff = now - DISPATCH_RATE_LIMIT_WINDOW_MS;
 		// Single-pass write-pointer prune — O(n) with no splice() shifts.
 		let write = 0;
-		// biome-ignore lint/style/useForOf: C-style loop needed for write-pointer in-place prune algorithm
+		// Biome-ignore lint/style/useForOf: C-style loop needed for write-pointer in-place prune algorithm
 		for (let read = 0; read < this.dispatchTimestamps.length; read++) {
 			if (this.dispatchTimestamps[read] > cutoff) {
 				this.dispatchTimestamps[write++] = this.dispatchTimestamps[read];
@@ -782,7 +759,7 @@ export class SchedulerRuntime {
 		);
 	}
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: tick scheduler has multiple early-return guard paths for correctness
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: tick scheduler has multiple early-return guard paths for correctness
 	async tickScheduler() {
 		if (!this.runtimeCtx) {
 			return;
@@ -815,10 +792,10 @@ export class SchedulerRuntime {
 		const shouldHoldLease = this.hasManagedTasksForLease();
 		if (shouldHoldLease) {
 			// Refresh the lease heartbeat unconditionally so other instances see this
-			// instance as alive even when pi is busy and not dispatching tasks. Without
-			// this, the lease goes stale after SCHEDULER_LEASE_STALE_AFTER_MS when the
-			// agent is processing messages, causing newer instances to grab the lease
-			// and mark this instance's tasks as stale_owner.
+			// Instance as alive even when pi is busy and not dispatching tasks. Without
+			// This, the lease goes stale after SCHEDULER_LEASE_STALE_AFTER_MS when the
+			// Agent is processing messages, causing newer instances to grab the lease
+			// And mark this instance's tasks as stale_owner.
 			this.refreshLeaseHeartbeat(now);
 		} else {
 			this.releaseLeaseIfOwned();
@@ -837,7 +814,7 @@ export class SchedulerRuntime {
 		}
 		if (!this.runtimeCtx.isIdle() || this.runtimeCtx.hasPendingMessages()) {
 			if (this.hasPendingTasks()) {
-				this.queueSchedulerTick(1_000);
+				this.queueSchedulerTick(1000);
 			}
 			return;
 		}
@@ -845,7 +822,7 @@ export class SchedulerRuntime {
 			this.emitRuntimeDiagnostics("dispatch throttled");
 			this.notifyRateLimit(now);
 			if (this.hasPendingTasks()) {
-				this.queueSchedulerTick(1_000);
+				this.queueSchedulerTick(1000);
 			}
 			return;
 		}
@@ -896,9 +873,10 @@ export class SchedulerRuntime {
 		]);
 
 		switch (option) {
-			case "Review tasks":
+			case "Review tasks": {
 				await this.openTaskManager(ctx);
 				break;
+			}
 			case `Take over scheduler and adopt foreign tasks${foreignTaskCount > 0 ? ` (${foreignTaskCount})` : ""}`: {
 				const adopted = this.takeOverScheduler(true);
 				ctx.ui.notify(
@@ -917,8 +895,9 @@ export class SchedulerRuntime {
 				ctx.ui.notify(`Cleared ${result.count} foreign task${result.count === 1 ? "" : "s"}.`, "warning");
 				break;
 			}
-			default:
+			default: {
 				ctx.ui.notify("This instance will observe scheduler tasks without dispatching them.", "info");
+			}
 		}
 
 		this.updateStatus();
@@ -927,8 +906,8 @@ export class SchedulerRuntime {
 	async openTaskManager(ctx: ExtensionContext): Promise<void> {
 		if (!ctx.hasUI) {
 			this.pi.sendMessage({
-				customType: "pi-scheduler",
 				content: this.formatTaskList(),
+				customType: "pi-scheduler",
 				display: true,
 			});
 			return;
@@ -943,12 +922,12 @@ export class SchedulerRuntime {
 
 			const otherTasks = this.getTasksNotCreatedHere();
 			const selected = await openScrollableSelect(ctx.ui, {
-				title: `Scheduled tasks for ${this.getWorkspaceLabel(ctx)} (select one)`,
-				options: this.buildTaskManagerOptions(list, otherTasks),
 				footerHint: "Enter manages the selected task",
 				maxVisibleOptions: 12,
-				overlayWidth: "80%",
+				options: this.buildTaskManagerOptions(list, otherTasks),
 				overlayMaxHeight: "75%",
+				overlayWidth: "80%",
+				title: `Scheduled tasks for ${this.getWorkspaceLabel(ctx)} (select one)`,
 			});
 			const selection = await this.handleTaskManagerSelection(ctx, selected, list, otherTasks);
 			if (selection === "close") {
@@ -976,19 +955,19 @@ export class SchedulerRuntime {
 		otherTasks: ScheduleTask[],
 	): ScrollSelectOption<TaskManagerSelection>[] {
 		const options = list.map((task) => ({
-			value: { kind: "task", taskId: task.id } as const,
 			label: this.taskOptionLabel(task),
+			value: { kind: "task", taskId: task.id } as const,
 		}));
 
 		if (otherTasks.length > 0) {
 			options.push({
-				value: { kind: "clear-other" },
 				label: `🧹 Clear tasks not created here (${otherTasks.length})`,
+				value: { kind: "clear-other" },
 			});
 		}
 
-		options.push({ value: { kind: "clear-all" }, label: "🗑 Clear all" });
-		options.push({ value: { kind: "close" }, label: "+ Close" });
+		options.push({ label: "🗑 Clear all", value: { kind: "clear-all" } });
+		options.push({ label: "+ Close", value: { kind: "close" } });
 		return options;
 	}
 
@@ -1035,7 +1014,7 @@ export class SchedulerRuntime {
 		return selected;
 	}
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TUI flow with multiple interactive branches.
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TUI flow with multiple interactive branches.
 	private async openTaskActions(ctx: ExtensionContext, taskId: string): Promise<boolean> {
 		while (true) {
 			const task = this.tasks.get(taskId);
@@ -1260,12 +1239,12 @@ export class SchedulerRuntime {
 		try {
 			this.pi.sendMessage(
 				{
-					customType: SCHEDULER_DISPATCHED_MESSAGE_TYPE,
 					content: task.prompt,
+					customType: SCHEDULER_DISPATCHED_MESSAGE_TYPE,
+					details: { runCount: task.runCount + 1, taskId: task.id, taskMode: this.taskMode(task) },
 					display: true,
-					details: { taskId: task.id, taskMode: this.taskMode(task), runCount: task.runCount + 1 },
 				},
-				{ triggerTurn: true, deliverAs: "followUp" },
+				{ deliverAs: "followUp", triggerTurn: true },
 			);
 			this.recordDispatch(now);
 		} catch {
@@ -1303,7 +1282,7 @@ export class SchedulerRuntime {
 		this.updateStatus();
 	}
 
-	handleAgentEnd(event: { messages?: Array<{ role?: string; content?: unknown }> }) {
+	handleAgentEnd(event: { messages?: { role?: string; content?: unknown }[] }) {
 		if (!this.awaitingTaskId) {
 			return;
 		}
@@ -1332,7 +1311,7 @@ export class SchedulerRuntime {
 			return;
 		}
 
-		const maxAttempts = task.maxAttempts;
+		const {maxAttempts} = task;
 		if (Number.isFinite(maxAttempts) && (task.runCount ?? 0) >= (maxAttempts ?? 0)) {
 			task.enabled = false;
 			task.lastStatus = "error";
@@ -1356,13 +1335,13 @@ export class SchedulerRuntime {
 		this.updateStatus();
 	}
 
-	private extractLatestAssistantText(messages: Array<{ role?: string; content?: unknown }>): string {
+	private extractLatestAssistantText(messages: { role?: string; content?: unknown }[]): string {
 		for (let i = messages.length - 1; i >= 0; i--) {
 			const message = messages[i];
 			if (message?.role !== "assistant") {
 				continue;
 			}
-			const content = message.content;
+			const {content} = message;
 			if (typeof content === "string") {
 				return content.trim();
 			}
@@ -1379,7 +1358,7 @@ export class SchedulerRuntime {
 	}
 
 	// Cache compiled completion-signal regexes keyed by the raw signal string
-	// to avoid re-parsing and re-compiling the same pattern on every call.
+	// To avoid re-parsing and re-compiling the same pattern on every call.
 	private completionSignalRegexCache = new Map<string, RegExp | null>();
 
 	private isCompletionDetected(task: ScheduleTask, assistantText: string): boolean {
@@ -1397,7 +1376,7 @@ export class SchedulerRuntime {
 					try {
 						cached = new RegExp(regexMatch[1], regexMatch[2]);
 					} catch {
-						cached = null; // invalid regex — fall back to substring matching
+						cached = null; // Invalid regex — fall back to substring matching
 					}
 				} else {
 					cached = null;
@@ -1438,7 +1417,7 @@ export class SchedulerRuntime {
 		}
 
 		if (task.cronExpression) {
-			const next = computeNextCronRunAt(task.cronExpression, now + 1_000);
+			const next = computeNextCronRunAt(task.cronExpression, now + 1000);
 			if (!next) {
 				this.tasks.delete(task.id);
 				return;
@@ -1479,15 +1458,15 @@ export class SchedulerRuntime {
 		const base =
 			task.kind === "once"
 				? "once"
-				: task.cronExpression
+				: (task.cronExpression
 					? `cron ${task.cronExpression}`
-					: `every ${formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL)}`;
+					: `every ${formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL)}`);
 		return task.continueUntilComplete ? `${base} until-complete` : base;
 	}
 
 	private taskOptionLabel(task: ScheduleTask): string {
 		const origin = this.taskCreatorShortLabel(task);
-		const state = task.resumeRequired ? `! ${task.resumeReason ?? "review"}` : task.enabled ? "+" : "-";
+		const state = task.resumeRequired ? `! ${task.resumeReason ?? "review"}` : (task.enabled ? "+" : "-");
 		return `${task.id} • ${origin} • ${state} [${task.scope ?? "instance"}] ${this.taskMode(task)} • ${this.formatRelativeTime(task.nextRunAt)} • ${this.truncateText(task.prompt, 50)}`;
 	}
 
@@ -1507,9 +1486,9 @@ export class SchedulerRuntime {
 	}
 
 	hashString(input: string): number {
-		let hash = 2166136261;
+		let hash = 2_166_136_261;
 		for (let i = 0; i < input.length; i++) {
-			hash ^= input.charCodeAt(i);
+			hash ^= input.codePointAt(i);
 			hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
 		}
 		return hash >>> 0;
@@ -1554,10 +1533,10 @@ export class SchedulerRuntime {
 		}
 		const task = this.tasks.get(target);
 		if (!task) {
-			return { tasks: [], error: `Task not found: ${target}` };
+			return { error: `Task not found: ${target}`, tasks: [] };
 		}
 		if (predicate && !predicate(task)) {
-			return { tasks: [], error: `Task ${target} is not eligible for that operation.` };
+			return { error: `Task ${target} is not eligible for that operation.`, tasks: [] };
 		}
 		return { tasks: [task] };
 	}
@@ -1599,7 +1578,7 @@ export class SchedulerRuntime {
 				this.leaseCacheAt = now;
 				return undefined;
 			}
-			const raw = fs.readFileSync(this.leasePath, "utf-8");
+			const raw = fs.readFileSync(this.leasePath, "utf8");
 			const parsed = JSON.parse(raw) as SchedulerLease;
 			if (!(parsed?.instanceId && Number.isFinite(parsed?.heartbeatAt))) {
 				this.leaseCache = undefined;
@@ -1631,7 +1610,7 @@ export class SchedulerRuntime {
 		const lease = this.readLease();
 		const ownedByCurrent = Boolean(lease && lease.instanceId === this.instanceId && this.isLeaseFresh(lease, now));
 		const activeForeign = Boolean(lease && lease.instanceId !== this.instanceId && this.isLeaseFresh(lease, now));
-		return { lease, ownedByCurrent, activeForeign };
+		return { activeForeign, lease, ownedByCurrent };
 	}
 
 	private writeLease(now = Date.now(), force = false): boolean {
@@ -1644,16 +1623,16 @@ export class SchedulerRuntime {
 				return false;
 			}
 			const lease: SchedulerLease = {
-				version: 1,
-				instanceId: this.instanceId,
-				sessionId: this.sessionId,
-				pid: process.pid,
 				cwd: this.runtimeCtx.cwd,
 				heartbeatAt: now,
+				instanceId: this.instanceId,
+				pid: process.pid,
+				sessionId: this.sessionId,
+				version: 1,
 			};
 			fs.mkdirSync(path.dirname(this.leasePath), { recursive: true });
 			const tempPath = `${this.leasePath}.tmp`;
-			fs.writeFileSync(tempPath, JSON.stringify(lease, null, 2), "utf-8");
+			fs.writeFileSync(tempPath, JSON.stringify(lease, null, 2), "utf8");
 			fs.renameSync(tempPath, this.leasePath);
 			// Update cache so subsequent reads in this tick don't hit disk
 			this.leaseCache = lease;
@@ -1861,7 +1840,7 @@ export class SchedulerRuntime {
 		}
 	}
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Deserializes backward-compatible task shapes with runtime normalization guards.
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Deserializes backward-compatible task shapes with runtime normalization guards.
 	loadTasksFromDisk() {
 		if (!this.storagePath) {
 			return;
@@ -1873,7 +1852,7 @@ export class SchedulerRuntime {
 			if (!fs.existsSync(this.storagePath)) {
 				return;
 			}
-			const raw = fs.readFileSync(this.storagePath, "utf-8");
+			const raw = fs.readFileSync(this.storagePath, "utf8");
 			const parsed = JSON.parse(raw) as SchedulerStore;
 			const list = Array.isArray(parsed?.tasks) ? parsed.tasks : [];
 			const now = Date.now();
@@ -1889,26 +1868,26 @@ export class SchedulerRuntime {
 
 				const normalized: ScheduleTask = {
 					...task,
-					scope: task.scope,
-					enabled: task.enabled ?? true,
-					pending: false,
-					runCount: task.runCount ?? 0,
-					resumeRequired: task.resumeRequired ?? false,
-					resumeReason: task.resumeReason,
-					continueUntilComplete: task.continueUntilComplete ?? false,
+					awaitingCompletion: false,
 					completionSignal: task.completionSignal?.trim() || undefined,
-					retryIntervalMs:
-						typeof task.retryIntervalMs === "number" && Number.isFinite(task.retryIntervalMs)
-							? Math.max(task.retryIntervalMs, ONE_MINUTE)
-							: undefined,
+					continueUntilComplete: task.continueUntilComplete ?? false,
+					creatorInstanceId: task.creatorInstanceId,
+					creatorSessionId: task.creatorSessionId,
+					enabled: task.enabled ?? true,
+					lastOutcomeSnippet: task.lastOutcomeSnippet,
 					maxAttempts:
 						typeof task.maxAttempts === "number" && Number.isFinite(task.maxAttempts)
 							? Math.max(1, Math.floor(task.maxAttempts))
 							: undefined,
-					awaitingCompletion: false,
-					lastOutcomeSnippet: task.lastOutcomeSnippet,
-					creatorInstanceId: task.creatorInstanceId,
-					creatorSessionId: task.creatorSessionId,
+					pending: false,
+					resumeReason: task.resumeReason,
+					resumeRequired: task.resumeRequired ?? false,
+					retryIntervalMs:
+						typeof task.retryIntervalMs === "number" && Number.isFinite(task.retryIntervalMs)
+							? Math.max(task.retryIntervalMs, ONE_MINUTE)
+							: undefined,
+					runCount: task.runCount ?? 0,
+					scope: task.scope,
 				};
 				if (normalized.kind === "recurring") {
 					const createdAt = Number.isFinite(normalized.createdAt) ? normalized.createdAt : now;
@@ -2010,23 +1989,29 @@ export class SchedulerRuntime {
 
 	private taskCreatorShortLabel(task: ScheduleTask): string {
 		switch (this.getTaskCreatorOrigin(task)) {
-			case "current":
+			case "current": {
 				return "this pi";
-			case "other":
+			}
+			case "other": {
 				return "other pi";
-			default:
+			}
+			default: {
 				return "legacy";
+			}
 		}
 	}
 
 	private taskCreatorLabel(task: ScheduleTask): string {
 		switch (this.getTaskCreatorOrigin(task)) {
-			case "current":
+			case "current": {
 				return `this instance (${this.instanceId})`;
-			case "other":
+			}
+			case "other": {
 				return `${task.creatorInstanceId}${task.creatorSessionId ? ` (${task.creatorSessionId})` : ""}`;
-			default:
+			}
+			default: {
 				return "unknown (legacy task)";
+			}
 		}
 	}
 
@@ -2066,7 +2051,7 @@ export class SchedulerRuntime {
 			const reason = task.resumeReason ?? "overdue";
 			counts.set(reason, (counts.get(reason) ?? 0) + 1);
 		}
-		const details = Array.from(counts.entries())
+		const details = [...counts.entries()]
 			.map(([reason, count]) => `${count} ${this.resumeReasonLabel(reason)}`)
 			.join(", ");
 		const count = dueTasks.length;
@@ -2080,16 +2065,21 @@ export class SchedulerRuntime {
 
 	private resumeReasonLabel(reason: ResumeReason): string {
 		switch (reason) {
-			case "foreign_owner":
+			case "foreign_owner": {
 				return "owned by another live instance";
-			case "stale_owner":
+			}
+			case "stale_owner": {
 				return "owned by a stale instance";
-			case "legacy_unowned":
+			}
+			case "legacy_unowned": {
 				return "legacy unowned task";
-			case "released":
+			}
+			case "released": {
 				return "released task";
-			default:
+			}
+			default: {
 				return "overdue task";
+			}
 		}
 	}
 
@@ -2121,11 +2111,11 @@ export class SchedulerRuntime {
 			}
 			fs.mkdirSync(path.dirname(this.storagePath), { recursive: true });
 			const store: SchedulerStore = {
-				version: 1,
 				tasks,
+				version: 1,
 			};
 			const tempPath = `${this.storagePath}.tmp`;
-			fs.writeFileSync(tempPath, JSON.stringify(store, null, 2), "utf-8");
+			fs.writeFileSync(tempPath, JSON.stringify(store, null, 2), "utf8");
 			fs.renameSync(tempPath, this.storagePath);
 		} catch {
 			// Best-effort persistence; runtime behavior should continue.

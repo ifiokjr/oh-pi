@@ -47,7 +47,7 @@ try {
 		verifyExtensionEntrypoints(pkg, manifest, packResult.files ?? []);
 	}
 } finally {
-	fs.rmSync(packRoot, { recursive: true, force: true });
+	fs.rmSync(packRoot, { force: true, recursive: true });
 }
 
 console.log("All published packages pack successfully.");

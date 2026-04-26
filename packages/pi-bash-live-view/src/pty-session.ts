@@ -86,9 +86,7 @@ export interface PtySessionManagerOptions {
 	ensureSpawnHelper?: () => Promise<string | null>;
 }
 
-const DEFAULT_NODE_PTY_MODULE_LOADER = async (): Promise<NodePtyModuleLike> => {
-	return (await import("node-pty")) as NodePtyModuleLike;
-};
+const DEFAULT_NODE_PTY_MODULE_LOADER = async (): Promise<NodePtyModuleLike> => (await import("node-pty")) as NodePtyModuleLike;
 
 let nodePtyModuleLoader: () => Promise<NodePtyModuleLike> = DEFAULT_NODE_PTY_MODULE_LOADER;
 
@@ -119,8 +117,8 @@ function sanitizeEnv(env: NodeJS.ProcessEnv = process.env): Record<string, strin
 	const mergedEnv = {
 		...process.env,
 		...env,
-		TERM: env.TERM ?? "xterm-256color",
 		COLORTERM: env.COLORTERM ?? "truecolor",
+		TERM: env.TERM ?? "xterm-256color",
 	};
 	const sanitized: Record<string, string> = {};
 	for (const [key, value] of Object.entries(mergedEnv)) {
@@ -140,26 +138,26 @@ export function resolveShellLaunch(
 	if (platform === "win32") {
 		const shell = env.SHELL?.trim();
 		if (shell && /(bash|sh)(?:\.exe)?$/i.test(shell)) {
-			return { file: shell, args: ["-lc", command] };
+			return { args: ["-lc", command], file: shell };
 		}
 
 		const comSpec = env.ComSpec?.trim();
 		if (comSpec) {
 			return {
-				file: comSpec,
 				args: ["/d", "/s", "/c", command],
+				file: comSpec,
 			};
 		}
 
 		return {
-			file: "cmd.exe",
 			args: ["/d", "/s", "/c", command],
+			file: "cmd.exe",
 		};
 	}
 
 	return {
-		file: env.SHELL?.trim() || "/bin/bash",
 		args: ["-lc", command],
+		file: env.SHELL?.trim() || "/bin/bash",
 	};
 }
 
@@ -232,10 +230,10 @@ export class PtySessionManager {
 		const rows = options.rows ?? DEFAULT_ROWS;
 		const pty = ptyModule.spawn(shell.file, shell.args, {
 			cols,
-			rows,
 			cwd: options.cwd,
 			env: sanitizeEnv(options.env),
 			name: "xterm-256color",
+			rows,
 		});
 
 		const exitDeferred = createDeferred<PtyExitEvent>();
@@ -279,7 +277,7 @@ export class PtySessionManager {
 
 		const appendChunk = (text: string) => {
 			const bytes = Buffer.byteLength(text, "utf8");
-			bufferedChunks.push({ text, bytes });
+			bufferedChunks.push({ bytes, text });
 			bufferedBytes += bytes;
 			if (bufferedBytes > this.maxBufferedBytes || bufferedChunks.length > this.maxBufferedChunks) {
 				bufferedBytes = pruneBufferedChunks(bufferedChunks, this.maxBufferedChunks, this.maxBufferedBytes);
@@ -302,50 +300,8 @@ export class PtySessionManager {
 		);
 
 		const session: ManagedPtySession = {
-			id,
-			pid: pty.pid,
 			command: options.command,
 			cwd: options.cwd,
-			startedAt: this.now(),
-			get endedAt() {
-				return endedAt;
-			},
-			get status() {
-				return sessionStatus;
-			},
-			get stopReason() {
-				return stopReason;
-			},
-			onData(listener) {
-				dataListeners.add(listener);
-				return () => {
-					dataListeners.delete(listener);
-				};
-			},
-			onExit(listener) {
-				exitListeners.add(listener);
-				return () => {
-					exitListeners.delete(listener);
-				};
-			},
-			whenExited: exitDeferred.promise,
-			getOutput,
-			kill(reason = "cancelled") {
-				if (stopReason == null || reason === "timed_out") {
-					stopReason = reason;
-				}
-				try {
-					pty.kill();
-				} catch {
-					finalize({ exitCode: null });
-				}
-			},
-			resize(columns, nextRows) {
-				pty.resize?.(columns, nextRows);
-			},
-			write(data) {
-				pty.write?.(data);
-			},
 			dispose() {
 				if (disposed) {
 					return;
@@ -361,6 +317,48 @@ export class PtySessionManager {
 				} catch {
 					finalize({ exitCode: null });
 				}
+			},
+			get endedAt() {
+				return endedAt;
+			},
+			getOutput,
+			id,
+			kill(reason = "cancelled") {
+				if (stopReason == null || reason === "timed_out") {
+					stopReason = reason;
+				}
+				try {
+					pty.kill();
+				} catch {
+					finalize({ exitCode: null });
+				}
+			},
+			onData(listener) {
+				dataListeners.add(listener);
+				return () => {
+					dataListeners.delete(listener);
+				};
+			},
+			onExit(listener) {
+				exitListeners.add(listener);
+				return () => {
+					exitListeners.delete(listener);
+				};
+			},
+			pid: pty.pid,
+			resize(columns, nextRows) {
+				pty.resize?.(columns, nextRows);
+			},
+			startedAt: this.now(),
+			get status() {
+				return sessionStatus;
+			},
+			get stopReason() {
+				return stopReason;
+			},
+			whenExited: exitDeferred.promise,
+			write(data) {
+				pty.write?.(data);
 			},
 		};
 
@@ -390,8 +388,8 @@ export class PtySessionManager {
 }
 
 export const ptySessionInternals = {
-	toDisposer,
-	sanitizeEnv,
-	pruneBufferedChunks,
 	createSessionStatus,
+	pruneBufferedChunks,
+	sanitizeEnv,
+	toDisposer,
 };

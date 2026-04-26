@@ -4,7 +4,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Usage, SingleResult } from "./types.js";
+import type { SingleResult, Usage } from "./types.js";
 import type { ChainStep, SequentialStep } from "./settings.js";
 import { isParallelStep } from "./settings.js";
 
@@ -12,7 +12,7 @@ import { isParallelStep } from "./settings.js";
  * Format token count with k suffix for large numbers
  */
 export function formatTokens(n: number): string {
-	return n < 1000 ? String(n) : n < 10000 ? `${(n / 1000).toFixed(1)}k` : `${Math.round(n / 1000)}k`;
+	return n < 1000 ? String(n) : (n < 10000 ? `${(n / 1000).toFixed(1)}k` : `${Math.round(n / 1000)}k`);
 }
 
 /**
@@ -20,13 +20,13 @@ export function formatTokens(n: number): string {
  */
 export function formatUsage(u: Usage, model?: string): string {
 	const parts: string[] = [];
-	if (u.turns) parts.push(`${u.turns} turn${u.turns > 1 ? "s" : ""}`);
-	if (u.input) parts.push(`in:${formatTokens(u.input)}`);
-	if (u.output) parts.push(`out:${formatTokens(u.output)}`);
-	if (u.cacheRead) parts.push(`R${formatTokens(u.cacheRead)}`);
-	if (u.cacheWrite) parts.push(`W${formatTokens(u.cacheWrite)}`);
-	if (u.cost) parts.push(`$${u.cost.toFixed(4)}`);
-	if (model) parts.push(model);
+	if (u.turns) {parts.push(`${u.turns} turn${u.turns > 1 ? "s" : ""}`);}
+	if (u.input) {parts.push(`in:${formatTokens(u.input)}`);}
+	if (u.output) {parts.push(`out:${formatTokens(u.output)}`);}
+	if (u.cacheRead) {parts.push(`R${formatTokens(u.cacheRead)}`);}
+	if (u.cacheWrite) {parts.push(`W${formatTokens(u.cacheWrite)}`);}
+	if (u.cost) {parts.push(`$${u.cost.toFixed(4)}`);}
+	if (model) {parts.push(model);}
 	return parts.join(" ");
 }
 
@@ -34,9 +34,9 @@ export function formatUsage(u: Usage, model?: string): string {
  * Format duration in human-readable form
  */
 export function formatDuration(ms: number): string {
-	if (ms < 1000) return `${ms}ms`;
-	if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-	return `${Math.floor(ms / 60000)}m${Math.floor((ms % 60000) / 1000)}s`;
+	if (ms < 1000) {return `${ms}ms`;}
+	if (ms < 60_000) {return `${(ms / 1000).toFixed(1)}s`;}
+	return `${Math.floor(ms / 60_000)}m${Math.floor((ms % 60_000) / 1000)}s`;
 }
 
 /**
@@ -63,7 +63,7 @@ export function buildChainSummary(
 	const hasProgress = fs.existsSync(progressPath);
 	const allSkills = new Set<string>();
 	for (const r of results) {
-		if (r.skills) r.skills.forEach((s) => allSkills.add(s));
+		if (r.skills) {r.skills.forEach((s) => allSkills.add(s));}
 	}
 	const skillsLine = allSkills.size > 0 ? `Skills: ${[...allSkills].join(", ")}` : "";
 
@@ -73,14 +73,14 @@ export function buildChainSummary(
 
 Progress: ${hasProgress ? progressPath : "(none)"}
 📁 Artifacts: ${chainDir}`;
-	} else {
+	}
 		const stepInfo = failedStep ? ` at step ${failedStep.index + 1}` : "";
 		const errorInfo = failedStep?.error ? `: ${failedStep.error}` : "";
 		return `Chain failed${stepInfo}${errorInfo}${skillsLine ? `\n${skillsLine}` : ""}
 
 Progress: ${hasProgress ? progressPath : "(none)"}
 📁 Artifacts: ${chainDir}`;
-	}
+	
 }
 
 /**
@@ -88,14 +88,18 @@ Progress: ${hasProgress ? progressPath : "(none)"}
  */
 export function formatToolCall(name: string, args: Record<string, unknown>): string {
 	switch (name) {
-		case "bash":
+		case "bash": {
 			return `$ ${((args.command as string) || "").slice(0, 60)}${(args.command as string)?.length > 60 ? "..." : ""}`;
-		case "read":
+		}
+		case "read": {
 			return `read ${shortenPath((args.path || args.file_path || "") as string)}`;
-		case "write":
+		}
+		case "write": {
 			return `write ${shortenPath((args.path || args.file_path || "") as string)}`;
-		case "edit":
+		}
+		case "edit": {
 			return `edit ${shortenPath((args.path || args.file_path || "") as string)}`;
+		}
 		default: {
 			const s = JSON.stringify(args);
 			return `${name} ${s.slice(0, 40)}${s.length > 40 ? "..." : ""}`;

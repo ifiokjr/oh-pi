@@ -5,7 +5,7 @@ export class ReconnectManager {
 	private _baseInterval: number;
 	private _stopped = false;
 
-	constructor(baseInterval = 1000, maxInterval = 30000) {
+	constructor(baseInterval = 1000, maxInterval = 30_000) {
 		this._baseInterval = baseInterval;
 		this._maxInterval = maxInterval;
 	}

@@ -1,32 +1,38 @@
-/* c8 ignore file */
+/* C8 ignore file */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname;
 const repoRoot = path.resolve(__dirname, "..");
 const outputPath = path.join(repoRoot, "docs", "research", "model-intelligence.snapshot.json");
 const runtimeOutputPath = path.join(repoRoot, "packages", "core", "src", "model-intelligence.generated.ts");
 
 const DATA_SOURCES = {
-	modelsDev: "https://models.dev/api.json",
 	benchLmLeaderboard: "https://benchlm.ai/api/data/leaderboard?limit=250",
 	benchLmPricing: "https://benchlm.ai/api/data/pricing?limit=400",
+	modelsDev: "https://models.dev/api.json",
 };
 
 const TASK_SCORE_WEIGHTS = {
+	all: {
+		overallScore: 1,
+	},
+	coding: {
+		coding: 1,
+	},
 	design: {
-		multimodalGrounded: 0.45,
 		coding: 0.2,
 		instructionFollowing: 0.2,
+		multimodalGrounded: 0.45,
 		reasoning: 0.15,
 	},
 	planning: {
-		reasoning: 0.45,
 		agentic: 0.25,
 		instructionFollowing: 0.2,
 		knowledge: 0.1,
+		reasoning: 0.45,
 	},
 	writing: {
 		instructionFollowing: 0.45,
@@ -34,52 +40,46 @@ const TASK_SCORE_WEIGHTS = {
 		multilingual: 0.15,
 		reasoning: 0.1,
 	},
-	coding: {
-		coding: 1,
-	},
-	all: {
-		overallScore: 1,
-	},
 };
 
 const CREATOR_NORMALIZATION = {
+	alibaba: "alibaba",
 	anthropic: "anthropic",
-	openai: "openai",
+	deepseek: "deepseek",
 	google: "google",
 	meta: "meta",
 	mistral: "mistral",
-	alibaba: "alibaba",
-	deepseek: "deepseek",
 	"moonshot ai": "moonshotai",
+	nvidia: "nvidia",
+	openai: "openai",
+	xiaomi: "xiaomi",
+	z: "zai",
 	"z.ai": "zai",
 	zai: "zai",
-	z: "zai",
-	nvidia: "nvidia",
-	xiaomi: "xiaomi",
 };
 
 const MANUAL_BENCH_ALIASES = {
-	"Anthropic::Claude Mythos Preview": ["claude mythos"],
-	"Google::Gemini 3 Pro Deep Think": ["gemini 3 pro", "gemini 3 pro deep think"],
-	"Z.AI::GLM-5 (Reasoning)": ["glm 5"],
-	"Alibaba::Qwen3.5 397B (Reasoning)": ["qwen3 5 397b", "qwen3.5:397b", "qwen3.5-397b"],
-	"OpenAI::GPT-5 (high)": ["gpt 5"],
-	"OpenAI::GPT-5 (medium)": ["gpt 5"],
-	"Moonshot AI::Kimi K2.5 (Reasoning)": ["kimi k2 5", "kimi k2.5"],
-	"DeepSeek::DeepSeek LLM 2.0": ["deepseek 2", "deepseek llm 2"],
-	"DeepSeek::DeepSeek Coder 2.0": ["deepseek coder 2", "deepseek coder 2.0"],
 	"Alibaba::Qwen2.5-1M": ["qwen2.5 1m", "qwen2 5 1m"],
 	"Alibaba::Qwen2.5-72B": ["qwen2.5 72b", "qwen2 5 72b"],
-	"DeepSeek::DeepSeekMath V2": ["deepseek math 2", "deepseekmath v2"],
 	"Alibaba::Qwen3 235B 2507 (Reasoning)": ["qwen3 235b", "qwen3 235b 2507"],
-	"Meta::Llama 3.1 405B": ["llama 3 1 405b", "llama 3.1 405b"],
-	"Mistral::Mistral Large 2": ["mistral large 2"],
+	"Alibaba::Qwen3.5 397B (Reasoning)": ["qwen3 5 397b", "qwen3.5:397b", "qwen3.5-397b"],
+	"Anthropic::Claude Mythos Preview": ["claude mythos"],
+	"DeepSeek::DeepSeek Coder 2.0": ["deepseek coder 2", "deepseek coder 2.0"],
+	"DeepSeek::DeepSeek LLM 2.0": ["deepseek 2", "deepseek llm 2"],
 	"DeepSeek::DeepSeek V3.1 (Reasoning)": ["deepseek v3.1", "deepseek v3 1"],
-	"Mistral::Mistral 8x7B": ["mistral 8x7b", "mixtral 8x7b"],
+	"DeepSeek::DeepSeekMath V2": ["deepseek math 2", "deepseekmath v2"],
 	"Google::Gemini 1.0 Pro": ["gemini 1 0 pro", "gemini 1.0 pro"],
-	"Mistral::Mixtral 8x22B Instruct v0.1": ["mixtral 8x22b", "mixtral 8x22b instruct"],
+	"Google::Gemini 3 Pro Deep Think": ["gemini 3 pro", "gemini 3 pro deep think"],
+	"Meta::Llama 3.1 405B": ["llama 3 1 405b", "llama 3.1 405b"],
 	"Mistral::Mistral 7B v0.3": ["mistral 7b", "mistral 7b v0 3"],
+	"Mistral::Mistral 8x7B": ["mistral 8x7b", "mixtral 8x7b"],
 	"Mistral::Mistral 8x7B v0.2": ["mistral 8x7b", "mixtral 8x7b v0 2"],
+	"Mistral::Mistral Large 2": ["mistral large 2"],
+	"Mistral::Mixtral 8x22B Instruct v0.1": ["mixtral 8x22b", "mixtral 8x22b instruct"],
+	"Moonshot AI::Kimi K2.5 (Reasoning)": ["kimi k2 5", "kimi k2.5"],
+	"OpenAI::GPT-5 (high)": ["gpt 5"],
+	"OpenAI::GPT-5 (medium)": ["gpt 5"],
+	"Z.AI::GLM-5 (Reasoning)": ["glm 5"],
 };
 
 async function fetchJson(url) {
@@ -99,26 +99,26 @@ async function fetchJson(url) {
 function normalizeCreator(value) {
 	const normalized = String(value ?? "")
 		.toLowerCase()
-		.replace(/\s+/g, " ")
+		.replaceAll(/\s+/g, " ")
 		.trim();
-	return CREATOR_NORMALIZATION[normalized] ?? normalized.replace(/[^a-z0-9]+/g, "");
+	return CREATOR_NORMALIZATION[normalized] ?? normalized.replaceAll(/[^a-z0-9]+/g, "");
 }
 
 function normalizeAlias(value) {
 	return String(value ?? "")
 		.toLowerCase()
-		.replace(/\((reasoning|thinking|high|medium|low)\)/g, " ")
-		.replace(/\bpreview\b/g, " ")
-		.replace(/\bdeep think\b/g, " ")
-		.replace(/\bv0\./g, "v0 ")
-		.replace(/\bv(\d)/g, " v$1")
-		.replace(/[^a-z0-9]+/g, " ")
-		.replace(/\s+/g, " ")
+		.replaceAll(/\((reasoning|thinking|high|medium|low)\)/g, " ")
+		.replaceAll(/\bpreview\b/g, " ")
+		.replaceAll(/\bdeep think\b/g, " ")
+		.replaceAll(/\bv0\./g, "v0 ")
+		.replaceAll(/\bv(\d)/g, " v$1")
+		.replaceAll(/[^a-z0-9]+/g, " ")
+		.replaceAll(/\s+/g, " ")
 		.trim();
 }
 
 function canonicalSlug(creator, model) {
-	return `${normalizeCreator(creator)}--${normalizeAlias(model).replace(/\s+/g, "-")}`;
+	return `${normalizeCreator(creator)}--${normalizeAlias(model).replaceAll(/\s+/g, "-")}`;
 }
 
 function parseContextWindow(value) {
@@ -132,7 +132,7 @@ function parseContextWindow(value) {
 
 	const match = value.trim().match(/^(\d+(?:\.\d+)?)\s*([kKmM])$/);
 	if (!match) {
-		const numeric = Number(value.replace(/[^\d.]/g, ""));
+		const numeric = Number(value.replaceAll(/[^\d.]/g, ""));
 		return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 	}
 
@@ -146,7 +146,7 @@ function parseContextWindow(value) {
 		return Math.round(base * 1_000_000);
 	}
 
-	return Math.round(base * 1_000);
+	return Math.round(base * 1000);
 }
 
 function roundScore(value) {
@@ -157,7 +157,7 @@ function roundScore(value) {
 }
 
 function uniqueSorted(values) {
-	return Array.from(new Set(values.filter(Boolean))).sort((left, right) => left.localeCompare(right));
+	return [...new Set(values.filter(Boolean))].toSorted((left, right) => left.localeCompare(right));
 }
 
 function deriveTaskScore(model, taskName, weights) {
@@ -178,18 +178,18 @@ function deriveTaskScore(model, taskName, weights) {
 
 	if (totalWeight === 0) {
 		return {
-			task: taskName,
-			score: null,
 			confidence: 0,
 			metricsUsed,
+			score: null,
+			task: taskName,
 		};
 	}
 
 	return {
-		task: taskName,
-		score: roundScore(weightedTotal / totalWeight),
 		confidence: roundScore(metricsUsed.length / Object.keys(weights).length),
 		metricsUsed,
+		score: roundScore(weightedTotal / totalWeight),
+		task: taskName,
 	};
 }
 
@@ -221,16 +221,16 @@ function buildCatalogAliasIndex(modelsDevCatalog) {
 
 			for (const alias of aliases) {
 				addAlias(aliasIndex, alias, {
-					providerId,
+					contextWindowTokens: typeof model.limit?.context === "number" ? model.limit.context : null,
 					id: model.id,
+					maxOutputTokens: typeof model.limit?.output === "number" ? model.limit.output : null,
+					multimodal: Boolean(model.attachment || model.modalities?.input?.includes("image")),
 					name: model.name,
 					openWeights: Boolean(model.open_weights),
+					providerId,
 					reasoning: Boolean(model.reasoning),
-					multimodal: Boolean(model.attachment || model.modalities?.input?.includes("image")),
-					toolCall: Boolean(model.tool_call),
 					structuredOutput: Boolean(model.structured_output),
-					contextWindowTokens: typeof model.limit?.context === "number" ? model.limit.context : null,
-					maxOutputTokens: typeof model.limit?.output === "number" ? model.limit.output : null,
+					toolCall: Boolean(model.tool_call),
 				});
 			}
 		}
@@ -260,7 +260,7 @@ function resolveCatalogCoverage(aliasIndex, creator, model) {
 		}
 	}
 
-	return Array.from(matches.values()).sort((left, right) => {
+	return [...matches.values()].toSorted((left, right) => {
 		const providerDiff = left.providerId.localeCompare(right.providerId);
 		if (providerDiff !== 0) {
 			return providerDiff;
@@ -271,7 +271,6 @@ function resolveCatalogCoverage(aliasIndex, creator, model) {
 
 function buildRuntimeSnapshot(snapshot) {
 	return {
-		version: snapshot.version,
 		generatedAt: snapshot.generatedAt,
 		models: snapshot.models.map((model) => ({
 			id: model.id,
@@ -290,12 +289,13 @@ function buildRuntimeSnapshot(snapshot) {
 			toolCall: model.catalog.toolCall,
 			structuredOutput: model.catalog.structuredOutput,
 		})),
+		version: snapshot.version,
 	};
 }
 
 function formatGeneratedRuntimeModule(runtimeSnapshot) {
 	return [
-		'/* This file is auto-generated by scripts/generate-model-intelligence-snapshot.mjs. */',
+		"/* This file is auto-generated by scripts/generate-model-intelligence-snapshot.mjs. */",
 		'import type { ModelIntelligenceRuntimeSnapshot } from "./model-intelligence.js";',
 		"",
 		`export const MODEL_INTELLIGENCE_RUNTIME_SNAPSHOT: ModelIntelligenceRuntimeSnapshot = ${JSON.stringify(runtimeSnapshot, null, 2)};`,
@@ -320,9 +320,7 @@ async function main() {
 			const pricing = pricingByBenchKey.get(`${entry.creator}::${entry.model}`) ?? null;
 			const coverage = resolveCatalogCoverage(aliasIndex, entry.creator, entry.model);
 			const taskScores = Object.fromEntries(
-				Object.entries(TASK_SCORE_WEIGHTS).map(([taskName, weights]) => {
-					return [taskName, deriveTaskScore(entry, taskName, weights)];
-				}),
+				Object.entries(TASK_SCORE_WEIGHTS).map(([taskName, weights]) => [taskName, deriveTaskScore(entry, taskName, weights)]),
 			);
 			const providers = uniqueSorted(coverage.map((item) => item.providerId));
 			const catalogContextWindows = coverage
@@ -338,37 +336,37 @@ async function main() {
 			const openWeightsCatalog = coverage.some((item) => item.openWeights);
 
 			return {
-				id: canonicalSlug(entry.creator, entry.model),
-				creator: entry.creator,
-				model: entry.model,
-				sourceType: entry.sourceType,
-				overallScore: entry.overallScore,
-				categoryScores: entry.categoryScores ?? {},
-				taskScores,
-				pricing: {
-					inputPriceUsdPerMillion: typeof entry.inputPrice === "number" ? entry.inputPrice : null,
-					outputPriceUsdPerMillion: typeof entry.outputPrice === "number" ? entry.outputPrice : null,
+				catalog: {
+					contextWindowTokens: catalogContextWindows.length > 0 ? Math.max(...catalogContextWindows) : null,
+					matched: coverage.length > 0,
+					maxOutputTokens: catalogOutputTokens.length > 0 ? Math.max(...catalogOutputTokens) : null,
+					multimodal: anyMultimodal,
+					openWeights: openWeightsCatalog,
+					providerCount: providers.length,
+					providerModelRefs: coverage.map((item) => `${item.providerId}/${item.id}`),
+					providers,
+					reasoning: anyReasoning,
+					structuredOutput: anyStructuredOutput,
+					toolCall: anyToolCall,
 				},
+				categoryScores: entry.categoryScores ?? {},
 				contextWindow: {
 					raw: typeof pricing?.contextWindow === "string" ? pricing.contextWindow : null,
 					tokens: parseContextWindow(pricing?.contextWindow),
 				},
-				catalog: {
-					matched: coverage.length > 0,
-					providerCount: providers.length,
-					providers,
-					providerModelRefs: coverage.map((item) => `${item.providerId}/${item.id}`),
-					openWeights: openWeightsCatalog,
-					reasoning: anyReasoning,
-					multimodal: anyMultimodal,
-					toolCall: anyToolCall,
-					structuredOutput: anyStructuredOutput,
-					contextWindowTokens: catalogContextWindows.length > 0 ? Math.max(...catalogContextWindows) : null,
-					maxOutputTokens: catalogOutputTokens.length > 0 ? Math.max(...catalogOutputTokens) : null,
+				creator: entry.creator,
+				id: canonicalSlug(entry.creator, entry.model),
+				model: entry.model,
+				overallScore: entry.overallScore,
+				pricing: {
+					inputPriceUsdPerMillion: typeof entry.inputPrice === "number" ? entry.inputPrice : null,
+					outputPriceUsdPerMillion: typeof entry.outputPrice === "number" ? entry.outputPrice : null,
 				},
+				sourceType: entry.sourceType,
+				taskScores,
 			};
 		})
-		.sort((left, right) => {
+		.toSorted((left, right) => {
 			const scoreDiff = (right.overallScore ?? 0) - (left.overallScore ?? 0);
 			if (scoreDiff !== 0) {
 				return scoreDiff;
@@ -377,42 +375,41 @@ async function main() {
 		});
 
 	const snapshot = {
-		version: 1,
 		generatedAt: new Date().toISOString(),
-		sources: {
-			modelsDev: {
-				url: DATA_SOURCES.modelsDev,
-				providerCount: summary.providerCount,
-				providerModelCount: summary.providerModelCount,
-			},
-			benchLm: {
-				leaderboardUrl: DATA_SOURCES.benchLmLeaderboard,
-				pricingUrl: DATA_SOURCES.benchLmPricing,
-				lastUpdated: benchLeaderboard.lastUpdated ?? benchPricing.lastUpdated ?? null,
-				rankedModelCount: models.length,
-			},
-			optionalFutureEnrichment: {
-				artificialAnalysis: {
-					url: "https://artificialanalysis.ai/api-reference",
-					note:
-						"Artificial Analysis exposes speed, latency, and additional eval metrics via a free API, but it requires an API key. This snapshot intentionally sticks to unauthenticated public sources.",
-				},
-			},
-		},
 		methodology: {
-			taskScoreWeights: TASK_SCORE_WEIGHTS,
 			notes: [
 				"design, planning, writing, coding, and all are derived routing scores for task selection, not official benchmark labels.",
 				"Provider coverage comes from matching BenchLM model names against models.dev provider catalogs using normalized aliases plus a small manual override list.",
 				"When a model is missing from the benchmark snapshot, the router should fall back to live catalog metadata plus name-based heuristics instead of excluding the model.",
 			],
-		},
-		summary: {
-			openWeightModelCount: models.filter((item) => item.sourceType === "Open Weight").length,
-			modelsWithCatalogCoverage: models.filter((item) => item.catalog.matched).length,
-			modelsWithoutCatalogCoverage: models.filter((item) => !item.catalog.matched).length,
+			taskScoreWeights: TASK_SCORE_WEIGHTS,
 		},
 		models,
+		sources: {
+			benchLm: {
+				lastUpdated: benchLeaderboard.lastUpdated ?? benchPricing.lastUpdated ?? null,
+				leaderboardUrl: DATA_SOURCES.benchLmLeaderboard,
+				pricingUrl: DATA_SOURCES.benchLmPricing,
+				rankedModelCount: models.length,
+			},
+			modelsDev: {
+				providerCount: summary.providerCount,
+				providerModelCount: summary.providerModelCount,
+				url: DATA_SOURCES.modelsDev,
+			},
+			optionalFutureEnrichment: {
+				artificialAnalysis: {
+					note: "Artificial Analysis exposes speed, latency, and additional eval metrics via a free API, but it requires an API key. This snapshot intentionally sticks to unauthenticated public sources.",
+					url: "https://artificialanalysis.ai/api-reference",
+				},
+			},
+		},
+		summary: {
+			modelsWithCatalogCoverage: models.filter((item) => item.catalog.matched).length,
+			modelsWithoutCatalogCoverage: models.filter((item) => !item.catalog.matched).length,
+			openWeightModelCount: models.filter((item) => item.sourceType === "Open Weight").length,
+		},
+		version: 1,
 	};
 
 	const runtimeSnapshot = buildRuntimeSnapshot(snapshot);
@@ -427,11 +424,11 @@ async function main() {
 	console.log(
 		JSON.stringify(
 			{
-				rankedModelCount: snapshot.sources.benchLm.rankedModelCount,
-				openWeightModelCount: snapshot.summary.openWeightModelCount,
 				modelsWithCatalogCoverage: snapshot.summary.modelsWithCatalogCoverage,
+				openWeightModelCount: snapshot.summary.openWeightModelCount,
 				providerCount: snapshot.sources.modelsDev.providerCount,
 				providerModelCount: snapshot.sources.modelsDev.providerModelCount,
+				rankedModelCount: snapshot.sources.benchLm.rankedModelCount,
 			},
 			null,
 			2,
@@ -440,6 +437,6 @@ async function main() {
 }
 
 main().catch((error) => {
-	console.error(error instanceof Error ? error.stack ?? error.message : error);
+	console.error(error instanceof Error ? (error.stack ?? error.message) : error);
 	process.exitCode = 1;
 });

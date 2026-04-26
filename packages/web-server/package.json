@@ -1,60 +1,60 @@
 {
-  "name": "@ifi/pi-web-server",
-  "version": "0.4.4",
-  "description": "Embeddable HTTP + WebSocket server for remote pi session management.",
-  "type": "module",
-  "bin": {
-    "pi-web": "dist/bin/pi-web.js"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "scripts": {
-    "clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist',{ recursive: true, force: true }))\"",
-    "build": "pnpm clean && tsc --project tsconfig.json",
-    "build:fast": "pnpm clean && tsgo --project tsconfig.json",
-    "typecheck": "tsgo --project tsconfig.json --noEmit"
-  },
-  "license": "MIT",
-  "dependencies": {
-    "hono": "^4.12.12",
-    "@hono/node-server": "^1.19.13",
-    "ws": "^8.18.0"
-  },
-  "devDependencies": {
-    "@types/ws": "^8.5.0"
-  },
-  "peerDependencies": {
-    "@mariozechner/pi-coding-agent": ">=0.56.1"
-  },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "keywords": [
-    "pi",
-    "pi-coding-agent",
-    "web",
-    "remote",
-    "server",
-    "websocket",
-    "http"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/web-server"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/web-server",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  }
+	"name": "@ifi/pi-web-server",
+	"version": "0.4.4",
+	"description": "Embeddable HTTP + WebSocket server for remote pi session management.",
+	"keywords": [
+		"http",
+		"pi",
+		"pi-coding-agent",
+		"remote",
+		"server",
+		"web",
+		"websocket"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/web-server",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/web-server"
+	},
+	"bin": {
+		"pi-web": "dist/bin/pi-web.js"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist',{ recursive: true, force: true }))\"",
+		"build": "pnpm clean && tsc --project tsconfig.json",
+		"build:fast": "pnpm clean && tsgo --project tsconfig.json",
+		"typecheck": "tsgo --project tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"@hono/node-server": "^1.19.13",
+		"hono": "^4.12.12",
+		"ws": "^8.18.0"
+	},
+	"devDependencies": {
+		"@types/ws": "^8.5.0"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-coding-agent": ">=0.56.1"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	}
 }

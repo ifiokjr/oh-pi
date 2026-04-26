@@ -40,13 +40,13 @@ function loadStorageConfig(): SubagentStorageConfig {
 		if (!fs.existsSync(CONFIG_PATH)) {
 			return {};
 		}
-		const parsed = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8")) as SubagentStorageConfig;
+		const parsed = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8")) as SubagentStorageConfig;
 		return {
-			projectAgentStorageMode: parseStorageMode(parsed.projectAgentStorageMode),
 			projectAgentSharedRoot:
 				typeof parsed.projectAgentSharedRoot === "string" && parsed.projectAgentSharedRoot.trim()
 					? expandTilde(parsed.projectAgentSharedRoot)
 					: undefined,
+			projectAgentStorageMode: parseStorageMode(parsed.projectAgentStorageMode),
 		};
 	} catch {
 		return {};
@@ -70,11 +70,10 @@ export function resolveProjectAgentStorageOptions(
 	const envRoot = process.env[STORAGE_ROOT_ENV_FLAG]?.trim();
 	const mode = options?.mode ?? envMode ?? config.projectAgentStorageMode ?? "shared";
 	const sharedRoot = path.resolve(
-		options?.sharedRoot ?? (envRoot ? expandTilde(envRoot) : config.projectAgentSharedRoot ?? DEFAULT_SHARED_ROOT),
+		options?.sharedRoot ?? (envRoot ? expandTilde(envRoot) : (config.projectAgentSharedRoot ?? DEFAULT_SHARED_ROOT)),
 	);
 	return { mode, sharedRoot };
 }
-
 
 function isDirectory(p: string): boolean {
 	try {
@@ -123,7 +122,7 @@ function cleanupLegacyPiDir(cwd: string): void {
 			fs.rmdirSync(piDir);
 		}
 	} catch {
-		// ignore cleanup failures
+		// Ignore cleanup failures
 	}
 }
 
@@ -153,8 +152,8 @@ export function migrateLegacyProjectAgents(cwd: string, options?: ProjectAgentSt
 		}
 		try {
 			fs.mkdirSync(path.dirname(sharedDir), { recursive: true });
-			fs.cpSync(legacyDir, sharedDir, { recursive: true, errorOnExist: true });
-			fs.rmSync(legacyDir, { recursive: true, force: true });
+			fs.cpSync(legacyDir, sharedDir, { errorOnExist: true, recursive: true });
+			fs.rmSync(legacyDir, { force: true, recursive: true });
 			cleanupLegacyPiDir(dir);
 		} catch {
 			// Best-effort migration. If anything fails, keep the project-local copy.

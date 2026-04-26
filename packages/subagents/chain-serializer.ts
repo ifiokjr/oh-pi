@@ -2,15 +2,15 @@ import type { ChainConfig, ChainStepConfig } from "./agents.js";
 
 function parseFrontmatter(content: string): { frontmatter: Record<string, string>; body: string } {
 	const frontmatter: Record<string, string> = {};
-	const normalized = content.replace(/\r\n/g, "\n");
+	const normalized = content.replaceAll(/\r\n/g, "\n");
 
 	if (!normalized.startsWith("---")) {
-		return { frontmatter, body: normalized };
+		return { body: normalized, frontmatter };
 	}
 
 	const endIndex = normalized.indexOf("\n---", 3);
 	if (endIndex === -1) {
-		return { frontmatter, body: normalized };
+		return { body: normalized, frontmatter };
 	}
 
 	const frontmatterBlock = normalized.slice(4, endIndex);
@@ -27,7 +27,7 @@ function parseFrontmatter(content: string): { frontmatter: Record<string, string
 		}
 	}
 
-	return { frontmatter, body };
+	return { body, frontmatter };
 }
 
 function parseStepBody(agent: string, sectionBody: string): ChainStepConfig {
@@ -39,13 +39,13 @@ function parseStepBody(agent: string, sectionBody: string): ChainStepConfig {
 	const step: ChainStepConfig = { agent, task };
 	for (const line of configLines) {
 		const match = line.match(/^([\w-]+):\s*(.*)$/);
-		if (!match) continue;
+		if (!match) {continue;}
 		const key = match[1].trim().toLowerCase();
 		const rawValue = match[2].trim();
 
 		if (key === "output") {
-			if (rawValue === "false") step.output = false;
-			else if (rawValue) step.output = rawValue;
+			if (rawValue === "false") {step.output = false;}
+			else if (rawValue) {step.output = rawValue;}
 			continue;
 		}
 		if (key === "reads") {
@@ -61,7 +61,7 @@ function parseStepBody(agent: string, sectionBody: string): ChainStepConfig {
 			continue;
 		}
 		if (key === "model") {
-			if (rawValue) step.model = rawValue;
+			if (rawValue) {step.model = rawValue;}
 			continue;
 		}
 		if (key === "skills") {
@@ -77,8 +77,8 @@ function parseStepBody(agent: string, sectionBody: string): ChainStepConfig {
 			continue;
 		}
 		if (key === "progress") {
-			if (rawValue === "true") step.progress = true;
-			else if (rawValue === "false") step.progress = false;
+			if (rawValue === "true") {step.progress = true;}
+			else if (rawValue === "false") {step.progress = false;}
 		}
 	}
 
@@ -106,17 +106,17 @@ export function parseChain(content: string, source: "user" | "project", filePath
 
 	const extraFields: Record<string, string> = {};
 	for (const [key, value] of Object.entries(frontmatter)) {
-		if (key === "name" || key === "description") continue;
+		if (key === "name" || key === "description") {continue;}
 		extraFields[key] = value;
 	}
 
 	return {
-		name: frontmatter.name,
 		description: frontmatter.description,
-		source,
-		filePath,
-		steps,
 		extraFields: Object.keys(extraFields).length > 0 ? extraFields : undefined,
+		filePath,
+		name: frontmatter.name,
+		source,
+		steps,
 	};
 }
 
@@ -136,17 +136,17 @@ export function serializeChain(config: ChainConfig): string {
 	for (let i = 0; i < config.steps.length; i++) {
 		const step = config.steps[i]!;
 		lines.push(`## ${step.agent}`);
-		if (step.output === false) lines.push("output: false");
-		else if (step.output) lines.push(`output: ${step.output}`);
-		if (step.reads === false) lines.push("reads: false");
-		else if (Array.isArray(step.reads) && step.reads.length > 0) lines.push(`reads: ${step.reads.join(", ")}`);
-		if (step.model) lines.push(`model: ${step.model}`);
-		if (step.skills === false) lines.push("skills: false");
-		else if (Array.isArray(step.skills) && step.skills.length > 0) lines.push(`skills: ${step.skills.join(", ")}`);
-		if (step.progress !== undefined) lines.push(`progress: ${step.progress ? "true" : "false"}`);
+		if (step.output === false) {lines.push("output: false");}
+		else if (step.output) {lines.push(`output: ${step.output}`);}
+		if (step.reads === false) {lines.push("reads: false");}
+		else if (Array.isArray(step.reads) && step.reads.length > 0) {lines.push(`reads: ${step.reads.join(", ")}`);}
+		if (step.model) {lines.push(`model: ${step.model}`);}
+		if (step.skills === false) {lines.push("skills: false");}
+		else if (Array.isArray(step.skills) && step.skills.length > 0) {lines.push(`skills: ${step.skills.join(", ")}`);}
+		if (step.progress !== undefined) {lines.push(`progress: ${step.progress ? "true" : "false"}`);}
 		lines.push("");
 		lines.push(step.task ?? "");
-		if (i < config.steps.length - 1) lines.push("");
+		if (i < config.steps.length - 1) {lines.push("");}
 	}
 
 	return `${lines.join("\n")}\n`;

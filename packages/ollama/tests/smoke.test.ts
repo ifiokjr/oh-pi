@@ -1,6 +1,6 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import ollamaProviderExtension from "../index.js";
 import * as localModule from "../local.js";
@@ -17,7 +17,14 @@ async function createDelayedCloudBootstrapBackend(
 		const reply = () => {
 			if (req.url === "/v1/models" && req.method === "GET") {
 				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ data: [{ id: "glm-5.1", object: "model" }, { id: "kimi-k2.5", object: "model" }] }));
+				res.end(
+					JSON.stringify({
+						data: [
+							{ id: "glm-5.1", object: "model" },
+							{ id: "kimi-k2.5", object: "model" },
+						],
+					}),
+				);
 				return;
 			}
 
@@ -28,16 +35,17 @@ async function createDelayedCloudBootstrapBackend(
 				});
 				req.on("end", () => {
 					const parsed = JSON.parse(body || "{}") as { model?: string };
-					const contextWindow = parsed.model === "kimi-k2.5" ? 262144 : 202752;
-					const capabilities = parsed.model === "kimi-k2.5"
-						? ["completion", "tools", "thinking", "vision"]
-						: ["completion", "tools", "thinking"];
+					const contextWindow = parsed.model === "kimi-k2.5" ? 262_144 : 202_752;
+					const capabilities =
+						parsed.model === "kimi-k2.5"
+							? ["completion", "tools", "thinking", "vision"]
+							: ["completion", "tools", "thinking"];
 					res.writeHead(200, { "Content-Type": "application/json" });
 					res.end(
 						JSON.stringify({
 							capabilities,
-							model_info: { [`${(parsed.model ?? "glm").split(/[:.-]/)[0]}.context_length`]: contextWindow },
 							details: {},
+							model_info: { [`${(parsed.model ?? "glm").split(/[:.-]/)[0]}.context_length`]: contextWindow },
 						}),
 					);
 				});
@@ -52,14 +60,14 @@ async function createDelayedCloudBootstrapBackend(
 	});
 
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-	const port = (server.address() as AddressInfo).port;
+	const {port} = (server.address() as AddressInfo);
 	const origin = `http://127.0.0.1:${port}`;
 	return {
 		apiUrl: `${origin}/v1`,
-		origin,
 		async close() {
 			await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
 		},
+		origin,
 	};
 }
 
@@ -82,17 +90,17 @@ describe("ollama provider smoke tests", () => {
 		harnesses.push(harness);
 		ollamaProviderExtension(harness.pi as never);
 
-		expect(harness.commands.has("ollama")).toBe(true);
-		expect(harness.commands.has("ollama:status")).toBe(true);
-		expect(harness.commands.has("ollama-cloud")).toBe(true);
-		expect(harness.providers.has("ollama")).toBe(true);
-		expect(harness.providers.has("ollama-cloud")).toBe(true);
-		expect(typeof harness.providers.get("ollama-cloud")?.streamSimple).toBe("function");
+		expect(harness.commands.has("ollama")).toBeTruthy();
+		expect(harness.commands.has("ollama:status")).toBeTruthy();
+		expect(harness.commands.has("ollama-cloud")).toBeTruthy();
+		expect(harness.providers.has("ollama")).toBeTruthy();
+		expect(harness.providers.has("ollama-cloud")).toBeTruthy();
+		expectTypeOf(harness.providers.get("ollama-cloud")?.streamSimple).toBeFunction();
 	});
 
 	it("does not crash on session_start when auth storage is not ready", async () => {
 		const backend = await createTestOllamaBackend();
-		backend.setModels([{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752 }]);
+		backend.setModels([{ capabilities: ["completion", "tools", "thinking"], contextWindow: 202752, id: "glm-5.1" }]);
 		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
 		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
 		process.env.PI_OLLAMA_CLOUD_SHOW_URL = `${backend.origin}/api/show`;
@@ -144,8 +152,8 @@ describe("ollama provider smoke tests", () => {
 		harnesses.push(harness);
 		ollamaProviderExtension(harness.pi as never);
 
-		const initialModels = harness.providers.get("ollama-cloud")?.models as Array<{ id: string }> | undefined;
-		expect(initialModels?.some((model) => model.id === "glm-5.1")).toBe(true);
+		const initialModels = harness.providers.get("ollama-cloud")?.models as { id: string }[] | undefined;
+		expect(initialModels?.some((model) => model.id === "glm-5.1")).toBeTruthy();
 
 		await backend.close();
 	});
@@ -153,8 +161,8 @@ describe("ollama provider smoke tests", () => {
 	it("bootstraps the public cloud catalog without an API key", async () => {
 		const backend = await createTestOllamaBackend();
 		backend.setModels([
-			{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752 },
-			{ id: "kimi-k2.5", capabilities: ["completion", "tools", "thinking", "vision"], contextWindow: 262144 },
+			{ capabilities: ["completion", "tools", "thinking"], contextWindow: 202752, id: "glm-5.1" },
+			{ capabilities: ["completion", "tools", "thinking", "vision"], contextWindow: 262144, id: "kimi-k2.5" },
 		]);
 		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
 		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
@@ -166,18 +174,17 @@ describe("ollama provider smoke tests", () => {
 		ollamaProviderExtension(harness.pi as never);
 
 		for (let attempt = 0; attempt < 80; attempt += 1) {
-			const models = harness.providers.get("ollama-cloud")?.models as Array<{ id: string }> | undefined;
+			const models = harness.providers.get("ollama-cloud")?.models as { id: string }[] | undefined;
 			if (models?.length === 2) {
 				break;
 			}
 			await new Promise((resolve) => setTimeout(resolve, 10));
 		}
 
-		expect((harness.providers.get("ollama-cloud")?.models as Array<{ id: string }> | undefined)?.map((model) => model.id)).toEqual([
-			"glm-5.1",
-			"kimi-k2.5",
-		]);
-		expect(backend.getAuthHeaders()).toEqual(["", "", ""]);
+		expect(
+			(harness.providers.get("ollama-cloud")?.models as { id: string }[] | undefined)?.map((model) => model.id),
+		).toStrictEqual(["glm-5.1", "kimi-k2.5"]);
+		expect(backend.getAuthHeaders()).toStrictEqual(["", "", ""]);
 		await backend.close();
 	});
 
@@ -187,7 +194,7 @@ describe("ollama provider smoke tests", () => {
 		(harness.ctx as any).modelRegistry = {
 			...(harness.ctx.modelRegistry as object),
 			authStorage: {
-				get: vi.fn(() => undefined),
+				get: vi.fn(() => {}),
 				set: vi.fn(),
 			},
 		};
@@ -222,10 +229,7 @@ describe("ollama provider smoke tests", () => {
 		const provider = harness.providers.get("ollama");
 		expect(provider).toBeDefined();
 		expect(() =>
-			provider?.streamSimple?.(
-				{ provider: "ollama", id: "missing-model" } as never,
-				{} as never,
-			),
-		).toThrowError(/\/ollama:pull missing-model/);
+			provider?.streamSimple?.({ id: "missing-model", provider: "ollama" } as never, {} as never),
+		).toThrow(/\/ollama:pull missing-model/);
 	});
 });

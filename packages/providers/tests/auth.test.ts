@@ -1,12 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { createApiKeyOAuthProvider, loginProvider, refreshProviderCredential } from "../auth.js";
 import { clearModelsDevCatalogCache } from "../catalog.js";
 import { getSupportedProvider } from "../config.js";
 
 function jsonResponse(body: unknown): Response {
 	return new Response(JSON.stringify(body), {
-		status: 200,
 		headers: { "Content-Type": "application/json" },
+		status: 200,
 	});
 }
 
@@ -14,12 +14,12 @@ const sampleCatalog = {
 	moonshotai: {
 		models: {
 			"kimi-k2.5": {
-				id: "kimi-k2.5",
-				name: "Kimi K2.5",
-				reasoning: true,
 				attachment: true,
+				id: "kimi-k2.5",
 				limit: { context: 262144, output: 32768 },
 				modalities: { input: ["text", "image"], output: ["text"] },
+				name: "Kimi K2.5",
+				reasoning: true,
 			},
 		},
 	},
@@ -40,7 +40,7 @@ describe("multi-provider api-key auth", () => {
 		const fetch = vi
 			.fn<() => Promise<Response>>()
 			.mockImplementationOnce(async () => jsonResponse(sampleCatalog))
-			.mockImplementationOnce(async () => jsonResponse({ data: [{ id: "kimi-k2.5", max_output: 24576 }] }));
+			.mockImplementationOnce(async () => jsonResponse({ data: [{ id: "kimi-k2.5", max_output: 24_576 }] }));
 		vi.stubGlobal("fetch", fetch);
 
 		let openedUrl = "";
@@ -53,7 +53,7 @@ describe("multi-provider api-key auth", () => {
 
 		expect(openedUrl).toBe(provider.authUrl);
 		expect(credential.access).toBe("moonshot-key");
-		expect(credential.models?.map((model) => model.id)).toEqual(["kimi-k2.5"]);
+		expect(credential.models?.map((model) => model.id)).toStrictEqual(["kimi-k2.5"]);
 	});
 
 	it("preserves previous models when a refresh cannot rediscover them", async () => {
@@ -62,7 +62,6 @@ describe("multi-provider api-key auth", () => {
 		vi.stubGlobal("fetch", fetch);
 
 		const refreshed = await refreshProviderCredential(provider, {
-			refresh: "moonshot-key",
 			access: "moonshot-key",
 			expires: Date.now() - 1000,
 			models: [
@@ -76,9 +75,10 @@ describe("multi-provider api-key auth", () => {
 					maxTokens: 32768,
 				},
 			],
+			refresh: "moonshot-key",
 		} as never);
 
-		expect(refreshed.models?.map((model) => model.id)).toEqual(["kimi-k2.5"]);
+		expect(refreshed.models?.map((model) => model.id)).toStrictEqual(["kimi-k2.5"]);
 	});
 
 	it("modifies provider models from the stored credential", () => {
@@ -87,20 +87,19 @@ describe("multi-provider api-key auth", () => {
 		const modified = oauth.modifyModels?.(
 			[
 				{
-					id: "placeholder",
-					name: "Placeholder",
 					api: "openai-completions",
-					provider: "moonshotai",
 					baseUrl: provider.baseUrl,
-					reasoning: false,
-					input: ["text"],
-					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 					contextWindow: 1,
+					cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0 },
+					id: "placeholder",
+					input: ["text"],
 					maxTokens: 1,
+					name: "Placeholder",
+					provider: "moonshotai",
+					reasoning: false,
 				},
 			],
 			{
-				refresh: "r",
 				access: "a",
 				expires: Date.now() + 1000,
 				models: [
@@ -114,9 +113,10 @@ describe("multi-provider api-key auth", () => {
 						maxTokens: 32768,
 					},
 				],
+				refresh: "r",
 			} as never,
 		);
 
-		expect(modified?.map((model) => model.id)).toEqual(["kimi-k2.5"]);
+		expect(modified?.map((model) => model.id)).toStrictEqual(["kimi-k2.5"]);
 	});
 });

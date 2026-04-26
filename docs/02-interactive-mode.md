@@ -69,9 +69,9 @@ Edit `~/.pi/agent/keybindings.json`:
 
 ```json
 {
-  "cursorUp": ["up", "ctrl+p"],
-  "cursorDown": ["down", "ctrl+n"],
-  "selectModel": "ctrl+l"
+	"cursorUp": ["up", "ctrl+p"],
+	"cursorDown": ["down", "ctrl+n"],
+	"selectModel": "ctrl+l"
 }
 ```
 

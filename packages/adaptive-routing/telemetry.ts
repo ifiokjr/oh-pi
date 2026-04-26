@@ -45,7 +45,7 @@ export function appendTelemetryEvent(
 	try {
 		mkdirSync(dirname(eventsPath), { recursive: true });
 		// Append-only write — never read the entire file back just to add one line.
-		appendFileSync(eventsPath, `${JSON.stringify(event)}\n`, "utf-8");
+		appendFileSync(eventsPath, `${JSON.stringify(event)}\n`, "utf8");
 
 		// Update in-memory stats incrementally instead of re-reading the whole file.
 		if (!memoryStats) {
@@ -64,7 +64,7 @@ function readAggregatesFromDisk(): AdaptiveRoutingStats {
 		if (!existsSync(aggregatesPath)) {
 			return emptyStats();
 		}
-		const raw = readFileSync(aggregatesPath, "utf-8");
+		const raw = readFileSync(aggregatesPath, "utf8");
 		const parsed = JSON.parse(raw) as AdaptiveRoutingStats;
 		if (parsed && typeof parsed === "object" && "decisions" in parsed) {
 			return parsed;
@@ -79,10 +79,10 @@ function emptyStats(): AdaptiveRoutingStats {
 	return {
 		decisions: 0,
 		feedback: {},
-		overrides: 0,
-		shadowDisagreements: 0,
 		outcomes: 0,
+		overrides: 0,
 		perModelLatencyMs: {},
+		shadowDisagreements: 0,
 	};
 }
 
@@ -103,11 +103,11 @@ function updateStatsIncremental(stats: AdaptiveRoutingStats, event: AdaptiveRout
 			const count = stats.outcomes;
 			stats.avgDurationMs = Math.round(((existing * (count - 1) + event.durationMs) / count) * 10) / 10;
 			if (event.selectedModel) {
-				const m = stats.perModelLatencyMs[event.selectedModel] ?? { count: 0, avgMs: 0 };
+				const m = stats.perModelLatencyMs[event.selectedModel] ?? { avgMs: 0, count: 0 };
 				const newCount = m.count + 1;
 				stats.perModelLatencyMs[event.selectedModel] = {
-					count: newCount,
 					avgMs: Math.round(((m.avgMs * m.count + event.durationMs) / newCount) * 10) / 10,
+					count: newCount,
 				};
 			}
 		}
@@ -120,7 +120,7 @@ export function readTelemetryEvents(): AdaptiveRoutingTelemetryEvent[] {
 		if (!existsSync(eventsPath)) {
 			return [];
 		}
-		return readFileSync(eventsPath, "utf-8")
+		return readFileSync(eventsPath, "utf8")
 			.split("\n")
 			.map((line) => line.trim())
 			.filter(Boolean)
@@ -134,10 +134,10 @@ export function computeStats(events: AdaptiveRoutingTelemetryEvent[]): AdaptiveR
 	const stats: AdaptiveRoutingStats = {
 		decisions: 0,
 		feedback: {},
-		overrides: 0,
-		shadowDisagreements: 0,
 		outcomes: 0,
+		overrides: 0,
 		perModelLatencyMs: {},
+		shadowDisagreements: 0,
 	};
 	let totalDurationMs = 0;
 	let durationCount = 0;
@@ -158,11 +158,11 @@ export function computeStats(events: AdaptiveRoutingTelemetryEvent[]): AdaptiveR
 				totalDurationMs += event.durationMs;
 				durationCount += 1;
 				if (event.selectedModel) {
-					const existing = stats.perModelLatencyMs[event.selectedModel] ?? { count: 0, avgMs: 0 };
+					const existing = stats.perModelLatencyMs[event.selectedModel] ?? { avgMs: 0, count: 0 };
 					const count = existing.count + 1;
 					stats.perModelLatencyMs[event.selectedModel] = {
-						count,
 						avgMs: Math.round(((existing.avgMs * existing.count + event.durationMs) / count) * 10) / 10,
+						count,
 					};
 				}
 			}
@@ -187,18 +187,20 @@ export function formatStats(stats: AdaptiveRoutingStats): string[] {
 	if (typeof stats.avgDurationMs === "number") {
 		lines.push(`Avg duration: ${Math.round(stats.avgDurationMs)}ms`);
 	}
-	const feedbackEntries = Object.entries(stats.feedback).sort((a, b) => a[0].localeCompare(b[0]));
+	const feedbackEntries = Object.entries(stats.feedback).toSorted((a, b) => a[0].localeCompare(b[0]));
 	if (feedbackEntries.length > 0) {
 		lines.push("Feedback:");
 		for (const [category, count] of feedbackEntries) {
 			lines.push(`  - ${category}: ${count}`);
 		}
 	}
-	const latencyEntries = Object.entries(stats.perModelLatencyMs).sort((left, right) => left[0].localeCompare(right[0]));
+	const latencyEntries = Object.entries(stats.perModelLatencyMs).toSorted((left, right) => left[0].localeCompare(right[0]));
 	if (latencyEntries.length > 0) {
 		lines.push("Measured latency:");
 		for (const [model, value] of latencyEntries) {
-			lines.push(`  - ${model}: ${Math.round(value.avgMs)}ms avg over ${value.count} run${value.count === 1 ? "" : "s"}`);
+			lines.push(
+				`  - ${model}: ${Math.round(value.avgMs)}ms avg over ${value.count} run${value.count === 1 ? "" : "s"}`,
+			);
 		}
 	}
 	if (stats.lastDecisionAt) {
@@ -213,11 +215,11 @@ export function createFeedbackEvent(
 	sessionId?: string,
 ): AdaptiveRoutingTelemetryEvent {
 	return {
-		type: "route_feedback",
-		timestamp: Date.now(),
+		category,
 		decisionId: decision?.id,
 		sessionId,
-		category,
+		timestamp: Date.now(),
+		type: "route_feedback",
 	};
 }
 
@@ -225,8 +227,8 @@ function writeAggregates(stats: AdaptiveRoutingStats): void {
 	const aggregatesPath = getAdaptiveRoutingAggregatesPath();
 	try {
 		mkdirSync(dirname(aggregatesPath), { recursive: true });
-		writeFileSync(aggregatesPath, `${JSON.stringify(stats, null, 2)}\n`, "utf-8");
+		writeFileSync(aggregatesPath, `${JSON.stringify(stats, null, 2)}\n`, "utf8");
 	} catch {
-		// best effort
+		// Best effort
 	}
 }

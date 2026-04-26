@@ -62,10 +62,10 @@ for (const manifestPath of manifestPaths(rootDir)) {
 
 			checked += 1;
 			if (!allowedPackages.has(name)) {
-				unknownDeps.push({ relPath, field, name, spec });
+				unknownDeps.push({ field, name, relPath, spec });
 			}
 			if (DISALLOWED_PROTOCOL_RE.test(spec)) {
-				suspiciousSpecs.push({ relPath, field, name, spec });
+				suspiciousSpecs.push({ field, name, relPath, spec });
 			}
 		}
 	}

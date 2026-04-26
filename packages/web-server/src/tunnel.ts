@@ -1,4 +1,5 @@
-import { type ChildProcess, execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 
 export type TunnelProvider = "cloudflared" | "tailscale";
 
@@ -13,13 +14,13 @@ export function detectTunnelProvider(): TunnelProvider | undefined {
 		execFileSync("which", ["cloudflared"], { stdio: "ignore" });
 		return "cloudflared";
 	} catch {
-		// not found
+		// Not found
 	}
 	try {
 		execFileSync("which", ["tailscale"], { stdio: "ignore" });
 		return "tailscale";
 	} catch {
-		// not found
+		// Not found
 	}
 	return undefined;
 }
@@ -49,7 +50,7 @@ function startCloudflaredTunnel(port: number): Promise<TunnelInfo> {
 				resolved = true;
 				reject(new Error("Cloudflare tunnel timed out after 30s"));
 			}
-		}, 30000);
+		}, 30_000);
 
 		const onData = (data: Buffer) => {
 			const text = data.toString();
@@ -61,8 +62,8 @@ function startCloudflaredTunnel(port: number): Promise<TunnelInfo> {
 				resolved = true;
 				clearTimeout(timeout);
 				resolve({
-					publicUrl: match[0],
 					provider: "cloudflared",
+					publicUrl: match[0],
 					stop: () => {
 						proc.kill("SIGTERM");
 					},
@@ -103,7 +104,7 @@ function startTailscaleTunnel(port: number): Promise<TunnelInfo> {
 				resolved = true;
 				reject(new Error("Tailscale funnel timed out after 30s"));
 			}
-		}, 30000);
+		}, 30_000);
 
 		const onData = (data: Buffer) => {
 			const text = data.toString();
@@ -113,8 +114,8 @@ function startTailscaleTunnel(port: number): Promise<TunnelInfo> {
 				resolved = true;
 				clearTimeout(timeout);
 				resolve({
-					publicUrl: match[0],
 					provider: "tailscale",
+					publicUrl: match[0],
 					stop: () => {
 						proc.kill("SIGTERM");
 					},

@@ -3,13 +3,13 @@ import { matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui"
 import type { TextEditorState } from "./text-editor.js";
 import {
 	createEditorState,
+	ensureCursorVisible,
+	getCursorDisplayPos,
 	handleEditorInput,
 	renderEditor,
 	wrapText,
-	getCursorDisplayPos,
-	ensureCursorVisible,
 } from "./text-editor.js";
-import { pad, row, renderHeader, renderFooter, fuzzyFilter } from "./render-helpers.js";
+import { fuzzyFilter, pad, renderFooter, renderHeader, row } from "./render-helpers.js";
 
 export interface ParallelSlot {
 	agentName: string;
@@ -42,14 +42,14 @@ const ADD_RESULTS_MAX = 5;
 
 export function createParallelState(agentNames: string[]): ParallelState {
 	return {
-		slots: agentNames.map((name) => ({ agentName: name, customTask: "" })),
-		cursor: 0,
-		scrollOffset: 0,
-		mode: "browse",
-		addQuery: "",
 		addCursor: 0,
-		editIndex: -1,
+		addQuery: "",
+		cursor: 0,
 		editEditor: null,
+		editIndex: -1,
+		mode: "browse",
+		scrollOffset: 0,
+		slots: agentNames.map((name) => ({ agentName: name, customTask: "" })),
 	};
 }
 
@@ -62,8 +62,8 @@ function clampSlotScroll(state: ParallelState, viewport: number): void {
 	state.cursor = Math.max(0, Math.min(state.cursor, state.slots.length - 1));
 	const maxOffset = Math.max(0, state.slots.length - viewport);
 	state.scrollOffset = Math.max(0, Math.min(state.scrollOffset, maxOffset));
-	if (state.cursor < state.scrollOffset) state.scrollOffset = state.cursor;
-	else if (state.cursor >= state.scrollOffset + viewport) state.scrollOffset = state.cursor - viewport + 1;
+	if (state.cursor < state.scrollOffset) {state.scrollOffset = state.cursor;}
+	else if (state.cursor >= state.scrollOffset + viewport) {state.scrollOffset = state.cursor - viewport + 1;}
 }
 
 export function handleParallelInput(
@@ -73,17 +73,20 @@ export function handleParallelInput(
 	width: number,
 ): ParallelAction | undefined {
 	switch (state.mode) {
-		case "browse":
+		case "browse": {
 			return handleBrowse(state, data);
-		case "add":
+		}
+		case "add": {
 			return handleAdd(state, agents, data);
-		case "edit-task":
+		}
+		case "edit-task": {
 			return handleEditTask(state, data, width);
+		}
 	}
 }
 
 function handleBrowse(state: ParallelState, data: string): ParallelAction | undefined {
-	if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) return { type: "back" };
+	if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) {return { type: "back" };}
 	if (matchesKey(data, "up")) {
 		state.cursor = Math.max(0, state.cursor - 1);
 		clampSlotScroll(state, SLOT_VIEWPORT_BROWSE);
@@ -112,7 +115,7 @@ function handleBrowse(state: ParallelState, data: string): ParallelAction | unde
 	}
 
 	if (matchesKey(data, "return")) {
-		if (state.slots.length === 0) return;
+		if (state.slots.length === 0) {return;}
 		state.mode = "edit-task";
 		state.editIndex = state.cursor;
 		state.editEditor = createEditorState(state.slots[state.cursor]!.customTask);
@@ -120,7 +123,7 @@ function handleBrowse(state: ParallelState, data: string): ParallelAction | unde
 	}
 
 	if (matchesKey(data, "ctrl+r")) {
-		if (state.slots.length >= 2) return { type: "proceed" };
+		if (state.slots.length >= 2) {return { type: "proceed" };}
 		return;
 	}
 
@@ -161,7 +164,7 @@ function handleAdd(state: ParallelState, agents: AgentOption[], data: string): P
 		return;
 	}
 
-	if (data.length === 1 && data.charCodeAt(0) >= 32) {
+	if (data.length === 1 && data.codePointAt(0) >= 32) {
 		state.addQuery += data;
 		state.addCursor = 0;
 		return;
@@ -184,18 +187,18 @@ function handleEditTask(state: ParallelState, data: string, width: number): Para
 
 	if (matchesKey(data, "return")) {
 		const slot = state.slots[state.editIndex];
-		if (slot) slot.customTask = state.editEditor.buffer.trim();
+		if (slot) {slot.customTask = state.editEditor.buffer.trim();}
 		state.editEditor = null;
 		state.mode = "browse";
 		return;
 	}
 
-	if (matchesKey(data, "tab")) return;
+	if (matchesKey(data, "tab")) {return;}
 
 	const innerW = width - 2;
 	const boxInnerWidth = Math.max(10, innerW - 4);
 	const nextState = handleEditorInput(state.editEditor, data, boxInnerWidth);
-	if (nextState) state.editEditor = nextState;
+	if (nextState) {state.editEditor = nextState;}
 	return;
 }
 
@@ -246,7 +249,7 @@ export function renderParallel(state: ParallelState, agents: AgentOption[], widt
 
 		const searchIcon = theme.fg("dim", "◎");
 		const cursor = theme.fg("accent", "│");
-		const placeholder = theme.fg("dim", "\x1b[3msearch agents...\x1b[23m");
+		const placeholder = theme.fg("dim", "\u001b[3msearch agents...\u001b[23m");
 		const queryDisplay = state.addQuery ? `${state.addQuery}${cursor}` : `${cursor}${placeholder}`;
 		contentLines.push(` ${searchIcon}  ${queryDisplay}`);
 
@@ -297,8 +300,8 @@ export function renderParallel(state: ParallelState, agents: AgentOption[], widt
 		contentLines.push(` ${theme.fg("dim", "Empty = use shared task")}`);
 	}
 
-	for (const line of contentLines) lines.push(row(line, width, theme));
-	for (let i = contentLines.length; i < CONTENT_HEIGHT; i++) lines.push(row("", width, theme));
+	for (const line of contentLines) {lines.push(row(line, width, theme));}
+	for (let i = contentLines.length; i < CONTENT_HEIGHT; i++) {lines.push(row("", width, theme));}
 
 	let statusText = "";
 	if (state.mode === "browse") {
@@ -325,7 +328,7 @@ export function renderParallel(state: ParallelState, agents: AgentOption[], widt
 
 function formatSlotSummary(slots: ParallelSlot[]): string {
 	const counts = new Map<string, number>();
-	for (const s of slots) counts.set(s.agentName, (counts.get(s.agentName) ?? 0) + 1);
+	for (const s of slots) {counts.set(s.agentName, (counts.get(s.agentName) ?? 0) + 1);}
 	return [...counts.entries()].map(([name, count]) => (count > 1 ? `${count}\u00D7 ${name}` : name)).join(" + ");
 }
 

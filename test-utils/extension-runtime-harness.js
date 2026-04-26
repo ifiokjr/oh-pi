@@ -19,13 +19,30 @@ export function createExtensionHarness() {
 
 	let currentThinking = "low";
 	const pi = {
+		appendEntry() {},
 		events: {
-			on(event, handler) {
-				eventBus.on(event, handler);
-			},
 			emit(event, ...args) {
 				eventBus.emit(event, ...args);
 			},
+			on(event, handler) {
+				eventBus.on(event, handler);
+			},
+		},
+		exec: async () => ({ stdout: "", stderr: "", exitCode: 0 }),
+		getActiveTools() {
+			return Array.from(tools.keys());
+		},
+		getAllTools() {
+			return Array.from(tools.values());
+		},
+		getFlag(name) {
+			return flags.get(name)?.default;
+		},
+		getSessionName() {
+			return sessionName;
+		},
+		getThinkingLevel() {
+			return currentThinking;
 		},
 		on(event, handler) {
 			if (!handlers.has(event)) {
@@ -33,17 +50,11 @@ export function createExtensionHarness() {
 			}
 			handlers.get(event).push(handler);
 		},
-		registerTool(tool) {
-			tools.set(tool.name, tool);
-		},
 		registerCommand(name, spec) {
 			commands.set(name, spec);
 		},
 		registerFlag(name, spec) {
 			flags.set(name, spec);
-		},
-		registerShortcut(name, spec) {
-			shortcuts.set(name, spec);
 		},
 		registerMessageRenderer(name, renderer) {
 			messageRenderers.set(name, renderer);
@@ -51,72 +62,74 @@ export function createExtensionHarness() {
 		registerProvider(name, config) {
 			providers.set(name, config);
 		},
+		registerShortcut(name, spec) {
+			shortcuts.set(name, spec);
+		},
+		registerTool(tool) {
+			tools.set(tool.name, tool);
+		},
 		sendMessage(message) {
 			messages.push(message);
 		},
 		sendUserMessage(message) {
 			userMessages.push(message);
 		},
-		appendEntry() {},
-		exec: async () => ({ stdout: "", stderr: "", exitCode: 0 }),
+		setActiveTools() {},
 		async setModel(model) {
 			ctx.model = model;
 			return true;
 		},
-		getThinkingLevel() {
-			return currentThinking;
+		setSessionName(name) {
+			sessionName = name;
 		},
 		setThinkingLevel(level) {
 			currentThinking = level;
 		},
-		getAllTools() {
-			return Array.from(tools.values());
-		},
-		getActiveTools() {
-			return Array.from(tools.keys());
-		},
-		setActiveTools() {},
-		getFlag(name) {
-			return flags.get(name)?.default;
-		},
-		getSessionName() {
-			return sessionName;
-		},
-		setSessionName(name) {
-			sessionName = name;
-		},
 	};
 
 	const ctx = {
+		abort() {},
+		compact() {},
 		cwd: process.cwd(),
+		fork: async () => ({ cancelled: false }),
+		getContextUsage: () => undefined,
+		getSystemPrompt: () => "",
+		hasPendingMessages: () => false,
 		hasUI: true,
+		isIdle: () => true,
 		model: undefined,
 		modelRegistry: {
 			getAvailable: () => [],
 		},
-		sessionManager: {
-			getEntries: () => [],
-			getBranch: () => [],
-			getLeafId: () => "leaf-1",
-			getSessionId: () => undefined,
-			getSessionFile: () => undefined,
-		},
-		isIdle: () => true,
-		hasPendingMessages: () => false,
-		abort() {},
-		shutdown() {},
-		getContextUsage: () => undefined,
-		compact() {},
-		getSystemPrompt: () => "",
-		waitForIdle: async () => {},
-		newSession: async () => ({ cancelled: false }),
-		fork: async () => ({ cancelled: false }),
 		navigateTree: async () => ({ cancelled: false }),
-		switchSession: async () => ({ cancelled: false }),
+		newSession: async () => ({ cancelled: false }),
 		reload: async () => {},
+		sessionManager: {
+			getBranch: () => [],
+			getEntries: () => [],
+			getLeafId: () => "leaf-1",
+			getSessionFile: () => undefined,
+			getSessionId: () => undefined,
+		},
+		shutdown() {},
+		switchSession: async () => ({ cancelled: false }),
 		ui: {
+			confirm: async () => true,
+			custom: async () => null,
+			editor: async () => null,
+			getEditorText() {
+				return editorText;
+			},
+			input: async () => null,
 			notify(msg, type) {
 				notifications.push({ msg, type });
+			},
+			select: async () => null,
+			setEditorComponent(factory) {
+				editorComponentFactory = factory;
+			},
+			setEditorText(text) {
+				editorText = text;
 			},
 			setStatus(key, value) {
 				if (value === undefined) {
@@ -126,49 +139,23 @@ export function createExtensionHarness() {
 				}
 			},
 			setWidget() {},
-			setEditorText(text) {
-				editorText = text;
-			},
-			getEditorText() {
-				return editorText;
-			},
-			setEditorComponent(factory) {
-				editorComponentFactory = factory;
-			},
-			select: async () => null,
-			confirm: async () => true,
-			input: async () => null,
-			editor: async () => null,
-			custom: async () => null,
 		},
+		waitForIdle: async () => {},
 	};
 
 	return {
-		pi,
-		ctx,
-		tools,
 		commands,
-		flags,
-		messages,
-		userMessages,
-		notifications,
-		statusMap,
-		shortcuts,
+		ctx,
 		editorState: {
+			get factory() {
+				return editorComponentFactory;
+			},
 			get text() {
 				return editorText;
 			},
 			set text(value) {
 				editorText = value;
 			},
-			get factory() {
-				return editorComponentFactory;
-			},
-		},
-		messageRenderers,
-		providers,
-		get sessionName() {
-			return sessionName;
 		},
 		emit(event, ...args) {
 			for (const handler of handlers.get(event) ?? []) {
@@ -182,5 +169,18 @@ export function createExtensionHarness() {
 			}
 			return results;
 		},
+		flags,
+		messageRenderers,
+		messages,
+		notifications,
+		pi,
+		providers,
+		get sessionName() {
+			return sessionName;
+		},
+		shortcuts,
+		statusMap,
+		tools,
+		userMessages,
 	};
 }

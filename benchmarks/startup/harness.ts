@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 
-export type BenchmarkHarnessOptions = {
+export interface BenchmarkHarnessOptions {
 	cwd?: string;
 	entries?: any[];
 	branch?: any[];
@@ -15,10 +15,10 @@ export type BenchmarkHarnessOptions = {
 		stderr: string;
 		exitCode: number;
 	}>;
-};
+}
 
 export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
-	const handlers = new Map<string, Array<(...args: any[]) => any>>();
+	const handlers = new Map<string, ((...args: any[]) => any)[]>();
 	const tools = new Map<string, any>();
 	const commands = new Map<string, any>();
 	const flags = new Map<string, any>();
@@ -27,15 +27,15 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 	const providers = new Map<string, any>();
 	const widgets = new Map<string, any>();
 	const statusMap = new Map<string, any>();
-	const statusCalls: Array<{ key: string; value: unknown }> = [];
-	const notifications: Array<{ msg: string; type: string }> = [];
+	const statusCalls: { key: string; value: unknown }[] = [];
+	const notifications: { msg: string; type: string }[] = [];
 	const footerBranchListeners = new Set<() => void>();
-	const mountedDisposers: Array<() => void> = [];
+	const mountedDisposers: (() => void)[] = [];
 	const requestRenderCounts = {
-		widget: 0,
+		editor: 0,
 		footer: 0,
 		header: 0,
-		editor: 0,
+		widget: 0,
 	};
 	const eventBus = new EventEmitter();
 	const authStorage = new Map<string, unknown>();
@@ -49,13 +49,20 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 	let editorFactory: any;
 	const theme = {
 		bg: (_color: string, text: string) => text,
-		fg: (_color: string, text: string) => text,
 		bold: (text: string) => text,
+		fg: (_color: string, text: string) => text,
 	};
 
 	const ctx = {
+		abort() {},
+		compact() {},
 		cwd: options.cwd ?? process.cwd(),
+		fork: async () => ({ cancelled: false }),
+		getContextUsage: () => options.contextUsage,
+		getSystemPrompt: () => "",
+		hasPendingMessages: () => false,
 		hasUI: options.hasUI ?? true,
+		isIdle: () => true,
 		model: undefined,
 		modelRegistry: {
 			authStorage: {
@@ -69,29 +76,41 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 			getAvailable: () => [],
 			refresh: () => {},
 		},
-		sessionManager: {
-			getEntries: () => entries,
-			getBranch: () => branch,
-			getLeafId: () => "leaf-1",
-			getSessionId: () => "session-1",
-			getSessionFile: () => "session.jsonl",
-		},
-		isIdle: () => true,
-		hasPendingMessages: () => false,
-		abort() {},
-		shutdown() {},
-		getContextUsage: () => options.contextUsage,
-		compact() {},
-		getSystemPrompt: () => "",
-		waitForIdle: async () => {},
-		newSession: async () => ({ cancelled: false }),
-		fork: async () => ({ cancelled: false }),
 		navigateTree: async () => ({ cancelled: false }),
-		switchSession: async () => ({ cancelled: false }),
+		newSession: async () => ({ cancelled: false }),
 		reload: async () => {},
+		sessionManager: {
+			getBranch: () => branch,
+			getEntries: () => entries,
+			getLeafId: () => "leaf-1",
+			getSessionFile: () => "session.jsonl",
+			getSessionId: () => "session-1",
+		},
+		shutdown() {},
+		switchSession: async () => ({ cancelled: false }),
 		ui: {
+			confirm: async () => true,
+			custom: async () => null,
+			editor: async () => null,
+			getEditorText() {
+				return editorText;
+			},
+			input: async () => null,
 			notify(msg: string, type: string) {
 				notifications.push({ msg, type });
+			},
+			select: async () => null,
+			setEditorComponent(factory: any) {
+				editorFactory = factory;
+			},
+			setEditorText(text: string) {
+				editorText = text;
+			},
+			setFooter(factory: any) {
+				footerFactory = factory;
+			},
+			setHeader(factory: any) {
+				headerFactory = factory;
 			},
 			setStatus(key: string, value: any) {
 				statusCalls.push({ key, value });
@@ -108,68 +127,23 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 				}
 				widgets.set(name, factory);
 			},
-			setHeader(factory: any) {
-				headerFactory = factory;
-			},
-			setFooter(factory: any) {
-				footerFactory = factory;
-			},
-			setEditorText(text: string) {
-				editorText = text;
-			},
-			getEditorText() {
-				return editorText;
-			},
-			setEditorComponent(factory: any) {
-				editorFactory = factory;
-			},
-			select: async () => null,
-			confirm: async () => true,
-			input: async () => null,
-			editor: async () => null,
-			custom: async () => null,
 		},
+		waitForIdle: async () => {},
 	};
 
 	const pi = {
+		appendEntry() {},
 		events: {
-			on(event: string, handler: (...args: any[]) => any) {
-				eventBus.on(event, handler);
+			emit(event: string, ...args: any[]) {
+				eventBus.emit(event, ...args);
 			},
 			off(event: string, handler: (...args: any[]) => any) {
 				eventBus.off(event, handler);
 			},
-			emit(event: string, ...args: any[]) {
-				eventBus.emit(event, ...args);
+			on(event: string, handler: (...args: any[]) => any) {
+				eventBus.on(event, handler);
 			},
 		},
-		on(event: string, handler: (...args: any[]) => any) {
-			if (!handlers.has(event)) {
-				handlers.set(event, []);
-			}
-			handlers.get(event)?.push(handler);
-		},
-		registerTool(tool: any) {
-			tools.set(tool.name, tool);
-		},
-		registerCommand(name: string, spec: any) {
-			commands.set(name, spec);
-		},
-		registerFlag(name: string, spec: any) {
-			flags.set(name, spec);
-		},
-		registerShortcut(name: string, spec: any) {
-			shortcuts.set(name, spec);
-		},
-		registerMessageRenderer(name: string, renderer: any) {
-			messageRenderers.set(name, renderer);
-		},
-		registerProvider(name: string, config: any) {
-			providers.set(name, config);
-		},
-		sendMessage() {},
-		sendUserMessage() {},
-		appendEntry() {},
 		exec:
 			options.exec ??
 			(async () => ({
@@ -177,31 +151,57 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 				stderr: "",
 				exitCode: 0,
 			})),
-		setModel(model: any) {
-			ctx.model = model;
-			return Promise.resolve(true);
-		},
-		getThinkingLevel() {
-			return currentThinking;
-		},
-		setThinkingLevel(level: string) {
-			currentThinking = level;
+		getActiveTools() {
+			return Array.from(tools.keys());
 		},
 		getAllTools() {
 			return Array.from(tools.values());
 		},
-		getActiveTools() {
-			return Array.from(tools.keys());
-		},
-		setActiveTools() {},
 		getFlag(name: string) {
 			return flags.get(name)?.default;
 		},
 		getSessionName() {
 			return sessionName;
 		},
+		getThinkingLevel() {
+			return currentThinking;
+		},
+		on(event: string, handler: (...args: any[]) => any) {
+			if (!handlers.has(event)) {
+				handlers.set(event, []);
+			}
+			handlers.get(event)?.push(handler);
+		},
+		registerCommand(name: string, spec: any) {
+			commands.set(name, spec);
+		},
+		registerFlag(name: string, spec: any) {
+			flags.set(name, spec);
+		},
+		registerMessageRenderer(name: string, renderer: any) {
+			messageRenderers.set(name, renderer);
+		},
+		registerProvider(name: string, config: any) {
+			providers.set(name, config);
+		},
+		registerShortcut(name: string, spec: any) {
+			shortcuts.set(name, spec);
+		},
+		registerTool(tool: any) {
+			tools.set(tool.name, tool);
+		},
+		sendMessage() {},
+		sendUserMessage() {},
+		setActiveTools() {},
+		setModel(model: any) {
+			ctx.model = model;
+			return Promise.resolve(true);
+		},
 		setSessionName(name: string) {
 			sessionName = name;
+		},
+		setThinkingLevel(level: string) {
+			currentThinking = level;
 		},
 	};
 
@@ -237,11 +237,11 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 			},
 			theme,
 			{
+				getGitBranch: () => "main",
 				onBranchChange(listener: () => void) {
 					footerBranchListeners.add(listener);
 					return () => footerBranchListeners.delete(listener);
 				},
-				getGitBranch: () => "main",
 			},
 		);
 		component?.render?.(width);
@@ -256,29 +256,9 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 	};
 
 	return {
-		pi,
-		ctx,
-		tools,
 		commands,
-		flags,
-		shortcuts,
-		providers,
-		messageRenderers,
-		widgets,
-		statusMap,
-		statusCalls,
-		notifications,
-		requestRenderCounts,
-		theme,
-		mountWidgets,
-		mountFooter,
+		ctx,
 		disposeMounted,
-		get headerFactory() {
-			return headerFactory;
-		},
-		get footerFactory() {
-			return footerFactory;
-		},
 		get editorFactory() {
 			return editorFactory;
 		},
@@ -294,5 +274,25 @@ export function createBenchmarkHarness(options: BenchmarkHarnessOptions = {}) {
 			}
 			return results;
 		},
+		flags,
+		get footerFactory() {
+			return footerFactory;
+		},
+		get headerFactory() {
+			return headerFactory;
+		},
+		messageRenderers,
+		mountFooter,
+		mountWidgets,
+		notifications,
+		pi,
+		providers,
+		requestRenderCounts,
+		shortcuts,
+		statusCalls,
+		statusMap,
+		theme,
+		tools,
+		widgets,
 	};
 }

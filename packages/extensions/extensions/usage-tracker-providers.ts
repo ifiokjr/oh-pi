@@ -2,12 +2,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { clampPercent, fmtDuration, fmtTokens, upsertWindow } from "./usage-tracker-formatting.js";
-import {
-	type PiAuthEntry,
-	PROBE_TIMEOUT_MS,
-	type ProviderKey,
-	type ProviderRateLimits,
-} from "./usage-tracker-shared.js";
+import { PROBE_TIMEOUT_MS } from './usage-tracker-shared.js';
+import type { PiAuthEntry, ProviderKey, ProviderRateLimits } from './usage-tracker-shared.js';
 
 // Pre-compiled regex for OpenAI-style compact duration parsing
 const OPENAI_DURATION_RE = /(\d+(?:\.\d+)?)(ms|s|m|h)/g;
@@ -17,18 +13,18 @@ const OPENAI_DURATION_RE = /(\d+(?:\.\d+)?)(ms|s|m|h)/g;
 /** Map from auth.json key to ProviderKey. */
 export const AUTH_KEY_TO_PROVIDER: Record<string, ProviderKey> = {
 	anthropic: "anthropic",
-	"openai-codex": "openai",
 	"google-antigravity": "google",
 	"google-gemini-cli": "google",
 	"ollama-cloud": "ollama",
+	"openai-codex": "openai",
 };
 
 /** Provider API base URLs used by direct usage/rate-limit probes. */
 const PROVIDER_API_BASE: Record<ProviderKey, string> = {
 	anthropic: "https://api.anthropic.com",
-	openai: "https://chatgpt.com/backend-api",
 	google: "https://cloudcode-pa.googleapis.com",
 	ollama: "https://ollama.com",
+	openai: "https://chatgpt.com/backend-api",
 };
 
 /**
@@ -62,7 +58,7 @@ export function readPiAuth(): Record<string, PiAuthEntry> {
 		if (!existsSync(authPath)) {
 			return {};
 		}
-		const raw = readFileSync(authPath, "utf-8");
+		const raw = readFileSync(authPath, "utf8");
 		const parsed = JSON.parse(raw);
 		if (!parsed || typeof parsed !== "object") {
 			return {};
@@ -114,9 +110,9 @@ async function refreshProviderToken(
 		// Persist to auth.json
 		try {
 			const authPath = getAuthPath();
-			const current = existsSync(authPath) ? JSON.parse(readFileSync(authPath, "utf-8")) : {};
+			const current = existsSync(authPath) ? JSON.parse(readFileSync(authPath, "utf8")) : {};
 			current[authKey] = { type: "oauth", ...updated };
-			writeFileSync(authPath, `${JSON.stringify(current, null, 2)}\n`, "utf-8");
+			writeFileSync(authPath, `${JSON.stringify(current, null, 2)}\n`, "utf8");
 		} catch {
 			// Non-critical: token works in-memory even if persistence fails.
 		}
@@ -133,7 +129,7 @@ async function refreshProviderToken(
 			// Not JSON — use as-is (Anthropic and OpenAI return raw tokens).
 		}
 
-		return { token: apiToken, entry: updated };
+		return { entry: updated, token: apiToken };
 	} catch {
 		return null;
 	}
@@ -150,12 +146,12 @@ export async function ensureFreshToken(
 	allAuth: Record<string, PiAuthEntry>,
 ): Promise<{ token: string; entry: PiAuthEntry } | null> {
 	if (Date.now() < entry.expires && entry.access) {
-		return { token: entry.access, entry };
+		return { entry, token: entry.access };
 	}
 
 	if (authKey === "ollama-cloud") {
 		const token = entry.access || entry.refresh;
-		return token ? { token, entry: { ...entry, access: token, refresh: entry.refresh || token } } : null;
+		return token ? { entry: { ...entry, access: token, refresh: entry.refresh || token }, token } : null;
 	}
 
 	// Token expired — try refreshing via pi's OAuth module
@@ -169,7 +165,7 @@ function decodeJwtPayload(jwt: string): Record<string, unknown> | null {
 		if (parts.length < 2) {
 			return null;
 		}
-		const payload = Buffer.from(parts[1], "base64url").toString("utf-8");
+		const payload = Buffer.from(parts[1], "base64url").toString("utf8");
 		return JSON.parse(payload) as Record<string, unknown>;
 	} catch {
 		return null;
@@ -191,7 +187,7 @@ function resetCountdown(isoOrDuration: string): string | null {
 	OPENAI_DURATION_RE.lastIndex = 0;
 	const matches = [...isoOrDuration.matchAll(OPENAI_DURATION_RE)];
 	if (matches.length > 0) {
-		const multipliers: Record<string, number> = { ms: 1, s: 1000, m: 60_000, h: 3_600_000 };
+		const multipliers: Record<string, number> = { h: 3_600_000, m: 60_000, ms: 1, s: 1000 };
 		let totalMs = 0;
 		for (const match of matches) {
 			totalMs += Number.parseFloat(match[1]) * (multipliers[match[2]] ?? 1);
@@ -235,8 +231,8 @@ function windowLabelFromSeconds(seconds: number): string {
 		const days = seconds / 86_400;
 		return `${days}d`;
 	}
-	if (seconds % 3_600 === 0) {
-		const hours = seconds / 3_600;
+	if (seconds % 3600 === 0) {
+		const hours = seconds / 3600;
 		return `${hours}h`;
 	}
 	if (seconds % 60 === 0) {
@@ -281,9 +277,9 @@ function maybeAddAnthropicOAuthWindow(
 	if (!(entry && typeof entry === "object")) {
 		return;
 	}
-	// biome-ignore lint/style/useNamingConvention: Anthropic OAuth payload uses snake_case keys.
+	// Biome-ignore lint/style/useNamingConvention: Anthropic OAuth payload uses snake_case keys.
 	const typed = entry as { utilization?: unknown; resets_at?: unknown };
-	const utilization = typed.utilization;
+	const {utilization} = typed;
 	if (!(typeof utilization === "number" && Number.isFinite(utilization))) {
 		return;
 	}
@@ -303,30 +299,30 @@ function maybeAddAnthropicOAuthWindow(
  * OAuth tokens (pi login) use `GET /api/oauth/usage`.
  * API-key tokens use `POST /v1/messages/count_tokens` and headers.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Handles OAuth and API-key probe flows with provider-specific status semantics.
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Handles OAuth and API-key probe flows with provider-specific status semantics.
 export async function probeAnthropicDirect(token: string): Promise<ProviderRateLimits> {
 	const result: ProviderRateLimits = {
+		account: null,
+		credits: null,
+		error: null,
+		note: null,
+		plan: null,
+		probedAt: Date.now(),
 		provider: "anthropic",
 		windows: [],
-		credits: null,
-		account: null,
-		plan: null,
-		note: null,
-		probedAt: Date.now(),
-		error: null,
 	};
 
 	try {
 		if (isAnthropicOAuthToken(token)) {
 			const response = await fetch(`${PROVIDER_API_BASE.anthropic}${ANTHROPIC_OAUTH_USAGE_PATH}`, {
-				method: "GET",
 				headers: {
-					authorization: `Bearer ${token}`,
 					accept: "application/json",
-					"content-type": "application/json",
 					"anthropic-beta": ANTHROPIC_OAUTH_USAGE_BETA,
+					authorization: `Bearer ${token}`,
+					"content-type": "application/json",
 					"user-agent": ANTHROPIC_OAUTH_USER_AGENT,
 				},
+				method: "GET",
 				signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
 			});
 
@@ -364,8 +360,8 @@ export async function probeAnthropicDirect(token: string): Promise<ProviderRateL
 
 		// Fallback path for API-key style Anthropic credentials.
 		const headers: Record<string, string> = {
-			"anthropic-version": "2023-06-01",
 			"anthropic-beta": "token-counting-2024-11-01",
+			"anthropic-version": "2023-06-01",
 			"content-type": "application/json",
 		};
 		if (isAnthropicApiKeyToken(token)) {
@@ -375,12 +371,12 @@ export async function probeAnthropicDirect(token: string): Promise<ProviderRateL
 		}
 
 		const response = await fetch(`${PROVIDER_API_BASE.anthropic}/v1/messages/count_tokens`, {
-			method: "POST",
-			headers,
 			body: JSON.stringify({
 				model: "claude-sonnet-4-20250514",
 				messages: [{ role: "user", content: "hi" }],
 			}),
+			headers,
+			method: "POST",
 			signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
 		});
 
@@ -422,11 +418,11 @@ export async function probeAnthropicDirect(token: string): Promise<ProviderRateL
 		}
 
 		result.plan = isAnthropicApiKeyToken(token) ? "API key" : "OAuth";
-	} catch (e) {
-		if (e instanceof Error && e.name === "TimeoutError") {
+	} catch (error) {
+		if (error instanceof Error && error.name === "TimeoutError") {
 			result.error = "Anthropic API probe timed out";
 		} else {
-			result.error = e instanceof Error ? e.message : String(e);
+			result.error = error instanceof Error ? error.message : String(error);
 		}
 	}
 
@@ -508,33 +504,33 @@ function maybeAddOpenAIWhamRateLimitGroup(result: ProviderRateLimits, groupLabel
  * Codex OAuth tokens can query `GET /backend-api/wham/usage`, which exposes
  * the active 5-hour/weekly windows plus additional model-specific limits.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: provider probe handles endpoint status variants and nested window payloads.
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: provider probe handles endpoint status variants and nested window payloads.
 export async function probeOpenAIDirect(token: string): Promise<ProviderRateLimits> {
 	const result: ProviderRateLimits = {
+		account: null,
+		credits: null,
+		error: null,
+		note: null,
+		plan: null,
+		probedAt: Date.now(),
 		provider: "openai",
 		windows: [],
-		credits: null,
-		account: null,
-		plan: null,
-		note: null,
-		probedAt: Date.now(),
-		error: null,
 	};
 
 	const { accountId } = hydrateOpenAIFromJwt(result, token);
 
 	try {
 		const headers: Record<string, string> = {
-			authorization: `Bearer ${token}`,
 			accept: "application/json",
+			authorization: `Bearer ${token}`,
 		};
 		if (accountId) {
 			headers["chatgpt-account-id"] = accountId;
 		}
 
 		const response = await fetch(`${PROVIDER_API_BASE.openai}/wham/usage`, {
-			method: "GET",
 			headers,
+			method: "GET",
 			signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
 		});
 
@@ -561,7 +557,7 @@ export async function probeOpenAIDirect(token: string): Promise<ProviderRateLimi
 			result.account = payload.email;
 		}
 
-		const credits = payload.credits;
+		const {credits} = payload;
 		if (credits && typeof credits === "object") {
 			const typedCredits = credits as { unlimited?: unknown; balance?: unknown };
 			if (typedCredits.unlimited === true) {
@@ -587,9 +583,9 @@ export async function probeOpenAIDirect(token: string): Promise<ProviderRateLimi
 				const label =
 					typeof typedItem.limit_name === "string"
 						? typedItem.limit_name
-						: typeof typedItem.metered_feature === "string"
+						: (typeof typedItem.metered_feature === "string"
 							? typedItem.metered_feature
-							: "Additional";
+							: "Additional");
 				maybeAddOpenAIWhamRateLimitGroup(result, label, typedItem.rate_limit);
 			}
 		}
@@ -597,11 +593,11 @@ export async function probeOpenAIDirect(token: string): Promise<ProviderRateLimi
 		if (result.windows.length === 0) {
 			result.note = appendNote(result.note, "OpenAI usage response did not include window data.");
 		}
-	} catch (e) {
-		if (e instanceof Error && e.name === "TimeoutError") {
+	} catch (error) {
+		if (error instanceof Error && error.name === "TimeoutError") {
 			result.error = "OpenAI API probe timed out";
 		} else {
-			result.error = e instanceof Error ? e.message : String(e);
+			result.error = error instanceof Error ? error.message : String(error);
 		}
 	}
 
@@ -617,10 +613,10 @@ const GOOGLE_CLIENT_METADATA = {
 function googleCodeAssistHeaders(token: string): Record<string, string> {
 	return {
 		authorization: `Bearer ${token}`,
+		"client-metadata": JSON.stringify(GOOGLE_CLIENT_METADATA),
 		"content-type": "application/json",
 		"user-agent": "google-cloud-sdk vscode_cloudshelleditor/0.1",
 		"x-goog-api-client": "gl-node/22.17.0",
-		"client-metadata": JSON.stringify(GOOGLE_CLIENT_METADATA),
 	};
 }
 
@@ -630,8 +626,8 @@ async function hydrateGoogleAccount(result: ProviderRateLimits, token: string): 
 	}
 	try {
 		const response = await fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
-			method: "GET",
 			headers: { authorization: `Bearer ${token}` },
+			method: "GET",
 			signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
 		});
 		if (!response.ok) {
@@ -652,17 +648,17 @@ async function hydrateGoogleAccount(result: ProviderRateLimits, token: string): 
  * OAuth tokens used by pi target Cloud Code Assist endpoints (not
  * generativelanguage.googleapis.com), so we probe `loadCodeAssist`.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: provider probe handles auth status, tier parsing, and optional account hydration.
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: provider probe handles auth status, tier parsing, and optional account hydration.
 export async function probeGoogleDirect(token: string, authEntry?: PiAuthEntry): Promise<ProviderRateLimits> {
 	const result: ProviderRateLimits = {
+		account: authEntry?.email ?? null,
+		credits: null,
+		error: null,
+		note: null,
+		plan: "OAuth",
+		probedAt: Date.now(),
 		provider: "google",
 		windows: [],
-		credits: null,
-		account: authEntry?.email ?? null,
-		plan: "OAuth",
-		note: null,
-		probedAt: Date.now(),
-		error: null,
 	};
 
 	try {
@@ -675,9 +671,9 @@ export async function probeGoogleDirect(token: string, authEntry?: PiAuthEntry):
 		};
 
 		const response = await fetch(`${PROVIDER_API_BASE.google}/v1internal:loadCodeAssist`, {
-			method: "POST",
-			headers: googleCodeAssistHeaders(token),
 			body: JSON.stringify(body),
+			headers: googleCodeAssistHeaders(token),
+			method: "POST",
 			signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
 		});
 
@@ -737,11 +733,11 @@ export async function probeGoogleDirect(token: string, authEntry?: PiAuthEntry):
 		}
 
 		await hydrateGoogleAccount(result, token);
-	} catch (e) {
-		if (e instanceof Error && e.name === "TimeoutError") {
+	} catch (error) {
+		if (error instanceof Error && error.name === "TimeoutError") {
 			result.error = "Google API probe timed out";
 		} else {
-			result.error = e instanceof Error ? e.message : String(e);
+			result.error = error instanceof Error ? error.message : String(error);
 		}
 	}
 
@@ -803,14 +799,14 @@ function maybeAddGenericRateLimitWindow(
 
 export async function probeOllamaDirect(token: string | null): Promise<ProviderRateLimits> {
 	const result: ProviderRateLimits = {
+		account: null,
+		credits: null,
+		error: null,
+		note: null,
+		plan: token ? "API key" : null,
+		probedAt: Date.now(),
 		provider: "ollama",
 		windows: [],
-		credits: null,
-		account: null,
-		plan: token ? "API key" : null,
-		note: null,
-		probedAt: Date.now(),
-		error: null,
 	};
 
 	const localBase = normalizeOllamaApiUrl(getEnv("OLLAMA_HOST") ?? "http://127.0.0.1:11434", "http://127.0.0.1:11434");
@@ -827,7 +823,7 @@ export async function probeOllamaDirect(token: string | null): Promise<ProviderR
 			signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
 		});
 		if (response.ok) {
-			const payload = (await response.json()) as { data?: Array<{ id?: string }> };
+			const payload = (await response.json()) as { data?: { id?: string }[] };
 			localNote = `Local daemon reachable at ${localOrigin} (${payload.data?.length ?? 0} model(s)).`;
 		} else {
 			localNote = `Local daemon unavailable at ${localOrigin} (${response.status}).`;
@@ -840,14 +836,14 @@ export async function probeOllamaDirect(token: string | null): Promise<ProviderR
 	if (token) {
 		try {
 			const response = await fetch(`${cloudBase}/models`, {
-				method: "GET",
 				headers: { authorization: `Bearer ${token}` },
+				method: "GET",
 				signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
 			});
 			if (response.status === 401) {
 				cloudNote = "Cloud auth was rejected — run /login ollama-cloud again.";
 			} else if (response.ok) {
-				const payload = (await response.json()) as { data?: Array<{ id?: string }> };
+				const payload = (await response.json()) as { data?: { id?: string }[] };
 				maybeAddGenericRateLimitWindow(result, response.headers);
 				cloudNote = `Cloud auth configured (${payload.data?.length ?? 0} model(s)).`;
 			} else {
@@ -888,13 +884,17 @@ export function shouldPreserveStaleWindows(
 /** Map from ProviderKey to human-readable display name. */
 export function providerDisplayName(provider: ProviderKey): string {
 	switch (provider) {
-		case "anthropic":
+		case "anthropic": {
 			return "Anthropic";
-		case "openai":
+		}
+		case "openai": {
 			return "OpenAI";
-		case "google":
+		}
+		case "google": {
 			return "Google";
-		case "ollama":
+		}
+		case "ollama": {
 			return "Ollama";
+		}
 	}
 }

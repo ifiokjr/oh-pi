@@ -32,8 +32,6 @@ export async function classifyPrompt(
 		const response = await completeSimple(
 			routerModel.model,
 			{
-				systemPrompt:
-					"You classify coding-agent prompts. Return strict JSON only with keys: intent, complexity, risk, expectedTurns, toolIntensity, contextBreadth, recommendedTier, recommendedThinking, confidence, reason. Use only allowed values. Keep reason short.",
 				messages: [
 					{
 						role: "user",
@@ -41,6 +39,8 @@ export async function classifyPrompt(
 						timestamp: Date.now(),
 					},
 				],
+				systemPrompt:
+					"You classify coding-agent prompts. Return strict JSON only with keys: intent, complexity, risk, expectedTurns, toolIntensity, contextBreadth, recommendedTier, recommendedThinking, confidence, reason. Use only allowed values. Keep reason short.",
 			},
 			{
 				apiKey,
@@ -52,8 +52,8 @@ export async function classifyPrompt(
 		if (!parsed) {
 			return {
 				...heuristic,
-				reason: `${heuristic.reason} (classifier fallback)`,
 				classifierMode: "heuristic",
+				reason: `${heuristic.reason} (classifier fallback)`,
 			};
 		}
 		return {
@@ -64,8 +64,8 @@ export async function classifyPrompt(
 	} catch {
 		return {
 			...heuristic,
-			reason: `${heuristic.reason} (classifier unavailable)`,
 			classifierMode: "heuristic",
+			reason: `${heuristic.reason} (classifier unavailable)`,
 		};
 	}
 }
@@ -78,21 +78,21 @@ export function classifyPromptHeuristically(prompt: string): PromptRouteClassifi
 	const recommendedThinking = detectThinking(recommendedTier);
 
 	return {
-		intent,
+		classifierMode: "heuristic",
 		complexity,
-		risk: intent === "quick-qna" ? "low" : complexity >= 4 ? "high" : "medium",
+		confidence: 0.5,
+		contextBreadth: complexity >= 4 || intent === "architecture" ? "large" : complexity >= 3 ? "medium" : "small",
 		expectedTurns: intent === "quick-qna" ? "one" : complexity >= 4 ? "many" : "few",
+		intent,
+		reason: `heuristic ${intent} classification`,
+		recommendedThinking,
+		recommendedTier,
+		risk: intent === "quick-qna" ? "low" : complexity >= 4 ? "high" : "medium",
 		toolIntensity: ["implementation", "debugging", "refactor", "autonomous"].includes(intent)
 			? "high"
 			: intent === "quick-qna"
 				? "low"
 				: "medium",
-		contextBreadth: complexity >= 4 || intent === "architecture" ? "large" : complexity >= 3 ? "medium" : "small",
-		recommendedTier,
-		recommendedThinking,
-		confidence: 0.5,
-		reason: `heuristic ${intent} classification`,
-		classifierMode: "heuristic",
 	};
 }
 
@@ -138,7 +138,7 @@ function detectIntent(text: string): RouteIntent {
 
 function detectComplexity(text: string, intent: RouteIntent): 1 | 2 | 3 | 4 | 5 {
 	let score = 1;
-	const length = text.split(/\s+/).length;
+	const {length} = text.split(/\s+/);
 
 	if (length > 20) {
 		score += 1;

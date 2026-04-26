@@ -34,7 +34,8 @@ Key usage-tracker surfaces:
 import { existsSync, promises as fsp, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { AssistantMessage } from "@mariozechner/pi-ai";
-import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@mariozechner/pi-coding-agent";
+import { getAgentDir } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI, ExtensionContext } from '@mariozechner/pi-coding-agent';
 import { Type } from "@sinclair/typebox";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode.js";
 import {
@@ -61,20 +62,8 @@ import {
 	readPiAuth,
 	shouldPreserveStaleWindows,
 } from "./usage-tracker-providers.js";
-import {
-	COST_THRESHOLDS,
-	type HistoricalCostPoint,
-	type ModelUsage,
-	type PiAuthEntry,
-	PROBE_COOLDOWN_MS,
-	type ProviderKey,
-	type ProviderRateLimits,
-	ROLLING_COST_WINDOW_MS,
-	ROLLING_HISTORY_MAX_POINTS,
-	type SourceUsage,
-	type TurnSnapshot,
-	type UsageSample,
-} from "./usage-tracker-shared.js";
+import { COST_THRESHOLDS, PROBE_COOLDOWN_MS, ROLLING_COST_WINDOW_MS, ROLLING_HISTORY_MAX_POINTS } from './usage-tracker-shared.js';
+import type { HistoricalCostPoint, ModelUsage, PiAuthEntry, ProviderKey, ProviderRateLimits, SourceUsage, TurnSnapshot, UsageSample } from './usage-tracker-shared.js';
 
 // ─── Extension entry point ──────────────────────────────────────────────────
 
@@ -95,7 +84,7 @@ function ensureCtrlUUnbound(): void {
 	try {
 		let config: Record<string, unknown> = {};
 		if (existsSync(keybindingsPath)) {
-			config = JSON.parse(readFileSync(keybindingsPath, "utf-8"));
+			config = JSON.parse(readFileSync(keybindingsPath, "utf8"));
 		}
 
 		let shouldWrite = false;
@@ -123,7 +112,7 @@ function ensureCtrlUUnbound(): void {
 		}
 
 		if (shouldWrite) {
-			writeFileSync(keybindingsPath, `${JSON.stringify(config, null, 2)}\n`, "utf-8");
+			writeFileSync(keybindingsPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 		}
 	} catch {
 		// Non-critical — worst case the warning still shows
@@ -187,8 +176,8 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 		return JSON.stringify({
 			activeProvider,
-			visibleTotals,
 			visibleRateLimits,
+			visibleTotals,
 		});
 	};
 
@@ -248,7 +237,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	function pruneRollingHistory(now = Date.now()): void {
 		const cutoff = now - ROLLING_COST_WINDOW_MS;
 		let write = 0;
-		// biome-ignore lint/style/useForOf: C-style loop needed for write-pointer in-place filter algorithm
+		// Biome-ignore lint/style/useForOf: C-style loop needed for write-pointer in-place filter algorithm
 		for (let read = 0; read < rollingHistory.length; read++) {
 			const entry = rollingHistory[read];
 			if (Number.isFinite(entry.timestamp) && entry.timestamp >= cutoff) {
@@ -274,7 +263,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	async function loadRollingHistory(): Promise<void> {
 		try {
-			const raw = JSON.parse(await fsp.readFile(usageHistoryPath, "utf-8")) as { entries?: unknown };
+			const raw = JSON.parse(await fsp.readFile(usageHistoryPath, "utf8")) as { entries?: unknown };
 			if (!Array.isArray(raw.entries)) {
 				return;
 			}
@@ -287,7 +276,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 				if (!(Number.isFinite(timestamp) && Number.isFinite(cost)) || cost < 0) {
 					continue;
 				}
-				rollingHistory.push({ timestamp, cost });
+				rollingHistory.push({ cost, timestamp });
 			}
 			rollingHistory.sort((a, b) => a.timestamp - b.timestamp);
 			pruneRollingHistory();
@@ -323,10 +312,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 				mkdirSync(dir, { recursive: true });
 			}
 			const payload = {
-				version: 1,
 				entries: rollingHistory,
+				version: 1,
 			};
-			writeFileSync(usageHistoryPath, `${JSON.stringify(payload, null, 2)}\n`, "utf-8");
+			writeFileSync(usageHistoryPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 		} catch {
 			// Non-critical. We still keep in-memory stats for current runtime.
 		}
@@ -378,20 +367,20 @@ export default function usageTracker(pi: ExtensionAPI) {
 			: [];
 		const probedAt = Number(candidate.probedAt);
 		return {
+			account: typeof candidate.account === "string" ? candidate.account : null,
+			credits: typeof candidate.credits === "number" && Number.isFinite(candidate.credits) ? candidate.credits : null,
+			error: typeof candidate.error === "string" ? candidate.error : null,
+			note: typeof candidate.note === "string" ? candidate.note : null,
+			plan: typeof candidate.plan === "string" ? candidate.plan : null,
+			probedAt: Number.isFinite(probedAt) ? probedAt : Date.now(),
 			provider: candidate.provider,
 			windows,
-			credits: typeof candidate.credits === "number" && Number.isFinite(candidate.credits) ? candidate.credits : null,
-			account: typeof candidate.account === "string" ? candidate.account : null,
-			plan: typeof candidate.plan === "string" ? candidate.plan : null,
-			note: typeof candidate.note === "string" ? candidate.note : null,
-			probedAt: Number.isFinite(probedAt) ? probedAt : Date.now(),
-			error: typeof candidate.error === "string" ? candidate.error : null,
 		};
 	}
 
 	async function loadRateLimitCache(): Promise<void> {
 		try {
-			const raw = JSON.parse(await fsp.readFile(rateLimitCachePath, "utf-8")) as { providers?: unknown };
+			const raw = JSON.parse(await fsp.readFile(rateLimitCachePath, "utf8")) as { providers?: unknown };
 			if (!raw.providers || typeof raw.providers !== "object") {
 				return;
 			}
@@ -404,10 +393,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 				if (existing && shouldPreserveStaleWindows(providerRateLimits, existing)) {
 					rateLimits.set(providerRateLimits.provider, {
 						...existing,
-						windows: providerRateLimits.windows.map((window) => ({ ...window })),
 						note: existing.note
 							? `${existing.note} Showing last known window values.`
 							: "Showing last known window values.",
+						windows: providerRateLimits.windows.map((window) => ({ ...window })),
 					});
 					continue;
 				}
@@ -446,7 +435,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 				mkdirSync(dir, { recursive: true });
 			}
 			const providers = Object.fromEntries(rateLimits);
-			writeFileSync(rateLimitCachePath, `${JSON.stringify({ version: 1, providers }, null, 2)}\n`, "utf-8");
+			writeFileSync(rateLimitCachePath, `${JSON.stringify({ providers, version: 1 }, null, 2)}\n`, "utf8");
 		} catch {
 			// Non-critical. We can still rely on in-memory provider data.
 		}
@@ -476,7 +465,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		persistedStateLoadTimer = setTimeout(() => {
 			persistedStateLoadScheduled = false;
 			persistedStateLoadTimer = null;
-			loadPersistedState().catch(() => undefined);
+			loadPersistedState().catch(() => {});
 		}, PERSISTED_STATE_LOAD_DELAY_MS);
 		persistedStateLoadTimer.unref?.();
 	};
@@ -513,8 +502,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 			case "claude":
 			case "sonnet":
 			case "opus":
-			case "haiku":
+			case "haiku": {
 				return "anthropic";
+			}
 			case "openai":
 			case "chatgpt":
 			case "codex":
@@ -522,21 +512,25 @@ export default function usageTracker(pi: ExtensionAPI) {
 			case "o1":
 			case "o3":
 			case "o4":
-			case "openai-codex":
+			case "openai-codex": {
 				return "openai";
+			}
 			case "google":
 			case "gemini":
 			case "flash":
 			case "pro-exp":
 			case "antigravity":
 			case "google-antigravity":
-			case "google-gemini-cli":
+			case "google-gemini-cli": {
 				return "google";
+			}
 			case "ollama":
-			case "ollama-cloud":
+			case "ollama-cloud": {
 				return "ollama";
-			default:
+			}
+			default: {
 				return null;
+			}
 		}
 	}
 
@@ -638,16 +632,16 @@ export default function usageTracker(pi: ExtensionAPI) {
 		const avgCostPerTurn = turns > 0 ? cost / turns : 0;
 		const rolling30dCost = getRolling30dCost();
 		return {
-			input,
-			output,
+			avgCostPerTurn,
+			avgTokensPerTurn,
 			cacheRead,
 			cacheWrite,
 			cost,
-			turns,
-			totalTokens,
-			avgTokensPerTurn,
-			avgCostPerTurn,
+			input,
+			output,
 			rolling30dCost,
+			totalTokens,
+			turns,
 		};
 	}
 
@@ -724,9 +718,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 		const lower = raw.toLowerCase();
 		return (
-			getSelectableProviders(getActiveProvider(ctx)).find((provider) => {
-				return providerDisplayName(provider).toLowerCase().includes(lower);
-			}) ?? null
+			getSelectableProviders(getActiveProvider(ctx)).find((provider) => providerDisplayName(provider).toLowerCase().includes(lower)) ?? null
 		);
 	}
 
@@ -772,11 +764,11 @@ export default function usageTracker(pi: ExtensionAPI) {
 						return lines.map((line) => truncateAnsi(line, width));
 					},
 					handleInput(data: string) {
-						if (data === "q" || data === "\x1b" || data === "\r" || data === " ") {
-							done(undefined);
+						if (data === "q" || data === "\x1B" || data === "\r" || data === " ") {
+							done();
 						}
 					},
-					// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
+					// Biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
 					dispose() {},
 				};
 			},
@@ -804,16 +796,16 @@ export default function usageTracker(pi: ExtensionAPI) {
 			existing.lastSeen = now;
 		} else {
 			models.set(modelKey, {
-				model: sample.model,
-				provider: sample.provider,
-				turns: 1,
-				input,
-				output,
 				cacheRead,
 				cacheWrite,
 				costTotal: cost,
 				firstSeen: now,
+				input,
 				lastSeen: now,
+				model: sample.model,
+				output,
+				provider: sample.provider,
+				turns: 1,
 			});
 		}
 
@@ -828,24 +820,24 @@ export default function usageTracker(pi: ExtensionAPI) {
 			sourceTotals.costTotal += cost;
 		} else {
 			sources.set(sourceKey, {
-				source: sourceKey,
-				turns: 1,
-				input,
-				output,
 				cacheRead,
 				cacheWrite,
 				costTotal: cost,
+				input,
+				output,
+				source: sourceKey,
+				turns: 1,
 			});
 		}
 
-		turnHistory.push({ timestamp: now, tokens: input + output, cost });
+		turnHistory.push({ cost, timestamp: now, tokens: input + output });
 		const cutoff = now - 3_600_000;
 		while (turnHistory.length > 0 && turnHistory[0].timestamp < cutoff) {
 			turnHistory.shift();
 		}
 
 		if (options.persist !== false && Number.isFinite(cost) && cost >= 0) {
-			rollingHistory.push({ timestamp: now, cost });
+			rollingHistory.push({ cost, timestamp: now });
 			pruneRollingHistory(now);
 			scheduleRollingHistorySave();
 		}
@@ -856,14 +848,14 @@ export default function usageTracker(pi: ExtensionAPI) {
 	function recordUsage(msg: AssistantMessage, options: { persist?: boolean } = {}): void {
 		recordUsageSample(
 			{
-				source: "session",
-				model: msg.model,
-				provider: msg.provider,
-				input: msg.usage.input,
-				output: msg.usage.output,
 				cacheRead: msg.usage.cacheRead,
 				cacheWrite: msg.usage.cacheWrite,
 				costTotal: msg.usage.cost.total,
+				input: msg.usage.input,
+				model: msg.model,
+				output: msg.usage.output,
+				provider: msg.provider,
+				source: "session",
 			},
 			options,
 		);
@@ -899,31 +891,31 @@ export default function usageTracker(pi: ExtensionAPI) {
 		const directCost = toFiniteNumber(usage.costTotal);
 		const nestedCost = toFiniteNumber(usage.cost?.total);
 		return {
+			cacheRead: toFiniteNumber(usage.cacheRead),
+			cacheWrite: toFiniteNumber(usage.cacheWrite),
+			costTotal: directCost > 0 ? directCost : nestedCost,
+			input: toFiniteNumber(usage.input),
+			model,
+			output: toFiniteNumber(usage.output),
+			provider,
 			source: sourceLabel(
 				typeof data.source === "string" ? data.source : "external",
 				typeof data.scope === "string" ? data.scope : undefined,
 			),
-			model,
-			provider,
-			input: toFiniteNumber(usage.input),
-			output: toFiniteNumber(usage.output),
-			cacheRead: toFiniteNumber(usage.cacheRead),
-			cacheWrite: toFiniteNumber(usage.cacheWrite),
-			costTotal: directCost > 0 ? directCost : nestedCost,
 		};
 	}
 
 	function getExternalSources(): SourceUsage[] {
 		return [...sources.values()]
 			.filter((entry) => entry.source !== "session" && entry.turns > 0)
-			.sort((a, b) => b.costTotal - a.costTotal);
+			.toSorted((a, b) => b.costTotal - a.costTotal);
 	}
 
 	function getPace(): { tokensPerMin: number; costPerHour: number } | null {
 		if (turnHistory.length < 2) {
 			return null;
 		}
-		const spanMs = turnHistory[turnHistory.length - 1].timestamp - turnHistory[0].timestamp;
+		const spanMs = turnHistory.at(-1).timestamp - turnHistory[0].timestamp;
 		if (spanMs < 10_000) {
 			return null;
 		}
@@ -935,7 +927,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		}
 		const tokensPerMin = Math.round(tokenTotal / (spanMs / 60_000));
 		const costPerHour = costTotal / (spanMs / 3_600_000);
-		return { tokensPerMin, costPerHour };
+		return { costPerHour, tokensPerMin };
 	}
 
 	function checkThresholds(ctx: ExtensionContext): void {
@@ -1013,7 +1005,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	 * Reads credentials from `~/.pi/agent/auth.json` and calls the provider
 	 * API directly — no external CLI tools required.
 	 */
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: provider probe handles auth discovery, refresh, and stale window fallback semantics.
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: provider probe handles auth discovery, refresh, and stale window fallback semantics.
 	async function probeProvider(provider: ProviderKey, force = false): Promise<void> {
 		const now = Date.now();
 		const last = lastProbeTime.get(provider) ?? 0;
@@ -1027,10 +1019,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 				const ollamaEntry = auth["ollama-cloud"];
 				const envToken = process.env.OLLAMA_API_KEY?.trim() || null;
 				const fresh = envToken
-					? { token: envToken, entry: ollamaEntry }
-					: ollamaEntry?.access
+					? { entry: ollamaEntry, token: envToken }
+					: (ollamaEntry?.access
 						? await ensureFreshToken("ollama-cloud", ollamaEntry, auth)
-						: null;
+						: null);
 				const limits = await probeOllamaDirect(fresh?.token ?? null);
 				rateLimits.set(provider, limits);
 				scheduleRateLimitCacheSave();
@@ -1053,14 +1045,14 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 			if (!(authKey && authEntry)) {
 				rateLimits.set(provider, {
+					account: null,
+					credits: null,
+					error: null,
+					note: `No pi auth configured for ${providerDisplayName(provider)} — run pi login.`,
+					plan: null,
+					probedAt: now,
 					provider,
 					windows: [],
-					credits: null,
-					account: null,
-					plan: null,
-					note: `No pi auth configured for ${providerDisplayName(provider)} — run pi login.`,
-					probedAt: now,
-					error: null,
 				});
 				scheduleRateLimitCacheSave();
 				lastProbeTime.set(provider, now);
@@ -1072,14 +1064,14 @@ export default function usageTracker(pi: ExtensionAPI) {
 			const fresh = await ensureFreshToken(authKey, authEntry, auth);
 			if (!fresh) {
 				rateLimits.set(provider, {
+					account: null,
+					credits: null,
+					error: `${providerDisplayName(provider)} token refresh failed — re-authenticate with pi login.`,
+					note: null,
+					plan: null,
+					probedAt: now,
 					provider,
 					windows: [],
-					credits: null,
-					account: null,
-					plan: null,
-					note: null,
-					probedAt: now,
-					error: `${providerDisplayName(provider)} token refresh failed — re-authenticate with pi login.`,
 				});
 				scheduleRateLimitCacheSave();
 				lastProbeTime.set(provider, now);
@@ -1089,18 +1081,22 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 			let limits: ProviderRateLimits;
 			switch (provider) {
-				case "anthropic":
+				case "anthropic": {
 					limits = await probeAnthropicDirect(fresh.token);
 					break;
-				case "openai":
+				}
+				case "openai": {
 					limits = await probeOpenAIDirect(fresh.token);
 					break;
-				case "google":
+				}
+				case "google": {
 					limits = await probeGoogleDirect(fresh.token, fresh.entry);
 					break;
-				case "ollama":
+				}
+				case "ollama": {
 					limits = await probeOllamaDirect(fresh.token);
 					break;
+				}
 			}
 
 			const previous = rateLimits.get(provider);
@@ -1189,11 +1185,11 @@ export default function usageTracker(pi: ExtensionAPI) {
 			perSource[key] = { ...value };
 		}
 		pi.events.emit("usage:limits", {
-			providers,
-			sessionCost: totals.cost,
-			rolling30dCost: totals.rolling30dCost,
 			perModel,
 			perSource,
+			providers,
+			rolling30dCost: totals.rolling30dCost,
+			sessionCost: totals.cost,
 		});
 	}
 
@@ -1221,7 +1217,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	// ─── Report generation ────────────────────────────────────────────────
 
 	/** Render rate limit windows as plain text (for LLM tool). */
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: report composition intentionally handles multiple optional detail lines.
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: report composition intentionally handles multiple optional detail lines.
 	function renderRateLimitsPlain(provider: ProviderKey | null = null): string {
 		const lines: string[] = [];
 		for (const rl of getRateLimitEntries(provider)) {
@@ -1229,7 +1225,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 				continue;
 			}
 			const name = providerDisplayName(rl.provider);
-			const windows = [...rl.windows].sort((a, b) => a.percentLeft - b.percentLeft);
+			const windows = [...rl.windows].toSorted((a, b) => a.percentLeft - b.percentLeft);
 			lines.push(`${name} Rate Limits:`);
 			if (rl.error) {
 				lines.push(`  Error: ${rl.error}`);
@@ -1276,7 +1272,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	}
 
 	/** Render rate limit windows with theme colors (for TUI). */
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: UI output path includes pace, metadata, and per-window fallbacks.
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: UI output path includes pace, metadata, and per-window fallbacks.
 	function renderRateLimitsRich(
 		theme: { fg: (c: string, t: string) => string },
 		provider: ProviderKey | null = null,
@@ -1289,7 +1285,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 			}
 
 			const name = providerDisplayName(rl.provider);
-			const windows = [...rl.windows].sort((a, b) => a.percentLeft - b.percentLeft);
+			const windows = [...rl.windows].toSorted((a, b) => a.percentLeft - b.percentLeft);
 			lines.push(`  ${theme.fg("accent", `▸ ${name} Rate Limits`)}`);
 			if (rl.error) {
 				lines.push(`    ${theme.fg("error", "Error:")} ${theme.fg("dim", rl.error)}`);
@@ -1306,7 +1302,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 				const pace = computeWindowPace(w);
 				if (pace) {
-					const paceColor = pace.deltaPercent > 2 ? "warning" : pace.deltaPercent < -2 ? "success" : "accent";
+					const paceColor = pace.deltaPercent > 2 ? "warning" : (pace.deltaPercent < -2 ? "success" : "accent");
 					const right = formatPaceRight(pace);
 					const rightText = right ? `${theme.fg("dim", " | ")}${theme.fg("dim", right)}` : "";
 					lines.push(
@@ -1366,13 +1362,13 @@ export default function usageTracker(pi: ExtensionAPI) {
 		return parts.join(theme.fg("dim", "  "));
 	}
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Plain-text report combines many optional telemetry sections.
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Plain-text report combines many optional telemetry sections.
 	function generatePlainReport(ctx: ExtensionContext, provider: ProviderKey | null = null): string {
 		const totals = getTotals(provider);
 		const elapsed = Date.now() - sessionStart;
 		const pace = provider ? null : getPace();
 		const ctxUsage = ctx.getContextUsage();
-		const scopedModels = getModelUsageEntries(provider).sort((a, b) => b.costTotal - a.costTotal);
+		const scopedModels = getModelUsageEntries(provider).toSorted((a, b) => b.costTotal - a.costTotal);
 		const lines: string[] = [];
 		const currentProvider = getActiveProvider(ctx);
 
@@ -1475,7 +1471,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		return lines.join("\n");
 	}
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: rich dashboard aggregates multiple optional sections and formatting branches.
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: rich dashboard aggregates multiple optional sections and formatting branches.
 	function generateRichReport(
 		ctx: ExtensionContext,
 		theme: { fg: (c: string, t: string) => string },
@@ -1485,7 +1481,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 		const elapsed = Date.now() - sessionStart;
 		const pace = provider ? null : getPace();
 		const ctxUsage = ctx.getContextUsage();
-		const scopedModels = getModelUsageEntries(provider).sort((a, b) => b.costTotal - a.costTotal);
+		const scopedModels = getModelUsageEntries(provider).toSorted((a, b) => b.costTotal - a.costTotal);
 		const lines: string[] = [];
 		const sep = theme.fg("dim", " │ ");
 		const divider = theme.fg("dim", "─".repeat(60));
@@ -1676,7 +1672,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 					}
 					unsubSafeMode();
 				},
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
+				// Biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
 				invalidate() {},
 				render(width: number) {
 					return renderWidget(activeCtx ?? ctx, theme).map((line) => truncateAnsi(line, width));
@@ -1774,18 +1770,8 @@ export default function usageTracker(pi: ExtensionAPI) {
 	// ─── usage_report tool ────────────────────────────────────────────────
 
 	pi.registerTool({
-		name: "usage_report",
-		label: "Usage Report",
 		description:
 			"Generate a rate limit status and token usage report. Shows provider rate limits (Anthropic, OpenAI, Google) and best-effort Ollama status, plus per-model costs. Use when the user asks about spending, rate limits, quotas, or remaining usage.",
-		promptSnippet: "Show provider rate limits (% remaining, reset time) and session usage/cost report.",
-		parameters: Type.Object({
-			format: Type.Optional(
-				Type.Union([Type.Literal("summary"), Type.Literal("detailed")], {
-					description: "'summary' for rate limits only, 'detailed' for full breakdown. Default: detailed.",
-				}),
-			),
-		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			await loadPersistedState();
 			// Force a probe of all configured providers before reporting
@@ -1809,6 +1795,16 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 			return { content: [{ type: "text", text }], details: {} };
 		},
+		label: "Usage Report",
+		name: "usage_report",
+		parameters: Type.Object({
+			format: Type.Optional(
+				Type.Union([Type.Literal("summary"), Type.Literal("detailed")], {
+					description: "'summary' for rate limits only, 'detailed' for full breakdown. Default: detailed.",
+				}),
+			),
+		}),
+		promptSnippet: "Show provider rate limits (% remaining, reset time) and session usage/cost report.",
 	});
 
 	// ─── Keyboard shortcut ────────────────────────────────────────────────

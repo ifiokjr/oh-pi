@@ -1,12 +1,13 @@
-import { PACE_MIN_EXPECTED_USED_PCT, type RateWindow, type WindowPace } from "./usage-tracker-shared.js";
+import { PACE_MIN_EXPECTED_USED_PCT } from './usage-tracker-shared.js';
+import type { RateWindow, WindowPace } from './usage-tracker-shared.js';
 
 export function fmtTokens(n: number): string {
 	if (n >= 1_000_000) {
 		return `${(n / 1_000_000).toFixed(1)}M`;
 	}
 
-	if (n >= 1_000) {
-		return `${(n / 1_000).toFixed(1)}k`;
+	if (n >= 1000) {
+		return `${(n / 1000).toFixed(1)}k`;
 	}
 
 	return `${n}`;
@@ -62,8 +63,8 @@ export function clampPercent(value: number): number {
 	return Math.max(0, Math.min(100, value));
 }
 
-// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes use control chars by definition
-const ANSI_RE = /\x1b\[[0-9;]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b\(B/g;
+// Biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes use control chars by definition
+const ANSI_RE = /\x1B\[[0-9;]*[A-Za-z]|\x1B\][^\x07]*\x07|\x1B\(B/g;
 const RESET_COUNTDOWN_RE = /(\d+(?:\.\d+)?)\s*(weeks?|w|days?|d|hours?|hrs?|hr|h|minutes?|mins?|min|m)\b/g;
 const NORMALIZE_WHITESPACE_RE = /\s+/g;
 const RESET_PREFIX_RE = /^resets?\s*/i;
@@ -89,22 +90,22 @@ export function parseResetCountdownMs(resetDescription: string | null): number |
 	}
 
 	const units: Record<string, number> = {
-		w: 7 * 24 * 60 * 60 * 1000,
-		week: 7 * 24 * 60 * 60 * 1000,
-		weeks: 7 * 24 * 60 * 60 * 1000,
 		d: 24 * 60 * 60 * 1000,
 		day: 24 * 60 * 60 * 1000,
 		days: 24 * 60 * 60 * 1000,
 		h: 60 * 60 * 1000,
-		hr: 60 * 60 * 1000,
-		hrs: 60 * 60 * 1000,
 		hour: 60 * 60 * 1000,
 		hours: 60 * 60 * 1000,
+		hr: 60 * 60 * 1000,
+		hrs: 60 * 60 * 1000,
 		m: 60 * 1000,
 		min: 60 * 1000,
 		mins: 60 * 1000,
 		minute: 60 * 1000,
 		minutes: 60 * 1000,
+		w: 7 * 24 * 60 * 60 * 1000,
+		week: 7 * 24 * 60 * 60 * 1000,
+		weeks: 7 * 24 * 60 * 60 * 1000,
 	};
 
 	const matches = [...normalized.matchAll(RESET_COUNTDOWN_RE)];
@@ -174,11 +175,11 @@ export function computeWindowPace(window: RateWindow): WindowPace | null {
 	}
 
 	return {
-		label: window.label,
-		deltaPercent,
-		expectedUsedPercent,
 		actualUsedPercent,
+		deltaPercent,
 		etaToExhaustionMs,
+		expectedUsedPercent,
+		label: window.label,
 		willLastToReset,
 	};
 }
@@ -247,5 +248,5 @@ export function truncateAnsi(line: string, width: number): string {
 		}
 	}
 
-	return `${line.slice(0, i)}\x1b[0m`;
+	return `${line.slice(0, i)}\x1B[0m`;
 }

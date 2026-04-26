@@ -22,21 +22,21 @@ export function countExisting(env: EnvInfo, dir: string): number {
  * @param config - The user's selected configuration
  * @param env - Current environment info
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Interactive wizard confirmation flow with many user branches.
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Interactive wizard confirmation flow with many user branches.
 export async function confirmApply(config: OhPConfigWithRouting, env: EnvInfo) {
 	const keepProviders = config.providerStrategy === "keep";
 	const addProviders = config.providerStrategy === "add";
 	const providerNames =
 		keepProviders || addProviders
 			? t("confirm.skipped")
-			: config.providers.length > 0
+			: (config.providers.length > 0
 				? config.providers.map((p) => p.name).join(", ")
-				: t("confirm.none");
+				: t("confirm.none"));
 	const primaryModel = keepProviders
 		? t("confirm.skipped")
-		: addProviders
+		: (addProviders
 			? t("confirm.skipped")
-			: config.providers[0]?.defaultModel || t("confirm.none");
+			: config.providers[0]?.defaultModel || t("confirm.none"));
 	const fallbackProviders = keepProviders
 		? t("confirm.skipped")
 		: addProviders
@@ -51,9 +51,9 @@ export async function confirmApply(config: OhPConfigWithRouting, env: EnvInfo) {
 				: t("confirm.none");
 	const providerStrategy = keepProviders
 		? t("confirm.providerStrategyKeep")
-		: addProviders
+		: (addProviders
 			? t("confirm.providerStrategyAdd")
-			: t("confirm.providerStrategyReplace");
+			: t("confirm.providerStrategyReplace"));
 
 	// ═══ Summary ═══
 	const adaptiveRoutingSummary = config.adaptiveRouting
@@ -90,9 +90,9 @@ export async function confirmApply(config: OhPConfigWithRouting, env: EnvInfo) {
 		const action = await p.select({
 			message: t("confirm.existingDetected"),
 			options: [
-				{ value: "backup", label: t("confirm.backup"), hint: t("confirm.backupHint") },
-				{ value: "overwrite", label: t("confirm.overwrite"), hint: t("confirm.overwriteHint") },
-				{ value: "cancel", label: t("confirm.cancel"), hint: t("confirm.cancelHint") },
+				{ hint: t("confirm.backupHint"), label: t("confirm.backup"), value: "backup" },
+				{ hint: t("confirm.overwriteHint"), label: t("confirm.overwrite"), value: "overwrite" },
+				{ hint: t("confirm.cancelHint"), label: t("confirm.cancel"), value: "cancel" },
 			],
 		});
 		if (p.isCancel(action) || action === "cancel") {
@@ -115,8 +115,8 @@ export async function confirmApply(config: OhPConfigWithRouting, env: EnvInfo) {
 		try {
 			installPi();
 			s.stop(t("confirm.piInstalled"));
-		} catch (e) {
-			s.stop(t("confirm.piFailed", { error: String(e) }));
+		} catch (error) {
+			s.stop(t("confirm.piFailed", { error: String(error) }));
 			p.log.warn(t("confirm.piManual"));
 		}
 	}

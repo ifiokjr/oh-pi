@@ -6,10 +6,10 @@ export const BG_COMMAND = "bg";
 export const BG_SHORTCUT = "ctrl+shift+b";
 export const BG_MESSAGE_TYPE = "pi-background-tasks:event";
 export const BG_WIDGET_KEY = "pi-background-tasks";
-export const BG_OUTPUT_SETTLE_MS = 1_500;
+export const BG_OUTPUT_SETTLE_MS = 1500;
 export const BG_OUTPUT_BUFFER_MAX_CHARS = 120_000;
-export const BG_OUTPUT_ALERT_MAX_CHARS = 3_000;
-export const BG_LOG_TAIL_MAX_CHARS = 5_000;
+export const BG_OUTPUT_ALERT_MAX_CHARS = 3000;
+export const BG_LOG_TAIL_MAX_CHARS = 5000;
 export const BG_DASHBOARD_WIDTH = 96;
 export const BG_DASHBOARD_MAX_HEIGHT = "80%";
 export const BG_DEFAULT_TIMEOUT_MS = 10 * 60_000;
@@ -67,7 +67,7 @@ export function getBgProcessLogFilePath(
 	tempDir: string = tmpdir(),
 	label: string = "",
 ): string {
-	const safeLabel = label.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "");
+	const safeLabel = label.replaceAll(/[^a-z0-9-]+/gi, "-").replaceAll(/^-+|-+$/g, "");
 	return join(tempDir, safeLabel ? `oh-pi-bg-${safeLabel}-${now}.log` : `oh-pi-bg-${now}.log`);
 }
 
@@ -105,23 +105,23 @@ export function trimOutputBuffer(
 	maxChars: number = BG_OUTPUT_BUFFER_MAX_CHARS,
 ): { output: string; lastAlertLength: number } {
 	if (output.length <= maxChars) {
-		return { output, lastAlertLength };
+		return { lastAlertLength, output };
 	}
 
 	const overflow = output.length - maxChars;
 	return {
-		output: output.slice(-maxChars),
 		lastAlertLength: Math.max(0, lastAlertLength - overflow),
+		output: output.slice(-maxChars),
 	};
 }
 
 export function formatDuration(ms: number): string {
 	const safeMs = Math.max(0, ms);
-	if (safeMs < 1_000) {
+	if (safeMs < 1000) {
 		return `${safeMs}ms`;
 	}
 
-	const seconds = safeMs / 1_000;
+	const seconds = safeMs / 1000;
 	if (seconds < 60) {
 		return `${seconds.toFixed(seconds >= 10 ? 0 : 1)}s`;
 	}
@@ -139,11 +139,11 @@ export function formatDuration(ms: number): string {
 
 export function formatRelativeTime(timestamp: number, now: number = Date.now()): string {
 	const diff = Math.max(0, now - timestamp);
-	if (diff < 1_000) {
+	if (diff < 1000) {
 		return "just now";
 	}
 	if (diff < 60_000) {
-		return `${Math.floor(diff / 1_000)}s ago`;
+		return `${Math.floor(diff / 1000)}s ago`;
 	}
 	if (diff < 3_600_000) {
 		return `${Math.floor(diff / 60_000)}m ago`;
@@ -187,7 +187,7 @@ export function isBackgroundTaskEventDetails(value: unknown): value is Backgroun
 	const candidate = value as Partial<BackgroundTaskEventDetails>;
 	return (
 		(candidate.eventType === "output" || candidate.eventType === "exit") &&
-		!!candidate.task &&
+		Boolean(candidate.task) &&
 		typeof candidate.task === "object" &&
 		typeof candidate.outputTail === "string"
 	);

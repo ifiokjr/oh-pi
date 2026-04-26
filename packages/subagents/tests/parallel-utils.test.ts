@@ -1,16 +1,8 @@
-import { describe, expect, it } from "vitest";
-import {
-	aggregateParallelOutputs,
-	flattenSteps,
-	isParallelGroup,
-	MAX_PARALLEL_CONCURRENCY,
-	mapConcurrent,
-	type ParallelStepGroup,
-	type RunnerStep,
-	type RunnerSubagentStep,
-} from "../parallel-utils.js";
 
-describe("isParallelGroup", () => {
+import { aggregateParallelOutputs, flattenSteps, isParallelGroup, MAX_PARALLEL_CONCURRENCY, mapConcurrent } from '../parallel-utils.js';
+import type { ParallelStepGroup, RunnerStep, RunnerSubagentStep } from '../parallel-utils.js';
+
+describe(isParallelGroup, () => {
 	it("returns true for a parallel step group", () => {
 		const step: ParallelStepGroup = {
 			parallel: [
@@ -18,21 +10,21 @@ describe("isParallelGroup", () => {
 				{ agent: "b", task: "do other stuff" },
 			],
 		};
-		expect(isParallelGroup(step)).toBe(true);
+		expect(isParallelGroup(step)).toBeTruthy();
 	});
 
 	it("returns false for a sequential step", () => {
 		const step: RunnerSubagentStep = { agent: "a", task: "do stuff" };
-		expect(isParallelGroup(step)).toBe(false);
+		expect(isParallelGroup(step)).toBeFalsy();
 	});
 
 	it("returns false when parallel is not an array", () => {
-		const step = { parallel: "not-an-array", agent: "a", task: "x" } as unknown as RunnerStep;
-		expect(isParallelGroup(step)).toBe(false);
+		const step = { agent: "a", parallel: "not-an-array", task: "x" } as unknown as RunnerStep;
+		expect(isParallelGroup(step)).toBeFalsy();
 	});
 });
 
-describe("flattenSteps", () => {
+describe(flattenSteps, () => {
 	it("returns sequential steps unchanged", () => {
 		const steps: RunnerStep[] = [
 			{ agent: "a", task: "t1" },
@@ -57,26 +49,26 @@ describe("flattenSteps", () => {
 		];
 		const flat = flattenSteps(steps);
 		expect(flat).toHaveLength(4);
-		expect(flat.map((step) => step.agent)).toEqual(["scout", "reviewer-a", "reviewer-b", "summarizer"]);
+		expect(flat.map((step) => step.agent)).toStrictEqual(["scout", "reviewer-a", "reviewer-b", "summarizer"]);
 	});
 
 	it("handles empty steps array", () => {
-		expect(flattenSteps([])).toEqual([]);
+		expect(flattenSteps([])).toStrictEqual([]);
 	});
 
 	it("handles empty parallel group", () => {
 		const steps: RunnerStep[] = [{ agent: "before", task: "x" }, { parallel: [] }, { agent: "after", task: "y" }];
 		const flat = flattenSteps(steps);
 		expect(flat).toHaveLength(2);
-		expect(flat.map((step) => step.agent)).toEqual(["before", "after"]);
+		expect(flat.map((step) => step.agent)).toStrictEqual(["before", "after"]);
 	});
 });
 
-describe("mapConcurrent", () => {
+describe(mapConcurrent, () => {
 	it("processes all items and preserves order", async () => {
 		const items = [10, 20, 30, 40];
 		const results = await mapConcurrent(items, 2, async (item) => item * 2, 0);
-		expect(results).toEqual([20, 40, 60, 80]);
+		expect(results).toStrictEqual([20, 40, 60, 80]);
 	});
 
 	it("respects concurrency limit", async () => {
@@ -101,7 +93,7 @@ describe("mapConcurrent", () => {
 
 	it("handles empty input", async () => {
 		const results = await mapConcurrent([], 4, async (item: number) => item, 0);
-		expect(results).toEqual([]);
+		expect(results).toStrictEqual([]);
 	});
 
 	it("clamps limit=0 to 1 for sequential execution", async () => {
@@ -175,11 +167,11 @@ describe("mapConcurrent", () => {
 	});
 });
 
-describe("aggregateParallelOutputs", () => {
+describe(aggregateParallelOutputs, () => {
 	it("aggregates successful outputs with headers", () => {
 		const result = aggregateParallelOutputs([
-			{ agent: "reviewer-a", output: "Looks good", exitCode: 0 },
-			{ agent: "reviewer-b", output: "Needs fixes", exitCode: 0 },
+			{ agent: "reviewer-a", exitCode: 0, output: "Looks good" },
+			{ agent: "reviewer-b", exitCode: 0, output: "Needs fixes" },
 		]);
 		expect(result).toContain("=== Parallel Task 1 (reviewer-a) ===");
 		expect(result).toContain("Looks good");
@@ -188,31 +180,31 @@ describe("aggregateParallelOutputs", () => {
 	});
 
 	it("marks failed tasks", () => {
-		const result = aggregateParallelOutputs([{ agent: "agent-a", output: "partial output", exitCode: 1 }]);
+		const result = aggregateParallelOutputs([{ agent: "agent-a", exitCode: 1, output: "partial output" }]);
 		expect(result).toContain("[!] FAILED (exit code 1)");
 	});
 
 	it("marks empty output", () => {
-		const result = aggregateParallelOutputs([{ agent: "agent-a", output: "", exitCode: 0 }]);
+		const result = aggregateParallelOutputs([{ agent: "agent-a", exitCode: 0, output: "" }]);
 		expect(result).toContain("[!] EMPTY OUTPUT");
 	});
 
 	it("treats whitespace-only output as empty", () => {
-		const result = aggregateParallelOutputs([{ agent: "agent-a", output: "   \n  ", exitCode: 0 }]);
+		const result = aggregateParallelOutputs([{ agent: "agent-a", exitCode: 0, output: "   \n  " }]);
 		expect(result).toContain("[!] EMPTY OUTPUT");
 	});
 
 	it("marks skipped tasks distinctly from failures", () => {
 		const result = aggregateParallelOutputs([
-			{ agent: "agent-a", output: "done", exitCode: 0 },
-			{ agent: "agent-b", output: "(skipped — fail-fast)", exitCode: -1 },
+			{ agent: "agent-a", exitCode: 0, output: "done" },
+			{ agent: "agent-b", exitCode: -1, output: "(skipped — fail-fast)" },
 		]);
 		expect(result).toContain("⏭️ SKIPPED");
 		expect(result).not.toContain("FAILED");
 	});
 });
 
-describe("MAX_PARALLEL_CONCURRENCY", () => {
+describe(MAX_PARALLEL_CONCURRENCY, () => {
 	it("is 4", () => {
 		expect(MAX_PARALLEL_CONCURRENCY).toBe(4);
 	});

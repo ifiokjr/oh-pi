@@ -1,5 +1,5 @@
 /**
- * oh-pi Git Checkpoint Extension
+ * Oh-pi Git Checkpoint Extension
  *
  * Provides four git-safety features for git-managed repositories:
  * 1. **Interactive git guard** — blocks git bash commands that are likely to open an editor and hang
@@ -117,10 +117,10 @@ export function detectInteractiveGitCommand(command: string): InteractiveGitDete
  */
 function terminalNotify(title: string, body: string): void {
 	if (process.env.KITTY_WINDOW_ID) {
-		process.stdout.write(`\x1b]99;i=1:d=0;${title}\x1b\\`);
-		process.stdout.write(`\x1b]99;i=1:p=body;${body}\x1b\\`);
+		process.stdout.write(`\x1B]99;i=1:d=0;${title}\x1B\\`);
+		process.stdout.write(`\x1B]99;i=1:p=body;${body}\u001b\\`);
 	} else {
-		process.stdout.write(`\x1b]777;notify;${title};${body}\x07`);
+		process.stdout.write(`\u001b]777;notify;${title};${body}\u0007`);
 	}
 }
 

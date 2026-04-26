@@ -24,8 +24,8 @@ export class PiWebClient {
 	private _ws: WebSocket | undefined;
 	private _state: ConnectionState = "disconnected";
 	private _instanceId: string | undefined;
-	private _listeners: Map<string, Set<EventHandler>> = new Map();
-	private _pendingRequests: Map<string, { resolve: (data: unknown) => void; reject: (err: Error) => void }> = new Map();
+	private _listeners = new Map<string, Set<EventHandler>>();
+	private _pendingRequests = new Map<string, { resolve: (data: unknown) => void; reject: (err: Error) => void }>();
 	private _reconnect: ReconnectManager;
 	private _webSocketCtor: typeof WebSocket;
 
@@ -53,18 +53,18 @@ export class PiWebClient {
 		return new Promise<InstanceInfo>((resolve, reject) => {
 			try {
 				this._ws = new this._webSocketCtor(this._options.url);
-			} catch (err) {
+			} catch (error) {
 				this._setState("disconnected");
-				reject(err instanceof Error ? err : new Error(String(err)));
+				reject(error instanceof Error ? error : new Error(String(error)));
 				return;
 			}
 
 			this._ws.onopen = () => {
 				this._setState("authenticating");
-				this._send({ type: "auth", token: this._options.token });
+				this._send({ token: this._options.token, type: "auth" });
 			};
 
-			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: message handling branches by protocol message type.
+			// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: message handling branches by protocol message type.
 			this._ws.onmessage = (event: MessageEvent) => {
 				let data: Record<string, unknown>;
 				try {
@@ -82,9 +82,9 @@ export class PiWebClient {
 
 					const info: InstanceInfo = {
 						instanceId: authOk.instanceId,
-						sessionId: authOk.session?.sessionId ?? "",
 						isStreaming: authOk.session?.isStreaming ?? false,
 						model: authOk.session?.model,
+						sessionId: authOk.session?.sessionId ?? "",
 						thinkingLevel: (authOk.session?.thinkingLevel as ThinkingLevel) ?? "off",
 					};
 					resolve(info);
@@ -154,19 +154,19 @@ export class PiWebClient {
 
 	async prompt(message: string, options?: PromptOptions): Promise<void> {
 		await this._request({
-			type: "prompt",
+			images: options?.images,
 			message,
 			streamingBehavior: options?.streamingBehavior,
-			images: options?.images,
+			type: "prompt",
 		});
 	}
 
 	async steer(message: string): Promise<void> {
-		await this._request({ type: "steer", message });
+		await this._request({ message, type: "steer" });
 	}
 
 	async followUp(message: string): Promise<void> {
-		await this._request({ type: "follow_up", message });
+		await this._request({ message, type: "follow_up" });
 	}
 
 	async abort(): Promise<void> {
@@ -192,7 +192,7 @@ export class PiWebClient {
 	}
 
 	async setModel(provider: string, modelId: string): Promise<unknown> {
-		return await this._request({ type: "set_model", provider, modelId });
+		return await this._request({ modelId, provider, type: "set_model" });
 	}
 
 	async getAvailableModels(): Promise<unknown[]> {
@@ -201,11 +201,11 @@ export class PiWebClient {
 	}
 
 	async setThinkingLevel(level: ThinkingLevel): Promise<void> {
-		await this._request({ type: "set_thinking_level", level });
+		await this._request({ level, type: "set_thinking_level" });
 	}
 
 	async compact(instructions?: string): Promise<CompactionResult> {
-		return (await this._request({ type: "compact", customInstructions: instructions })) as CompactionResult;
+		return (await this._request({ customInstructions: instructions, type: "compact" })) as CompactionResult;
 	}
 
 	async newSession(): Promise<{ cancelled: boolean }> {
@@ -213,7 +213,7 @@ export class PiWebClient {
 	}
 
 	respondToUI(requestId: string, response: Omit<ExtensionUIResponse, "type" | "id">): void {
-		this._send({ type: "extension_ui_response", id: requestId, ...response });
+		this._send({ id: requestId, type: "extension_ui_response", ...response });
 	}
 
 	// Event subscription
@@ -240,7 +240,7 @@ export class PiWebClient {
 	private _request(cmd: Record<string, unknown>): Promise<unknown> {
 		return new Promise((resolve, reject) => {
 			const id = `req-${++requestCounter}`;
-			this._pendingRequests.set(id, { resolve, reject });
+			this._pendingRequests.set(id, { reject, resolve });
 			this._send({ ...cmd, id });
 
 			// Timeout after 30s
@@ -249,7 +249,7 @@ export class PiWebClient {
 					this._pendingRequests.delete(id);
 					reject(new Error(`Request timed out: ${cmd.type}`));
 				}
-			}, 30000);
+			}, 30_000);
 		});
 	}
 

@@ -1,7 +1,6 @@
 ---
 name: liquid-glass
-description:
-  Apple Liquid Glass design system. Use when building UI with translucent, depth-aware glass
+description: Apple Liquid Glass design system. Use when building UI with translucent, depth-aware glass
   morphism following Apple's design language. Provides CSS tokens, component patterns, dark/light
   mode, and animation specs.
 ---
@@ -45,18 +44,18 @@ All tokens are defined in `references/tokens.css`. Key categories:
 
 ```css
 .glass-card {
-  background: var(--lg-bg-primary);
-  backdrop-filter: blur(var(--lg-blur-md));
-  -webkit-backdrop-filter: blur(var(--lg-blur-md));
-  border: 1px solid var(--lg-border-color);
-  border-radius: var(--lg-radius-lg);
-  box-shadow: var(--lg-shadow-elevated);
-  transition: transform var(--lg-duration-normal) var(--lg-easing-spring);
+	background: var(--lg-bg-primary);
+	backdrop-filter: blur(var(--lg-blur-md));
+	-webkit-backdrop-filter: blur(var(--lg-blur-md));
+	border: 1px solid var(--lg-border-color);
+	border-radius: var(--lg-radius-lg);
+	box-shadow: var(--lg-shadow-elevated);
+	transition: transform var(--lg-duration-normal) var(--lg-easing-spring);
 }
 
 .glass-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--lg-shadow-high);
+	transform: translateY(-2px);
+	box-shadow: var(--lg-shadow-high);
 }
 ```
 
@@ -64,10 +63,10 @@ All tokens are defined in `references/tokens.css`. Key categories:
 
 ```css
 .glass-toolbar {
-  background: var(--lg-bg-toolbar);
-  backdrop-filter: blur(var(--lg-blur-lg)) saturate(var(--lg-saturate));
-  -webkit-backdrop-filter: blur(var(--lg-blur-lg)) saturate(var(--lg-saturate));
-  border-bottom: 1px solid var(--lg-border-subtle);
+	background: var(--lg-bg-toolbar);
+	backdrop-filter: blur(var(--lg-blur-lg)) saturate(var(--lg-saturate));
+	-webkit-backdrop-filter: blur(var(--lg-blur-lg)) saturate(var(--lg-saturate));
+	border-bottom: 1px solid var(--lg-border-subtle);
 }
 ```
 
@@ -75,16 +74,16 @@ All tokens are defined in `references/tokens.css`. Key categories:
 
 ```css
 .glass-btn {
-  background: var(--lg-bg-interactive);
-  backdrop-filter: blur(var(--lg-blur-sm));
-  border: 1px solid var(--lg-border-color);
-  border-radius: var(--lg-radius-md);
-  transition: all var(--lg-duration-fast) var(--lg-easing-spring);
+	background: var(--lg-bg-interactive);
+	backdrop-filter: blur(var(--lg-blur-sm));
+	border: 1px solid var(--lg-border-color);
+	border-radius: var(--lg-radius-md);
+	transition: all var(--lg-duration-fast) var(--lg-easing-spring);
 }
 
 .glass-btn:active {
-  transform: scale(0.97);
-  background: var(--lg-bg-pressed);
+	transform: scale(0.97);
+	background: var(--lg-bg-pressed);
 }
 ```
 
@@ -92,15 +91,15 @@ All tokens are defined in `references/tokens.css`. Key categories:
 
 ```css
 .glass-overlay {
-  background: var(--lg-bg-scrim);
-  backdrop-filter: blur(var(--lg-blur-xl));
+	background: var(--lg-bg-scrim);
+	backdrop-filter: blur(var(--lg-blur-xl));
 }
 
 .glass-modal {
-  background: var(--lg-bg-elevated);
-  border: 1px solid var(--lg-border-color);
-  border-radius: var(--lg-radius-xl);
-  box-shadow: var(--lg-shadow-high);
+	background: var(--lg-bg-elevated);
+	border: 1px solid var(--lg-border-color);
+	border-radius: var(--lg-radius-xl);
+	box-shadow: var(--lg-shadow-high);
 }
 ```
 
@@ -112,10 +111,10 @@ dark-tinted glass with higher blur to maintain readability.
 ```css
 /* Force a mode on a subtree */
 .light-glass {
-  color-scheme: light;
+	color-scheme: light;
 }
 .dark-glass {
-  color-scheme: dark;
+	color-scheme: dark;
 }
 ```
 
@@ -126,18 +125,18 @@ Use spring-based easing for physical feel:
 ```css
 /* Entry */
 @keyframes glass-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+	from {
+		opacity: 0;
+		transform: scale(0.95) translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1) translateY(0);
+	}
 }
 
 .glass-animate-in {
-  animation: glass-enter var(--lg-duration-normal) var(--lg-easing-spring) both;
+	animation: glass-enter var(--lg-duration-normal) var(--lg-easing-spring) both;
 }
 ```
 

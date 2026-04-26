@@ -19,10 +19,13 @@ Output format (plan.md):
 # Implementation Plan
 
 ## Goal
+
 One sentence summary of what needs to be done.
 
 ## Tasks
+
 Numbered steps, each small and actionable:
+
 1. **Task 1**: Description
    - File: `path/to/file.ts`
    - Changes: What to modify
@@ -32,15 +35,19 @@ Numbered steps, each small and actionable:
    ...
 
 ## Files to Modify
+
 - `path/to/file.ts` - what changes
 
 ## New Files (if any)
+
 - `path/to/new.ts` - purpose
 
 ## Dependencies
+
 Which tasks depend on others.
 
 ## Risks
+
 Anything to watch out for.
 
 Keep the plan concrete. The worker agent will execute it.

@@ -6,16 +6,17 @@ import {
 	OLLAMA_CLOUD_PROVIDER,
 	getOllamaCloudRuntimeConfig,
 } from "./config.js";
-import { enrichOllamaCloudCredentials, getCredentialModels, type OllamaCloudCredentials, type OllamaProviderModel } from "./models.js";
+import { enrichOllamaCloudCredentials, getCredentialModels } from './models.js';
+import type { OllamaCloudCredentials, OllamaProviderModel } from './models.js';
 
 const STATIC_CREDENTIAL_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 export async function loginOllamaCloud(callbacks: OAuthLoginCallbacks): Promise<OllamaCloudCredentials> {
 	const config = getOllamaCloudRuntimeConfig();
 	callbacks.onAuth({
-		url: config.keysUrl,
 		instructions:
 			"Create an Ollama API key, then paste it back into pi. Ollama documents API keys for third-party cloud access; pi uses that flow for Ollama Cloud login.",
+		url: config.keysUrl,
 	});
 	callbacks.onProgress?.("Waiting for Ollama Cloud API key...");
 	const envApiKey = getEnvApiKey();
@@ -25,7 +26,9 @@ export async function loginOllamaCloud(callbacks: OAuthLoginCallbacks): Promise<
 	const input = (await callbacks.onPrompt({ message: promptMessage })).trim();
 	const apiKey = input || envApiKey;
 	if (!apiKey) {
-		throw new Error(`No Ollama API key provided. Set ${OLLAMA_CLOUD_API_KEY_ENV} or paste a key from ${config.keysUrl}.`);
+		throw new Error(
+			`No Ollama API key provided. Set ${OLLAMA_CLOUD_API_KEY_ENV} or paste a key from ${config.keysUrl}.`,
+		);
 	}
 	callbacks.onProgress?.("Validating Ollama Cloud API key and discovering models...");
 	return enrichOllamaCloudCredentials(createStaticCredential(apiKey), { signal: callbacks.signal });
@@ -40,7 +43,9 @@ export async function refreshOllamaCloudCredential(
 	});
 }
 
-export async function refreshOllamaCloudCredentialModels(credentials: OllamaCloudCredentials): Promise<OllamaCloudCredentials> {
+export async function refreshOllamaCloudCredentialModels(
+	credentials: OllamaCloudCredentials,
+): Promise<OllamaCloudCredentials> {
 	return enrichOllamaCloudCredentials(createStaticCredential(credentials.access), { previous: credentials });
 }
 
@@ -50,22 +55,17 @@ export function createOllamaCloudOAuthProvider(
 	getActiveCloudModels: CloudModelsGetter,
 ): Omit<OAuthProviderInterface, "id"> {
 	return {
-		name: "Ollama Cloud",
-		async login(callbacks) {
-			return loginOllamaCloud(callbacks);
-		},
-		async refreshToken(credentials) {
-			return refreshOllamaCloudCredential(credentials);
-		},
 		getApiKey(credentials) {
 			return credentials.access;
+		},
+		async login(callbacks) {
+			return loginOllamaCloud(callbacks);
 		},
 		modifyModels(models, credentials) {
 			const config = getOllamaCloudRuntimeConfig();
 			const runtimeModels = getActiveCloudModels();
-			const current = runtimeModels.length > 0
-				? runtimeModels
-				: getCredentialModels(credentials as OllamaCloudCredentials);
+			const current =
+				runtimeModels.length > 0 ? runtimeModels : getCredentialModels(credentials as OllamaCloudCredentials);
 			return [
 				...models.filter((model) => model.provider !== OLLAMA_CLOUD_PROVIDER),
 				...current.map((model) => ({
@@ -76,14 +76,18 @@ export function createOllamaCloudOAuthProvider(
 				})),
 			];
 		},
+		name: "Ollama Cloud",
+		async refreshToken(credentials) {
+			return refreshOllamaCloudCredential(credentials);
+		},
 	};
 }
 
 function createStaticCredential(apiKey: string): OAuthCredentials {
 	return {
-		refresh: apiKey,
 		access: apiKey,
 		expires: Date.now() + STATIC_CREDENTIAL_TTL_MS,
+		refresh: apiKey,
 	};
 }
 

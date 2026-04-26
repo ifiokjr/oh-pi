@@ -1,45 +1,14 @@
-/* c8 ignore file */
+/* C8 ignore file */
 
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import {
-	type ExtensionAPI,
-	type ExtensionCommandContext,
-	type ExtensionContext,
-	type Theme,
-	getShellConfig,
-} from "@mariozechner/pi-coding-agent";
+import { getShellConfig } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext, Theme } from '@mariozechner/pi-coding-agent';
 import { StringEnum } from "@mariozechner/pi-ai";
 import { Text, matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
-import {
-	BG_COMMAND,
-	BG_DASHBOARD_MAX_HEIGHT,
-	BG_DASHBOARD_WIDTH,
-	BG_DEFAULT_TIMEOUT_MS,
-	BG_INSTALL_SYMBOL,
-	BG_LOG_TAIL_MAX_CHARS,
-	BG_MESSAGE_TYPE,
-	BG_OUTPUT_ALERT_MAX_CHARS,
-	BG_OUTPUT_SETTLE_MS,
-	BG_SHORTCUT,
-	BG_WIDGET_KEY,
-	type BackgroundTaskEventDetails,
-	type BackgroundTaskSnapshot,
-	type BackgroundTaskStatus,
-	buildTaskSummaryLine,
-	createBgProcessShellEnv,
-	formatDuration,
-	formatRelativeTime,
-	getBgProcessLogFilePath,
-	isBackgroundTaskEventDetails,
-	parseOutputMatcher,
-	resolveTaskByToken,
-	summarizeTaskStatus,
-	tailText,
-	taskDisplayName,
-	trimOutputBuffer,
-} from "./background-tasks-shared.js";
+import { BG_COMMAND, BG_DASHBOARD_MAX_HEIGHT, BG_DASHBOARD_WIDTH, BG_DEFAULT_TIMEOUT_MS, BG_INSTALL_SYMBOL, BG_LOG_TAIL_MAX_CHARS, BG_MESSAGE_TYPE, BG_OUTPUT_ALERT_MAX_CHARS, BG_OUTPUT_SETTLE_MS, BG_SHORTCUT, BG_WIDGET_KEY, buildTaskSummaryLine, createBgProcessShellEnv, formatDuration, formatRelativeTime, getBgProcessLogFilePath, isBackgroundTaskEventDetails, parseOutputMatcher, resolveTaskByToken, summarizeTaskStatus, tailText, taskDisplayName, trimOutputBuffer } from './background-tasks-shared.js';
+import type { BackgroundTaskEventDetails, BackgroundTaskSnapshot, BackgroundTaskStatus } from './background-tasks-shared.js';
 
 type ManagedTask = BackgroundTaskSnapshot & {
 	child: ReturnType<typeof spawn>;
@@ -51,7 +20,7 @@ type ManagedTask = BackgroundTaskSnapshot & {
 	stopRequested: boolean;
 };
 
-type SpawnTaskOptions = {
+interface SpawnTaskOptions {
 	command: string;
 	title?: string;
 	cwd?: string;
@@ -62,27 +31,27 @@ type SpawnTaskOptions = {
 	initialLastAlertLength?: number;
 	logFile?: string;
 	expiresAt?: number | null;
-};
+}
 
 type ThemeLike = Theme;
 
 function taskSnapshot(task: ManagedTask): BackgroundTaskSnapshot {
 	return {
-		id: task.id,
-		title: task.title,
 		command: task.command,
 		cwd: task.cwd,
-		pid: task.pid,
-		logFile: task.logFile,
-		startedAt: task.startedAt,
-		updatedAt: task.updatedAt,
-		lastOutputAt: task.lastOutputAt,
-		expiresAt: task.expiresAt,
-		status: task.status,
 		exitCode: task.exitCode,
-		reactToOutput: task.reactToOutput,
+		expiresAt: task.expiresAt,
+		id: task.id,
+		lastOutputAt: task.lastOutputAt,
+		logFile: task.logFile,
 		notifyPattern: task.notifyPattern,
 		outputBytes: task.outputBytes,
+		pid: task.pid,
+		reactToOutput: task.reactToOutput,
+		startedAt: task.startedAt,
+		status: task.status,
+		title: task.title,
+		updatedAt: task.updatedAt,
 	};
 }
 
@@ -103,7 +72,9 @@ function buildTaskEventLines(details: BackgroundTaskEventDetails, theme: ThemeLi
 	];
 
 	if (details.task.expiresAt != null) {
-		lines.push(`${theme.fg("muted", "Expiry")}: ${formatRelativeTime(details.task.expiresAt, details.eventAt)} (${formatDuration(details.task.expiresAt - details.eventAt)} remaining)`);
+		lines.push(
+			`${theme.fg("muted", "Expiry")}: ${formatRelativeTime(details.task.expiresAt, details.eventAt)} (${formatDuration(details.task.expiresAt - details.eventAt)} remaining)`,
+		);
 	}
 
 	lines.push(
@@ -129,7 +100,11 @@ function buildTaskEventLines(details: BackgroundTaskEventDetails, theme: ThemeLi
 	return lines;
 }
 
-function renderTaskEventMessage(message: { content?: unknown; details?: unknown }, expanded: boolean, theme: ThemeLike): Text {
+function renderTaskEventMessage(
+	message: { content?: unknown; details?: unknown },
+	expanded: boolean,
+	theme: ThemeLike,
+): Text {
 	if (!isBackgroundTaskEventDetails(message.details)) {
 		return renderBackgroundMessage(String(message.content ?? "Background task update"), theme);
 	}
@@ -171,7 +146,8 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 	let taskCounter = 0;
 	const tasks = new Map<string, ManagedTask>();
 
-	const getSortedTasks = (): ManagedTask[] => [...tasks.values()].sort((left, right) => right.startedAt - left.startedAt);
+	const getSortedTasks = (): ManagedTask[] =>
+		[...tasks.values()].toSorted((left, right) => right.startedAt - left.startedAt);
 
 	const getTaskOutput = (task: ManagedTask): string => {
 		if (task.output.length > 0) {
@@ -181,7 +157,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			return "";
 		}
 		try {
-			return readFileSync(task.logFile, "utf-8");
+			return readFileSync(task.logFile, "utf8");
 		} catch {
 			return "";
 		}
@@ -204,7 +180,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			if (task.expiresAt != null && now >= task.expiresAt) {
 				const remaining = getTaskOutput(task);
 				if (remaining.trim()) {
-					appendFileSync(task.logFile, `\n[expired] Background task timed out after ${formatDuration(task.expiresAt! - task.startedAt)}.\n`);
+					appendFileSync(
+						task.logFile,
+						`\n[expired] Background task timed out after ${formatDuration(task.expiresAt! - task.startedAt)}.\n`,
+					);
 				}
 				finalizeTask(task, task.exitCode, "stopped");
 				sendTaskEvent("exit", task);
@@ -273,7 +252,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 						return;
 					}
 
-					timer = setInterval(() => tui.requestRender(), 1_000);
+					timer = setInterval(() => tui.requestRender(), 1000);
 					timer.unref?.();
 				};
 
@@ -286,7 +265,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 							requestWidgetRender = null;
 						}
 					},
-					// biome-ignore lint/suspicious/noEmptyBlockStatements: Required by the widget component interface.
+					// Biome-ignore lint/suspicious/noEmptyBlockStatements: Required by the widget component interface.
 					invalidate() {},
 					render(width: number) {
 						ensureTimer();
@@ -312,12 +291,12 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 		options: { newOutputTail?: string; matchedPattern?: string } = {},
 	) => {
 		const details: BackgroundTaskEventDetails = {
-			eventType,
-			task: taskSnapshot(task),
 			eventAt: Date.now(),
-			outputTail: tailText(getTaskOutput(task), BG_OUTPUT_ALERT_MAX_CHARS),
-			newOutputTail: options.newOutputTail,
+			eventType,
 			matchedPattern: options.matchedPattern,
+			newOutputTail: options.newOutputTail,
+			outputTail: tailText(getTaskOutput(task), BG_OUTPUT_ALERT_MAX_CHARS),
+			task: taskSnapshot(task),
 		};
 		const headline =
 			eventType === "exit"
@@ -326,12 +305,12 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 
 		pi.sendMessage(
 			{
-				customType: BG_MESSAGE_TYPE,
 				content: `${headline}\nCommand: ${task.command}`,
-				display: true,
+				customType: BG_MESSAGE_TYPE,
 				details,
+				display: true,
 			},
-			eventType === "exit" ? { triggerTurn: true, deliverAs: "followUp" } : { triggerTurn: false },
+			eventType === "exit" ? { deliverAs: "followUp", triggerTurn: true } : { triggerTurn: false },
 		);
 	};
 
@@ -355,8 +334,8 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 
 			task.lastAlertLength = getTaskOutput(task).length;
 			sendTaskEvent("output", task, {
-				newOutputTail: tailText(unseenOutput, BG_OUTPUT_ALERT_MAX_CHARS),
 				matchedPattern: task.notifyPattern,
+				newOutputTail: tailText(unseenOutput, BG_OUTPUT_ALERT_MAX_CHARS),
 			});
 			refreshUi();
 		}, BG_OUTPUT_SETTLE_MS);
@@ -392,11 +371,11 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 
 	const stopTask = (task: ManagedTask | null): { ok: boolean; message: string } => {
 		if (!task) {
-			return { ok: false, message: "No background task matched that id or pid." };
+			return { message: "No background task matched that id or pid.", ok: false };
 		}
 
 		if (task.status !== "running") {
-			return { ok: true, message: `${task.id} is already ${summarizeTaskStatus(task.status, task.exitCode)}.` };
+			return { message: `${task.id} is already ${summarizeTaskStatus(task.status, task.exitCode)}.`, ok: true };
 		}
 
 		task.stopRequested = true;
@@ -414,7 +393,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 		}
 
 		refreshUi();
-		return { ok: true, message: `Stopping ${task.id} (${task.command}).` };
+		return { message: `Stopping ${task.id} (${task.command}).`, ok: true };
 	};
 
 	const spawnTask = (options: SpawnTaskOptions): ManagedTask => {
@@ -442,28 +421,28 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 		writeFileSync(logFile, initialOutput);
 
 		const task: ManagedTask = {
-			id,
-			title,
+			child,
+			closed: false,
 			command,
 			cwd,
-			pid: child.pid ?? 0,
-			logFile,
-			startedAt: Date.now(),
-			updatedAt: Date.now(),
-			lastOutputAt: initialOutput.trim().length > 0 ? Date.now() : null,
-			expiresAt,
-			status: "running",
 			exitCode: null,
-			reactToOutput,
-			notifyPattern,
-			outputBytes: Buffer.byteLength(initialOutput),
-			child,
-			output: initialBuffer.output,
+			expiresAt,
+			id,
 			lastAlertLength: initialBuffer.lastAlertLength,
-			outputTimer: null,
+			lastOutputAt: initialOutput.trim().length > 0 ? Date.now() : null,
+			logFile,
 			matcher: parseOutputMatcher(notifyPattern),
-			closed: false,
+			notifyPattern,
+			output: initialBuffer.output,
+			outputBytes: Buffer.byteLength(initialOutput),
+			outputTimer: null,
+			pid: child.pid ?? 0,
+			reactToOutput,
+			startedAt: Date.now(),
+			status: "running",
 			stopRequested: false,
+			title,
+			updatedAt: Date.now(),
 		};
 		tasks.set(task.id, task);
 
@@ -526,7 +505,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 				let taskScroll = 0;
 				let outputScroll = 0;
 				let followOutput = true;
-				let timer: ReturnType<typeof setInterval> | null = setInterval(() => tui.requestRender(), 1_000);
+				let timer: ReturnType<typeof setInterval> | null = setInterval(() => tui.requestRender(), 1000);
 				timer.unref?.();
 
 				const selectedTask = (): ManagedTask | null => {
@@ -534,15 +513,16 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 					if (sorted.length === 0) {
 						return null;
 					}
-					const current = selectedId ? tasks.get(selectedId) ?? null : null;
+					const current = selectedId ? (tasks.get(selectedId) ?? null) : null;
 					if (current) {
 						return current;
 					}
 					selectedId = sorted[0]?.id ?? null;
-					return selectedId ? tasks.get(selectedId) ?? null : null;
+					return selectedId ? (tasks.get(selectedId) ?? null) : null;
 				};
 
-				const getOutputLines = (task: ManagedTask | null): string[] => splitOutputLines(task ? getTaskOutput(task) : "");
+				const getOutputLines = (task: ManagedTask | null): string[] =>
+					splitOutputLines(task ? getTaskOutput(task) : "");
 
 				const getMaxOutputScroll = (task: ManagedTask | null): number =>
 					Math.max(0, getOutputLines(task).length - DASHBOARD_OUTPUT_VIEWPORT);
@@ -643,7 +623,11 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 						return lines.map((line) => truncateToWidth(line, width));
 					}
 
-					const taskPaneWidth = clamp(Math.floor(width * 0.34), DASHBOARD_MIN_TASK_PANE_WIDTH, DASHBOARD_MAX_TASK_PANE_WIDTH);
+					const taskPaneWidth = clamp(
+						Math.floor(width * 0.34),
+						DASHBOARD_MIN_TASK_PANE_WIDTH,
+						DASHBOARD_MAX_TASK_PANE_WIDTH,
+					);
 					const detailPaneWidth = Math.max(24, width - taskPaneWidth - 3);
 					const divider = theme.fg("dim", " │ ");
 					const left: string[] = [];
@@ -661,7 +645,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 
 					for (const task of sorted.slice(taskScroll, taskScroll + DASHBOARD_TASK_VIEWPORT)) {
 						const marker = task.id === selected?.id ? theme.fg("accent", "→") : theme.fg("dim", "·");
-						const statusColor = task.status === "running" ? "success" : task.status === "failed" ? "error" : "muted";
+						const statusColor = task.status === "running" ? "success" : (task.status === "failed" ? "error" : "muted");
 						left.push(
 							`${marker} ${theme.fg(statusColor, task.id)} ${theme.fg("dim", summarizeTaskStatus(task.status, task.exitCode))}`,
 						);
@@ -682,10 +666,16 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 						right.push(
 							`${theme.fg(focusedPane === "output" ? "accent" : "muted", theme.bold(`Watch ${selected.id}`))} ${theme.fg("dim", followOutput ? "follow" : `line ${outputScroll + 1}`)}`,
 						);
-						right.push(`${theme.fg("muted", "Status")}: ${summarizeTaskStatus(selected.status, selected.exitCode)} · pid ${selected.pid}`);
-						right.push(`${theme.fg("muted", "Started")}: ${formatRelativeTime(selected.startedAt)} · ${formatDuration(Date.now() - selected.startedAt)} elapsed`);
+						right.push(
+							`${theme.fg("muted", "Status")}: ${summarizeTaskStatus(selected.status, selected.exitCode)} · pid ${selected.pid}`,
+						);
+						right.push(
+							`${theme.fg("muted", "Started")}: ${formatRelativeTime(selected.startedAt)} · ${formatDuration(Date.now() - selected.startedAt)} elapsed`,
+						);
 						if (selected.expiresAt != null) {
-							right.push(`${theme.fg("muted", "Expiry")}: ${formatRelativeTime(selected.expiresAt)} (${formatDuration(selected.expiresAt - Date.now())} remaining)`);
+							right.push(
+								`${theme.fg("muted", "Expiry")}: ${formatRelativeTime(selected.expiresAt)} (${formatDuration(selected.expiresAt - Date.now())} remaining)`,
+							);
 						}
 						right.push(`${theme.fg("muted", "Command")}: ${selected.command}`);
 						right.push(`${theme.fg("muted", "Cwd")}: ${selected.cwd}`);
@@ -704,7 +694,12 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 							right.push(theme.fg("dim", `↓ ${hiddenOutputBelow} newer line(s)`));
 						}
 						right.push("");
-						right.push(theme.fg("dim", `Output ${outputScroll + 1}-${Math.min(outputLines.length, outputScroll + DASHBOARD_OUTPUT_VIEWPORT)} of ${outputLines.length} · max scroll ${maxOutputScroll}`));
+						right.push(
+							theme.fg(
+								"dim",
+								`Output ${outputScroll + 1}-${Math.min(outputLines.length, outputScroll + DASHBOARD_OUTPUT_VIEWPORT)} of ${outputLines.length} · max scroll ${maxOutputScroll}`,
+							),
+						);
 					}
 
 					const rowCount = Math.max(left.length, right.length);
@@ -726,7 +721,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 					},
 					handleInput(data: string) {
 						if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c") || data === "q") {
-							done(undefined);
+							done();
 							return;
 						}
 
@@ -827,22 +822,25 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 							}
 						}
 					},
-					// biome-ignore lint/suspicious/noEmptyBlockStatements: required by the Component interface.
+					// Biome-ignore lint/suspicious/noEmptyBlockStatements: required by the Component interface.
 					invalidate() {},
 					render(width: number) {
 						return renderLines(width);
 					},
 				};
 			},
-			{ overlay: true, overlayOptions: { anchor: "center", width: BG_DASHBOARD_WIDTH, maxHeight: BG_DASHBOARD_MAX_HEIGHT } },
+			{
+				overlay: true,
+				overlayOptions: { anchor: "center", maxHeight: BG_DASHBOARD_MAX_HEIGHT, width: BG_DASHBOARD_WIDTH },
+			},
 		);
 	};
 
 	const taskPromptOptions = () =>
 		getSortedTasks().map((task) => ({
-			value: task.id,
-			label: task.id,
 			description: `${summarizeTaskStatus(task.status, task.exitCode)} · ${task.command}`,
+			label: task.id,
+			value: task.id,
 		}));
 
 	const resolveTask = (id?: string, pid?: number): ManagedTask | null => resolveTaskByToken(tasks.values(), id ?? pid);
@@ -851,7 +849,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 		text: string,
 		options: { details?: Record<string, unknown>; isError?: boolean } = {},
 	): any => ({
-		content: [{ type: "text", text }],
+		content: [{ text, type: "text" }],
 		details: options.details ?? {},
 		isError: options.isError,
 	});
@@ -904,15 +902,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.registerTool({
-		name: "bg_status",
-		label: "Background Process Status",
 		description: "Check status, view output, or stop background tasks that were spawned explicitly.",
-		parameters: Type.Object({
-			action: StringEnum(["list", "log", "stop"] as const, {
-				description: "list=show tasks, log=view task output, stop=terminate a task",
-			}),
-			pid: Type.Optional(Type.Number({ description: "Task pid for action=log or stop" })),
-		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, _ctx): Promise<any> {
 			if (params.action === "list") {
 				return makeToolResult(formatTaskListText());
@@ -931,29 +921,19 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			const stopped = stopTask(task);
 			return makeToolResult(stopped.message, { details: { task: taskSnapshot(task) }, isError: !stopped.ok });
 		},
+		label: "Background Process Status",
+		name: "bg_status",
+		parameters: Type.Object({
+			action: StringEnum(["list", "log", "stop"] as const, {
+				description: "list=show tasks, log=view task output, stop=terminate a task",
+			}),
+			pid: Type.Optional(Type.Number({ description: "Task pid for action=log or stop" })),
+		}),
 	});
 
 	pi.registerTool({
-		name: "bg_task",
-		label: "Background Task",
 		description:
 			"Spawn, inspect, and stop background shell tasks. Tasks keep running after the tool returns, append output to a log file, and can wake the agent up when new output arrives or when the task exits. Background tasks expire after 10 minutes by default to prevent indefinite runs. Pass expiresAt=null to disable the expiry.",
-		parameters: Type.Object({
-			action: StringEnum(["spawn", "list", "log", "stop", "clear"] as const, {
-				description: "spawn=start a new task, list=show tasks, log=view task output, stop=terminate, clear=remove finished tasks",
-			}),
-			command: Type.Optional(Type.String({ description: "Shell command to run for action=spawn" })),
-			id: Type.Optional(Type.String({ description: "Task id for action=log or stop" })),
-			pid: Type.Optional(Type.Number({ description: "PID for action=log or stop" })),
-			title: Type.Optional(Type.String({ description: "Optional label for action=spawn" })),
-			cwd: Type.Optional(Type.String({ description: "Optional working directory for action=spawn" })),
-			reactToOutput: Type.Optional(
-				Type.Boolean({ description: "Wake the agent up when new output arrives. Defaults to true." }),
-			),
-			notifyPattern: Type.Optional(
-				Type.String({ description: "Optional substring or /regex/flags gate for output wakeups." }),
-			),
-		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, _ctx): Promise<any> {
 			const { action } = params;
 
@@ -982,7 +962,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 				});
 
 				return makeToolResult(
-					`Started ${task.id} (pid ${task.pid}) in the background.\nCommand: ${task.command}\nCwd: ${task.cwd}\nLog: ${task.logFile}\nExpiry: ${task.expiresAt != null ? formatRelativeTime(task.expiresAt) : "none"}\nWakeups: ${task.reactToOutput ? task.notifyPattern ?? "on output" : "exit only"}`,
+					`Started ${task.id} (pid ${task.pid}) in the background.\nCommand: ${task.command}\nCwd: ${task.cwd}\nLog: ${task.logFile}\nExpiry: ${task.expiresAt != null ? formatRelativeTime(task.expiresAt) : "none"}\nWakeups: ${task.reactToOutput ? (task.notifyPattern ?? "on output") : "exit only"}`,
 					{ details: { task: taskSnapshot(task) } },
 				);
 			}
@@ -1000,22 +980,46 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			const stopped = stopTask(task);
 			return makeToolResult(stopped.message, { details: { task: taskSnapshot(task) }, isError: !stopped.ok });
 		},
+		label: "Background Task",
+		name: "bg_task",
+		parameters: Type.Object({
+			action: StringEnum(["spawn", "list", "log", "stop", "clear"] as const, {
+				description:
+					"spawn=start a new task, list=show tasks, log=view task output, stop=terminate, clear=remove finished tasks",
+			}),
+			command: Type.Optional(Type.String({ description: "Shell command to run for action=spawn" })),
+			id: Type.Optional(Type.String({ description: "Task id for action=log or stop" })),
+			pid: Type.Optional(Type.Number({ description: "PID for action=log or stop" })),
+			title: Type.Optional(Type.String({ description: "Optional label for action=spawn" })),
+			cwd: Type.Optional(Type.String({ description: "Optional working directory for action=spawn" })),
+			reactToOutput: Type.Optional(
+				Type.Boolean({ description: "Wake the agent up when new output arrives. Defaults to true." }),
+			),
+			notifyPattern: Type.Optional(
+				Type.String({ description: "Optional substring or /regex/flags gate for output wakeups." }),
+			),
+		}),
 	});
 
 	pi.registerCommand(BG_COMMAND, {
-		description: "Manage background shell tasks: /bg, /bg run <cmd>, /bg stop <id>, /bg watch [--follow] <id>, /bg clear.",
+		description:
+			"Manage background shell tasks: /bg, /bg run <cmd>, /bg stop <id>, /bg watch [--follow] <id>, /bg clear.",
 		getArgumentCompletions(prefix) {
 			const trimmed = prefix.trimStart();
 			const parts = trimmed.split(/\s+/).filter(Boolean);
 			if (parts.length <= 1) {
 				const options = [
-					{ value: "dashboard", label: "dashboard", description: "Open the background task dashboard" },
-					{ value: "list", label: "list", description: "Show a textual summary of tracked tasks" },
-					{ value: "run ", label: "run", description: "Spawn a new background shell task" },
-					{ value: "watch ", label: "watch", description: "Open the dashboard focused on a task" },
-					{ value: "watch --follow ", label: "watch --follow", description: "Open the output pane with follow-tail enabled" },
-					{ value: "stop ", label: "stop", description: "Terminate a running task" },
-					{ value: "clear", label: "clear", description: "Remove finished tasks from the dashboard" },
+					{ description: "Open the background task dashboard", label: "dashboard", value: "dashboard" },
+					{ description: "Show a textual summary of tracked tasks", label: "list", value: "list" },
+					{ description: "Spawn a new background shell task", label: "run", value: "run " },
+					{ description: "Open the dashboard focused on a task", label: "watch", value: "watch " },
+					{
+						description: "Open the output pane with follow-tail enabled",
+						label: "watch --follow",
+						value: "watch --follow ",
+					},
+					{ description: "Terminate a running task", label: "stop", value: "stop " },
+					{ description: "Remove finished tasks from the dashboard", label: "clear", value: "clear" },
 				];
 				const needle = trimmed.toLowerCase();
 				return options.filter((option) => option.value.trim().startsWith(needle));
@@ -1101,8 +1105,8 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 }
 
 export const backgroundTasksInternals = {
-	renderTaskEventMessage,
 	buildTaskEventLines,
+	renderTaskEventMessage,
 };
 
 export { createBgProcessShellEnv, getBgProcessLogFilePath } from "./background-tasks-shared.js";

@@ -18,36 +18,30 @@ import type { ExtensionAPI, ExtensionContext, ReadonlyFooterDataProvider } from 
 import { truncateToWidth } from "@mariozechner/pi-tui";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode";
 import { recordRuntimeSample } from "./watchdog-runtime-diagnostics";
-import {
-	formatOwnerLabel,
-	getCachedRepoWorktreeContext,
-	getRepoWorktreeSnapshot,
-	type RepoWorktreeContext,
-	type RepoWorktreeSnapshot,
-	refreshRepoWorktreeContext,
-} from "./worktree-shared";
+import { formatOwnerLabel, getCachedRepoWorktreeContext, getRepoWorktreeSnapshot, refreshRepoWorktreeContext } from './worktree-shared';
+import type { RepoWorktreeContext, RepoWorktreeSnapshot } from './worktree-shared';
 
 /** OSC 8 hyperlink: renders `text` as a clickable terminal link to `url`. */
 export function hyperlink(url: string, text: string): string {
-	return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`;
+	return `\u001b]8;;${url}\u0007${text}\u001b]8;;\u0007`;
 }
 
-export type PrInfo = {
+export interface PrInfo {
 	number: number;
 	url: string;
 	headRefName?: string;
-};
+}
 
 const PR_PROBE_COOLDOWN_MS = 60_000;
 const FOOTER_POLL_INTERVAL_MS = 60_000;
 const FOOTER_STARTUP_REFRESH_DELAY_MS = 250;
 const FOOTER_STARTUP_DEFER_ENTRY_THRESHOLD = 250;
 
-export type FooterUsageTotals = {
+export interface FooterUsageTotals {
 	input: number;
 	output: number;
 	cost: number;
-};
+}
 
 function samePrs(left: PrInfo[], right: PrInfo[]): boolean {
 	return (
@@ -92,7 +86,7 @@ function accumulateAssistantUsage(totals: FooterUsageTotals, message: AssistantM
 function collectFooterUsageTotalsFromEntries(
 	entries: ReturnType<ExtensionContext["sessionManager"]["getBranch"]>,
 ): FooterUsageTotals {
-	const totals: FooterUsageTotals = { input: 0, output: 0, cost: 0 };
+	const totals: FooterUsageTotals = { cost: 0, input: 0, output: 0 };
 	for (const entry of entries) {
 		if (entry.type === "message" && entry.message.role === "assistant") {
 			accumulateAssistantUsage(totals, entry.message as AssistantMessage);
@@ -109,7 +103,7 @@ export default function (pi: ExtensionAPI) {
 	/** Timestamp of the current session start, used for elapsed time. */
 	let sessionStart = Date.now();
 	/** Cached assistant usage totals to avoid rescanning the full session on every render. */
-	let usageTotals: FooterUsageTotals = { input: 0, output: 0, cost: 0 };
+	let usageTotals: FooterUsageTotals = { cost: 0, input: 0, output: 0 };
 	/** Cached PR info for the current branch. */
 	let activeFooterData: ReadonlyFooterDataProvider | null = null;
 	let activeCtx: ExtensionContext | null = null;
@@ -198,7 +192,7 @@ export default function (pi: ExtensionAPI) {
 
 		worktreeRefreshTimer = setTimeout(() => {
 			worktreeRefreshTimer = null;
-			refreshWorktreeContext(cwd).catch(() => undefined);
+			refreshWorktreeContext(cwd).catch(() => {});
 		}, delayMs);
 	};
 
@@ -244,8 +238,8 @@ export default function (pi: ExtensionAPI) {
 					return;
 				}
 				try {
-					const parsed = JSON.parse(stdout.trim()) as Array<{ number?: number; url?: string; headRefName?: string }>;
-					updateCachedPrs(parsed.filter((entry): entry is PrInfo => !!entry.number && !!entry.url));
+					const parsed = JSON.parse(stdout.trim()) as { number?: number; url?: string; headRefName?: string }[];
+					updateCachedPrs(parsed.filter((entry): entry is PrInfo => Boolean(entry.number) && Boolean(entry.url)));
 				} catch {
 					updateCachedPrs([]);
 				}
@@ -291,9 +285,9 @@ export default function (pi: ExtensionAPI) {
 					unsubSafeMode();
 					clearInterval(timer);
 				},
-				// biome-ignore lint/suspicious/noEmptyBlockStatements: Required by footer interface
+				// Biome-ignore lint/suspicious/noEmptyBlockStatements: Required by footer interface
 				invalidate() {},
-				// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Footer rendering combines multiple live metrics in one pass.
+				// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Footer rendering combines multiple live metrics in one pass.
 				render(width: number): string[] {
 					if (getSafeModeState().enabled) {
 						return [];
@@ -301,7 +295,7 @@ export default function (pi: ExtensionAPI) {
 					const usage = ctx.getContextUsage();
 					const pct = usage?.percent ?? 0;
 
-					const pctColor = pct > 75 ? "error" : pct > 50 ? "warning" : "success";
+					const pctColor = pct > 75 ? "error" : (pct > 50 ? "warning" : "success");
 
 					const tokenStats = [
 						theme.fg("accent", `${fmt(usageTotals.input)}/${fmt(usageTotals.output)}`),
@@ -399,7 +393,7 @@ export default function (pi: ExtensionAPI) {
 
 	// ─── /status overlay ─────────────────────────────────────────────────
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Status overlay assembles many optional sections.
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Status overlay assembles many optional sections.
 	function buildStatusLines(
 		theme: { fg: (color: string, text: string) => string },
 		worktreeSnapshot: RepoWorktreeSnapshot | null,
@@ -435,7 +429,7 @@ export default function (pi: ExtensionAPI) {
 		const usage = activeCtx?.getContextUsage?.();
 		if (usage) {
 			const pct = usage.percent ?? 0;
-			const pctColor = pct > 75 ? "error" : pct > 50 ? "warning" : "success";
+			const pctColor = pct > 75 ? "error" : (pct > 50 ? "warning" : "success");
 			const tokens = usage.tokens == null ? "?" : fmt(usage.tokens);
 			lines.push(
 				`  ${theme.fg("accent", "Context")}${sep}${theme.fg(pctColor, `${pct.toFixed(0)}% used`)}${sep}${tokens} / ${fmt(usage.contextWindow)} tokens`,
@@ -527,11 +521,11 @@ export default function (pi: ExtensionAPI) {
 							return lines.map((line) => truncateToWidth(line, width));
 						},
 						handleInput(data: string) {
-							if (data === "q" || data === "\x1b" || data === "\r" || data === " ") {
-								done(undefined);
+							if (data === "q" || data === "\x1B" || data === "\r" || data === " ") {
+								done();
 							}
 						},
-						// biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
+						// Biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
 						dispose() {},
 					};
 				},

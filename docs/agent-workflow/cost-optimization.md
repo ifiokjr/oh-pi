@@ -1,9 +1,11 @@
 # Cost Optimization for Multimodal (Image/Video) Workloads
 
 ## Objective
+
 Increase speed and reduce spend by making cheap multimodal extraction/summarization the default and reserving premium models/workers for ambiguous or high-risk cases.
 
 ## Cost/Speed Strategy
+
 1. **Tiered Inference**
    - Tier 1 (default): low-cost multimodal model for extraction + summary.
    - Tier 2 (conditional): premium multimodal/text model for deep reasoning or high-stakes validation.
@@ -19,14 +21,15 @@ Increase speed and reduce spend by making cheap multimodal extraction/summarizat
 
 ## Routing Matrix
 
-| Asset Type | Default Cheap Model Class | Preprocess Step | Finalize Condition | Escalate Condition |
-|---|---|---|---|---|
-| Image | image-lite MM | normalize + optional OCR | confidence >= 0.78 and no risk flags | low confidence, missing fields, risk flags |
-| Video (<5 min) | video-lite MM | keyframes + ASR | coverage >= 0.85 and no high-stakes intent | uncertainty, timeline gaps, high-stakes intent |
-| Video (>=5 min) | video-lite MM | scene segmentation + sparse sampling + ASR | key events extracted with acceptable confidence | unresolved critical segments |
-| Mixed media | multimodal-lite MM | modality split + merge | complete schema and no blocked policy | cross-modal contradiction or low confidence |
+| Asset Type      | Default Cheap Model Class | Preprocess Step                            | Finalize Condition                              | Escalate Condition                             |
+| --------------- | ------------------------- | ------------------------------------------ | ----------------------------------------------- | ---------------------------------------------- |
+| Image           | image-lite MM             | normalize + optional OCR                   | confidence >= 0.78 and no risk flags            | low confidence, missing fields, risk flags     |
+| Video (<5 min)  | video-lite MM             | keyframes + ASR                            | coverage >= 0.85 and no high-stakes intent      | uncertainty, timeline gaps, high-stakes intent |
+| Video (>=5 min) | video-lite MM             | scene segmentation + sparse sampling + ASR | key events extracted with acceptable confidence | unresolved critical segments                   |
+| Mixed media     | multimodal-lite MM        | modality split + merge                     | complete schema and no blocked policy           | cross-modal contradiction or low confidence    |
 
 ## Budget Guardrails
+
 - Define per-task `max_estimated_cost_usd` at intake.
 - If cheap-pass projected cost exceeds budget:
   - reduce sampling density,
@@ -34,10 +37,12 @@ Increase speed and reduce spend by making cheap multimodal extraction/summarizat
   - request user approval before premium escalation.
 
 ## Latency Guardrails
+
 - Set SLO bands by task type (e.g., quick summary vs forensic review).
 - If Tier 1 breaches SLO repeatedly, switch to backup cheap model before premium.
 
 ## Quality Guardrails
+
 - Minimum thresholds:
   - `confidence_score >= 0.78`
   - `coverage_score >= 0.85`
@@ -48,6 +53,7 @@ Increase speed and reduce spend by making cheap multimodal extraction/summarizat
   - security incidents.
 
 ## KPIs to Track
+
 - Cheap-pass completion rate (% finalized without escalation).
 - Average cost per task by modality.
 - P50/P95 latency by modality.
@@ -55,6 +61,7 @@ Increase speed and reduce spend by making cheap multimodal extraction/summarizat
 - Rework rate after finalize (quality escape metric).
 
 ## Implementation Checklist
+
 - [ ] Enforce `cheap-first` routing in orchestrator.
 - [ ] Standardize `summary_schema` across models.
 - [ ] Implement threshold-based promote/finalize gate.
@@ -76,5 +83,6 @@ else:
 ```
 
 ## Colony Handoff Notes
+
 - Downstream higher-tier workers should consume `summary_schema` first and only inspect raw media for unresolved points.
 - Keep escalation reasons machine-readable for later routing-policy tuning.

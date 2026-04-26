@@ -7,12 +7,12 @@ import type { EnvInfo } from "../utils/detect.js";
 /** Provider API base URLs for dynamic model fetching */
 const PROVIDER_API_URLS: Record<string, string> = {
 	anthropic: "https://api.anthropic.com",
-	openai: "https://api.openai.com",
 	google: "https://generativelanguage.googleapis.com",
 	groq: "https://api.groq.com",
+	mistral: "https://api.mistral.ai",
+	openai: "https://api.openai.com",
 	openrouter: "https://openrouter.ai",
 	xai: "https://api.x.ai",
-	mistral: "https://api.mistral.ai",
 };
 
 /**
@@ -36,7 +36,7 @@ export function isUnsafeUrl(urlStr: string): boolean {
 		}
 
 		// Block private IP ranges
-		if (/^10\./.test(host)) {
+		if (host.startsWith('10.')) {
 			return true;
 		}
 
@@ -44,11 +44,11 @@ export function isUnsafeUrl(urlStr: string): boolean {
 			return true;
 		}
 
-		if (/^192\.168\./.test(host)) {
+		if (host.startsWith('192.168.')) {
 			return true;
 		}
 
-		if (/^0\./.test(host) || host === "0.0.0.0") {
+		if (host.startsWith('0.') || host === "0.0.0.0") {
 			return true;
 		}
 
@@ -56,7 +56,7 @@ export function isUnsafeUrl(urlStr: string): boolean {
 			return true;
 		}
 
-		if (/^169\.254\./.test(host)) {
+		if (host.startsWith('169.254.')) {
 			return true;
 		}
 
@@ -78,11 +78,11 @@ interface FetchResult {
 
 interface AnthropicModelResponseItem {
 	id: string;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	owned_by?: string;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	thinking_enabled?: boolean;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	max_tokens?: number;
 }
 
@@ -94,13 +94,13 @@ interface GoogleModelResponseItem {
 
 interface OpenAIModelResponseItem {
 	id: string;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	thinking_enabled?: boolean;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	context_window?: number;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	max_tokens?: number;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	max_output?: number;
 }
 
@@ -140,7 +140,7 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
 	// Try Anthropic-style first (for known anthropic or any provider)
 	try {
 		const res = await fetch(`${base}/v1/models`, {
-			headers: { "x-api-key": resolvedKey, "anthropic-version": "2023-06-01" },
+			headers: { "anthropic-version": "2023-06-01", "x-api-key": resolvedKey },
 			signal: AbortSignal.timeout(8000),
 		});
 		if (res.ok) {
@@ -151,20 +151,20 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
 					api: "anthropic-messages",
 					models: data
 						.map((m) => ({
-							id: m.id,
-							reasoning: m.thinking_enabled ?? false,
-							input: ["text", "image"] as ("text" | "image")[],
 							contextWindow: m.max_tokens ?? 200000,
+							id: m.id,
+							input: ["text", "image"] as ("text" | "image")[],
 							maxTokens: m.thinking_enabled
 								? Math.min(m.max_tokens ?? 128000, 128000)
 								: Math.min(m.max_tokens ?? 8192, 16384),
+							reasoning: m.thinking_enabled ?? false,
 						}))
-						.sort((a: DiscoveredModel, b: DiscoveredModel) => a.id.localeCompare(b.id)),
+						.toSorted((a: DiscoveredModel, b: DiscoveredModel) => a.id.localeCompare(b.id)),
 				};
 			}
 		}
 	} catch {
-		/* fall through */
+		/* Fall through */
 	}
 
 	// Try Google-style
@@ -181,18 +181,18 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
 						api: "google-generative-ai",
 						models: data
 							.map((m) => ({
-								id: m.name.replace("models/", ""),
-								reasoning: m.name.includes("thinking") || m.name.includes("2.5"),
-								input: ["text", "image"] as ("text" | "image")[],
 								contextWindow: m.inputTokenLimit ?? 1048576,
+								id: m.name.replace("models/", ""),
+								input: ["text", "image"] as ("text" | "image")[],
 								maxTokens: m.outputTokenLimit ?? 65536,
+								reasoning: m.name.includes("thinking") || m.name.includes("2.5"),
 							}))
-							.sort((a: DiscoveredModel, b: DiscoveredModel) => a.id.localeCompare(b.id)),
+							.toSorted((a: DiscoveredModel, b: DiscoveredModel) => a.id.localeCompare(b.id)),
 					};
 				}
 			}
 		} catch {
-			/* fall through */
+			/* Fall through */
 		}
 	}
 
@@ -210,18 +210,18 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
 					api: "openai-completions",
 					models: data
 						.map((m) => ({
-							id: m.id,
-							reasoning: m.thinking_enabled ?? m.id.includes("o3"),
-							input: ["text", "image"] as ("text" | "image")[],
 							contextWindow: m.context_window ?? m.max_tokens ?? 128000,
+							id: m.id,
+							input: ["text", "image"] as ("text" | "image")[],
 							maxTokens: m.max_output ?? 16384,
+							reasoning: m.thinking_enabled ?? m.id.includes("o3"),
 						}))
-						.sort((a: DiscoveredModel, b: DiscoveredModel) => a.id.localeCompare(b.id)),
+						.toSorted((a: DiscoveredModel, b: DiscoveredModel) => a.id.localeCompare(b.id)),
 				};
 			}
 		}
 	} catch {
-		/* fall through */
+		/* Fall through */
 	}
 
 	return { models: [] };
@@ -233,7 +233,7 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
  * @param env - Current environment info with detected providers
  * @returns Provider setup result with strategy and selected providers
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Interactive setup flow needs explicit branching per provider strategy.
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Interactive setup flow needs explicit branching per provider strategy.
 export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult> {
 	const entries = Object.entries(PROVIDERS);
 	let providerStrategy: ProviderSetupStrategy = "replace";
@@ -244,9 +244,9 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 		const action = await p.select({
 			message: t("provider.detected", { list: detected.join(", ") }),
 			options: [
-				{ value: "keep", label: t("provider.detectedKeep"), hint: t("provider.detectedKeepHint") },
-				{ value: "replace", label: t("provider.detectedReplace"), hint: t("provider.detectedReplaceHint") },
-				{ value: "add", label: t("provider.detectedAdd"), hint: t("provider.detectedAddHint") },
+				{ hint: t("provider.detectedKeepHint"), label: t("provider.detectedKeep"), value: "keep" },
+				{ hint: t("provider.detectedReplaceHint"), label: t("provider.detectedReplace"), value: "replace" },
+				{ hint: t("provider.detectedAddHint"), label: t("provider.detectedAdd"), value: "add" },
 			],
 		});
 		if (p.isCancel(action)) {
@@ -255,7 +255,7 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 		}
 
 		if (action === "keep") {
-			return { providers: [], providerStrategy: "keep" };
+			return { providerStrategy: "keep", providers: [] };
 		}
 
 		providerStrategy = action;
@@ -270,10 +270,10 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 			const options = [
 				...entries
 					.filter(([key]) => !selected.has(key))
-					.map(([key, info]) => ({ value: key, label: info.label, hint: info.env })),
+					.map(([key, info]) => ({ hint: info.env, label: info.label, value: key })),
 				...(selected.has("_custom")
 					? []
-					: [{ value: "_custom", label: t("provider.custom"), hint: t("provider.customHint") }]),
+					: [{ hint: t("provider.customHint"), label: t("provider.custom"), value: "_custom" }]),
 			];
 			if (options.length === 0) {
 				break;
@@ -281,8 +281,8 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 
 			if (pickedAny) {
 				const addMore = await p.confirm({
-					message: t("provider.addFallback"),
 					initialValue: false,
+					message: t("provider.addFallback"),
 				});
 				if (p.isCancel(addMore)) {
 					p.cancel(t("cancelled"));
@@ -309,14 +309,14 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 			}
 			pickedAny = true;
 		}
-		return { providers: configs, providerStrategy: "add" };
+		return { providerStrategy: "add", providers: configs };
 	}
 
 	const firstChoice = await p.select({
 		message: t("provider.selectPrimary"),
 		options: [
-			...entries.map(([key, info]) => ({ value: key, label: info.label, hint: info.env })),
-			{ value: "_custom", label: t("provider.custom"), hint: t("provider.customHint") },
+			...entries.map(([key, info]) => ({ hint: info.env, label: info.label, value: key })),
+			{ hint: t("provider.customHint"), label: t("provider.custom"), value: "_custom" },
 		],
 	});
 	if (p.isCancel(firstChoice)) {
@@ -335,18 +335,18 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 		const options = [
 			...entries
 				.filter(([key]) => !selected.has(key))
-				.map(([key, info]) => ({ value: key, label: info.label, hint: info.env })),
+				.map(([key, info]) => ({ hint: info.env, label: info.label, value: key })),
 			...(selected.has("_custom")
 				? []
-				: [{ value: "_custom", label: t("provider.custom"), hint: t("provider.customHint") }]),
+				: [{ hint: t("provider.customHint"), label: t("provider.custom"), value: "_custom" }]),
 		];
 		if (options.length === 0) {
 			break;
 		}
 
 		const addFallback = await p.confirm({
-			message: t("provider.addFallback"),
 			initialValue: false,
+			message: t("provider.addFallback"),
 		});
 		if (p.isCancel(addFallback)) {
 			p.cancel(t("cancelled"));
@@ -372,7 +372,7 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 		}
 	}
 
-	return { providers: configs, providerStrategy: "replace" };
+	return { providerStrategy: "replace", providers: configs };
 }
 
 async function setupProviderChoice(choice: string): Promise<ProviderConfig | null> {
@@ -390,8 +390,8 @@ async function setupProviderChoice(choice: string): Promise<ProviderConfig | nul
 	const envVal = process.env[info.env];
 
 	const useCustomUrl = await p.confirm({
-		message: t("provider.useCustomUrl", { label: info.label }),
 		initialValue: false,
+		message: t("provider.useCustomUrl", { label: info.label }),
 	});
 	if (p.isCancel(useCustomUrl)) {
 		p.cancel(t("cancelled"));
@@ -405,9 +405,9 @@ async function setupProviderChoice(choice: string): Promise<ProviderConfig | nul
 			placeholder: t("provider.baseUrlPlaceholder"),
 			validate: (v) =>
 				v?.startsWith("http")
-					? isUnsafeUrl(v)
+					? (isUnsafeUrl(v)
 						? "URL must use HTTPS for remote hosts (private IPs blocked)"
-						: undefined
+						: undefined)
 					: t("provider.baseUrlValidation"),
 		});
 		if (p.isCancel(url)) {
@@ -444,7 +444,7 @@ async function setupProviderChoice(choice: string): Promise<ProviderConfig | nul
 	}
 
 	p.log.success(t("provider.configured", { label: info.label }));
-	return { name, apiKey, defaultModel, baseUrl, api: finalApi, discoveredModels };
+	return { api: finalApi, apiKey, baseUrl, defaultModel, discoveredModels, name };
 }
 
 async function selectOpenAIApiMode(
@@ -454,12 +454,12 @@ async function selectOpenAIApiMode(
 	const selected = await p.select({
 		message: t("provider.apiMode", { label }),
 		options: [
-			{ value: "auto", label: t("provider.apiModeAuto"), hint: t("provider.apiModeAutoHint", { model: defaultModel }) },
-			{ value: "openai-responses", label: t("provider.apiModeResponses"), hint: t("provider.apiModeResponsesHint") },
+			{ hint: t("provider.apiModeAutoHint", { model: defaultModel }), label: t("provider.apiModeAuto"), value: "auto" },
+			{ hint: t("provider.apiModeResponsesHint"), label: t("provider.apiModeResponses"), value: "openai-responses" },
 			{
-				value: "openai-completions",
-				label: t("provider.apiModeCompletions"),
 				hint: t("provider.apiModeCompletionsHint"),
+				label: t("provider.apiModeCompletions"),
+				value: "openai-completions",
 			},
 		],
 	});
@@ -498,9 +498,9 @@ async function setupCustomProvider(): Promise<ProviderConfig | null> {
 		placeholder: t("provider.baseUrlCustomPlaceholder"),
 		validate: (v) =>
 			v?.startsWith("http")
-				? isUnsafeUrl(v)
+				? (isUnsafeUrl(v)
 					? "URL must use HTTPS for remote hosts (private IPs blocked)"
-					: undefined
+					: undefined)
 				: t("provider.baseUrlValidation"),
 	});
 	if (p.isCancel(baseUrl)) {
@@ -508,7 +508,7 @@ async function setupCustomProvider(): Promise<ProviderConfig | null> {
 		process.exit(0);
 	}
 
-	const needsKey = await p.confirm({ message: t("provider.needsKey"), initialValue: false });
+	const needsKey = await p.confirm({ initialValue: false, message: t("provider.needsKey") });
 	if (p.isCancel(needsKey)) {
 		p.cancel(t("cancelled"));
 		process.exit(0);
@@ -524,7 +524,7 @@ async function setupCustomProvider(): Promise<ProviderConfig | null> {
 
 	p.log.success(t("provider.customConfigured", { name, url: baseUrl }));
 
-	return { name, apiKey, defaultModel, baseUrl, api: finalApi, discoveredModels };
+	return { api: finalApi, apiKey, baseUrl, defaultModel, discoveredModels, name };
 }
 
 interface SelectResult {
@@ -534,7 +534,7 @@ interface SelectResult {
 }
 
 export function buildModelSelectionOptions(modelIds: readonly string[]) {
-	return modelIds.map((modelId) => ({ value: modelId, label: modelId }));
+	return modelIds.map((modelId) => ({ label: modelId, value: modelId }));
 }
 
 /**
@@ -568,7 +568,7 @@ async function selectModelWithMeta(
 		);
 		if (result.models.length > 0) {
 			discoveredModels = result.models;
-			api = result.api;
+			({ api } = result);
 			modelIds = result.models.map((m) => m.id);
 		}
 	}
@@ -584,11 +584,11 @@ async function selectModelWithMeta(
 			process.exit(0);
 		}
 
-		return { defaultModel: model, discoveredModels, api };
+		return { api, defaultModel: model, discoveredModels };
 	}
 
 	if (modelIds.length === 1) {
-		return { defaultModel: modelIds[0], discoveredModels, api };
+		return { api, defaultModel: modelIds[0], discoveredModels };
 	}
 
 	const model = await p.select({
@@ -599,7 +599,7 @@ async function selectModelWithMeta(
 		p.cancel(t("cancelled"));
 		process.exit(0);
 	}
-	return { defaultModel: model, discoveredModels, api };
+	return { api, defaultModel: model, discoveredModels };
 }
 
 /**

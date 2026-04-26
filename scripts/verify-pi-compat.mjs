@@ -23,7 +23,7 @@ export const SMOKE_TESTS = [
 export const WORKSPACE_INSTALL_ARGS = ["install", "--no-frozen-lockfile", "--link-workspace-packages"];
 
 export function parseArgs(argv, env = process.env) {
-	const parsed = { version: env.PI_COMPAT_VERSION, restore: false };
+	const parsed = { restore: false, version: env.PI_COMPAT_VERSION };
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
 		if ((arg === "--version" || arg === "-v") && argv[i + 1]) {
@@ -43,8 +43,8 @@ export function parseArgs(argv, env = process.env) {
 export function run(command, args, options = {}) {
 	console.log(`\n> ${command} ${args.join(" ")}`);
 	execFileSync(command, args, {
-		stdio: "inherit",
 		env: process.env,
+		stdio: "inherit",
 		...options,
 	});
 }
@@ -110,7 +110,7 @@ export function main(argv = process.argv.slice(2)) {
 	}
 }
 
-const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+const isMain = process.argv[1] && import.meta.filename === process.argv[1];
 
 if (isMain) {
 	main();

@@ -1,12 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildWidgetLines, formatElapsedMmSs, PtyLiveWidgetController, widgetInternals } from "../src/widget.js";
+
+import { PtyLiveWidgetController, buildWidgetLines, formatElapsedMmSs, widgetInternals } from "../src/widget.js";
 
 const theme = {
-	fg: (_color: string, text: string) => text,
 	bold: (text: string) => text,
+	fg: (_color: string, text: string) => text,
 };
 
-describe("PTY live widget", () => {
+describe("pTY live widget", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-04-21T12:00:00Z"));
@@ -27,25 +27,25 @@ describe("PTY live widget", () => {
 		const lines = buildWidgetLines(
 			theme,
 			{
-				command: "pnpm test --watch",
-				startedAt: Date.now() - 7_000,
 				ansiLines: ["line-1", "line-2", "line-3"],
-				status: "running",
+				command: "pnpm test --watch",
 				exitCode: null,
+				startedAt: Date.now() - 7_000,
+				status: "running",
 			},
 			{ maxLines: 2 },
 			Date.now(),
 		);
 		expect(lines[0]).toContain("🖥 Bash PTY");
 		expect(lines[0]).toContain("00:07");
-		expect(lines.slice(-2)).toEqual(["line-2", "line-3"]);
+		expect(lines.slice(-2)).toStrictEqual(["line-2", "line-3"]);
 		expect(
 			buildWidgetLines(theme, {
-				command: "echo ready",
-				startedAt: Date.now(),
 				ansiLines: [],
-				status: "completed",
+				command: "echo ready",
 				exitCode: 0,
+				startedAt: Date.now(),
+				status: "completed",
 			}),
 		).toContain("(waiting for output)");
 	});
@@ -61,21 +61,21 @@ describe("PTY live widget", () => {
 		);
 
 		controller.update({
-			command: "pnpm dev",
-			startedAt: Date.now() - 2_000,
 			ansiLines: ["booting"],
-			status: "running",
+			command: "pnpm dev",
 			exitCode: null,
+			startedAt: Date.now() - 2_000,
+			status: "running",
 		});
 		controller.update({
-			command: "pnpm dev",
-			startedAt: Date.now() - 2_000,
 			ansiLines: ["booting", "ready"],
-			status: "running",
+			command: "pnpm dev",
 			exitCode: null,
+			startedAt: Date.now() - 2_000,
+			status: "running",
 		});
 
-		expect(setWidget).toHaveBeenCalledTimes(1);
+		expect(setWidget).toHaveBeenCalledOnce();
 		const widgetFactory = setWidget.mock.calls[0][1] as (
 			tui: { requestRender: () => void },
 			themeArg: { fg: (color: string, text: string) => string; bold: (text: string) => string },
@@ -88,25 +88,25 @@ describe("PTY live widget", () => {
 		await vi.advanceTimersByTimeAsync(119);
 		expect(requestRender).not.toHaveBeenCalled();
 		await vi.advanceTimersByTimeAsync(1);
-		expect(requestRender).toHaveBeenCalledTimes(1);
+		expect(requestRender).toHaveBeenCalledOnce();
 
-		await vi.advanceTimersByTimeAsync(1_000);
+		await vi.advanceTimersByTimeAsync(1000);
 		expect(requestRender).toHaveBeenCalledTimes(2);
 
 		controller.update({
-			command: "pnpm dev",
-			startedAt: Date.now() - 2_000,
 			ansiLines: ["done"],
-			status: "completed",
+			command: "pnpm dev",
 			exitCode: 0,
+			startedAt: Date.now() - 2_000,
+			status: "completed",
 		});
 		await vi.advanceTimersByTimeAsync(120);
 		expect(requestRender).toHaveBeenCalledTimes(3);
-		await vi.advanceTimersByTimeAsync(1_000);
+		await vi.advanceTimersByTimeAsync(1000);
 		expect(requestRender).toHaveBeenCalledTimes(3);
 
 		controller.clear();
-		expect(setWidget).toHaveBeenLastCalledWith("pty-widget", undefined);
+		expect(setWidget).toHaveBeenLastCalledWith("pty-widget");
 		widget.dispose();
 
 		controller.dispose();
@@ -115,11 +115,11 @@ describe("PTY live widget", () => {
 	it("becomes a no-op when the context has no UI", () => {
 		const controller = new PtyLiveWidgetController({ hasUI: false }, { key: "no-ui" });
 		controller.update({
-			command: "echo hi",
-			startedAt: Date.now(),
 			ansiLines: ["hi"],
-			status: "running",
+			command: "echo hi",
 			exitCode: null,
+			startedAt: Date.now(),
+			status: "running",
 		});
 		controller.clear();
 		controller.dispose();
@@ -127,13 +127,13 @@ describe("PTY live widget", () => {
 		const setWidget = vi.fn();
 		const controllerWithDefaultKey = new PtyLiveWidgetController({ hasUI: true, ui: { setWidget } });
 		controllerWithDefaultKey.update({
-			command: "echo hi",
-			startedAt: Date.now(),
 			ansiLines: ["hi"],
-			status: "completed",
+			command: "echo hi",
 			exitCode: 0,
+			startedAt: Date.now(),
+			status: "completed",
 		});
 		controllerWithDefaultKey.clear();
-		expect(setWidget).toHaveBeenCalled();
+		expect(setWidget).toHaveBeenCalledWith();
 	});
 });

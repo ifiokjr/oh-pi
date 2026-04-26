@@ -1,4 +1,4 @@
-/* c8 ignore file */
+/* C8 ignore file */
 // Export all pages
 export { Overview } from "./Overview";
 export { Models } from "./Models";

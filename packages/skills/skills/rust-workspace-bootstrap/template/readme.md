@@ -1,6 +1,6 @@
-# __PROJECT_TITLE__
+# **PROJECT_TITLE**
 
-__DESCRIPTION__
+**DESCRIPTION**
 
 A Rust workspace starter inspired by the structure used in `mdt` and `pina`, with strong defaults for:
 

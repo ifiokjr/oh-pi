@@ -2,21 +2,25 @@
 	"name": "@ifi/pi-provider-ollama",
 	"version": "0.4.4",
 	"description": "Experimental Ollama provider for pi with local discovery and cloud login support.",
-	"type": "module",
 	"keywords": [
-		"pi-package",
+		"cloud",
+		"experimental",
+		"local",
+		"ollama",
 		"pi",
 		"pi-coding-agent",
-		"ollama",
-		"provider",
-		"local",
-		"cloud",
-		"experimental"
+		"pi-package",
+		"provider"
 	],
-	"pi": {
-		"extensions": [
-			"./index.ts"
-		]
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/ollama",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/ollama"
 	},
 	"files": [
 		"*.ts",
@@ -24,16 +28,7 @@
 		"!**/*.test.ts",
 		"!tests/**"
 	],
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/ifiokjr/oh-pi.git",
-		"directory": "packages/ollama"
-	},
-	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/ollama",
-	"bugs": {
-		"url": "https://github.com/ifiokjr/oh-pi/issues"
-	},
+	"type": "module",
 	"scripts": {
 		"build": "pnpm run typecheck && pnpm run test:worktree",
 		"typecheck": "tsgo --project ./tsconfig.json --noEmit",
@@ -45,5 +40,10 @@
 		"@mariozechner/pi-coding-agent": ">=0.56.1",
 		"@mariozechner/pi-tui": ">=0.56.1",
 		"@sinclair/typebox": "*"
+	},
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
 	}
 }

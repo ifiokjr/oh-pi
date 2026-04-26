@@ -55,7 +55,7 @@ export function wrapText(text: string, width: number): { lines: string[]; starts
 
 	const endsWithNewline = text.endsWith("\n");
 	if (!endsWithNewline) {
-		const lastLine = lines[lines.length - 1] ?? "";
+		const lastLine = lines.at(-1) ?? "";
 		if (text.length > 0 && lastLine.length === width) {
 			starts.push(text.length);
 			lines.push("");
@@ -68,10 +68,10 @@ export function wrapText(text: string, width: number): { lines: string[]; starts
 export function getCursorDisplayPos(cursor: number, starts: number[]): { line: number; col: number } {
 	for (let i = starts.length - 1; i >= 0; i--) {
 		if (cursor >= starts[i]) {
-			return { line: i, col: cursor - starts[i] };
+			return { col: cursor - starts[i], line: i };
 		}
 	}
-	return { line: 0, col: 0 };
+	return { col: 0, line: 0 };
 }
 
 export function ensureCursorVisible(cursorLine: number, viewportHeight: number, currentOffset: number): number {
@@ -87,44 +87,44 @@ export function ensureCursorVisible(cursorLine: number, viewportHeight: number, 
 }
 
 function isWordChar(ch: string): boolean {
-	const code = ch.charCodeAt(0);
+	const code = ch.codePointAt(0);
 	return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95;
 }
 
 function wordBackward(buffer: string, cursor: number): number {
 	let pos = cursor;
-	while (pos > 0 && !isWordChar(buffer[pos - 1]!)) pos--;
-	while (pos > 0 && isWordChar(buffer[pos - 1]!)) pos--;
+	while (pos > 0 && !isWordChar(buffer[pos - 1]!)) {pos--;}
+	while (pos > 0 && isWordChar(buffer[pos - 1]!)) {pos--;}
 	return pos;
 }
 
 function wordForward(buffer: string, cursor: number): number {
 	const len = buffer.length;
 	let pos = cursor;
-	while (pos < len && isWordChar(buffer[pos]!)) pos++;
-	while (pos < len && !isWordChar(buffer[pos]!)) pos++;
+	while (pos < len && isWordChar(buffer[pos]!)) {pos++;}
+	while (pos < len && !isWordChar(buffer[pos]!)) {pos++;}
 	return pos;
 }
 
 function normalizeInsertText(data: string, multiLine: boolean): string | null {
 	let text = data;
 
-	text = text.split("\x1b[200~").join("");
-	text = text.split("\x1b[201~").join("");
-	text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+	text = text.split("\u001b[200~").join("");
+	text = text.split("\u001b[201~").join("");
+	text = text.replaceAll(/\r\n/g, "\n").replaceAll(/\r/g, "\n");
 
 	if (!multiLine) {
 		const nl = text.indexOf("\n");
-		if (nl !== -1) text = text.slice(0, nl);
+		if (nl !== -1) {text = text.slice(0, nl);}
 	}
 
-	text = text.replace(/\t/g, "    ");
-	if (text.length === 0) return null;
+	text = text.replaceAll(/\t/g, "    ");
+	if (text.length === 0) {return null;}
 
 	for (let i = 0; i < text.length; i++) {
-		const code = text.charCodeAt(i);
+		const code = text.codePointAt(i);
 		if (code < 32) {
-			if (multiLine && text[i] === "\n") continue;
+			if (multiLine && text[i] === "\n") {continue;}
 			return null;
 		}
 	}
@@ -145,8 +145,8 @@ export function handleEditorInput(
 	}
 
 	if (matchesKey(data, "return")) {
-		if (!multiLine) return null;
-		const buffer = state.buffer.slice(0, state.cursor) + "\n" + state.buffer.slice(state.cursor);
+		if (!multiLine) {return null;}
+		const buffer = `${state.buffer.slice(0, state.cursor)  }\n${  state.buffer.slice(state.cursor)}`;
 		return { ...state, buffer, cursor: state.cursor + 1 };
 	}
 
@@ -162,12 +162,12 @@ export function handleEditorInput(
 	}
 
 	if (matchesKey(data, "left")) {
-		if (state.cursor > 0) return { ...state, cursor: state.cursor - 1 };
+		if (state.cursor > 0) {return { ...state, cursor: state.cursor - 1 };}
 		return state;
 	}
 
 	if (matchesKey(data, "right")) {
-		if (state.cursor < state.buffer.length) return { ...state, cursor: state.cursor + 1 };
+		if (state.cursor < state.buffer.length) {return { ...state, cursor: state.cursor + 1 };}
 		return state;
 	}
 
@@ -207,7 +207,7 @@ export function handleEditorInput(
 
 	if (matchesKey(data, "alt+backspace")) {
 		const target = wordBackward(state.buffer, state.cursor);
-		if (target === state.cursor) return state;
+		if (target === state.cursor) {return state;}
 		const buffer = state.buffer.slice(0, target) + state.buffer.slice(state.cursor);
 		return { ...state, buffer, cursor: target };
 	}
@@ -241,7 +241,7 @@ function renderWithCursor(text: string, cursorPos: number): string {
 	const before = text.slice(0, cursorPos);
 	const cursorChar = text[cursorPos] ?? " ";
 	const after = text.slice(cursorPos + 1);
-	return `${before}\x1b[7m${cursorChar}\x1b[27m${after}`;
+	return `${before}\x1B[7m${cursorChar}\x1B[27m${after}`;
 }
 
 export function renderEditor(state: TextEditorState, width: number, viewportHeight: number): string[] {

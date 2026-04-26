@@ -61,7 +61,7 @@ export interface AgentProgress {
 	skills?: string[];
 	currentTool?: string;
 	currentToolArgs?: string;
-	recentTools: Array<{ tool: string; args: string; endMs: number }>;
+	recentTools: { tool: string; args: string; endMs: number }[];
 	recentOutput: string[];
 	toolCount: number;
 	tokens: number;
@@ -158,7 +158,7 @@ export interface AsyncStatus {
 	endedAt?: number;
 	lastUpdate?: number;
 	currentStep?: number;
-	steps?: Array<{ agent: string; status: string; durationMs?: number; tokens?: TokenUsage; skills?: string[] }>;
+	steps?: { agent: string; status: string; durationMs?: number; tokens?: TokenUsage; skills?: string[] }[];
 	sessionDir?: string;
 	outputFile?: string;
 	totalTokens?: TokenUsage;
@@ -243,12 +243,12 @@ export const DEFAULT_MAX_OUTPUT: Required<MaxOutputConfig> = {
 };
 
 export const DEFAULT_ARTIFACT_CONFIG: ArtifactConfig = {
+	cleanupDays: 7,
 	enabled: true,
 	includeInput: true,
-	includeOutput: true,
 	includeJsonl: false,
 	includeMetadata: true,
-	cleanupDays: 7,
+	includeOutput: true,
 };
 
 export const MAX_PARALLEL = 8;
@@ -291,8 +291,8 @@ export function getSubagentDepthEnv(): Record<string, string> {
 // ============================================================================
 
 export function formatBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes}B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+	if (bytes < 1024) {return `${bytes}B`;}
+	if (bytes < 1024 * 1024) {return `${(bytes / 1024).toFixed(1)}KB`;}
 	return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
@@ -302,7 +302,7 @@ export function truncateOutput(
 	artifactPath?: string,
 ): TruncationResult {
 	const lines = output.split("\n");
-	const bytes = Buffer.byteLength(output, "utf-8");
+	const bytes = Buffer.byteLength(output, "utf8");
 
 	if (bytes <= config.bytes && lines.length <= config.lines) {
 		return { text: output, truncated: false };
@@ -314,12 +314,12 @@ export function truncateOutput(
 	}
 
 	let result = truncatedLines.join("\n");
-	if (Buffer.byteLength(result, "utf-8") > config.bytes) {
+	if (Buffer.byteLength(result, "utf8") > config.bytes) {
 		let low = 0;
 		let high = result.length;
 		while (low < high) {
 			const mid = Math.floor((low + high + 1) / 2);
-			if (Buffer.byteLength(result.slice(0, mid), "utf-8") <= config.bytes) {
+			if (Buffer.byteLength(result.slice(0, mid), "utf8") <= config.bytes) {
 				low = mid;
 			} else {
 				high = mid - 1;
@@ -332,10 +332,10 @@ export function truncateOutput(
 	const marker = `[TRUNCATED: showing first ${keptLines} of ${lines.length} lines, ${formatBytes(Buffer.byteLength(result))} of ${formatBytes(bytes)}${artifactPath ? ` - full output at ${artifactPath}` : ""}]\n`;
 
 	return {
-		text: marker + result,
-		truncated: true,
+		artifactPath,
 		originalBytes: bytes,
 		originalLines: lines.length,
-		artifactPath,
+		text: marker + result,
+		truncated: true,
 	};
 }

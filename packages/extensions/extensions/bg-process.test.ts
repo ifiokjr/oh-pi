@@ -1,46 +1,46 @@
 import { EventEmitter } from "node:events";
 import { delimiter, join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 
 const { createBashToolMock, getShellConfigMock, spawnMock } = vi.hoisted(() => ({
 	createBashToolMock: vi.fn(() => ({
-		label: "Bash",
 		description: "Built-in bash tool.",
+		execute: vi.fn(),
+		label: "Bash",
 		renderCall: undefined,
 		renderResult: undefined,
-		execute: vi.fn(),
 	})),
-	getShellConfigMock: vi.fn(() => ({ shell: "C:/Program Files/Git/bin/bash.exe", args: ["-c"] })),
+	getShellConfigMock: vi.fn(() => ({ args: ["-c"], shell: "C:/Program Files/Git/bin/bash.exe" })),
 	spawnMock: vi.fn(),
 }));
 
-vi.mock("node:child_process", () => ({
+vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({
 	spawn: spawnMock,
 }));
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
 	createBashTool: createBashToolMock,
 	getAgentDir: () => "/mock-home/.pi/agent",
 	getShellConfig: getShellConfigMock,
 }));
 
-vi.mock("@mariozechner/pi-ai", () => ({
+vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({
 	StringEnum: (values: readonly string[], options?: Record<string, unknown>) => ({
-		type: "string",
 		enum: [...values],
+		type: "string",
 		...options,
 	}),
 }));
 
-vi.mock("@ifi/pi-background-tasks", async () => await import("../../background-tasks/index.ts"));
+vi.mock<typeof import('@ifi/pi-background-tasks')>(import('@ifi/pi-background-tasks'), async () => await import("../../background-tasks/index.ts"));
 
-vi.mock("@sinclair/typebox", () => ({
+vi.mock<typeof import('@sinclair/typebox')>(import('@sinclair/typebox'), () => ({
 	Type: {
-		Object: (schema: unknown) => schema,
-		String: (options?: Record<string, unknown>) => ({ type: "string", ...options }),
-		Number: (options?: Record<string, unknown>) => ({ type: "number", ...options }),
 		Boolean: (options?: Record<string, unknown>) => ({ type: "boolean", ...options }),
+		Number: (options?: Record<string, unknown>) => ({ type: "number", ...options }),
+		Object: (schema: unknown) => schema,
 		Optional: (value: unknown) => ({ optional: true, ...((value as object | undefined) ?? {}) }),
+		String: (options?: Record<string, unknown>) => ({ type: "string", ...options }),
 	},
 }));
 
@@ -49,13 +49,13 @@ import bgProcessExtension, { createBgProcessShellEnv, getBgProcessLogFilePath } 
 function createMockPi() {
 	const tools = new Map<string, any>();
 	return {
+		on() {},
+		registerCommand() {},
+		registerMessageRenderer() {},
+		registerShortcut() {},
 		registerTool(tool: any) {
 			tools.set(tool.name, tool);
 		},
-		registerMessageRenderer() {},
-		registerCommand() {},
-		registerShortcut() {},
-		on() {},
 		sendMessage() {},
 		tools,
 	};
@@ -79,7 +79,7 @@ function createMockChild() {
 
 afterEach(() => {
 	vi.clearAllMocks();
-	getShellConfigMock.mockReturnValue({ shell: "C:/Program Files/Git/bin/bash.exe", args: ["-c"] });
+	getShellConfigMock.mockReturnValue({ args: ["-c"], shell: "C:/Program Files/Git/bin/bash.exe" });
 });
 
 describe("bg-process", () => {
@@ -103,16 +103,16 @@ describe("bg-process", () => {
 
 		const result = await tool.execute("tool-1", { action: "spawn", command: "echo hello" });
 
-		expect(getShellConfigMock).toHaveBeenCalledOnce();
+		expect(getShellConfigMock).toHaveBeenCalledTimes(1);
 		expect(spawnMock).toHaveBeenCalledWith(
 			"C:/Program Files/Git/bin/bash.exe",
 			["-c", "echo hello"],
 			expect.objectContaining({
 				cwd: process.cwd(),
-				stdio: ["ignore", "pipe", "pipe"],
 				env: expect.objectContaining({
 					PATH: expect.stringContaining(join("/mock-home/.pi/agent", "bin")),
 				}),
+				stdio: ["ignore", "pipe", "pipe"],
 			}),
 		);
 		expect(result.content[0].text).toContain("Started bg-1");

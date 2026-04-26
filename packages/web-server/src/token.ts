@@ -40,7 +40,7 @@ export function loadOrCreateToken(filePath?: string): TokenInfo {
 			const existing = readFileSync(filePath, "utf8").trim();
 
 			if (existing.length === 64) {
-				return { token: existing, instanceId: generateInstanceId(existing), isNew: false };
+				return { instanceId: generateInstanceId(existing), isNew: false, token: existing };
 			}
 		} catch {
 			// File doesn't exist or is unreadable — create new
@@ -49,9 +49,9 @@ export function loadOrCreateToken(filePath?: string): TokenInfo {
 		const token = generateToken();
 		mkdirSync(dirname(filePath), { recursive: true });
 		writeFileSync(filePath, token, { mode: 0o600 });
-		return { token, instanceId: generateInstanceId(token), isNew: true };
+		return { instanceId: generateInstanceId(token), isNew: true, token };
 	}
 
 	const token = generateToken();
-	return { token, instanceId: generateInstanceId(token), isNew: true };
+	return { instanceId: generateInstanceId(token), isNew: true, token };
 }

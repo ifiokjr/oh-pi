@@ -1,4 +1,5 @@
-import { createPiWebServer, detectTunnelProvider, getLanIp, type PiWebServer, startTunnel } from "@ifi/pi-web-server";
+import { createPiWebServer, detectTunnelProvider, getLanIp, startTunnel } from '@ifi/pi-web-server';
+import type { PiWebServer } from '@ifi/pi-web-server';
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 const HOSTED_UI_URL = "https://pi-remote.dev";
@@ -94,7 +95,7 @@ export default function (pi: ExtensionAPI) {
 }
 
 function buildConnectUrl(server: PiWebServer): string {
-	const tunnelUrl = server.tunnelUrl;
+	const {tunnelUrl} = server;
 
 	if (tunnelUrl) {
 		return `${HOSTED_UI_URL}?host=${encodeURIComponent(tunnelUrl)}&t=${server.token}`;

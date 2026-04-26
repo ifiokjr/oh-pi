@@ -21,50 +21,50 @@
 export type PiRole = "system" | "user" | "assistant";
 
 export interface PiMessage {
-  role: PiRole;
-  content: string;
+	role: PiRole;
+	content: string;
 }
 
 export interface PiToolSpec {
-  name: string;
-  description?: string;
-  inputSchema?: unknown;
+	name: string;
+	description?: string;
+	inputSchema?: unknown;
 }
 
 export interface CreateSessionOptions {
-  model?: string;
-  instructions?: string;
-  metadata?: Record<string, string>;
-  timeoutMs?: number;
+	model?: string;
+	instructions?: string;
+	metadata?: Record<string, string>;
+	timeoutMs?: number;
 }
 
 export interface RunOptions {
-  tools?: PiToolSpec[];
-  timeoutMs?: number;
-  signal?: AbortSignal;
-  onToken?: (token: string) => void;
-  onEvent?: (event: { type: string; data?: unknown }) => void;
+	tools?: PiToolSpec[];
+	timeoutMs?: number;
+	signal?: AbortSignal;
+	onToken?: (token: string) => void;
+	onEvent?: (event: { type: string; data?: unknown }) => void;
 }
 
 export interface PiRunResult {
-  outputText: string;
-  usage?: {
-    inputTokens?: number;
-    outputTokens?: number;
-    costUsd?: number;
-  };
-  raw?: unknown;
+	outputText: string;
+	usage?: {
+		inputTokens?: number;
+		outputTokens?: number;
+		costUsd?: number;
+	};
+	raw?: unknown;
 }
 
 export interface PiSession {
-  id: string;
-  run(messages: PiMessage[], options?: RunOptions): Promise<PiRunResult>;
-  interrupt(reason?: string): Promise<void>;
-  close(): Promise<void>;
+	id: string;
+	run(messages: PiMessage[], options?: RunOptions): Promise<PiRunResult>;
+	interrupt(reason?: string): Promise<void>;
+	close(): Promise<void>;
 }
 
 export interface PiAdapter {
-  createSession(options?: CreateSessionOptions): Promise<PiSession>;
+	createSession(options?: CreateSessionOptions): Promise<PiSession>;
 }
 ```
 

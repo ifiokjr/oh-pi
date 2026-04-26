@@ -1,5 +1,6 @@
 import { EXTENSIONS, getLocale, selectLanguage } from "@ifi/oh-pi-core";
-import { runConfigWizard, type WizardBaseConfig } from "./tui/config-wizard.js";
+import { runConfigWizard } from './tui/config-wizard.js';
+import type { WizardBaseConfig } from './tui/config-wizard.js';
 import { confirmApply } from "./tui/confirm-apply.js";
 import { runInstaller } from "./tui/installer.js";
 import { selectMode } from "./tui/mode-select.js";
@@ -8,7 +9,8 @@ import { setupProviders } from "./tui/provider-setup.js";
 import { setupAdaptiveRouting } from "./tui/routing-setup.js";
 import { welcome } from "./tui/welcome.js";
 import type { OhPConfigWithRouting } from "./types.js";
-import { detectEnv, type EnvInfo } from "./utils/detect.js";
+import { detectEnv } from './utils/detect.js';
+import type { EnvInfo } from './utils/detect.js';
 
 export interface RunOptions {
 	yes?: boolean;
@@ -52,17 +54,17 @@ export async function run(options: RunOptions = {}) {
 async function quickFlow(env: EnvInfo): Promise<OhPConfigWithRouting> {
 	const providerSetup = await setupProviders(env);
 	const adaptiveRouting = await setupAdaptiveRouting([
-		...(env.existingProviders ?? []).map((name) => ({ name, apiKey: "none" })),
+		...(env.existingProviders ?? []).map((name) => ({ apiKey: "none", name })),
 		...providerSetup.providers,
 	]);
 	return {
 		...providerSetup,
 		adaptiveRouting,
-		theme: "dark",
-		keybindings: "default",
-		extensions: ["git-guard", "auto-session-name", "custom-footer", "diagnostics", "compact-header", "auto-update"],
-		prompts: ["review", "fix", "explain", "commit", "test"],
 		agents: "general-developer",
+		extensions: ["git-guard", "auto-session-name", "custom-footer", "diagnostics", "compact-header", "auto-update"],
+		keybindings: "default",
+		prompts: ["review", "fix", "explain", "commit", "test"],
+		theme: "dark",
 		thinking: "medium",
 	};
 }
@@ -85,11 +87,11 @@ async function presetFlow(env: EnvInfo): Promise<OhPConfigWithRouting> {
 function customFlow(env: EnvInfo): Promise<OhPConfigWithRouting> {
 	const defaultExtensions = EXTENSIONS.filter((e) => e.default).map((e) => e.name);
 	const initial: WizardBaseConfig = {
-		theme: "dark",
-		keybindings: "default",
-		extensions: defaultExtensions,
-		prompts: ["review", "fix", "explain", "commit", "test", "refactor", "optimize", "security", "document", "pr"],
 		agents: "general-developer",
+		extensions: defaultExtensions,
+		keybindings: "default",
+		prompts: ["review", "fix", "explain", "commit", "test", "refactor", "optimize", "security", "document", "pr"],
+		theme: "dark",
 		thinking: "medium",
 	};
 	return runConfigWizard(env, initial);

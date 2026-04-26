@@ -1,49 +1,42 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 
 const { getAgentDir } = vi.hoisted(() => ({
 	getAgentDir: vi.fn(() => "/mock-home/.pi/agent"),
 }));
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
 	getAgentDir,
 }));
-vi.mock("@ifi/oh-pi-core", async () => {
-	return await import("../core/src/model-intelligence.js");
-});
+vi.mock<typeof import('@ifi/oh-pi-core')>(import('@ifi/oh-pi-core'), async () => await import("../core/src/model-intelligence.js"));
 
-import {
-	buildDelegatedSelectionPolicy,
-	inspectDelegatedSelection,
-	readDelegatedSelectionLatencySnapshot,
-	readDelegatedSelectionUsageSnapshot,
-	type DelegatedAvailableModelRef,
-} from "./delegated-runtime.js";
+import { buildDelegatedSelectionPolicy, inspectDelegatedSelection, readDelegatedSelectionLatencySnapshot, readDelegatedSelectionUsageSnapshot } from './delegated-runtime.js';
+import type { DelegatedAvailableModelRef } from './delegated-runtime.js';
 
 const sampleModels: DelegatedAvailableModelRef[] = [
 	{
-		provider: "openai",
-		id: "gpt-5-mini",
-		fullId: "openai/gpt-5-mini",
-		name: "GPT-5 Mini",
-		reasoning: true,
-		input: ["text", "image"],
 		contextWindow: 400_000,
+		cost: { cacheRead: 0, cacheWrite: 0, input: 0.25, output: 2 },
+		fullId: "openai/gpt-5-mini",
+		id: "gpt-5-mini",
+		input: ["text", "image"],
 		maxTokens: 128_000,
-		cost: { input: 0.25, output: 2, cacheRead: 0, cacheWrite: 0 },
+		name: "GPT-5 Mini",
+		provider: "openai",
+		reasoning: true,
 	},
 	{
-		provider: "google",
-		id: "gemini-2.5-flash",
-		fullId: "google/gemini-2.5-flash",
-		name: "Gemini 2.5 Flash",
-		reasoning: true,
-		input: ["text", "image"],
 		contextWindow: 1_000_000,
+		cost: { cacheRead: 0, cacheWrite: 0, input: 0.1, output: 0.4 },
+		fullId: "google/gemini-2.5-flash",
+		id: "gemini-2.5-flash",
+		input: ["text", "image"],
 		maxTokens: 64_000,
-		cost: { input: 0.1, output: 0.4, cacheRead: 0, cacheWrite: 0 },
+		name: "Gemini 2.5 Flash",
+		provider: "google",
+		reasoning: true,
 	},
 ];
 
@@ -57,7 +50,7 @@ describe("delegated runtime helpers", () => {
 	});
 
 	afterEach(() => {
-		rmSync(tempAgentDir, { recursive: true, force: true });
+		rmSync(tempAgentDir, { force: true, recursive: true });
 		vi.clearAllMocks();
 	});
 
@@ -67,8 +60,8 @@ describe("delegated runtime helpers", () => {
 			JSON.stringify(
 				{
 					providers: {
-						openai: { windows: [{ percentLeft: 15 }] },
 						google: { windows: [{ percentLeft: 80 }] },
+						openai: { windows: [{ percentLeft: 15 }] },
 					},
 				},
 				null,
@@ -76,9 +69,9 @@ describe("delegated runtime helpers", () => {
 			),
 		);
 
-		expect(readDelegatedSelectionUsageSnapshot()).toEqual({
-			openai: { remainingPct: 15, confidence: "estimated" },
-			google: { remainingPct: 80, confidence: "estimated" },
+		expect(readDelegatedSelectionUsageSnapshot()).toStrictEqual({
+			google: { confidence: "estimated", remainingPct: 80 },
+			openai: { confidence: "estimated", remainingPct: 15 },
 		});
 	});
 
@@ -98,7 +91,7 @@ describe("delegated runtime helpers", () => {
 			),
 		);
 
-		expect(readDelegatedSelectionLatencySnapshot()).toEqual({
+		expect(readDelegatedSelectionLatencySnapshot()).toStrictEqual({
 			"google/gemini-2.5-flash": { avgMs: 1500, count: 4 },
 			"openai/gpt-5-mini": { avgMs: 5000, count: 2 },
 		});
@@ -109,25 +102,25 @@ describe("delegated runtime helpers", () => {
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			JSON.stringify(
 				{
-					delegatedRouting: {
-						enabled: true,
-						categories: {
-							"quick-discovery": {
-								preferredProviders: ["google"],
-								preferFastModels: true,
-							},
-						},
-					},
 					delegatedModelSelection: {
-						disabledProviders: ["cursor"],
-						disabledModels: [],
-						preferLowerUsage: true,
 						allowSmallContextForSmallTasks: true,
+						disabledModels: [],
+						disabledProviders: ["cursor"],
+						preferLowerUsage: true,
 						roleOverrides: {
 							"subagent:planner": {
 								preferredModels: ["google/gemini-2.5-flash"],
 							},
 						},
+					},
+					delegatedRouting: {
+						categories: {
+							"quick-discovery": {
+								preferFastModels: true,
+								preferredProviders: ["google"],
+							},
+						},
+						enabled: true,
 					},
 				},
 				null,
@@ -137,20 +130,20 @@ describe("delegated runtime helpers", () => {
 
 		const result = buildDelegatedSelectionPolicy({
 			category: "quick-discovery",
-			roleKeys: ["subagent:planner"],
 			defaults: {
-				taskProfile: "planning",
 				preferFastModels: true,
+				taskProfile: "planning",
 			},
+			roleKeys: ["subagent:planner"],
 		});
 
 		expect(result.policy).toMatchObject({
-			preferredProviders: ["google"],
-			preferredModels: ["google/gemini-2.5-flash"],
 			blockedProviders: ["cursor"],
-			taskProfile: "planning",
 			preferFastModels: true,
 			preferLowerUsage: true,
+			preferredModels: ["google/gemini-2.5-flash"],
+			preferredProviders: ["google"],
+			taskProfile: "planning",
 		});
 	});
 
@@ -159,22 +152,22 @@ describe("delegated runtime helpers", () => {
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			JSON.stringify(
 				{
+					delegatedModelSelection: {
+						allowSmallContextForSmallTasks: true,
+						disabledModels: [],
+						disabledProviders: [],
+						preferLowerUsage: true,
+						roleOverrides: {},
+					},
 					delegatedRouting: {
-						enabled: true,
 						categories: {
 							"quick-discovery": {
 								candidates: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
-								preferredProviders: ["google", "openai"],
 								preferFastModels: true,
+								preferredProviders: ["google", "openai"],
 							},
 						},
-					},
-					delegatedModelSelection: {
-						disabledProviders: [],
-						disabledModels: [],
-						preferLowerUsage: true,
-						allowSmallContextForSmallTasks: true,
-						roleOverrides: {},
+						enabled: true,
 					},
 				},
 				null,
@@ -185,21 +178,24 @@ describe("delegated runtime helpers", () => {
 		const inspection = inspectDelegatedSelection({
 			availableModels: sampleModels,
 			category: "quick-discovery",
-			defaults: { taskProfile: "planning", preferFastModels: true },
-			usage: {
-				openai: { remainingPct: 10, confidence: "estimated" },
-				google: { remainingPct: 90, confidence: "estimated" },
-			},
+			defaults: { preferFastModels: true, taskProfile: "planning" },
 			latency: {
 				"google/gemini-2.5-flash": { avgMs: 1500, count: 4 },
 				"openai/gpt-5-mini": { avgMs: 6000, count: 2 },
 			},
 			taskText: "Quickly scan the repo and summarize likely hotspots.",
+			usage: {
+				google: { confidence: "estimated", remainingPct: 90 },
+				openai: { confidence: "estimated", remainingPct: 10 },
+			},
 		});
 
 		expect(inspection.selection?.selectedModel).toBe("google/gemini-2.5-flash");
-		expect(inspection.selection?.ranked[0]?.reasons).toEqual(
-			expect.arrayContaining([expect.stringContaining("preferred-provider:1"), expect.stringContaining("measured-latency")]),
+		expect(inspection.selection?.ranked[0]?.reasons).toStrictEqual(
+			expect.arrayContaining([
+				expect.stringContaining("preferred-provider:1"),
+				expect.stringContaining("measured-latency"),
+			]),
 		);
 	});
 });

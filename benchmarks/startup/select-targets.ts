@@ -1,19 +1,19 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-type Manifest = {
+interface Manifest {
 	pi?: {
 		extensions?: string[];
 	};
-};
+}
 
-export type BenchmarkTargetReport = {
+export interface BenchmarkTargetReport {
 	mode: "all" | "selected";
 	selectedExtensions: string[];
 	selectedFocusedBenchmarkIds: string[];
 	reasons: string[];
 	changedFiles: string[];
-};
+}
 
 const ROOT = process.cwd();
 const PACKAGE_PATH = path.join(ROOT, "package.json");
@@ -39,39 +39,39 @@ const GLOBAL_PATH_PREFIXES = [
 ] as const;
 const FOCUSED_BENCHMARK_RULES = [
 	{
+		benchmarkIds: ["scheduler-runtime-context-with-store"],
 		prefixes: [
 			"packages/extensions/extensions/scheduler.ts",
 			"packages/extensions/extensions/scheduler-shared.ts",
 			"packages/extensions/extensions/scheduler-registration.ts",
 		],
-		benchmarkIds: ["scheduler-runtime-context-with-store"],
 	},
 	{
-		prefixes: [
-			"packages/extensions/extensions/custom-footer.ts",
-			"packages/extensions/extensions/custom-footer.test.ts",
-		],
 		benchmarkIds: [
 			"custom-footer-usage-scan-large-history",
 			"custom-footer-first-render",
 			"worktree-context-temp-repo",
 		],
+		prefixes: [
+			"packages/extensions/extensions/custom-footer.ts",
+			"packages/extensions/extensions/custom-footer.test.ts",
+		],
 	},
 	{
+		benchmarkIds: ["usage-tracker-session-start-near-threshold"],
 		prefixes: [
 			"packages/extensions/extensions/usage-tracker.ts",
 			"packages/extensions/extensions/usage-tracker.test.ts",
 		],
-		benchmarkIds: ["usage-tracker-session-start-near-threshold"],
 	},
 	{
+		benchmarkIds: ["worktree-context-temp-repo", "worktree-snapshot-temp-repo", "custom-footer-first-render"],
 		prefixes: [
 			"packages/extensions/extensions/worktree.ts",
 			"packages/extensions/extensions/worktree.test.ts",
 			"packages/extensions/extensions/worktree-shared.ts",
 			"packages/extensions/extensions/worktree-shared.test.ts",
 		],
-		benchmarkIds: ["worktree-context-temp-repo", "worktree-snapshot-temp-repo", "custom-footer-first-render"],
 	},
 ] as const;
 
@@ -132,7 +132,7 @@ function inferFocusedBenchmarkIds(filePath: string): string[] {
 }
 
 export async function computeBenchmarkTargets(changedFiles: string[]): Promise<BenchmarkTargetReport> {
-	const manifest = JSON.parse(await fs.readFile(PACKAGE_PATH, "utf-8")) as Manifest;
+	const manifest = JSON.parse(await fs.readFile(PACKAGE_PATH, "utf8")) as Manifest;
 	const entries = (manifest.pi?.extensions ?? []).map((entry) => toPosix(entry).replace(/^\.\//, ""));
 	const packageExtensionIds = getPackageExtensionIds(entries);
 	const selectedExtensions = new Set<string>();
@@ -159,13 +159,13 @@ export async function computeBenchmarkTargets(changedFiles: string[]): Promise<B
 	}
 
 	return {
+		changedFiles: changedFiles.map(toPosix),
 		mode,
+		reasons: Array.from(new Set(reasons)),
 		selectedExtensions:
 			mode === "all" ? Array.from(new Set(entries.map(extensionIdFromEntry))).sort() : [...selectedExtensions].sort(),
 		selectedFocusedBenchmarkIds:
 			mode === "all" ? [...ALL_FOCUSED_BENCHMARK_IDS] : [...selectedFocusedBenchmarkIds].sort(),
-		reasons: Array.from(new Set(reasons)),
-		changedFiles: changedFiles.map(toPosix),
 	};
 }
 
@@ -175,7 +175,7 @@ async function main() {
 		throw new Error("Pass a newline-delimited changed-files path as the first argument.");
 	}
 
-	const changedFiles = (await fs.readFile(path.resolve(changedFilesArg), "utf-8"))
+	const changedFiles = (await fs.readFile(path.resolve(changedFilesArg), "utf8"))
 		.split(/\r?\n/)
 		.map((line) => line.trim())
 		.filter(Boolean);

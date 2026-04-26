@@ -5,14 +5,14 @@ import type {
 	NormalizedRouteCandidate,
 	PromptRouteClassification,
 	ProviderUsageState,
+	RouteContextBreadth,
 	RouteDecision,
-	RouteTier,
-	RouteThinkingLevel,
+	RouteExpectedTurns,
 	RouteIntent,
 	RouteRisk,
-	RouteExpectedTurns,
+	RouteThinkingLevel,
+	RouteTier,
 	RouteToolIntensity,
-	RouteContextBreadth,
 } from "./types.js";
 
 /**
@@ -78,10 +78,7 @@ export interface EvaluateCorpusOptions {
 	lock?: { model: string; thinking: RouteThinkingLevel; setAt?: number };
 }
 
-export function evaluateCorpus(
-	corpus: CorpusEntry[],
-	opts: EvaluateCorpusOptions,
-): CorpusSummary {
+export function evaluateCorpus(corpus: CorpusEntry[], opts: EvaluateCorpusOptions): CorpusSummary {
 	const runs: CorpusEvaluationRun[] = [];
 	let matched = 0;
 	let mismatched = 0;
@@ -95,9 +92,9 @@ export function evaluateCorpus(
 
 		if (entry.expectedIntent !== classification.intent) {
 			mismatches.push({
-				fieldName: "intent",
-				expected: entry.expectedIntent,
 				actual: classification.intent,
+				expected: entry.expectedIntent,
+				fieldName: "intent",
 			});
 		} else {
 			intentMatches++;
@@ -105,78 +102,78 @@ export function evaluateCorpus(
 
 		if (entry.expectedComplexity !== classification.complexity) {
 			mismatches.push({
-				fieldName: "complexity",
-				expected: entry.expectedComplexity,
 				actual: classification.complexity,
+				expected: entry.expectedComplexity,
+				fieldName: "complexity",
 			});
 		}
 
 		if (entry.expectedRisk !== classification.risk) {
 			mismatches.push({
-				fieldName: "risk",
-				expected: entry.expectedRisk,
 				actual: classification.risk,
+				expected: entry.expectedRisk,
+				fieldName: "risk",
 			});
 		}
 
 		if (entry.expectedTurns !== classification.expectedTurns) {
 			mismatches.push({
-				fieldName: "expectedTurns",
-				expected: entry.expectedTurns,
 				actual: classification.expectedTurns,
+				expected: entry.expectedTurns,
+				fieldName: "expectedTurns",
 			});
 		}
 
 		if (entry.expectedToolIntensity !== classification.toolIntensity) {
 			mismatches.push({
-				fieldName: "toolIntensity",
-				expected: entry.expectedToolIntensity,
 				actual: classification.toolIntensity,
+				expected: entry.expectedToolIntensity,
+				fieldName: "toolIntensity",
 			});
 		}
 
 		if (entry.expectedContextBreadth !== classification.contextBreadth) {
 			mismatches.push({
-				fieldName: "contextBreadth",
-				expected: entry.expectedContextBreadth,
 				actual: classification.contextBreadth,
+				expected: entry.expectedContextBreadth,
+				fieldName: "contextBreadth",
 			});
 		}
 
 		if (entry.expectedTier !== classification.recommendedTier) {
 			mismatches.push({
-				fieldName: "recommendedTier",
-				expected: entry.expectedTier,
 				actual: classification.recommendedTier,
+				expected: entry.expectedTier,
+				fieldName: "recommendedTier",
 			});
 		}
 
 		if (entry.expectedThinking !== classification.recommendedThinking) {
 			mismatches.push({
-				fieldName: "recommendedThinking",
-				expected: entry.expectedThinking,
 				actual: classification.recommendedThinking,
+				expected: entry.expectedThinking,
+				fieldName: "recommendedThinking",
 			});
 		}
 
 		const decision = decideRoute({
-			config: opts.config,
 			candidates: opts.candidates,
 			classification,
-			usage: opts.usage,
+			config: opts.config,
 			currentModel: opts.currentModel,
 			currentThinking: opts.currentThinking,
 			lock: opts.lock ? { ...opts.lock, setAt: opts.lock.setAt ?? Date.now() } : undefined,
+			usage: opts.usage,
 		});
 
 		let modelMismatch: string | undefined;
 
 		if (decision) {
 			if (entry.expectedModel === decision.selectedModel) {
-				// perfect match
+				// Perfect match
 			} else {
 				if (entry.acceptableFallbacks.includes(decision.selectedModel)) {
-					// acceptable fallback – we do not count this as a mismatch for modelAccuracy
+					// Acceptable fallback – we do not count this as a mismatch for modelAccuracy
 				} else {
 					modelMismatch = decision.selectedModel;
 					modelMismatchCount++;
@@ -196,12 +193,12 @@ export function evaluateCorpus(
 		}
 
 		const run: CorpusEvaluationRun = {
-			name: entry.name,
-			prompt: entry.prompt,
 			classification,
 			decision: decision ?? undefined,
 			mismatches,
 			modelMismatch,
+			name: entry.name,
+			prompt: entry.prompt,
 		};
 
 		runs.push(run);
@@ -216,13 +213,13 @@ export function evaluateCorpus(
 	const intentAccuracy = corpus.length > 0 ? intentMatches / corpus.length : 1;
 
 	return {
-		total: corpus.length,
+		fallbackMismatchCount,
+		intentAccuracy,
 		matched,
 		mismatched,
-		intentAccuracy,
 		modelMismatchCount,
-		fallbackMismatchCount,
 		runs,
+		total: corpus.length,
 	};
 }
 
@@ -243,7 +240,7 @@ export function formatEvaluationSummary(summary: CorpusSummary): string {
 		lines.push("");
 		lines.push("Mismatched examples:");
 		for (const run of summary.runs) {
-			if (run.mismatches.length === 0 && !run.modelMismatch) continue;
+			if (run.mismatches.length === 0 && !run.modelMismatch) {continue;}
 			lines.push(`  • ${run.name}`);
 			for (const m of run.mismatches) {
 				lines.push(`    - ${m.fieldName}: expected ${String(m.expected)} — got ${String(m.actual)}`);

@@ -38,22 +38,27 @@ function parseInlineConfig(raw: string): InlineConfig {
 		const key = trimmed.slice(0, eq).trim();
 		const val = trimmed.slice(eq + 1).trim();
 		switch (key) {
-			case "output":
+			case "output": {
 				config.output = val === "false" ? false : val;
 				break;
-			case "reads":
+			}
+			case "reads": {
 				config.reads = val === "false" ? false : val.split("+").filter(Boolean);
 				break;
-			case "model":
+			}
+			case "model": {
 				config.model = val || undefined;
 				break;
+			}
 			case "skill":
-			case "skills":
+			case "skills": {
 				config.skill = val === "false" ? false : val.split("+").filter(Boolean);
 				break;
-			case "progress":
+			}
+			case "progress": {
 				config.progress = val !== "false";
 				break;
+			}
 		}
 	}
 	return config;
@@ -62,12 +67,12 @@ function parseInlineConfig(raw: string): InlineConfig {
 function parseAgentToken(token: string): { name: string; config: InlineConfig } {
 	const bracket = token.indexOf("[");
 	if (bracket === -1) {
-		return { name: token, config: {} };
+		return { config: {}, name: token };
 	}
 	const end = token.lastIndexOf("]");
 	return {
-		name: token.slice(0, bracket),
 		config: parseInlineConfig(token.slice(bracket + 1, end !== -1 ? end : undefined)),
+		name: token.slice(0, bracket),
 	};
 }
 
@@ -80,12 +85,14 @@ function extractBgFlag(args: string): { args: string; bg: boolean } {
 
 function makeAgentCompletions(getBaseCwd: () => string, multiAgent: boolean) {
 	return (prefix: string) => {
-		const agents = discoverAgents(getBaseCwd(), "both").agents;
+		const {agents} = discoverAgents(getBaseCwd(), "both");
 		if (!multiAgent) {
 			if (prefix.includes(" ")) {
 				return null;
 			}
-			return agents.filter((agent) => agent.name.startsWith(prefix)).map((agent) => ({ value: agent.name, label: agent.name }));
+			return agents
+				.filter((agent) => agent.name.startsWith(prefix))
+				.map((agent) => ({ label: agent.name, value: agent.name }));
 		}
 
 		const lastArrow = prefix.lastIndexOf(" -> ");
@@ -97,11 +104,11 @@ function makeAgentCompletions(getBaseCwd: () => string, multiAgent: boolean) {
 		const lastWord = (prefix.match(/(\S*)$/) || ["", ""])[1];
 		const beforeLastWord = prefix.slice(0, prefix.length - lastWord.length);
 		if (lastWord === "->") {
-			return agents.map((agent) => ({ value: `${prefix} ${agent.name}`, label: agent.name }));
+			return agents.map((agent) => ({ label: agent.name, value: `${prefix} ${agent.name}` }));
 		}
 		return agents
 			.filter((agent) => agent.name.startsWith(lastWord))
-			.map((agent) => ({ value: `${beforeLastWord}${agent.name}`, label: agent.name }));
+			.map((agent) => ({ label: agent.name, value: `${beforeLastWord}${agent.name}` }));
 	};
 }
 
@@ -168,15 +175,15 @@ function parseAgentArgs(
 		return null;
 	}
 
-	const agents = discoverAgents(getBaseCwd(), "both").agents;
+	const {agents} = discoverAgents(getBaseCwd(), "both");
 	for (const step of steps) {
-		if (!agents.find((agent) => agent.name === step.name)) {
+		if (!agents.some((agent) => agent.name === step.name)) {
 			ctx.ui.notify(`Unknown agent: ${step.name}`, "error");
 			return null;
 		}
 	}
 	if (command === "chain" && !steps[0]?.task && (perStep || !sharedTask)) {
-		ctx.ui.notify("First step must have a task: /chain agent \"task\" -> agent2", "error");
+		ctx.ui.notify('First step must have a task: /chain agent "task" -> agent2', "error");
 		return null;
 	}
 	if (command === "parallel" && !steps.some((step) => step.task) && !sharedTask) {
@@ -218,8 +225,8 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 				return;
 			}
 
-			const agents = discoverAgents(options.getBaseCwd(), "both").agents;
-			if (!agents.find((agent) => agent.name === agentName)) {
+			const {agents} = discoverAgents(options.getBaseCwd(), "both");
+			if (!agents.some((agent) => agent.name === agentName)) {
 				ctx.ui.notify(`Unknown agent: ${agentName}`, "error");
 				return;
 			}
@@ -228,11 +235,11 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 			if (inline.reads && Array.isArray(inline.reads) && inline.reads.length > 0) {
 				finalTask = `[Read from: ${inline.reads.join(", ")}]\n\n${finalTask}`;
 			}
-			const params: Record<string, unknown> = { agent: agentName, task: finalTask, clarify: false };
-			if (inline.output !== undefined) params.output = inline.output;
-			if (inline.skill !== undefined) params.skill = inline.skill;
-			if (inline.model) params.model = inline.model;
-			if (bg) params.async = true;
+			const params: Record<string, unknown> = { agent: agentName, clarify: false, task: finalTask };
+			if (inline.output !== undefined) {params.output = inline.output;}
+			if (inline.skill !== undefined) {params.skill = inline.skill;}
+			if (inline.model) {params.model = inline.model;}
+			if (bg) {params.async = true;}
 			sendToolCall(params);
 		},
 	});
@@ -248,15 +255,15 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 			}
 			const chain = parsed.steps.map(({ name, config, task: stepTask }, index) => ({
 				agent: name,
-				...(stepTask ? { task: stepTask } : index === 0 && parsed.task ? { task: parsed.task } : {}),
+				...(stepTask ? { task: stepTask } : (index === 0 && parsed.task ? { task: parsed.task } : {})),
 				...(config.output !== undefined ? { output: config.output } : {}),
 				...(config.reads !== undefined ? { reads: config.reads } : {}),
 				...(config.model ? { model: config.model } : {}),
 				...(config.skill !== undefined ? { skill: config.skill } : {}),
 				...(config.progress !== undefined ? { progress: config.progress } : {}),
 			}));
-			const params: Record<string, unknown> = { chain, task: parsed.task, clarify: false, agentScope: "both" };
-			if (bg) params.async = true;
+			const params: Record<string, unknown> = { agentScope: "both", chain, clarify: false, task: parsed.task };
+			if (bg) {params.async = true;}
 			pi.sendUserMessage(`Call the subagent tool with these exact parameters: ${JSON.stringify(params)}`);
 		},
 	});
@@ -284,12 +291,12 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 				...(config.progress !== undefined ? { progress: config.progress } : {}),
 			}));
 			const params: Record<string, unknown> = {
-				chain: [{ parallel: tasks }],
-				task: parsed.task,
-				clarify: false,
 				agentScope: "both",
+				chain: [{ parallel: tasks }],
+				clarify: false,
+				task: parsed.task,
 			};
-			if (bg) params.async = true;
+			if (bg) {params.async = true;}
 			pi.sendUserMessage(`Call the subagent tool with these exact parameters: ${JSON.stringify(params)}`);
 		},
 	});

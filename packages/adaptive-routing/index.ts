@@ -1,4 +1,4 @@
-/* c8 ignore file */
+/* C8 ignore file */
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { classifyPrompt } from "./classifier.js";
 import { inspectDelegatedSelection } from "./delegated-runtime.js";
@@ -27,7 +27,7 @@ import type {
 const STATUS_KEY = "adaptive-routing";
 const STARTUP_STATE_REFRESH_DELAY_MS = 250;
 
-type RuntimeState = {
+interface RuntimeState {
 	state: AdaptiveRoutingState;
 	usage?: ProviderUsageState;
 	lastDecision?: RouteDecision;
@@ -36,18 +36,18 @@ type RuntimeState = {
 	lastDecisionOverridden: boolean;
 	lastDecisionStartedAt?: number;
 	applyingRoute: boolean;
-};
+}
 
 export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 	const runtime: RuntimeState = {
+		applyingRoute: false,
+		lastDecision: undefined,
+		lastDecisionOverridden: false,
+		lastDecisionPromptHash: undefined,
+		lastDecisionStartedAt: undefined,
+		lastDecisionTurnCount: 0,
 		state: readAdaptiveRoutingState(),
 		usage: undefined,
-		lastDecision: undefined,
-		lastDecisionPromptHash: undefined,
-		lastDecisionTurnCount: 0,
-		lastDecisionOverridden: false,
-		lastDecisionStartedAt: undefined,
-		applyingRoute: false,
 	};
 
 	function persistState(): void {
@@ -79,7 +79,7 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 	}
 
 	function refreshUsageSnapshot(): void {
-		pi.events.emit("usage:query", undefined);
+		pi.events.emit("usage:query");
 	}
 
 	pi.events.on("usage:limits", (payload: unknown) => {
@@ -97,17 +97,6 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 			}
 		}
 		runtime.usage = {
-			providers,
-			sessionCost:
-				payload && typeof payload === "object" && typeof (payload as { sessionCost?: unknown }).sessionCost === "number"
-					? ((payload as { sessionCost: number }).sessionCost ?? undefined)
-					: undefined,
-			rolling30dCost:
-				payload &&
-				typeof payload === "object" &&
-				typeof (payload as { rolling30dCost?: unknown }).rolling30dCost === "number"
-					? ((payload as { rolling30dCost: number }).rolling30dCost ?? undefined)
-					: undefined,
 			perModel:
 				payload && typeof payload === "object" && typeof (payload as { perModel?: unknown }).perModel === "object"
 					? ((payload as { perModel: Record<string, unknown> }).perModel ?? undefined)
@@ -115,6 +104,17 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 			perSource:
 				payload && typeof payload === "object" && typeof (payload as { perSource?: unknown }).perSource === "object"
 					? ((payload as { perSource: Record<string, unknown> }).perSource ?? undefined)
+					: undefined,
+			providers,
+			rolling30dCost:
+				payload &&
+				typeof payload === "object" &&
+				typeof (payload as { rolling30dCost?: unknown }).rolling30dCost === "number"
+					? ((payload as { rolling30dCost: number }).rolling30dCost ?? undefined)
+					: undefined,
+			sessionCost:
+				payload && typeof payload === "object" && typeof (payload as { sessionCost?: unknown }).sessionCost === "number"
+					? ((payload as { sessionCost: number }).sessionCost ?? undefined)
 					: undefined,
 			updatedAt: Date.now(),
 		};
@@ -151,18 +151,18 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 	pi.on("model_select", async (event, ctx) => {
 		if (!runtime.applyingRoute && shouldRecordOverride(event, runtime.lastDecision)) {
 			appendTelemetryEvent(readAdaptiveRoutingConfig().telemetry, {
-				type: "route_override",
-				timestamp: Date.now(),
 				decisionId: runtime.lastDecision?.id,
 				from: {
 					model: runtime.lastDecision?.selectedModel ?? "unknown",
 					thinking: runtime.lastDecision?.selectedThinking ?? "off",
 				},
+				reason: "manual",
+				timestamp: Date.now(),
 				to: {
 					model: `${event.model.provider}/${event.model.id}`,
 					thinking: pi.getThinkingLevel() as RouteThinkingLevel,
 				},
-				reason: "manual",
+				type: "route_override",
 			});
 			runtime.lastDecisionOverridden = true;
 		}
@@ -175,15 +175,17 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 		}
 		const now = Date.now();
 		appendTelemetryEvent(readAdaptiveRoutingConfig().telemetry, {
-			type: "route_outcome",
-			timestamp: now,
-			decisionId: runtime.lastDecision.id,
-			selectedModel: runtime.lastDecision.selectedModel,
-			turnCount: runtime.lastDecisionTurnCount,
 			completed: true,
-			userOverrideOccurred: runtime.lastDecisionOverridden,
+			decisionId: runtime.lastDecision.id,
 			durationMs:
-				typeof runtime.lastDecisionStartedAt === "number" ? Math.max(0, now - runtime.lastDecisionStartedAt) : undefined,
+				typeof runtime.lastDecisionStartedAt === "number"
+					? Math.max(0, now - runtime.lastDecisionStartedAt)
+					: undefined,
+			selectedModel: runtime.lastDecision.selectedModel,
+			timestamp: now,
+			turnCount: runtime.lastDecisionTurnCount,
+			type: "route_outcome",
+			userOverrideOccurred: runtime.lastDecisionOverridden,
 		});
 		runtime.lastDecisionStartedAt = undefined;
 	});
@@ -215,13 +217,13 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 		const currentModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
 		const currentThinking = pi.getThinkingLevel() as RouteThinkingLevel;
 		const decision = decideRoute({
-			config,
 			candidates,
 			classification,
+			config,
 			currentModel,
 			currentThinking,
-			usage: runtime.usage,
 			lock: runtime.state.lock,
+			usage: runtime.usage,
 		});
 		if (!decision) {
 			ctx.ui.setStatus(STATUS_KEY, `${mode} → no route`);
@@ -238,37 +240,37 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 		persistState();
 
 		appendTelemetryEvent(config.telemetry, {
-			type: "route_decision",
-			timestamp: Date.now(),
+			candidates: decision.explanation.candidates,
+			classifier: classification,
 			decisionId: decision.id,
-			promptHash: runtime.lastDecisionPromptHash,
+			explanationCodes: decision.explanation.codes,
+			fallbacks: decision.fallbacks,
 			mode,
+			promptHash: runtime.lastDecisionPromptHash,
+			quota: decision.explanation.quota,
 			selected: {
 				model: decision.selectedModel,
 				thinking: decision.selectedThinking,
 			},
-			fallbacks: decision.fallbacks,
-			classifier: classification,
-			quota: decision.explanation.quota,
-			candidates: decision.explanation.candidates,
-			explanationCodes: decision.explanation.codes,
+			timestamp: Date.now(),
+			type: "route_decision",
 		});
 
 		if (mode === "shadow") {
 			if (currentModel && (currentModel !== decision.selectedModel || currentThinking !== decision.selectedThinking)) {
 				appendTelemetryEvent(config.telemetry, {
-					type: "route_shadow_disagreement",
-					timestamp: Date.now(),
+					actual: {
+						model: currentModel,
+						thinking: currentThinking,
+					},
 					decisionId: decision.id,
 					promptHash: runtime.lastDecisionPromptHash,
 					suggested: {
 						model: decision.selectedModel,
 						thinking: decision.selectedThinking,
 					},
-					actual: {
-						model: currentModel,
-						thinking: currentThinking,
-					},
+					timestamp: Date.now(),
+					type: "route_shadow_disagreement",
 				});
 			}
 			ctx.ui.notify(`Adaptive route suggestion: ${decision.selectedModel} · ${decision.selectedThinking}`, "info");
@@ -291,24 +293,27 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 
 			switch (subcommand) {
 				case "on":
-				case "auto":
+				case "auto": {
 					runtime.state.mode = "auto";
 					persistState();
 					updateStatus(ctx);
 					ctx.ui.notify("Adaptive routing set to auto mode.", "info");
 					return;
-				case "off":
+				}
+				case "off": {
 					runtime.state.mode = "off";
 					persistState();
 					updateStatus(ctx);
 					ctx.ui.notify("Adaptive routing disabled.", "warning");
 					return;
-				case "shadow":
+				}
+				case "shadow": {
 					runtime.state.mode = "shadow";
 					persistState();
 					updateStatus(ctx);
 					ctx.ui.notify("Adaptive routing set to shadow mode.", "info");
 					return;
+				}
 				case "lock": {
 					if (!ctx.model) {
 						ctx.ui.notify("No active model to lock.", "warning");
@@ -316,8 +321,8 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 					}
 					runtime.state.lock = {
 						model: `${ctx.model.provider}/${ctx.model.id}`,
-						thinking: pi.getThinkingLevel() as RouteThinkingLevel,
 						setAt: Date.now(),
+						thinking: pi.getThinkingLevel() as RouteThinkingLevel,
 					};
 					persistState();
 					updateStatus(ctx);
@@ -327,18 +332,20 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 					);
 					return;
 				}
-				case "unlock":
+				case "unlock": {
 					runtime.state.lock = undefined;
 					persistState();
 					updateStatus(ctx);
 					ctx.ui.notify("Adaptive routing lock cleared.", "info");
 					return;
-				case "refresh":
+				}
+				case "refresh": {
 					refreshUsageSnapshot();
 					runtime.state = readAdaptiveRoutingState();
 					ctx.ui.notify("Adaptive routing config and usage refreshed.", "info");
 					updateStatus(ctx);
 					return;
+				}
 				case "feedback": {
 					const category = normalizeFeedbackCategory(rest[0]);
 					if (!category) {
@@ -355,42 +362,55 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 					ctx.ui.notify(`Recorded route feedback: ${category}.`, "info");
 					return;
 				}
-				case "stats":
+				case "stats": {
 					await openOverlay(ctx, formatStats(computeStats(readTelemetryEvents())));
 					return;
+				}
 				case "assignments":
-				case "delegated":
+				case "delegated": {
 					await openOverlay(ctx, buildDelegatedAssignmentLines(readAdaptiveRoutingConfig(), ctx, runtime.usage));
 					return;
-				case "why":
+				}
+				case "why": {
 					await openOverlay(ctx, buildDelegatedWhyLines(readAdaptiveRoutingConfig(), ctx, rest));
 					return;
-				case "explain":
+				}
+				case "explain": {
 					await openOverlay(ctx, buildExplanationLines(runtime.lastDecision, runtime.usage));
 					return;
-				default:
+				}
+				default: {
 					ctx.ui.notify(buildStatusLine(runtime.state, runtime.lastDecision, getEffectiveMode()), "info");
+				}
 			}
 		},
 	};
 
 	pi.registerCommand("route", routeCommand);
 
-	const routeAliases: Array<{ name: string; subcommand: string; description: string }> = [
-		{ name: "route:status", subcommand: "status", description: "Show the current adaptive routing status." },
-		{ name: "route:on", subcommand: "on", description: "Enable adaptive routing auto mode." },
-		{ name: "route:auto", subcommand: "auto", description: "Enable adaptive routing auto mode." },
-		{ name: "route:off", subcommand: "off", description: "Disable adaptive routing." },
-		{ name: "route:shadow", subcommand: "shadow", description: "Suggest route decisions without changing the active model." },
-		{ name: "route:explain", subcommand: "explain", description: "Explain the latest adaptive route decision." },
-		{ name: "route:assignments", subcommand: "assignments", description: "Show delegated routing assignments." },
-		{ name: "route:delegated", subcommand: "delegated", description: "Show delegated routing assignments." },
-		{ name: "route:why", subcommand: "why", description: "Inspect why a delegated model was chosen." },
-		{ name: "route:lock", subcommand: "lock", description: "Lock routing to the current model and thinking level." },
-		{ name: "route:unlock", subcommand: "unlock", description: "Clear the adaptive routing lock." },
-		{ name: "route:refresh", subcommand: "refresh", description: "Refresh routing config and usage snapshots." },
-		{ name: "route:feedback", subcommand: "feedback", description: "Record feedback for the last adaptive routing decision." },
-		{ name: "route:stats", subcommand: "stats", description: "Show adaptive routing telemetry stats." },
+	const routeAliases: { name: string; subcommand: string; description: string }[] = [
+		{ description: "Show the current adaptive routing status.", name: "route:status", subcommand: "status" },
+		{ description: "Enable adaptive routing auto mode.", name: "route:on", subcommand: "on" },
+		{ description: "Enable adaptive routing auto mode.", name: "route:auto", subcommand: "auto" },
+		{ description: "Disable adaptive routing.", name: "route:off", subcommand: "off" },
+		{
+			description: "Suggest route decisions without changing the active model.",
+			name: "route:shadow",
+			subcommand: "shadow",
+		},
+		{ description: "Explain the latest adaptive route decision.", name: "route:explain", subcommand: "explain" },
+		{ description: "Show delegated routing assignments.", name: "route:assignments", subcommand: "assignments" },
+		{ description: "Show delegated routing assignments.", name: "route:delegated", subcommand: "delegated" },
+		{ description: "Inspect why a delegated model was chosen.", name: "route:why", subcommand: "why" },
+		{ description: "Lock routing to the current model and thinking level.", name: "route:lock", subcommand: "lock" },
+		{ description: "Clear the adaptive routing lock.", name: "route:unlock", subcommand: "unlock" },
+		{ description: "Refresh routing config and usage snapshots.", name: "route:refresh", subcommand: "refresh" },
+		{
+			description: "Record feedback for the last adaptive routing decision.",
+			name: "route:feedback",
+			subcommand: "feedback",
+		},
+		{ description: "Show adaptive routing telemetry stats.", name: "route:stats", subcommand: "stats" },
 	];
 
 	for (const alias of routeAliases) {
@@ -490,10 +510,12 @@ function normalizeFeedbackCategory(value: string | undefined): RouteFeedbackCate
 		case "overkill":
 		case "underpowered":
 		case "wrong-provider":
-		case "wrong-thinking":
+		case "wrong-thinking": {
 			return value?.toLowerCase() as RouteFeedbackCategory;
-		default:
+		}
+		default: {
 			return undefined;
+		}
 	}
 }
 
@@ -561,18 +583,18 @@ function buildDelegatedAssignmentLines(
 		return lines;
 	}
 	const availableModels = ctx.modelRegistry.getAvailable().map((model) => ({
-		provider: model.provider,
-		id: model.id,
 		fullId: `${model.provider}/${model.id}`,
+		id: model.id,
 		name: model.name,
+		provider: model.provider,
 	}));
 	const categoryEntries = Object.entries(delegated.categories);
 	if (categoryEntries.length === 0) {
 		lines.push("No delegated categories configured.");
 		return lines;
 	}
-	const disabledProviders = config.delegatedModelSelection.disabledProviders;
-	const disabledModels = config.delegatedModelSelection.disabledModels;
+	const {disabledProviders} = config.delegatedModelSelection;
+	const {disabledModels} = config.delegatedModelSelection;
 	if (disabledProviders.length > 0) {
 		lines.push(`Disabled providers: ${disabledProviders.join(", ")}`);
 	}
@@ -580,7 +602,7 @@ function buildDelegatedAssignmentLines(
 		lines.push(`Disabled models: ${disabledModels.join(", ")}`);
 	}
 	for (const [category, policy] of categoryEntries) {
-		const resolvedModel = resolveDelegatedAssignmentModel({ category, policy, config, availableModels });
+		const resolvedModel = resolveDelegatedAssignmentModel({ availableModels, category, config, policy });
 		lines.push(`- ${category}`);
 		if (policy.preferredProviders?.length) {
 			lines.push(`  providers: ${policy.preferredProviders.join(" → ")}`);
@@ -612,16 +634,16 @@ function buildDelegatedAssignmentLines(
 		lines.push("Role overrides:");
 		for (const [role, override] of roleOverrides) {
 			const resolvedModel = resolveDelegatedAssignmentModel({
+				availableModels,
 				category: undefined,
+				config,
+				override,
 				policy: {
 					candidates: override.candidateModels,
-					preferredProviders: override.preferredProviders,
-					fallbackGroup: undefined,
 					defaultThinking: undefined,
+					fallbackGroup: undefined,
+					preferredProviders: override.preferredProviders,
 				},
-				config,
-				availableModels,
-				override,
 			});
 			lines.push(`- ${role}`);
 			if (override.preferredModels?.length) {
@@ -663,15 +685,15 @@ function buildDelegatedWhyLines(
 	}
 
 	const availableModels = ctx.modelRegistry.getAvailable().map((model) => ({
-		provider: model.provider,
-		id: model.id,
-		fullId: `${model.provider}/${model.id}`,
-		name: model.name,
-		reasoning: model.reasoning,
-		input: model.input,
 		contextWindow: model.contextWindow,
-		maxTokens: model.maxTokens,
 		cost: model.cost,
+		fullId: `${model.provider}/${model.id}`,
+		id: model.id,
+		input: model.input,
+		maxTokens: model.maxTokens,
+		name: model.name,
+		provider: model.provider,
+		reasoning: model.reasoning,
 	}));
 	const taskText = args.slice(1).join(" ").trim() || undefined;
 	const categoryPolicy = config.delegatedRouting.categories[target];
@@ -682,19 +704,20 @@ function buildDelegatedWhyLines(
 	}
 
 	const inspection = inspectDelegatedSelection({
-		config,
 		availableModels,
 		category: categoryPolicy ? target : undefined,
-		roleKeys: roleOverride ? [target] : undefined,
+		config,
 		defaults: {
-			taskProfile: categoryPolicy?.taskProfile ?? roleOverride?.taskProfile ?? "all",
-			preferFastModels: categoryPolicy?.preferFastModels ?? roleOverride?.preferFastModels ?? target === "quick-discovery",
-			minContextWindow: categoryPolicy?.minContextWindow ?? roleOverride?.minContextWindow,
 			allowSmallContextForSmallTasks:
 				categoryPolicy?.allowSmallContextForSmallTasks ??
 				roleOverride?.allowSmallContextForSmallTasks ??
 				config.delegatedModelSelection.allowSmallContextForSmallTasks,
+			minContextWindow: categoryPolicy?.minContextWindow ?? roleOverride?.minContextWindow,
+			preferFastModels:
+				categoryPolicy?.preferFastModels ?? roleOverride?.preferFastModels ?? target === "quick-discovery",
+			taskProfile: categoryPolicy?.taskProfile ?? roleOverride?.taskProfile ?? "all",
 		},
+		roleKeys: roleOverride ? [target] : undefined,
 		taskText,
 	});
 
@@ -744,7 +767,7 @@ export function resolveDelegatedAssignmentModel(params: {
 	category?: string;
 	policy: NonNullable<ReturnType<typeof readAdaptiveRoutingConfig>["delegatedRouting"]["categories"][string]>;
 	config: ReturnType<typeof readAdaptiveRoutingConfig>;
-	availableModels: Array<{ provider: string; id: string; fullId: string; name: string }>;
+	availableModels: { provider: string; id: string; fullId: string; name: string }[];
 	override?: ReturnType<typeof readAdaptiveRoutingConfig>["delegatedModelSelection"]["roleOverrides"][string];
 }): string | undefined {
 	const { category, policy, config, availableModels, override } = params;
@@ -753,9 +776,7 @@ export function resolveDelegatedAssignmentModel(params: {
 		...(override?.blockedProviders ?? []),
 	]);
 	const blockedModels = new Set([...config.delegatedModelSelection.disabledModels, ...(override?.blockedModels ?? [])]);
-	const unblockedModels = availableModels.filter((model) => {
-		return !blockedProviders.has(model.provider) && !blockedModels.has(model.fullId) && !blockedModels.has(model.id);
-	});
+	const unblockedModels = availableModels.filter((model) => !blockedProviders.has(model.provider) && !blockedModels.has(model.fullId) && !blockedModels.has(model.id));
 	for (const ref of override?.preferredModels ?? []) {
 		const match = ref.endsWith("/<best-available>")
 			? unblockedModels.find((model) => model.provider === ref.slice(0, ref.indexOf("/")))
@@ -783,7 +804,7 @@ export function resolveDelegatedAssignmentModel(params: {
 			return match.fullId;
 		}
 	}
-	/* c8 ignore next 5 */
+	/* C8 ignore next 5 */
 	let cheapFallback: { provider: string; id: string; fullId: string; name: string } | undefined;
 	if (category === "quick-discovery") {
 		cheapFallback = unblockedModels.find((model) => model.provider === "groq");
@@ -797,11 +818,8 @@ export function resolveDelegatedAssignmentModel(params: {
 async function openOverlay(ctx: ExtensionCommandContext, lines: string[]): Promise<void> {
 	await ctx.ui.custom(
 		(tui, _theme, _keybindings, done) => ({
-			invalidate() {
-				// No-op overlay invalidation.
-			},
-			render(width: number) {
-				return lines.map((line) => line.slice(0, width));
+			dispose() {
+				// No-op overlay cleanup.
 			},
 			handleInput(data: string) {
 				if (data === "q" || data === "\x1b" || data === " " || data === "\r") {
@@ -812,10 +830,13 @@ async function openOverlay(ctx: ExtensionCommandContext, lines: string[]): Promi
 					tui.requestRender();
 				}
 			},
-			dispose() {
-				// No-op overlay cleanup.
+			invalidate() {
+				// No-op overlay invalidation.
+			},
+			render(width: number) {
+				return lines.map((line) => line.slice(0, width));
 			},
 		}),
-		{ overlay: true, overlayOptions: { anchor: "center", width: 96, maxHeight: 28 } },
+		{ overlay: true, overlayOptions: { anchor: "center", maxHeight: 28, width: 96 } },
 	);
 }

@@ -20,19 +20,19 @@ export function preprocessMultimodalTask(task: Task): MultimodalIngestionReport 
 		const lower = file.toLowerCase();
 		const imageExt = [...IMAGE_EXTENSIONS].find((ext) => lower.endsWith(ext));
 		if (imageExt) {
-			artifacts.push({ path: file, kind: "image" });
+			artifacts.push({ kind: "image", path: file });
 			continue;
 		}
 		const videoExt = [...VIDEO_EXTENSIONS].find((ext) => lower.endsWith(ext));
 		if (videoExt) {
-			artifacts.push({ path: file, kind: "video" });
+			artifacts.push({ kind: "video", path: file });
 		}
 	}
 
 	if (artifacts.length === 0) {
 		return {
-			hasMultimodalInput: false,
 			artifacts,
+			hasMultimodalInput: false,
 			summary: "No image/video artifacts detected.",
 		};
 	}
@@ -40,8 +40,8 @@ export function preprocessMultimodalTask(task: Task): MultimodalIngestionReport 
 	const imageCount = artifacts.filter((a) => a.kind === "image").length;
 	const videoCount = artifacts.filter((a) => a.kind === "video").length;
 	return {
-		hasMultimodalInput: true,
 		artifacts,
+		hasMultimodalInput: true,
 		summary: `Detected multimodal artifacts: ${imageCount} image(s), ${videoCount} video(s).`,
 	};
 }

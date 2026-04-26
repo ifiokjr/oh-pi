@@ -12,24 +12,20 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import type { AgentConfig } from "./agents.js";
 import { applyThinkingSuffix } from "./execution.js";
 import { injectSingleOutputInstruction, resolveSingleOutputPath } from "./single-output.js";
-import {
-	isParallelStep,
-	resolveStepBehavior,
-	type ChainStep,
-	type ParallelStep,
-	type SequentialStep,
-	type StepOverrides,
-} from "./settings.js";
+import { isParallelStep, resolveStepBehavior } from './settings.js';
+import type { ChainStep, ParallelStep, SequentialStep, StepOverrides } from './settings.js';
 import type { RunnerStep } from "./parallel-utils.js";
 import { resolvePiPackageRoot } from "./pi-spawn.js";
 import { buildSkillInjection, normalizeSkillInput, resolveSkills } from "./skills.js";
-import { type ArtifactConfig, type Details, type MaxOutputConfig, ASYNC_DIR, RESULTS_DIR } from "./types.js";
-import { resolveSubagentModelResolution, type AvailableModelRef } from "./model-routing.js";
+import { ASYNC_DIR, RESULTS_DIR } from './types.js';
+import type { ArtifactConfig, Details, MaxOutputConfig } from './types.js';
+import { resolveSubagentModelResolution } from './model-routing.js';
+import type { AvailableModelRef } from './model-routing.js';
 
 const require = createRequire(import.meta.url);
 const piPackageRoot = resolvePiPackageRoot();
 const jitiCliPath: string | undefined = (() => {
-	const candidates: Array<() => string> = [
+	const candidates: (() => string)[] = [
 		() => path.join(path.dirname(require.resolve("jiti/package.json")), "lib/jiti-cli.mjs"),
 		() => path.join(path.dirname(require.resolve("@mariozechner/jiti/package.json")), "lib/jiti-cli.mjs"),
 		() => {
@@ -41,10 +37,10 @@ const jitiCliPath: string | undefined = (() => {
 	for (const candidate of candidates) {
 		try {
 			const p = candidate();
-			if (fs.existsSync(p)) return p;
+			if (fs.existsSync(p)) {return p;}
 		} catch {}
 	}
-	return undefined;
+	return;
 })();
 
 export interface AsyncExecutionContext {
@@ -84,7 +80,7 @@ export interface AsyncSingleParams {
 }
 
 export interface AsyncExecutionResult {
-	content: Array<{ type: "text"; text: string }>;
+	content: { type: "text"; text: string }[];
 	details: Details;
 	isError?: boolean;
 }
@@ -100,12 +96,12 @@ export function isAsyncAvailable(): boolean {
  * Spawn the async runner process
  */
 function spawnRunner(cfg: object, suffix: string, cwd: string): number | undefined {
-	if (!jitiCliPath) return undefined;
+	if (!jitiCliPath) {return undefined;}
 
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `pi-async-cfg-`));
 	const cfgPath = path.join(tmpDir, `${suffix}.json`);
 	fs.writeFileSync(cfgPath, JSON.stringify(cfg), { mode: 0o600 });
-	const runner = path.join(path.dirname(fileURLToPath(import.meta.url)), "subagent-runner.ts");
+	const runner = path.join(import.meta.dirname, "subagent-runner.ts");
 
 	const proc = spawn("node", [jitiCliPath, runner, cfgPath], {
 		cwd,
@@ -128,11 +124,11 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 	for (const s of chain) {
 		const stepAgents = isParallelStep(s) ? s.parallel.map((t) => t.agent) : [(s as SequentialStep).agent];
 		for (const agentName of stepAgents) {
-			if (!agents.find((x) => x.name === agentName)) {
+			if (!agents.some((x) => x.name === agentName)) {
 				return {
 					content: [{ type: "text", text: `Unknown agent: ${agentName}` }],
-					isError: true,
 					details: { mode: "chain" as const, results: [] },
+					isError: true,
 				};
 			}
 		}
@@ -163,30 +159,32 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 		const outputPath = resolveSingleOutputPath(s.output, ctx.cwd, s.cwd ?? cwd);
 		const task = injectSingleOutputInstruction(s.task ?? "{previous}", outputPath);
 
-		let modelResolution = resolveSubagentModelResolution(a, ctx.availableModels ?? [], s.model, {
+		const modelResolution = resolveSubagentModelResolution(a, ctx.availableModels ?? [], s.model, {
 			currentModel: ctx.currentModel,
 			taskText: s.task,
 		});
 
 		return {
 			agent: s.agent,
-			task,
 			cwd: s.cwd,
-			model: applyThinkingSuffix(modelResolution.model, a.thinking),
-			tools: a.tools,
 			extensions: a.extensions,
 			mcpDirectTools: a.mcpDirectTools,
-			systemPrompt,
-			skills: resolvedSkills.map((r) => r.name),
+			model: applyThinkingSuffix(modelResolution.model, a.thinking),
 			outputPath,
+			skills: resolvedSkills.map((r) => r.name),
+			systemPrompt,
+			task,
+			tools: a.tools,
 		};
 	};
 
 	// Build runner steps — sequential steps become flat objects,
-	// parallel steps become { parallel: [...], concurrency?, failFast? }
+	// Parallel steps become { parallel: [...], concurrency?, failFast? }
 	const steps: RunnerStep[] = chain.map((s) => {
 		if (isParallelStep(s)) {
 			return {
+				concurrency: s.concurrency,
+				failFast: s.failFast,
 				parallel: s.parallel.map((t) =>
 					buildSeqStep({
 						agent: t.agent,
@@ -197,8 +195,6 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 						output: t.output,
 					}),
 				),
-				concurrency: s.concurrency,
-				failFast: s.failFast,
 			};
 		}
 		return buildSeqStep(s as SequentialStep);
@@ -207,19 +203,19 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 	const runnerCwd = cwd ?? ctx.cwd;
 	const pid = spawnRunner(
 		{
-			id,
-			steps,
-			resultPath: path.join(RESULTS_DIR, `${id}.json`),
-			cwd: runnerCwd,
-			placeholder: "{previous}",
-			maxOutput,
-			artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
 			artifactConfig,
-			share: shareEnabled,
-			sessionDir: sessionRoot ? path.join(sessionRoot, `async-${id}`) : undefined,
+			artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
 			asyncDir,
-			sessionId: ctx.currentSessionId,
+			cwd: runnerCwd,
+			id,
+			maxOutput,
 			piPackageRoot,
+			placeholder: "{previous}",
+			resultPath: path.join(RESULTS_DIR, `${id}.json`),
+			sessionDir: sessionRoot ? path.join(sessionRoot, `async-${id}`) : undefined,
+			sessionId: ctx.currentSessionId,
+			share: shareEnabled,
+			steps,
 		},
 		id,
 		runnerCwd,
@@ -231,17 +227,17 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 			? firstStep.parallel.map((t) => t.agent)
 			: [(firstStep as SequentialStep).agent];
 		ctx.pi.events.emit("subagent:started", {
-			id,
-			pid,
 			agent: firstAgents[0],
-			task: isParallelStep(firstStep)
-				? firstStep.parallel[0]?.task?.slice(0, 50)
-				: (firstStep as SequentialStep).task?.slice(0, 50),
+			asyncDir,
 			chain: chain.map((s) =>
 				isParallelStep(s) ? `[${s.parallel.map((t) => t.agent).join("+")}]` : (s as SequentialStep).agent,
 			),
 			cwd: runnerCwd,
-			asyncDir,
+			id,
+			pid,
+			task: isParallelStep(firstStep)
+				? firstStep.parallel[0]?.task?.slice(0, 50)
+				: (firstStep as SequentialStep).task?.slice(0, 50),
 		});
 	}
 
@@ -251,8 +247,8 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 		.join(" -> ");
 
 	return {
-		content: [{ type: "text", text: `Async chain: ${chainDesc} [${id}]` }],
-		details: { mode: "chain", results: [], asyncId: id, asyncDir },
+		content: [{ text: `Async chain: ${chainDesc} [${id}]`, type: "text" }],
+		details: { asyncDir, asyncId: id, mode: "chain", results: [] },
 	};
 }
 
@@ -278,13 +274,24 @@ export function executeAsyncSingle(id: string, params: AsyncSingleParams): Async
 	const runnerCwd = cwd ?? ctx.cwd;
 	const outputPath = resolveSingleOutputPath(params.output, ctx.cwd, cwd);
 	const taskWithOutputInstruction = injectSingleOutputInstruction(task, outputPath);
-	let modelResolution = resolveSubagentModelResolution(agentConfig, ctx.availableModels ?? [], undefined, {
+	const modelResolution = resolveSubagentModelResolution(agentConfig, ctx.availableModels ?? [], undefined, {
 		currentModel: ctx.currentModel,
 		taskText: params.task,
 	});
 	const pid = spawnRunner(
 		{
+			artifactConfig,
+			artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
+			asyncDir,
+			cwd: runnerCwd,
 			id,
+			maxOutput,
+			piPackageRoot,
+			placeholder: "{previous}",
+			resultPath: path.join(RESULTS_DIR, `${id}.json`),
+			sessionDir: sessionRoot ? path.join(sessionRoot, `async-${id}`) : undefined,
+			sessionId: ctx.currentSessionId,
+			share: shareEnabled,
 			steps: [
 				{
 					agent,
@@ -299,17 +306,6 @@ export function executeAsyncSingle(id: string, params: AsyncSingleParams): Async
 					outputPath,
 				},
 			],
-			resultPath: path.join(RESULTS_DIR, `${id}.json`),
-			cwd: runnerCwd,
-			placeholder: "{previous}",
-			maxOutput,
-			artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
-			artifactConfig,
-			share: shareEnabled,
-			sessionDir: sessionRoot ? path.join(sessionRoot, `async-${id}`) : undefined,
-			asyncDir,
-			sessionId: ctx.currentSessionId,
-			piPackageRoot,
 		},
 		id,
 		runnerCwd,
@@ -317,17 +313,17 @@ export function executeAsyncSingle(id: string, params: AsyncSingleParams): Async
 
 	if (pid) {
 		ctx.pi.events.emit("subagent:started", {
+			agent,
+			asyncDir,
+			cwd: runnerCwd,
 			id,
 			pid,
-			agent,
 			task: task?.slice(0, 50),
-			cwd: runnerCwd,
-			asyncDir,
 		});
 	}
 
 	return {
-		content: [{ type: "text", text: `Async: ${agent} [${id}]` }],
-		details: { mode: "single", results: [], asyncId: id, asyncDir },
+		content: [{ text: `Async: ${agent} [${id}]`, type: "text" }],
+		details: { asyncDir, asyncId: id, mode: "single", results: [] },
 	};
 }

@@ -1,14 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@ifi/pi-extension-subagents/execution.ts", () => ({
+
+vi.mock<typeof import('@ifi/pi-extension-subagents/execution.ts')>(import('@ifi/pi-extension-subagents/execution.ts'), () => ({
 	runSync: vi.fn(),
 }));
 
-vi.mock("@ifi/pi-extension-subagents/utils.ts", () => ({
+vi.mock<typeof import('@ifi/pi-extension-subagents/utils.ts')>(import('@ifi/pi-extension-subagents/utils.ts'), () => ({
 	getFinalOutput: vi.fn(),
 }));
 
-vi.mock("@ifi/pi-shared-qna", () => ({
+vi.mock<typeof import('@ifi/pi-shared-qna')>(import('@ifi/pi-shared-qna'), () => ({
 	requirePiTuiModule: () => ({
 		Text: class Text {
 			constructor(
@@ -30,11 +30,11 @@ type MockGetFinalOutput = typeof getFinalOutput & ReturnType<typeof vi.fn>;
 function makeSingleResult(exitCode: number, error?: string) {
 	return {
 		agent: "plan-researcher",
-		task: "Task",
+		error,
 		exitCode,
 		messages: [],
-		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
-		error,
+		task: "Task",
+		usage: { cacheRead: 0, cacheWrite: 0, cost: 0, input: 0, output: 0, turns: 0 },
 	};
 }
 
@@ -49,8 +49,8 @@ function registerTools(getState = () => ({ active: true }), activeTools?: string
 		} as any,
 		{
 			getState,
-			taskAgentsSchema: {},
 			steerTaskAgentSchema: {},
+			taskAgentsSchema: {},
 		},
 	);
 	return tools;
@@ -60,7 +60,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 });
 
-describe("normalizeTaskAgentTasks", () => {
+describe(normalizeTaskAgentTasks, () => {
 	it("sanitizes and deduplicates task ids", () => {
 		const normalized = normalizeTaskAgentTasks([
 			{ id: "Auth Scan", prompt: "Inspect auth" },
@@ -68,38 +68,38 @@ describe("normalizeTaskAgentTasks", () => {
 			{ prompt: "Inspect docs" },
 		]);
 
-		expect(normalized.map((task) => task.id)).toEqual(["auth-scan", "auth-scan-2", "task-3"]);
+		expect(normalized.map((task) => task.id)).toStrictEqual(["auth-scan", "auth-scan-2", "task-3"]);
 	});
 });
 
-describe("buildTaskAgentRunDetails", () => {
+describe(buildTaskAgentRunDetails, () => {
 	it("counts successful tasks", () => {
 		const details = buildTaskAgentRunDetails("run-1", [
 			{
-				taskId: "task-1",
-				task: "One",
+				activities: [],
 				cwd: "/tmp",
+				exitCode: 0,
+				finishedAt: 2,
 				output: "ok",
 				references: [],
-				exitCode: 0,
-				stderr: "",
-				activities: [],
 				startedAt: 1,
-				finishedAt: 2,
+				stderr: "",
 				steeringNotes: [],
+				task: "One",
+				taskId: "task-1",
 			},
 			{
-				taskId: "task-2",
-				task: "Two",
+				activities: [],
 				cwd: "/tmp",
+				exitCode: 1,
+				finishedAt: 2,
 				output: "",
 				references: [],
-				exitCode: 1,
-				stderr: "failed",
-				activities: [],
 				startedAt: 1,
-				finishedAt: 2,
+				stderr: "failed",
 				steeringNotes: [],
+				task: "Two",
+				taskId: "task-2",
 			},
 		]);
 
@@ -111,7 +111,7 @@ describe("buildTaskAgentRunDetails", () => {
 describe("task agent tool registration", () => {
 	it("registers both planning task tools", () => {
 		const tools = registerTools();
-		expect(Array.from(tools.keys()).sort()).toEqual(["steer_task_agent", "task_agents"]);
+		expect([...tools.keys()].toSorted()).toStrictEqual(["steer_task_agent", "task_agents"]);
 	});
 
 	it("renders compact call previews for task agent batches", () => {
@@ -149,7 +149,7 @@ describe("task agent tool registration", () => {
 			{ cwd: "/repo" },
 		);
 
-		expect(result.isError).toBe(true);
+		expect(result.isError).toBeTruthy();
 		expect(result.content[0]?.text).toContain("only available while plan mode is active");
 	});
 });
@@ -159,10 +159,10 @@ describe("task_agents tool", () => {
 		const tools = registerTools();
 		const taskAgentsTool = tools.get("task_agents");
 		const result = {
+			content: [{ type: "text", text: "progress" }],
 			details: {
-				runId: "run-1",
 				completed: 1,
-				total: 5,
+				runId: "run-1",
 				tasks: [
 					{
 						taskId: "a",
@@ -176,8 +176,8 @@ describe("task_agents tool", () => {
 					{ taskId: "d", prompt: "Inspect ui", status: "queued", activityCount: 0 },
 					{ taskId: "e", prompt: "Inspect build", status: "queued", activityCount: 0 },
 				],
+				total: 5,
 			},
-			content: [{ type: "text", text: "progress" }],
 		};
 
 		const compact = taskAgentsTool.renderResult(
@@ -214,18 +214,18 @@ describe("task_agents tool", () => {
 		const result = await taskAgentsTool.execute(
 			"call-1",
 			{
+				concurrency: 2,
 				tasks: [
 					{ id: "task-a", prompt: "Inspect auth", cwd: "/repo" },
 					{ id: "task-b", prompt: "Inspect docs", cwd: "/repo/docs" },
 				],
-				concurrency: 2,
 			},
 			undefined,
 			undefined,
 			{ cwd: "/repo" },
 		);
 
-		expect(result.isError).toBe(false);
+		expect(result.isError).toBeFalsy();
 		expect(runSync).toHaveBeenCalledTimes(2);
 		expect((runSync as MockRunSync).mock.calls[0]?.[2]).toBe("plan-researcher");
 		expect((runSync as MockRunSync).mock.calls[0]?.[3]).toContain("Task ID: task-a");
@@ -242,10 +242,10 @@ describe("task_agents tool", () => {
 		const taskAgentsTool = tools.get("task_agents");
 		const detailed = taskAgentsTool.renderResult(
 			{
+				content: [{ type: "text", text: "done" }],
 				details: {
 					runId: "run-2",
 					successCount: 1,
-					totalCount: 2,
 					tasks: [
 						{
 							taskId: "auth",
@@ -274,8 +274,8 @@ describe("task_agents tool", () => {
 							steeringNotes: [],
 						},
 					],
+					totalCount: 2,
 				},
-				content: [{ type: "text", text: "done" }],
 			},
 			{ expanded: true, isPartial: false },
 			{ bold: (text: string) => text, fg: (_tone: string, text: string) => text },
@@ -288,7 +288,7 @@ describe("task_agents tool", () => {
 		expect(detailed.text).toContain("Ctrl+O to collapse.");
 
 		const fallback = taskAgentsTool.renderResult(
-			{ details: undefined, content: [{ type: "text", text: "plain fallback" }] },
+			{ content: [{ type: "text", text: "plain fallback" }], details: undefined },
 			{ expanded: false, isPartial: false },
 			{ bold: (text: string) => text, fg: (_tone: string, text: string) => text },
 		);
@@ -306,15 +306,15 @@ describe("task_agents tool", () => {
 		const result = await taskAgentsTool.execute(
 			"call-1",
 			{
-				tasks: [{ prompt: "Inspect auth" }, { prompt: "Inspect docs" }],
 				concurrency: 2,
+				tasks: [{ prompt: "Inspect auth" }, { prompt: "Inspect docs" }],
 			},
 			undefined,
 			undefined,
 			{ cwd: "/repo" },
 		);
 
-		expect(result.isError).toBe(true);
+		expect(result.isError).toBeTruthy();
 		expect(result.details.successCount).toBe(1);
 		expect(result.details.tasks[1]?.stderr).toBe("failed to inspect");
 	});
@@ -325,7 +325,7 @@ describe("steer_task_agent", () => {
 		const tools = registerTools();
 		const steerTaskAgentTool = tools.get("steer_task_agent");
 		const rendered = steerTaskAgentTool.renderCall(
-			{ runId: "run-1", taskId: "auth", instruction: "Focus carefully on middleware ordering and auth regressions" },
+			{ instruction: "Focus carefully on middleware ordering and auth regressions", runId: "run-1", taskId: "auth" },
 			{ bold: (text: string) => text, fg: (_tone: string, text: string) => text },
 		);
 
@@ -338,7 +338,7 @@ describe("steer_task_agent", () => {
 		const steerTaskAgentTool = tools.get("steer_task_agent");
 		const result = await steerTaskAgentTool.execute(
 			"call-1",
-			{ runId: "x", taskId: "y", instruction: "z" },
+			{ instruction: "z", runId: "x", taskId: "y" },
 			undefined,
 			undefined,
 			{
@@ -346,7 +346,7 @@ describe("steer_task_agent", () => {
 			},
 		);
 
-		expect(result.isError).toBe(true);
+		expect(result.isError).toBeTruthy();
 		expect(result.content[0]?.text).toContain("steer_task_agent is only available while plan mode is active");
 	});
 
@@ -359,7 +359,7 @@ describe("steer_task_agent", () => {
 
 		const firstRun = await taskAgentsTool.execute(
 			"call-1",
-			{ tasks: [{ id: "auth-scan", prompt: "Inspect auth" }], concurrency: 1 },
+			{ concurrency: 1, tasks: [{ id: "auth-scan", prompt: "Inspect auth" }] },
 			undefined,
 			undefined,
 			{ cwd: "/repo" },
@@ -367,32 +367,32 @@ describe("steer_task_agent", () => {
 
 		const missingArgs = await steerTaskAgentTool.execute(
 			"call-2",
-			{ runId: "", taskId: "", instruction: "" },
+			{ instruction: "", runId: "", taskId: "" },
 			undefined,
 			undefined,
 			{ cwd: "/repo" },
 		);
-		expect(missingArgs.isError).toBe(true);
+		expect(missingArgs.isError).toBeTruthy();
 		expect(missingArgs.content[0]?.text).toContain("runId, taskId, and instruction are required");
 
 		const unknownRun = await steerTaskAgentTool.execute(
 			"call-3",
-			{ runId: "unknown", taskId: "auth-scan", instruction: "retry" },
+			{ instruction: "retry", runId: "unknown", taskId: "auth-scan" },
 			undefined,
 			undefined,
 			{ cwd: "/repo" },
 		);
-		expect(unknownRun.isError).toBe(true);
+		expect(unknownRun.isError).toBeTruthy();
 		expect(unknownRun.content[0]?.text).toContain("Known runIds");
 
 		const unknownTask = await steerTaskAgentTool.execute(
 			"call-4",
-			{ runId: firstRun.details.runId, taskId: "missing", instruction: "retry" },
+			{ instruction: "retry", runId: firstRun.details.runId, taskId: "missing" },
 			undefined,
 			undefined,
 			{ cwd: "/repo" },
 		);
-		expect(unknownTask.isError).toBe(true);
+		expect(unknownTask.isError).toBeTruthy();
 		expect(unknownTask.content[0]?.text).toContain("Known taskIds: auth-scan");
 	});
 
@@ -408,7 +408,7 @@ describe("steer_task_agent", () => {
 
 		const firstRun = await taskAgentsTool.execute(
 			"call-1",
-			{ tasks: [{ id: "auth-scan", prompt: "Inspect auth" }], concurrency: 1 },
+			{ concurrency: 1, tasks: [{ id: "auth-scan", prompt: "Inspect auth" }] },
 			undefined,
 			undefined,
 			{ cwd: "/repo" },
@@ -417,9 +417,9 @@ describe("steer_task_agent", () => {
 		const steerResult = await steerTaskAgentTool.execute(
 			"call-2",
 			{
+				instruction: "Focus on auth middleware ordering",
 				runId: firstRun.details.runId,
 				taskId: "auth-scan",
-				instruction: "Focus on auth middleware ordering",
 			},
 			undefined,
 			undefined,
@@ -429,8 +429,8 @@ describe("steer_task_agent", () => {
 		expect(runSync).toHaveBeenCalledTimes(2);
 		expect((runSync as MockRunSync).mock.calls[1]?.[3]).toContain("Steering update from the main planning agent");
 		expect((runSync as MockRunSync).mock.calls[1]?.[3]).toContain("Focus on auth middleware ordering");
-		expect(steerResult.isError).toBe(false);
-		expect(steerResult.details.tasks[0]?.steeringNotes).toEqual(["Focus on auth middleware ordering"]);
+		expect(steerResult.isError).toBeFalsy();
+		expect(steerResult.details.tasks[0]?.steeringNotes).toStrictEqual(["Focus on auth middleware ordering"]);
 		expect(steerResult.details.tasks[0]?.references).toContain("src/auth.ts");
 		expect(steerResult.content[0]?.text).toContain("Steered auth-scan");
 	});

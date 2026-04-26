@@ -1,5 +1,6 @@
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { createServer, type Server } from "node:http";
+import { createServer } from 'node:http';
+import type { Server } from 'node:http';
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -27,11 +28,7 @@ export interface DiscoveryServiceOptions {
 }
 
 function escapeHtml(value: string): string {
-	return value
-		.replaceAll("&", "&amp;")
-		.replaceAll("<", "&lt;")
-		.replaceAll(">", "&gt;")
-		.replaceAll('"', "&quot;");
+	return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 
 function safeJsonParse(text: string): DiscoveryRecord | undefined {
@@ -54,15 +51,16 @@ export class DiscoveryService {
 	}
 
 	async register(
-		record: Omit<DiscoveryRecord, "id" | "startedAt" | "lastSeenAt"> & Partial<Pick<DiscoveryRecord, "id" | "startedAt">>,
+		record: Omit<DiscoveryRecord, "id" | "startedAt" | "lastSeenAt"> &
+			Partial<Pick<DiscoveryRecord, "id" | "startedAt">>,
 	): Promise<DiscoveryRecord> {
 		await mkdir(this.directory, { recursive: true });
 		const now = this.now();
 		const nextRecord: DiscoveryRecord = {
 			...record,
 			id: record.id ?? `${record.instanceId}-${record.pid}`,
-			startedAt: record.startedAt ?? now,
 			lastSeenAt: now,
+			startedAt: record.startedAt ?? now,
 		};
 		await writeFile(this.filePath(nextRecord.id), `${JSON.stringify(nextRecord, null, 2)}\n`, "utf8");
 		return nextRecord;
@@ -101,7 +99,7 @@ export class DiscoveryService {
 				continue;
 			}
 
-			const content = await readFile(join(this.directory, name), "utf8").catch(() => undefined);
+			const content = await readFile(join(this.directory, name), "utf8").catch(() => {});
 			if (!content) {
 				continue;
 			}
@@ -229,7 +227,7 @@ export async function startDiscoveryHttpServer(
 	});
 
 	const address = server.address();
-	/* v8 ignore next -- Node returns an object for bound TCP listeners in this package. */
+	/* V8 ignore next -- Node returns an object for bound TCP listeners in this package. */
 	const resolvedPort = typeof address === "object" && address ? address.port : port;
 
 	return {

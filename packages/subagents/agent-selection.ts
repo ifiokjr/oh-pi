@@ -1,4 +1,4 @@
-import type { AgentScope, AgentConfig } from "./agents.js";
+import type { AgentConfig, AgentScope } from "./agents.js";
 
 export function mergeAgentsForScope(
 	scope: AgentScope,
@@ -8,16 +8,16 @@ export function mergeAgentsForScope(
 ): AgentConfig[] {
 	const agentMap = new Map<string, AgentConfig>();
 
-	for (const agent of builtinAgents) agentMap.set(agent.name, agent);
+	for (const agent of builtinAgents) {agentMap.set(agent.name, agent);}
 
 	if (scope === "both") {
-		for (const agent of userAgents) agentMap.set(agent.name, agent);
-		for (const agent of projectAgents) agentMap.set(agent.name, agent);
+		for (const agent of userAgents) {agentMap.set(agent.name, agent);}
+		for (const agent of projectAgents) {agentMap.set(agent.name, agent);}
 	} else if (scope === "user") {
-		for (const agent of userAgents) agentMap.set(agent.name, agent);
+		for (const agent of userAgents) {agentMap.set(agent.name, agent);}
 	} else {
-		for (const agent of projectAgents) agentMap.set(agent.name, agent);
+		for (const agent of projectAgents) {agentMap.set(agent.name, agent);}
 	}
 
-	return Array.from(agentMap.values());
+	return [...agentMap.values()];
 }

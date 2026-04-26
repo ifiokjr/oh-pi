@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import type { ChecklistSummary, WorkflowPaths, WorkflowStatus } from "./types.js";
 import { getLatestFeatureDir, listFeatureDirs } from "./workspace.js";
@@ -18,7 +18,7 @@ function countChecklistItems(content: string): { total: number; completed: numbe
 			}
 		}
 	}
-	return { total, completed, incomplete };
+	return { completed, incomplete, total };
 }
 
 export function summarizeChecklists(checklistsDir?: string): ChecklistSummary[] {
@@ -39,7 +39,7 @@ export function summarizeChecklists(checklistsDir?: string): ChecklistSummary[] 
 				status: counts.incomplete === 0 ? "pass" : "fail",
 			} satisfies ChecklistSummary;
 		})
-		.sort((a, b) => a.name.localeCompare(b.name));
+		.toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
 function nextStepsFor(paths: WorkflowPaths, initialized: boolean): string[] {
@@ -53,8 +53,8 @@ function nextStepsFor(paths: WorkflowPaths, initialized: boolean): string[] {
 
 	const steps: string[] = [];
 	const specExists = existsSync(paths.featureSpec);
-	const planExists = !!paths.planFile && existsSync(paths.planFile);
-	const tasksExist = !!paths.tasksFile && existsSync(paths.tasksFile);
+	const planExists = Boolean(paths.planFile) && existsSync(paths.planFile);
+	const tasksExist = Boolean(paths.tasksFile) && existsSync(paths.tasksFile);
 	const checklists = summarizeChecklists(paths.checklistsDir);
 	const hasIncompleteChecklist = checklists.some((checklist) => checklist.incomplete > 0);
 
@@ -93,81 +93,81 @@ export function buildWorkflowStatus(options: {
 	const initialized = existsSync(options.paths.specifyDir);
 	const artifacts = [
 		{
+			exists: existsSync(options.paths.workflowReadmeFile),
 			label: ".specify/README.md",
 			path: options.paths.workflowReadmeFile,
-			exists: existsSync(options.paths.workflowReadmeFile),
 		},
 		{
+			exists: existsSync(options.paths.constitutionFile),
 			label: "constitution.md",
 			path: options.paths.constitutionFile,
-			exists: existsSync(options.paths.constitutionFile),
 		},
-		{ label: "pi-agent.md", path: options.paths.agentContextFile, exists: existsSync(options.paths.agentContextFile) },
+		{ exists: existsSync(options.paths.agentContextFile), label: "pi-agent.md", path: options.paths.agentContextFile },
 		{
+			exists: existsSync(options.paths.extensionsConfigFile),
 			label: "extensions.yml",
 			path: options.paths.extensionsConfigFile,
-			exists: existsSync(options.paths.extensionsConfigFile),
 		},
 	];
 
 	if (options.paths.featureSpec) {
 		artifacts.push({
+			exists: existsSync(options.paths.featureSpec),
 			label: "spec.md",
 			path: options.paths.featureSpec,
-			exists: existsSync(options.paths.featureSpec),
 		});
 	}
 
 	if (options.paths.planFile) {
-		artifacts.push({ label: "plan.md", path: options.paths.planFile, exists: existsSync(options.paths.planFile) });
+		artifacts.push({ exists: existsSync(options.paths.planFile), label: "plan.md", path: options.paths.planFile });
 	}
 
 	if (options.paths.tasksFile) {
-		artifacts.push({ label: "tasks.md", path: options.paths.tasksFile, exists: existsSync(options.paths.tasksFile) });
+		artifacts.push({ exists: existsSync(options.paths.tasksFile), label: "tasks.md", path: options.paths.tasksFile });
 	}
 
 	if (options.paths.researchFile) {
 		artifacts.push({
+			exists: existsSync(options.paths.researchFile),
 			label: "research.md",
 			path: options.paths.researchFile,
-			exists: existsSync(options.paths.researchFile),
 		});
 	}
 
 	if (options.paths.dataModelFile) {
 		artifacts.push({
+			exists: existsSync(options.paths.dataModelFile),
 			label: "data-model.md",
 			path: options.paths.dataModelFile,
-			exists: existsSync(options.paths.dataModelFile),
 		});
 	}
 
 	if (options.paths.quickstartFile) {
 		artifacts.push({
+			exists: existsSync(options.paths.quickstartFile),
 			label: "quickstart.md",
 			path: options.paths.quickstartFile,
-			exists: existsSync(options.paths.quickstartFile),
 		});
 	}
 
 	if (options.paths.contractsDir) {
 		artifacts.push({
+			exists: existsSync(options.paths.contractsDir) && statSync(options.paths.contractsDir).isDirectory(),
 			label: "contracts/",
 			path: options.paths.contractsDir,
-			exists: existsSync(options.paths.contractsDir) && statSync(options.paths.contractsDir).isDirectory(),
 		});
 	}
 
 	return {
-		initialized,
-		repoRoot: options.repoRoot,
-		currentBranch: options.currentBranch,
-		featureDirs,
 		activeFeature,
-		paths: options.paths,
 		artifacts,
 		checklists: summarizeChecklists(options.paths.checklistsDir),
+		currentBranch: options.currentBranch,
+		featureDirs,
+		initialized,
 		nextSteps: nextStepsFor(options.paths, initialized),
+		paths: options.paths,
+		repoRoot: options.repoRoot,
 	};
 }
 

@@ -1,7 +1,8 @@
-/* c8 ignore file */
+/* C8 ignore file */
 import { join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
-import { loadJsonConfigFile, type NormalizedConfigResult } from "./config-loader.js";
+import { loadJsonConfigFile } from './config-loader.js';
+import type { NormalizedConfigResult } from './config-loader.js';
 import { DEFAULT_ADAPTIVE_ROUTING_CONFIG } from "./defaults.js";
 import type {
 	AdaptiveRoutingConfig,
@@ -61,9 +62,9 @@ export function getAdaptiveRoutingConfigPath(): string {
 export function readAdaptiveRoutingConfig(): AdaptiveRoutingConfig {
 	const configPath = getAdaptiveRoutingConfigPath();
 	return loadJsonConfigFile({
-		path: configPath,
 		fallback: DEFAULT_ADAPTIVE_ROUTING_CONFIG,
 		normalize: normalizeAdaptiveRoutingConfigWithWarnings,
+		path: configPath,
 		warn: (message) => warnAdaptiveRoutingConfig(configPath, message),
 	});
 }
@@ -82,20 +83,20 @@ function normalizeAdaptiveRoutingConfigWithWarnings(raw: unknown): NormalizedCon
 	const warnings: string[] = [];
 	return {
 		value: {
-			mode: normalizeMode(cfg.mode, fallback.mode, warnings, "mode"),
-			routerModels: normalizeStringArray(cfg.routerModels, fallback.routerModels),
-			stickyTurns: normalizeStickyTurns(cfg.stickyTurns, fallback.stickyTurns),
-			telemetry: normalizeTelemetryConfig(cfg.telemetry, fallback.telemetry, warnings),
-			models: normalizeModelPreferences(cfg.models, fallback.models, warnings),
-			intents: normalizeIntentPolicies(cfg.intents, fallback.intents),
-			taskClasses: normalizeTaskClasses(cfg.taskClasses, fallback.taskClasses),
-			providerReserves: normalizeProviderReserves(cfg.providerReserves, fallback.providerReserves),
-			fallbackGroups: normalizeFallbackGroups(cfg.fallbackGroups, fallback.fallbackGroups),
-			delegatedRouting: normalizeDelegatedRouting(cfg.delegatedRouting, fallback.delegatedRouting),
 			delegatedModelSelection: normalizeDelegatedModelSelection(
 				cfg.delegatedModelSelection,
 				fallback.delegatedModelSelection,
 			),
+			delegatedRouting: normalizeDelegatedRouting(cfg.delegatedRouting, fallback.delegatedRouting),
+			fallbackGroups: normalizeFallbackGroups(cfg.fallbackGroups, fallback.fallbackGroups),
+			intents: normalizeIntentPolicies(cfg.intents, fallback.intents),
+			mode: normalizeMode(cfg.mode, fallback.mode, warnings, "mode"),
+			models: normalizeModelPreferences(cfg.models, fallback.models, warnings),
+			providerReserves: normalizeProviderReserves(cfg.providerReserves, fallback.providerReserves),
+			routerModels: normalizeStringArray(cfg.routerModels, fallback.routerModels),
+			stickyTurns: normalizeStickyTurns(cfg.stickyTurns, fallback.stickyTurns),
+			taskClasses: normalizeTaskClasses(cfg.taskClasses, fallback.taskClasses),
+			telemetry: normalizeTelemetryConfig(cfg.telemetry, fallback.telemetry, warnings),
 		},
 		warnings,
 	};
@@ -153,8 +154,8 @@ function normalizeModelPreferences(
 	}
 	const cfg = value as Record<string, unknown>;
 	return {
-		ranked: normalizeStringArray(cfg.ranked, fallback.ranked),
 		excluded: normalizeStringArray(cfg.excluded, fallback.excluded),
+		ranked: normalizeStringArray(cfg.ranked, fallback.ranked),
 	};
 }
 
@@ -178,11 +179,11 @@ function normalizeIntentPolicies(
 
 function normalizeIntentPolicy(value: Record<string, unknown>, fallback?: IntentRoutingPolicy): IntentRoutingPolicy {
 	return {
+		defaultThinking: normalizeOptionalThinking(value.defaultThinking, fallback?.defaultThinking),
+		fallbackGroup: normalizeOptionalString(value.fallbackGroup, fallback?.fallbackGroup),
 		preferredModels: normalizeOptionalStringArray(value.preferredModels, fallback?.preferredModels),
 		preferredProviders: normalizeOptionalStringArray(value.preferredProviders, fallback?.preferredProviders),
-		defaultThinking: normalizeOptionalThinking(value.defaultThinking, fallback?.defaultThinking),
 		preferredTier: normalizeOptionalTier(value.preferredTier, fallback?.preferredTier),
-		fallbackGroup: normalizeOptionalString(value.fallbackGroup, fallback?.fallbackGroup),
 	};
 }
 
@@ -217,8 +218,8 @@ function normalizeTaskClassPolicy(
 		return fallback;
 	}
 	return {
-		defaultThinking,
 		candidates,
+		defaultThinking,
 		fallbackGroup: normalizeOptionalString(value.fallbackGroup, fallback?.fallbackGroup),
 	};
 }
@@ -245,16 +246,16 @@ function normalizeProviderReservePolicy(
 	fallback?: ProviderReservePolicy,
 ): ProviderReservePolicy {
 	return {
-		minRemainingPct: normalizePercent(value.minRemainingPct, fallback?.minRemainingPct ?? 15),
-		applyToTiers: normalizeOptionalTierArray(value.applyToTiers, fallback?.applyToTiers),
 		allowOverrideForPeak:
 			typeof value.allowOverrideForPeak === "boolean"
 				? value.allowOverrideForPeak
 				: (fallback?.allowOverrideForPeak ?? true),
+		applyToTiers: normalizeOptionalTierArray(value.applyToTiers, fallback?.applyToTiers),
 		confidence:
 			typeof value.confidence === "string" && ["authoritative", "estimated", "unknown"].includes(value.confidence)
 				? (fallback?.confidence ?? (value.confidence as ProviderReservePolicy["confidence"]))
 				: fallback?.confidence,
+		minRemainingPct: normalizePercent(value.minRemainingPct, fallback?.minRemainingPct ?? 15),
 	};
 }
 
@@ -295,8 +296,8 @@ function normalizeFallbackGroupPolicy(
 function normalizeDelegatedRouting(value: unknown, fallback: DelegatedRoutingConfig): DelegatedRoutingConfig {
 	if (!value || typeof value !== "object") {
 		return {
-			enabled: fallback.enabled,
 			categories: { ...fallback.categories },
+			enabled: fallback.enabled,
 		};
 	}
 	const cfg = value as Record<string, unknown>;
@@ -310,8 +311,8 @@ function normalizeDelegatedRouting(value: unknown, fallback: DelegatedRoutingCon
 		}
 	}
 	return {
-		enabled: typeof cfg.enabled === "boolean" ? cfg.enabled : fallback.enabled,
 		categories,
+		enabled: typeof cfg.enabled === "boolean" ? cfg.enabled : fallback.enabled,
 	};
 }
 
@@ -320,20 +321,20 @@ function normalizeDelegatedCategory(
 	fallback?: DelegatedCategoryPolicy,
 ): DelegatedCategoryPolicy {
 	return {
-		candidates: normalizeOptionalStringArray(value.candidates, fallback?.candidates),
-		preferredProviders: normalizeOptionalStringArray(value.preferredProviders, fallback?.preferredProviders),
-		fallbackGroup: normalizeOptionalString(value.fallbackGroup, fallback?.fallbackGroup),
-		defaultThinking: normalizeOptionalThinking(value.defaultThinking, fallback?.defaultThinking),
-		taskProfile: normalizeOptionalDelegatedTaskProfile(value.taskProfile, fallback?.taskProfile),
-		preferFastModels: normalizeOptionalBoolean(value.preferFastModels, fallback?.preferFastModels),
-		preferLowCost: normalizeOptionalBoolean(value.preferLowCost, fallback?.preferLowCost),
-		requireReasoning: normalizeOptionalBoolean(value.requireReasoning, fallback?.requireReasoning),
-		requireMultimodal: normalizeOptionalBoolean(value.requireMultimodal, fallback?.requireMultimodal),
-		minContextWindow: normalizeOptionalMinContextWindow(value.minContextWindow, fallback?.minContextWindow),
 		allowSmallContextForSmallTasks: normalizeOptionalBoolean(
 			value.allowSmallContextForSmallTasks,
 			fallback?.allowSmallContextForSmallTasks,
 		),
+		candidates: normalizeOptionalStringArray(value.candidates, fallback?.candidates),
+		defaultThinking: normalizeOptionalThinking(value.defaultThinking, fallback?.defaultThinking),
+		fallbackGroup: normalizeOptionalString(value.fallbackGroup, fallback?.fallbackGroup),
+		minContextWindow: normalizeOptionalMinContextWindow(value.minContextWindow, fallback?.minContextWindow),
+		preferFastModels: normalizeOptionalBoolean(value.preferFastModels, fallback?.preferFastModels),
+		preferLowCost: normalizeOptionalBoolean(value.preferLowCost, fallback?.preferLowCost),
+		preferredProviders: normalizeOptionalStringArray(value.preferredProviders, fallback?.preferredProviders),
+		requireMultimodal: normalizeOptionalBoolean(value.requireMultimodal, fallback?.requireMultimodal),
+		requireReasoning: normalizeOptionalBoolean(value.requireReasoning, fallback?.requireReasoning),
+		taskProfile: normalizeOptionalDelegatedTaskProfile(value.taskProfile, fallback?.taskProfile),
 	};
 }
 
@@ -343,28 +344,24 @@ function normalizeDelegatedModelSelection(
 ): DelegatedModelSelectionConfig {
 	if (!value || typeof value !== "object") {
 		return {
-			disabledProviders: [...fallback.disabledProviders],
-			disabledModels: [...fallback.disabledModels],
-			preferLowerUsage: fallback.preferLowerUsage,
 			allowSmallContextForSmallTasks: fallback.allowSmallContextForSmallTasks,
+			disabledModels: [...fallback.disabledModels],
+			disabledProviders: [...fallback.disabledProviders],
+			preferLowerUsage: fallback.preferLowerUsage,
 			roleOverrides: { ...fallback.roleOverrides },
 		};
 	}
 	const cfg = value as Record<string, unknown>;
 	return {
-		disabledProviders: normalizeStringArray(
-			cfg.disabledProviders ?? cfg.excludedProviders,
-			fallback.disabledProviders,
-		),
-		disabledModels: normalizeStringArray(cfg.disabledModels ?? cfg.excludedModels, fallback.disabledModels),
-		preferLowerUsage:
-			typeof cfg.preferLowerUsage === "boolean" ? cfg.preferLowerUsage : fallback.preferLowerUsage,
 		allowSmallContextForSmallTasks:
 			typeof cfg.allowSmallContextForSmallTasks === "boolean"
 				? cfg.allowSmallContextForSmallTasks
 				: fallback.allowSmallContextForSmallTasks,
-			roleOverrides: normalizeDelegatedRoleOverrides(cfg.roleOverrides, fallback.roleOverrides),
-		};
+		disabledModels: normalizeStringArray(cfg.disabledModels ?? cfg.excludedModels, fallback.disabledModels),
+		disabledProviders: normalizeStringArray(cfg.disabledProviders ?? cfg.excludedProviders, fallback.disabledProviders),
+		preferLowerUsage: typeof cfg.preferLowerUsage === "boolean" ? cfg.preferLowerUsage : fallback.preferLowerUsage,
+		roleOverrides: normalizeDelegatedRoleOverrides(cfg.roleOverrides, fallback.roleOverrides),
+	};
 }
 
 function normalizeDelegatedRoleOverrides(
@@ -389,22 +386,22 @@ function normalizeDelegatedSelectionOverride(
 	fallback?: DelegatedSelectionOverride,
 ): DelegatedSelectionOverride {
 	return {
-		candidateModels: normalizeOptionalStringArray(value.candidateModels, fallback?.candidateModels),
-		preferredModels: normalizeOptionalStringArray(value.preferredModels, fallback?.preferredModels),
-		preferredProviders: normalizeOptionalStringArray(value.preferredProviders, fallback?.preferredProviders),
-		blockedModels: normalizeOptionalStringArray(value.blockedModels, fallback?.blockedModels),
-		blockedProviders: normalizeOptionalStringArray(value.blockedProviders, fallback?.blockedProviders),
-		taskProfile: normalizeOptionalDelegatedTaskProfile(value.taskProfile, fallback?.taskProfile),
-		preferFastModels: normalizeOptionalBoolean(value.preferFastModels, fallback?.preferFastModels),
-		preferLowCost: normalizeOptionalBoolean(value.preferLowCost, fallback?.preferLowCost),
-		preferLowerUsage: normalizeOptionalBoolean(value.preferLowerUsage, fallback?.preferLowerUsage),
-		requireReasoning: normalizeOptionalBoolean(value.requireReasoning, fallback?.requireReasoning),
-		requireMultimodal: normalizeOptionalBoolean(value.requireMultimodal, fallback?.requireMultimodal),
-		minContextWindow: normalizeOptionalMinContextWindow(value.minContextWindow, fallback?.minContextWindow),
 		allowSmallContextForSmallTasks: normalizeOptionalBoolean(
 			value.allowSmallContextForSmallTasks,
 			fallback?.allowSmallContextForSmallTasks,
 		),
+		blockedModels: normalizeOptionalStringArray(value.blockedModels, fallback?.blockedModels),
+		blockedProviders: normalizeOptionalStringArray(value.blockedProviders, fallback?.blockedProviders),
+		candidateModels: normalizeOptionalStringArray(value.candidateModels, fallback?.candidateModels),
+		minContextWindow: normalizeOptionalMinContextWindow(value.minContextWindow, fallback?.minContextWindow),
+		preferFastModels: normalizeOptionalBoolean(value.preferFastModels, fallback?.preferFastModels),
+		preferLowCost: normalizeOptionalBoolean(value.preferLowCost, fallback?.preferLowCost),
+		preferLowerUsage: normalizeOptionalBoolean(value.preferLowerUsage, fallback?.preferLowerUsage),
+		preferredModels: normalizeOptionalStringArray(value.preferredModels, fallback?.preferredModels),
+		preferredProviders: normalizeOptionalStringArray(value.preferredProviders, fallback?.preferredProviders),
+		requireMultimodal: normalizeOptionalBoolean(value.requireMultimodal, fallback?.requireMultimodal),
+		requireReasoning: normalizeOptionalBoolean(value.requireReasoning, fallback?.requireReasoning),
+		taskProfile: normalizeOptionalDelegatedTaskProfile(value.taskProfile, fallback?.taskProfile),
 	};
 }
 
@@ -460,7 +457,7 @@ function normalizeStringArray(value: unknown, fallback: string[]): string[] {
 		.filter((item): item is string => typeof item === "string")
 		.map((item) => item.trim())
 		.filter(Boolean);
-	return normalized.length > 0 ? Array.from(new Set(normalized)) : [...fallback];
+	return normalized.length > 0 ? [...new Set(normalized)] : [...fallback];
 }
 
 function normalizeOptionalStringArray(value: unknown, fallback?: string[]): string[] | undefined {
@@ -474,7 +471,7 @@ function normalizeOptionalStringArray(value: unknown, fallback?: string[]): stri
 		.filter((item): item is string => typeof item === "string")
 		.map((item) => item.trim())
 		.filter(Boolean);
-	return normalized.length > 0 ? Array.from(new Set(normalized)) : undefined;
+	return normalized.length > 0 ? [...new Set(normalized)] : undefined;
 }
 
 function normalizeOptionalString(value: unknown, fallback?: string): string | undefined {
@@ -517,5 +514,5 @@ function normalizeOptionalTierArray(value: unknown, fallback?: RouteTier[]): Rou
 	const normalized = value.filter(
 		(item): item is RouteTier => typeof item === "string" && ROUTE_TIERS.has(item as RouteTier),
 	);
-	return normalized.length > 0 ? Array.from(new Set(normalized)) : undefined;
+	return normalized.length > 0 ? [...new Set(normalized)] : undefined;
 }

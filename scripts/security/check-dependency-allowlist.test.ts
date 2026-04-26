@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+
 
 const tempDirs: string[] = [];
 const scriptPath = path.resolve(import.meta.dirname, "check-dependency-allowlist.mjs");
@@ -13,7 +13,7 @@ function writeJson(filePath: string, value: unknown): void {
 
 afterEach(() => {
 	for (const dir of tempDirs.splice(0)) {
-		rmSync(dir, { recursive: true, force: true });
+		rmSync(dir, { force: true, recursive: true });
 	}
 });
 
@@ -35,12 +35,12 @@ describe("check-dependency-allowlist", () => {
 			version: "0.1.0",
 		});
 		writeJson(path.join(repoDir, "packages", "internal-b", "package.json"), {
-			name: "@ifi/internal-b",
-			version: "0.1.0",
 			dependencies: {
 				"@ifi/internal-a": "0.1.0",
 				chalk: "^5.0.0",
 			},
+			name: "@ifi/internal-b",
+			version: "0.1.0",
 		});
 
 		const output = execFileSync("node", [scriptPath], {

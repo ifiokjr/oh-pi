@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+
 import {
 	buildPaiInstanceId,
 	clearRepoWorktreeSnapshotCache,
@@ -25,7 +25,7 @@ import {
 
 function git(cwd: string, args: string[]): string {
 	return execFileSync("git", ["-C", cwd, ...args], {
-		encoding: "utf-8",
+		encoding: "utf8",
 		stdio: ["ignore", "pipe", "pipe"],
 	}).trim();
 }
@@ -36,7 +36,7 @@ function createTempRepo(rootDir: string): string {
 	git(repoDir, ["init", "--initial-branch", "main"]);
 	git(repoDir, ["config", "user.name", "Coverage Bot"]);
 	git(repoDir, ["config", "user.email", "coverage@example.com"]);
-	fs.writeFileSync(path.join(repoDir, "README.md"), "# repo\n", "utf-8");
+	fs.writeFileSync(path.join(repoDir, "README.md"), "# repo\n", "utf8");
 	git(repoDir, ["add", "README.md"]);
 	git(repoDir, ["commit", "-m", "chore: seed repo"]);
 	return repoDir;
@@ -48,24 +48,24 @@ function createSandbox() {
 	const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "oh-pi-worktree-test-"));
 	tempRoots.push(tempRoot);
 	return {
-		tempRoot,
 		repoDir: createTempRepo(tempRoot),
 		sharedRoot: path.join(tempRoot, "shared-worktrees"),
+		tempRoot,
 	};
 }
 
 afterEach(() => {
 	clearRepoWorktreeSnapshotCache();
 	for (const tempRoot of tempRoots.splice(0)) {
-		fs.rmSync(tempRoot, { recursive: true, force: true });
+		fs.rmSync(tempRoot, { force: true, recursive: true });
 	}
 });
 
 describe("worktree helpers", () => {
 	it("creates owner metadata and labels consistently", () => {
 		const owner = createOwnerMetadata({
-			instanceId: "pai-test-instance",
 			cwd: "/tmp/repo",
+			instanceId: "pai-test-instance",
 			sessionFile: "/tmp/repo/.pi/session-123.jsonl",
 			sessionName: "Coverage run",
 		});
@@ -86,12 +86,12 @@ describe("worktree helpers", () => {
 		const { tempRoot } = createSandbox();
 		expect(getRepoWorktreeSnapshot(tempRoot)).toBeNull();
 
-		const owner = createOwnerMetadata({ instanceId: "pai-1", cwd: tempRoot });
+		const owner = createOwnerMetadata({ cwd: tempRoot, instanceId: "pai-1" });
 		expect(() =>
-			createManagedWorktree({ cwd: tempRoot, branch: "", purpose: "Coverage", owner, sharedRoot: tempRoot }),
+			createManagedWorktree({ branch: "", cwd: tempRoot, owner, purpose: "Coverage", sharedRoot: tempRoot }),
 		).toThrow("Branch name is required.");
 		expect(() =>
-			createManagedWorktree({ cwd: tempRoot, branch: "test/coverage", purpose: "", owner, sharedRoot: tempRoot }),
+			createManagedWorktree({ branch: "test/coverage", cwd: tempRoot, owner, purpose: "", sharedRoot: tempRoot }),
 		).toThrow("Purpose is required.");
 	});
 
@@ -99,60 +99,60 @@ describe("worktree helpers", () => {
 		const { repoDir, sharedRoot } = createSandbox();
 		const normalizedRepoDir = fs.realpathSync.native(repoDir);
 		const owner = createOwnerMetadata({
-			instanceId: "pai-1",
 			cwd: repoDir,
+			instanceId: "pai-1",
 			sessionFile: path.join(repoDir, ".pi", "session-1.jsonl"),
 			sessionName: "Coverage run",
 		});
 
 		const initialSnapshot = getRepoWorktreeSnapshot(repoDir, sharedRoot);
 		expect(initialSnapshot?.repoRoot).toBe(normalizedRepoDir);
-		expect(initialSnapshot?.isLinkedWorktree).toBe(false);
+		expect(initialSnapshot?.isLinkedWorktree).toBeFalsy();
 		expect(initialSnapshot?.worktrees).toHaveLength(1);
-		expect(initialSnapshot?.registry.managedWorktrees).toEqual([]);
+		expect(initialSnapshot?.registry.managedWorktrees).toStrictEqual([]);
 
 		const result = createManagedWorktree({
-			cwd: repoDir,
 			branch: "test/worktree-coverage",
-			purpose: "Cover git worktree flows",
+			cwd: repoDir,
 			owner,
+			purpose: "Cover git worktree flows",
 			sharedRoot,
 		});
 
-		expect(result.createdBranch).toBe(true);
+		expect(result.createdBranch).toBeTruthy();
 		expect(result.branch).toBe("test/worktree-coverage");
-		expect(fs.existsSync(result.worktreePath)).toBe(true);
-		expect(result.worktreePath.startsWith(getManagedWorktreeParentDir(normalizedRepoDir, sharedRoot))).toBe(true);
-		expect(fs.existsSync(getWorktreeRegistryPath(normalizedRepoDir, sharedRoot))).toBe(true);
+		expect(fs.existsSync(result.worktreePath)).toBeTruthy();
+		expect(result.worktreePath.startsWith(getManagedWorktreeParentDir(normalizedRepoDir, sharedRoot))).toBeTruthy();
+		expect(fs.existsSync(getWorktreeRegistryPath(normalizedRepoDir, sharedRoot))).toBeTruthy();
 
 		const linkedSnapshot = getRepoWorktreeSnapshot(result.worktreePath, sharedRoot);
-		expect(linkedSnapshot?.isLinkedWorktree).toBe(true);
+		expect(linkedSnapshot?.isLinkedWorktree).toBeTruthy();
 		expect(linkedSnapshot?.currentBranch).toBe("test/worktree-coverage");
-		expect(linkedSnapshot?.current?.isManaged).toBe(true);
+		expect(linkedSnapshot?.current?.isManaged).toBeTruthy();
 		expect(linkedSnapshot?.current?.metadata?.purpose).toBe("Cover git worktree flows");
 		expect(linkedSnapshot?.worktrees).toHaveLength(2);
 
-		expect(touchManagedWorktreeSeen(normalizedRepoDir, result.worktreePath, sharedRoot)).toBe(true);
-		expect(touchManagedWorktreeSeen(normalizedRepoDir, path.join(sharedRoot, "missing"), sharedRoot)).toBe(false);
+		expect(touchManagedWorktreeSeen(normalizedRepoDir, result.worktreePath, sharedRoot)).toBeTruthy();
+		expect(touchManagedWorktreeSeen(normalizedRepoDir, path.join(sharedRoot, "missing"), sharedRoot)).toBeFalsy();
 
 		const registry = loadWorktreeRegistry(normalizedRepoDir, sharedRoot);
 		expect(registry.managedWorktrees).toHaveLength(1);
 		expect(registry.managedWorktrees[0]).toMatchObject({
 			branch: "test/worktree-coverage",
-			purpose: "Cover git worktree flows",
 			owner: { instanceId: "pai-1", sessionName: "Coverage run" },
+			purpose: "Cover git worktree flows",
 		});
-		expect(registry.managedWorktrees[0]?.lastSeenAt).toEqual(expect.any(String));
+		expect(registry.managedWorktrees[0]?.lastSeenAt).toStrictEqual(expect.any(String));
 
 		const removal = removeManagedWorktree(result.metadata, sharedRoot);
 		expect(removal).toMatchObject({
+			note: "Removed pi-owned worktree from git worktree list.",
 			removed: true,
 			removedFromGit: true,
 			removedRegistryEntry: true,
-			note: "Removed pi-owned worktree from git worktree list.",
 		});
-		expect(fs.existsSync(result.worktreePath)).toBe(false);
-		expect(loadWorktreeRegistry(normalizedRepoDir, sharedRoot).managedWorktrees).toEqual([]);
+		expect(fs.existsSync(result.worktreePath)).toBeFalsy();
+		expect(loadWorktreeRegistry(normalizedRepoDir, sharedRoot).managedWorktrees).toStrictEqual([]);
 	}, 20_000);
 
 	it("reads lightweight context probe without git worktree list", () => {
@@ -162,9 +162,9 @@ describe("worktree helpers", () => {
 		const context = getRepoWorktreeContext(repoDir, sharedRoot);
 		expect(context).not.toBeNull();
 		expect(context!.repoRoot).toBe(normalizedRepoDir);
-		expect(context!.isLinkedWorktree).toBe(false);
+		expect(context!.isLinkedWorktree).toBeFalsy();
 		expect(context!.currentBranch).toBe("main");
-		expect(context!.current?.isMain).toBe(true);
+		expect(context!.current?.isMain).toBeTruthy();
 		// Context does not include the worktrees array
 		expect((context as any).worktrees).toBeUndefined();
 	}, 10_000);
@@ -205,12 +205,12 @@ describe("worktree helpers", () => {
 	it("removes stale registry entries when the worktree is already gone", () => {
 		const { repoDir, sharedRoot } = createSandbox();
 		const normalizedRepoDir = fs.realpathSync.native(repoDir);
-		const owner = createOwnerMetadata({ instanceId: "pai-1", cwd: repoDir });
+		const owner = createOwnerMetadata({ cwd: repoDir, instanceId: "pai-1" });
 		const result = createManagedWorktree({
-			cwd: repoDir,
 			branch: "test/stale-worktree",
-			purpose: "Exercise stale cleanup",
+			cwd: repoDir,
 			owner,
+			purpose: "Exercise stale cleanup",
 			sharedRoot,
 		});
 
@@ -222,11 +222,11 @@ describe("worktree helpers", () => {
 
 		const removal = removeManagedWorktree(result.metadata, sharedRoot);
 		expect(removal).toMatchObject({
+			note: "Worktree directory was already missing; removed stale pi registry entry.",
 			removed: true,
 			removedFromGit: false,
 			removedRegistryEntry: true,
-			note: "Worktree directory was already missing; removed stale pi registry entry.",
 		});
-		expect(loadWorktreeRegistry(normalizedRepoDir, sharedRoot).managedWorktrees).toEqual([]);
+		expect(loadWorktreeRegistry(normalizedRepoDir, sharedRoot).managedWorktrees).toStrictEqual([]);
 	}, 20_000);
 });

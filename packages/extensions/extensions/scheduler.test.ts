@@ -6,44 +6,44 @@
  * event wiring, command handlers, tool actions, persistence, and edge cases.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
-vi.mock("node:fs", async (importOriginal) => {
+vi.mock<typeof import('node:fs')>(import('node:fs'), async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs")>();
 	return {
 		...actual,
+		copyFileSync: vi.fn(),
 		existsSync: vi.fn().mockReturnValue(false),
 		mkdirSync: vi.fn(),
 		readFileSync: vi.fn().mockReturnValue("{}"),
-		writeFileSync: vi.fn(),
-		renameSync: vi.fn(),
-		copyFileSync: vi.fn(),
-		rmSync: vi.fn(),
 		readdirSync: vi.fn().mockReturnValue([]),
+		renameSync: vi.fn(),
+		rmSync: vi.fn(),
 		rmdirSync: vi.fn(),
+		writeFileSync: vi.fn(),
 	};
 });
 
-vi.mock("node:os", async (importOriginal) => {
+vi.mock<typeof import('node:os')>(import('node:os'), async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:os")>();
 	return { ...actual, homedir: () => "/mock-home" };
 });
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
 	getAgentDir: () => "/mock-home/.pi/agent",
 }));
-vi.mock("@mariozechner/pi-ai", () => ({}));
+vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({}));
 
-vi.mock("@sinclair/typebox", () => ({
+vi.mock<typeof import('@sinclair/typebox')>(import('@sinclair/typebox'), () => ({
 	Type: {
-		Object: (schema: any) => schema,
-		String: (opts?: any) => ({ type: "string", ...opts }),
-		Number: (opts?: any) => ({ type: "number", ...opts }),
-		Optional: (t: any) => ({ optional: true, ...t }),
-		Union: (types: any[], opts?: any) => ({ oneOf: types, ...opts }),
 		Literal: (value: any) => ({ const: value }),
+		Number: (opts?: any) => ({ type: "number", ...opts }),
+		Object: (schema: any) => schema,
+		Optional: (t: any) => ({ optional: true, ...t }),
+		String: (opts?: any) => ({ type: "string", ...opts }),
+		Union: (types: any[], opts?: any) => ({ oneOf: types, ...opts }),
 	},
 }));
 
@@ -58,18 +58,24 @@ function createMockPi() {
 	const userMessages: string[] = [];
 
 	return {
-		on(event: string, handler: (...args: any[]) => any) {
-			if (!handlers.has(event)) {
-				handlers.set(event, []);
+		_commands: commands,
+		_emit(event: string, ...args: any[]) {
+			const fns = handlers.get(event) ?? [];
+			for (const fn of fns) {
+				fn(...args);
 			}
-			handlers.get(event)!.push(handler);
 		},
+		_eventBusHandlers: eventBusHandlers,
+		_handlers: handlers,
+		_messages: messages,
+		_tools: tools,
+		_userMessages: userMessages,
+
 		events: {
-			on(event: string, handler: (...args: any[]) => any) {
-				if (!eventBusHandlers.has(event)) {
-					eventBusHandlers.set(event, []);
+			emit(event: string, ...args: any[]) {
+				for (const fn of eventBusHandlers.get(event) ?? []) {
+					fn(...args);
 				}
-				eventBusHandlers.get(event)!.push(handler);
 			},
 			off(event: string, handler: (...args: any[]) => any) {
 				const fns = eventBusHandlers.get(event);
@@ -80,14 +86,18 @@ function createMockPi() {
 					}
 				}
 			},
-			emit(event: string, ...args: any[]) {
-				for (const fn of eventBusHandlers.get(event) ?? []) {
-					fn(...args);
+			on(event: string, handler: (...args: any[]) => any) {
+				if (!eventBusHandlers.has(event)) {
+					eventBusHandlers.set(event, []);
 				}
+				eventBusHandlers.get(event)!.push(handler);
 			},
 		},
-		registerTool(tool: any) {
-			tools.set(tool.name, tool);
+		on(event: string, handler: (...args: any[]) => any) {
+			if (!handlers.has(event)) {
+				handlers.set(event, []);
+			}
+			handlers.get(event)!.push(handler);
 		},
 		registerCommand(name: string, opts: any) {
 			commands.set(name, opts);
@@ -95,24 +105,14 @@ function createMockPi() {
 		registerMessageRenderer(_customType: string, _renderer: any) {
 			// No-op in tests
 		},
+		registerTool(tool: any) {
+			tools.set(tool.name, tool);
+		},
 		sendMessage(msg: any) {
 			messages.push(msg);
 		},
 		sendUserMessage(prompt: string) {
 			userMessages.push(prompt);
-		},
-
-		_handlers: handlers,
-		_eventBusHandlers: eventBusHandlers,
-		_tools: tools,
-		_commands: commands,
-		_messages: messages,
-		_userMessages: userMessages,
-		_emit(event: string, ...args: any[]) {
-			const fns = handlers.get(event) ?? [];
-			for (const fn of fns) {
-				fn(...args);
-			}
 		},
 	};
 }
@@ -120,20 +120,26 @@ function createMockPi() {
 function createMockCtx(overrides: Record<string, any> = {}) {
 	const notifications: { msg: string; type: string }[] = [];
 	const statusMap = new Map<string, any>();
-	const statusCalls: Array<{ key: string; value: any }> = [];
+	const statusCalls: { key: string; value: any }[] = [];
 
 	return {
+		_notifications: notifications,
+		_statusCalls: statusCalls,
+		_statusMap: statusMap,
 		cwd: overrides.cwd ?? "/mock-project",
+		hasPendingMessages: overrides.hasPendingMessages ?? (() => false),
 		hasUI: overrides.hasUI ?? true,
 		isIdle: overrides.isIdle ?? (() => true),
-		hasPendingMessages: overrides.hasPendingMessages ?? (() => false),
 		sessionManager: overrides.sessionManager ?? {
 			getSessionFile: () => "/mock-home/.pi/agent/sessions/test-session.jsonl",
 		},
 		ui: {
+			confirm: overrides.confirm ?? vi.fn().mockResolvedValue(true),
+			input: overrides.input ?? vi.fn().mockResolvedValue(null),
 			notify(msg: string, type: string) {
 				notifications.push({ msg, type });
 			},
+			select: overrides.select ?? vi.fn().mockResolvedValue(null),
 			setStatus(key: string, value: any) {
 				statusCalls.push({ key, value });
 				if (value === undefined) {
@@ -142,13 +148,7 @@ function createMockCtx(overrides: Record<string, any> = {}) {
 					statusMap.set(key, value);
 				}
 			},
-			select: overrides.select ?? vi.fn().mockResolvedValue(null),
-			confirm: overrides.confirm ?? vi.fn().mockResolvedValue(true),
-			input: overrides.input ?? vi.fn().mockResolvedValue(null),
 		},
-		_notifications: notifications,
-		_statusMap: statusMap,
-		_statusCalls: statusCalls,
 	};
 }
 
@@ -200,7 +200,7 @@ const getDispatchedPrompts = (pi: ReturnType<typeof createPi>) =>
 		.filter((m: any) => m.customType === SCHEDULER_DISPATCHED_MESSAGE_TYPE)
 		.map((m: any) => m.content as string);
 
-describe("parseDuration", () => {
+describe(parseDuration, () => {
 	it("parses seconds with short unit", () => {
 		expect(parseDuration("30s")).toBe(30_000);
 	});
@@ -281,7 +281,7 @@ describe("parseDuration", () => {
 
 // ─── Duration normalization ──────────────────────────────────────────────────
 
-describe("normalizeDuration", () => {
+describe(normalizeDuration, () => {
 	it("passes through exact minute values", () => {
 		const result = normalizeDuration(5 * ONE_MINUTE);
 		expect(result.durationMs).toBe(5 * ONE_MINUTE);
@@ -315,7 +315,7 @@ describe("normalizeDuration", () => {
 
 // ─── formatDurationShort ─────────────────────────────────────────────────────
 
-describe("formatDurationShort", () => {
+describe(formatDurationShort, () => {
 	it("formats minutes", () => {
 		expect(formatDurationShort(5 * ONE_MINUTE)).toBe("5m");
 	});
@@ -335,7 +335,7 @@ describe("formatDurationShort", () => {
 
 // ─── Cron normalization ──────────────────────────────────────────────────────
 
-describe("normalizeCronExpression", () => {
+describe(normalizeCronExpression, () => {
 	it("normalizes 5-field cron to 6-field by prepending seconds=0", () => {
 		const result = normalizeCronExpression("*/5 * * * *");
 		expect(result).toBeDefined();
@@ -382,7 +382,7 @@ describe("normalizeCronExpression", () => {
 
 // ─── computeNextCronRunAt ────────────────────────────────────────────────────
 
-describe("computeNextCronRunAt", () => {
+describe(computeNextCronRunAt, () => {
 	it("returns a future timestamp", () => {
 		const now = Date.now();
 		const next = computeNextCronRunAt("0 */5 * * * *", now);
@@ -404,7 +404,7 @@ describe("computeNextCronRunAt", () => {
 
 // ─── parseLoopScheduleArgs ───────────────────────────────────────────────────
 
-describe("parseLoopScheduleArgs", () => {
+describe(parseLoopScheduleArgs, () => {
 	it("returns undefined for empty input", () => {
 		expect(parseLoopScheduleArgs("")).toBeUndefined();
 	});
@@ -499,7 +499,7 @@ describe("parseLoopScheduleArgs", () => {
 
 // ─── parseRemindScheduleArgs ─────────────────────────────────────────────────
 
-describe("parseRemindScheduleArgs", () => {
+describe(parseRemindScheduleArgs, () => {
 	it("returns undefined for empty input", () => {
 		expect(parseRemindScheduleArgs("")).toBeUndefined();
 	});
@@ -529,10 +529,10 @@ describe("parseRemindScheduleArgs", () => {
 
 // ─── validateSchedulePromptAddInput ──────────────────────────────────────────
 
-describe("validateSchedulePromptAddInput", () => {
+describe(validateSchedulePromptAddInput, () => {
 	it("rejects cron for once tasks", () => {
-		const result = validateSchedulePromptAddInput({ kind: "once", cron: "*/5 * * * *" });
-		expect(result.ok).toBe(false);
+		const result = validateSchedulePromptAddInput({ cron: "*/5 * * * *", kind: "once" });
+		expect(result.ok).toBeFalsy();
 		if (!result.ok) {
 			expect(result.error).toBe("invalid_cron_for_once");
 		}
@@ -540,47 +540,47 @@ describe("validateSchedulePromptAddInput", () => {
 
 	it("requires duration for once tasks", () => {
 		const result = validateSchedulePromptAddInput({ kind: "once" });
-		expect(result.ok).toBe(false);
+		expect(result.ok).toBeFalsy();
 		if (!result.ok) {
 			expect(result.error).toBe("missing_duration");
 		}
 	});
 
 	it("rejects both duration and cron for recurring", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", duration: "5m", cron: "*/5 * * * *" });
-		expect(result.ok).toBe(false);
+		const result = validateSchedulePromptAddInput({ cron: "*/5 * * * *", duration: "5m", kind: "recurring" });
+		expect(result.ok).toBeFalsy();
 		if (!result.ok) {
 			expect(result.error).toBe("conflicting_schedule_inputs");
 		}
 	});
 
 	it("rejects invalid duration", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", duration: "banana" });
-		expect(result.ok).toBe(false);
+		const result = validateSchedulePromptAddInput({ duration: "banana", kind: "recurring" });
+		expect(result.ok).toBeFalsy();
 		if (!result.ok) {
 			expect(result.error).toBe("invalid_duration");
 		}
 	});
 
 	it("rejects invalid cron", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", cron: "not-a-cron" });
-		expect(result.ok).toBe(false);
+		const result = validateSchedulePromptAddInput({ cron: "not-a-cron", kind: "recurring" });
+		expect(result.ok).toBeFalsy();
 		if (!result.ok) {
 			expect(result.error).toBe("invalid_cron");
 		}
 	});
 
 	it("rejects recurring cron schedules faster than 1 minute", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", cron: "*/30 * * * * *" });
-		expect(result.ok).toBe(false);
+		const result = validateSchedulePromptAddInput({ cron: "*/30 * * * * *", kind: "recurring" });
+		expect(result.ok).toBeFalsy();
 		if (!result.ok) {
 			expect(result.error).toBe("invalid_cron");
 		}
 	});
 
 	it("validates and normalizes recurring cron", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", cron: "*/5 * * * *" });
-		expect(result.ok).toBe(true);
+		const result = validateSchedulePromptAddInput({ cron: "*/5 * * * *", kind: "recurring" });
+		expect(result.ok).toBeTruthy();
 		if (result.ok) {
 			expect(result.plan.kind).toBe("recurring");
 			if (result.plan.kind === "recurring") {
@@ -593,8 +593,8 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("validates recurring duration", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", duration: "5m" });
-		expect(result.ok).toBe(true);
+		const result = validateSchedulePromptAddInput({ duration: "5m", kind: "recurring" });
+		expect(result.ok).toBeTruthy();
 		if (result.ok && result.plan.kind === "recurring" && result.plan.mode === "interval") {
 			expect(result.plan.durationMs).toBe(5 * ONE_MINUTE);
 		}
@@ -602,7 +602,7 @@ describe("validateSchedulePromptAddInput", () => {
 
 	it("defaults recurring to 10m interval when no schedule provided", () => {
 		const result = validateSchedulePromptAddInput({});
-		expect(result.ok).toBe(true);
+		expect(result.ok).toBeTruthy();
 		if (result.ok) {
 			expect(result.plan.kind).toBe("recurring");
 			if (result.plan.kind === "recurring" && result.plan.mode === "interval") {
@@ -612,8 +612,8 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("validates once with valid duration", () => {
-		const result = validateSchedulePromptAddInput({ kind: "once", duration: "30m" });
-		expect(result.ok).toBe(true);
+		const result = validateSchedulePromptAddInput({ duration: "30m", kind: "once" });
+		expect(result.ok).toBeTruthy();
 		if (result.ok) {
 			expect(result.plan.kind).toBe("once");
 			if (result.plan.kind === "once") {
@@ -623,8 +623,8 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("normalizes once duration sub-minute values", () => {
-		const result = validateSchedulePromptAddInput({ kind: "once", duration: "30s" });
-		expect(result.ok).toBe(true);
+		const result = validateSchedulePromptAddInput({ duration: "30s", kind: "once" });
+		expect(result.ok).toBeTruthy();
 		if (result.ok && result.plan.kind === "once") {
 			expect(result.plan.durationMs).toBe(ONE_MINUTE);
 			expect(result.plan.note).toContain("Rounded");
@@ -634,7 +634,7 @@ describe("validateSchedulePromptAddInput", () => {
 
 // ─── SchedulerRuntime ────────────────────────────────────────────────────────
 
-describe("getSchedulerStoragePath", () => {
+describe(getSchedulerStoragePath, () => {
 	it("stores scheduler state under the shared pi agent directory", () => {
 		expect(getSchedulerStoragePath("/mock-project")).toBe(
 			"/mock-home/.pi/agent/scheduler/root/mock-project/scheduler.json",
@@ -648,7 +648,7 @@ describe("getSchedulerStoragePath", () => {
 	});
 });
 
-describe("getSchedulerLeasePath", () => {
+describe(getSchedulerLeasePath, () => {
 	it("stores the scheduler lease alongside the shared scheduler state", () => {
 		expect(getSchedulerLeasePath("/mock-project")).toBe(
 			"/mock-home/.pi/agent/scheduler/root/mock-project/scheduler.lease.json",
@@ -656,7 +656,7 @@ describe("getSchedulerLeasePath", () => {
 	});
 });
 
-describe("SchedulerRuntime", () => {
+describe(SchedulerRuntime, () => {
 	let pi: ReturnType<typeof createMockPi>;
 	let runtime: SchedulerRuntime;
 
@@ -665,13 +665,13 @@ describe("SchedulerRuntime", () => {
 		vi.clearAllMocks();
 		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
 		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
-		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(mkdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(writeFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(renameSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
-		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		pi = createMockPi();
 		runtime = new SchedulerRuntime(pi as any);
 	});
@@ -690,7 +690,7 @@ describe("SchedulerRuntime", () => {
 			const task = runtime.addRecurringIntervalTask("check build", 5 * ONE_MINUTE);
 			expect(task.kind).toBe("recurring");
 			expect(task.intervalMs).toBe(5 * ONE_MINUTE);
-			expect(task.enabled).toBe(true);
+			expect(task.enabled).toBeTruthy();
 			expect(task.runCount).toBe(0);
 			expect(runtime.taskCount).toBe(1);
 		});
@@ -730,25 +730,25 @@ describe("SchedulerRuntime", () => {
 
 		it("enables and disables tasks", () => {
 			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
-			expect(runtime.setTaskEnabled(task.id, false)).toBe(true);
-			expect(runtime.getTask(task.id)!.enabled).toBe(false);
+			expect(runtime.setTaskEnabled(task.id, false)).toBeTruthy();
+			expect(runtime.getTask(task.id)!.enabled).toBeFalsy();
 
-			expect(runtime.setTaskEnabled(task.id, true)).toBe(true);
-			expect(runtime.getTask(task.id)!.enabled).toBe(true);
+			expect(runtime.setTaskEnabled(task.id, true)).toBeTruthy();
+			expect(runtime.getTask(task.id)!.enabled).toBeTruthy();
 		});
 
 		it("returns false when enabling nonexistent task", () => {
-			expect(runtime.setTaskEnabled("nonexistent", true)).toBe(false);
+			expect(runtime.setTaskEnabled("nonexistent", true)).toBeFalsy();
 		});
 
 		it("deletes tasks", () => {
 			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
-			expect(runtime.deleteTask(task.id)).toBe(true);
+			expect(runtime.deleteTask(task.id)).toBeTruthy();
 			expect(runtime.taskCount).toBe(0);
 		});
 
 		it("returns false when deleting nonexistent task", () => {
-			expect(runtime.deleteTask("nonexistent")).toBe(false);
+			expect(runtime.deleteTask("nonexistent")).toBeFalsy();
 		});
 
 		it("clears all tasks", () => {
@@ -773,7 +773,7 @@ describe("SchedulerRuntime", () => {
 			const stored = runtime.getTask(task.id)!;
 			stored.pending = true;
 			runtime.setTaskEnabled(task.id, false);
-			expect(runtime.getTask(task.id)!.pending).toBe(false);
+			expect(runtime.getTask(task.id)!.pending).toBeFalsy();
 		});
 	});
 
@@ -797,7 +797,7 @@ describe("SchedulerRuntime", () => {
 
 			const result = runtime.clearTasksNotCreatedHere();
 
-			expect(result).toMatchObject({ count: 2, otherCount: 1, legacyCount: 1 });
+			expect(result).toMatchObject({ count: 2, legacyCount: 1, otherCount: 1 });
 			expect(runtime.getTask(localTask.id)).toBeDefined();
 			expect(runtime.getTask(otherTask.id)).toBeUndefined();
 			expect(runtime.getTask(legacyTask.id)).toBeUndefined();
@@ -813,7 +813,7 @@ describe("SchedulerRuntime", () => {
 			const adopted = runtime.adoptTasks(task.id);
 			expect(adopted.count).toBe(1);
 			expect(runtime.getTask(task.id)?.ownerInstanceId).toBe(runtime.currentInstanceId);
-			expect(runtime.getTask(task.id)?.resumeRequired).toBe(false);
+			expect(runtime.getTask(task.id)?.resumeRequired).toBeFalsy();
 		});
 	});
 
@@ -873,8 +873,8 @@ describe("SchedulerRuntime", () => {
 			const j2 = runtime.computeJitterMs("xyz", 60 * ONE_MINUTE);
 			// They *could* collide but extremely unlikely with different strings
 			// This is a probabilistic check
-			expect(typeof j1).toBe("number");
-			expect(typeof j2).toBe("number");
+			expectTypeOf(j1).toBeNumber();
+			expectTypeOf(j2).toBeNumber();
 		});
 
 		it("cron tasks have zero jitter", () => {
@@ -961,8 +961,8 @@ describe("SchedulerRuntime", () => {
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
 
-			const task = runtime.addRecurringIntervalTask("check", 1 * ONE_MINUTE);
-			expect(runtime.getTask(task.id)!.pending).toBe(false);
+			const task = runtime.addRecurringIntervalTask("check", Number(ONE_MINUTE));
+			expect(runtime.getTask(task.id)!.pending).toBeFalsy();
 
 			// Advance past the task's nextRunAt
 			vi.advanceTimersByTime(task.nextRunAt - Date.now() + 1000);
@@ -972,7 +972,7 @@ describe("SchedulerRuntime", () => {
 			const updated = runtime.getTask(task.id);
 			if (updated) {
 				expect(updated.runCount).toBe(1);
-				expect(updated.pending).toBe(false);
+				expect(updated.pending).toBeFalsy();
 			}
 		});
 
@@ -980,11 +980,11 @@ describe("SchedulerRuntime", () => {
 			const ctx = createMockCtx({ isIdle: () => false });
 			runtime.setRuntimeContext(ctx as any);
 
-			const task = runtime.addRecurringIntervalTask("check", 1 * ONE_MINUTE);
+			const task = runtime.addRecurringIntervalTask("check", Number(ONE_MINUTE));
 			vi.advanceTimersByTime(task.nextRunAt - Date.now() + 1000);
 			await runtime.tickScheduler();
 
-			expect(runtime.getTask(task.id)!.pending).toBe(true);
+			expect(runtime.getTask(task.id)!.pending).toBeTruthy();
 			expect(pi._userMessages).toHaveLength(0);
 		});
 
@@ -992,11 +992,11 @@ describe("SchedulerRuntime", () => {
 			const ctx = createMockCtx({ hasPendingMessages: () => true });
 			runtime.setRuntimeContext(ctx as any);
 
-			const task = runtime.addRecurringIntervalTask("check", 1 * ONE_MINUTE);
+			const task = runtime.addRecurringIntervalTask("check", Number(ONE_MINUTE));
 			vi.advanceTimersByTime(task.nextRunAt - Date.now() + 1000);
 			await runtime.tickScheduler();
 
-			expect(runtime.getTask(task.id)!.pending).toBe(true);
+			expect(runtime.getTask(task.id)!.pending).toBeTruthy();
 			expect(pi._userMessages).toHaveLength(0);
 		});
 
@@ -1008,7 +1008,7 @@ describe("SchedulerRuntime", () => {
 			expect(runtime.taskCount).toBe(1);
 
 			// Advance past the default recurring expiry window without triggering
-			// the 1 s heartbeat interval 86 k times.
+			// The 1 s heartbeat interval 86 k times.
 			vi.setSystemTime(Date.now() + DEFAULT_RECURRING_EXPIRY_MS + 1000);
 			await runtime.tickScheduler();
 
@@ -1019,18 +1019,18 @@ describe("SchedulerRuntime", () => {
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
 
-			const task = runtime.addRecurringIntervalTask("check", 1 * ONE_MINUTE);
+			const task = runtime.addRecurringIntervalTask("check", Number(ONE_MINUTE));
 			runtime.setTaskEnabled(task.id, false);
 
 			vi.advanceTimersByTime(task.nextRunAt - Date.now() + 1000);
 			await runtime.tickScheduler();
 
-			expect(runtime.getTask(task.id)!.pending).toBe(false);
+			expect(runtime.getTask(task.id)!.pending).toBeFalsy();
 			expect(pi._userMessages).toHaveLength(0);
 		});
 
 		it("does nothing without runtime context", async () => {
-			const task = runtime.addRecurringIntervalTask("check", 1 * ONE_MINUTE);
+			const task = runtime.addRecurringIntervalTask("check", Number(ONE_MINUTE));
 			vi.advanceTimersByTime(2 * ONE_MINUTE);
 			await runtime.tickScheduler();
 			expect(pi._userMessages).toHaveLength(0);
@@ -1046,7 +1046,7 @@ describe("SchedulerRuntime", () => {
 				(writeFileSync as ReturnType<typeof vi.fn>).mock.calls.some(
 					([file]: [string]) => typeof file === "string" && file.endsWith("scheduler.lease.json.tmp"),
 				),
-			).toBe(false);
+			).toBeFalsy();
 		});
 	});
 
@@ -1059,10 +1059,10 @@ describe("SchedulerRuntime", () => {
 			task.pending = true;
 			runtime.dispatchTask(task);
 
-			expect(getDispatchedPrompts(pi)).toEqual(["check ci"]);
+			expect(getDispatchedPrompts(pi)).toStrictEqual(["check ci"]);
 			expect(task.runCount).toBe(1);
 			expect(task.lastStatus).toBe("success");
-			expect(task.pending).toBe(false);
+			expect(task.pending).toBeFalsy();
 		});
 
 		it("removes one-shot task after dispatch", () => {
@@ -1073,7 +1073,7 @@ describe("SchedulerRuntime", () => {
 			task.pending = true;
 			runtime.dispatchTask(task);
 
-			expect(getDispatchedPrompts(pi)).toEqual(["remind me"]);
+			expect(getDispatchedPrompts(pi)).toStrictEqual(["remind me"]);
 			expect(runtime.taskCount).toBe(0);
 		});
 
@@ -1138,8 +1138,8 @@ describe("SchedulerRuntime", () => {
 			}
 
 			expect(getDispatchedPrompts(pi)).toHaveLength(MAX_DISPATCHES_PER_WINDOW);
-			expect(tasks[MAX_DISPATCHES_PER_WINDOW].pending).toBe(true);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduler throttled"))).toBe(true);
+			expect(tasks[MAX_DISPATCHES_PER_WINDOW].pending).toBeTruthy();
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduler throttled"))).toBeTruthy();
 		});
 
 		it("resets dispatch capacity after the rate-limit window", () => {
@@ -1153,7 +1153,7 @@ describe("SchedulerRuntime", () => {
 			}
 			expect(getDispatchedPrompts(pi)).toHaveLength(MAX_DISPATCHES_PER_WINDOW);
 
-			vi.advanceTimersByTime(DISPATCH_RATE_LIMIT_WINDOW_MS + 1_000);
+			vi.advanceTimersByTime(DISPATCH_RATE_LIMIT_WINDOW_MS + 1000);
 
 			const nextTask = runtime.addRecurringIntervalTask("after window", 5 * ONE_MINUTE);
 			nextTask.pending = true;
@@ -1187,7 +1187,7 @@ describe("SchedulerRuntime", () => {
 			runtime.dispatchTask(task);
 
 			expect(task.lastStatus).toBe("error");
-			expect(task.pending).toBe(true);
+			expect(task.pending).toBeTruthy();
 		});
 	});
 
@@ -1202,11 +1202,11 @@ describe("SchedulerRuntime", () => {
 			task.resumeRequired = true;
 			task.resumeReason = "stale_owner";
 
-			expect(runtime.runTaskNow(task.id)).toBe(true);
+			expect(runtime.runTaskNow(task.id)).toBeTruthy();
 			vi.advanceTimersByTime(150);
 			await Promise.resolve();
 
-			expect(getDispatchedPrompts(pi)).toEqual(["check ci"]);
+			expect(getDispatchedPrompts(pi)).toStrictEqual(["check ci"]);
 			expect(runtime.getTask(task.id)).toBeUndefined();
 		});
 	});
@@ -1227,7 +1227,7 @@ describe("SchedulerRuntime", () => {
 			runtime.startScheduler();
 			runtime.startScheduler();
 
-			expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+			expect(setIntervalSpy).toHaveBeenCalledOnce();
 			runtime.stopScheduler();
 		});
 
@@ -1236,7 +1236,7 @@ describe("SchedulerRuntime", () => {
 
 			runtime.addOneShotTask("check ci", ONE_MINUTE);
 
-			expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+			expect(setIntervalSpy).toHaveBeenCalledOnce();
 			runtime.stopScheduler();
 		});
 
@@ -1244,8 +1244,8 @@ describe("SchedulerRuntime", () => {
 			const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
 			const task = runtime.addOneShotTask("check ci", ONE_MINUTE);
 
-			expect(runtime.deleteTask(task.id)).toBe(true);
-			expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
+			expect(runtime.deleteTask(task.id)).toBeTruthy();
+			expect(clearIntervalSpy).toHaveBeenCalledOnce();
 		});
 
 		it("stopScheduler is safe when not started", () => {
@@ -1258,7 +1258,7 @@ describe("SchedulerRuntime", () => {
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
 			runtime.updateStatus();
-			expect(ctx._statusMap.has("pi-scheduler")).toBe(false);
+			expect(ctx._statusMap.has("pi-scheduler")).toBeFalsy();
 		});
 
 		it("shows active count and next run", () => {
@@ -1274,7 +1274,6 @@ describe("SchedulerRuntime", () => {
 			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
 				JSON.stringify({
-					version: 1,
 					tasks: [
 						{
 							id: "due12345",
@@ -1288,6 +1287,7 @@ describe("SchedulerRuntime", () => {
 							pending: false,
 						},
 					],
+					version: 1,
 				}),
 			);
 
@@ -1335,7 +1335,7 @@ describe("SchedulerRuntime", () => {
 			runtime.setRuntimeContext(ctx as any);
 			runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
 
-			expect(writeFileSync).toHaveBeenCalled();
+			expect(writeFileSync).toHaveBeenCalledWith();
 			const writes = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
 			const schedulerWrite = writes.find(
 				(c: unknown[]) => typeof c[0] === "string" && (c[0] as string).includes("scheduler.json"),
@@ -1353,7 +1353,7 @@ describe("SchedulerRuntime", () => {
 			const writes = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
 			const tmpWrite = writes.find((c: unknown[]) => typeof c[0] === "string" && (c[0] as string).includes(".tmp"));
 			expect(tmpWrite).toBeDefined();
-			expect(renameSync).toHaveBeenCalled();
+			expect(renameSync).toHaveBeenCalledWith();
 		});
 
 		it("loads tasks from the shared store on context set", () => {
@@ -1361,7 +1361,6 @@ describe("SchedulerRuntime", () => {
 			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
 				JSON.stringify({
-					version: 1,
 					tasks: [
 						{
 							id: "test1234",
@@ -1380,6 +1379,7 @@ describe("SchedulerRuntime", () => {
 							ownerSessionId: null,
 						},
 					],
+					version: 1,
 				}),
 			);
 
@@ -1391,8 +1391,8 @@ describe("SchedulerRuntime", () => {
 			expect(task).toBeDefined();
 			expect(task!.prompt).toBe("check build");
 			expect(task!.runCount).toBe(3);
-			expect(task!.resumeRequired).toBe(false);
-			expect(readFileSync).toHaveBeenCalledWith(getSchedulerStoragePath(ctx.cwd), "utf-8");
+			expect(task!.resumeRequired).toBeFalsy();
+			expect(readFileSync).toHaveBeenCalledWith(getSchedulerStoragePath(ctx.cwd), "utf8");
 		});
 
 		it("marks overdue restored tasks as resume-required instead of dispatching them immediately", async () => {
@@ -1400,7 +1400,6 @@ describe("SchedulerRuntime", () => {
 			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
 				JSON.stringify({
-					version: 1,
 					tasks: [
 						{
 							id: "overdue1",
@@ -1417,6 +1416,7 @@ describe("SchedulerRuntime", () => {
 							scope: "workspace",
 						},
 					],
+					version: 1,
 				}),
 			);
 
@@ -1425,11 +1425,11 @@ describe("SchedulerRuntime", () => {
 
 			const task = runtime.getTask("overdue1");
 			expect(task).toBeDefined();
-			expect(task!.resumeRequired).toBe(true);
-			expect(task!.pending).toBe(false);
+			expect(task!.resumeRequired).toBeTruthy();
+			expect(task!.pending).toBeFalsy();
 
 			await runtime.tickScheduler();
-			expect(task!.pending).toBe(false);
+			expect(task!.pending).toBeFalsy();
 			expect(pi._userMessages).toHaveLength(0);
 		});
 
@@ -1438,7 +1438,6 @@ describe("SchedulerRuntime", () => {
 			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
 				JSON.stringify({
-					version: 1,
 					tasks: [
 						{
 							id: "overdue2",
@@ -1453,18 +1452,19 @@ describe("SchedulerRuntime", () => {
 							scope: "workspace",
 						},
 					],
+					version: 1,
 				}),
 			);
 
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
 
-			expect(runtime.getTask("overdue2")!.resumeRequired).toBe(true);
+			expect(runtime.getTask("overdue2")!.resumeRequired).toBeTruthy();
 			runtime.setTaskEnabled("overdue2", false);
 			runtime.setTaskEnabled("overdue2", true);
 			await runtime.tickScheduler();
 
-			expect(getDispatchedPrompts(pi)).toEqual(["check build"]);
+			expect(getDispatchedPrompts(pi)).toStrictEqual(["check build"]);
 		});
 
 		it("skips expired tasks when loading from disk", () => {
@@ -1472,7 +1472,6 @@ describe("SchedulerRuntime", () => {
 			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
 				JSON.stringify({
-					version: 1,
 					tasks: [
 						{
 							id: "expired1",
@@ -1488,6 +1487,7 @@ describe("SchedulerRuntime", () => {
 							pending: false,
 						},
 					],
+					version: 1,
 				}),
 			);
 
@@ -1502,7 +1502,6 @@ describe("SchedulerRuntime", () => {
 			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
 				JSON.stringify({
-					version: 1,
 					tasks: [
 						{
 							id: "unsafe1",
@@ -1518,6 +1517,7 @@ describe("SchedulerRuntime", () => {
 							pending: false,
 						},
 					],
+					version: 1,
 				}),
 			);
 
@@ -1547,7 +1547,6 @@ describe("SchedulerRuntime", () => {
 			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
 				JSON.stringify({
-					version: 1,
 					tasks: [
 						{ id: null, prompt: "no id", kind: "recurring" },
 						{ id: "valid", prompt: null, kind: "recurring" },
@@ -1562,6 +1561,7 @@ describe("SchedulerRuntime", () => {
 							pending: false,
 						},
 					],
+					version: 1,
 				}),
 			);
 
@@ -1575,7 +1575,6 @@ describe("SchedulerRuntime", () => {
 			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
 				JSON.stringify({
-					version: 1,
 					tasks: [
 						{
 							id: "loaded1",
@@ -1587,15 +1586,16 @@ describe("SchedulerRuntime", () => {
 							// enabled and runCount missing
 						},
 					],
+					version: 1,
 				}),
 			);
 
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
 			const task = runtime.getTask("loaded1");
-			expect(task!.enabled).toBe(true);
+			expect(task!.enabled).toBeTruthy();
 			expect(task!.runCount).toBe(0);
-			expect(task!.pending).toBe(false);
+			expect(task!.pending).toBeFalsy();
 		});
 
 		it("migrates legacy .pi/scheduler.json into the shared store", () => {
@@ -1630,7 +1630,7 @@ describe("SchedulerRuntime", () => {
 		it("does not persist without storage path", () => {
 			// Don't set runtime context (no storage path)
 			runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE);
-			// writeFileSync may not be called for scheduler writes
+			// WriteFileSync may not be called for scheduler writes
 			const schedulerWrites = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls.filter(
 				(c: unknown[]) => typeof c[0] === "string" && (c[0] as string).includes("scheduler.json"),
 			);
@@ -1640,7 +1640,7 @@ describe("SchedulerRuntime", () => {
 
 	describe("hashString", () => {
 		it("returns a number", () => {
-			expect(typeof runtime.hashString("test")).toBe("number");
+			expectTypeOf(runtime.hashString("test")).toBeNumber();
 		});
 
 		it("returns same hash for same input", () => {
@@ -1654,7 +1654,7 @@ describe("SchedulerRuntime", () => {
 		it("returns unsigned 32-bit integer", () => {
 			const hash = runtime.hashString("test");
 			expect(hash).toBeGreaterThanOrEqual(0);
-			expect(hash).toBeLessThanOrEqual(0xffffffff);
+			expect(hash).toBeLessThanOrEqual(0xFFFFFFFF);
 		});
 	});
 });
@@ -1669,13 +1669,13 @@ describe("schedulerExtension registration", () => {
 		vi.clearAllMocks();
 		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
 		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
-		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(mkdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(writeFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(renameSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
-		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		pi = createMockPi();
 	});
 
@@ -1685,17 +1685,17 @@ describe("schedulerExtension registration", () => {
 
 	it("registers all four commands", () => {
 		schedulerExtension(pi as any);
-		expect(pi._commands.has("loop")).toBe(true);
-		expect(pi._commands.has("remind")).toBe(true);
-		expect(pi._commands.has("schedule")).toBe(true);
-		expect(pi._commands.has("schedule:tui")).toBe(true);
-		expect(pi._commands.has("schedule:delete")).toBe(true);
-		expect(pi._commands.has("unschedule")).toBe(true);
+		expect(pi._commands.has("loop")).toBeTruthy();
+		expect(pi._commands.has("remind")).toBeTruthy();
+		expect(pi._commands.has("schedule")).toBeTruthy();
+		expect(pi._commands.has("schedule:tui")).toBeTruthy();
+		expect(pi._commands.has("schedule:delete")).toBeTruthy();
+		expect(pi._commands.has("unschedule")).toBeTruthy();
 	});
 
 	it("registers schedule_prompt tool", () => {
 		schedulerExtension(pi as any);
-		expect(pi._tools.has("schedule_prompt")).toBe(true);
+		expect(pi._tools.has("schedule_prompt")).toBeTruthy();
 	});
 
 	it("describes schedule_prompt as usable for future PR and CI follow-ups", () => {
@@ -1705,17 +1705,17 @@ describe("schedulerExtension registration", () => {
 		expect(tool.description).toContain("PRs");
 		expect(tool.description).toContain("CI");
 		expect(tool.promptSnippet).toContain("future follow-ups");
-		expect(tool.promptGuidelines.some((line: string) => line.includes("monitor PRs, CI"))).toBe(true);
-		expect(tool.promptGuidelines.some((line: string) => line.includes("active and idle"))).toBe(true);
+		expect(tool.promptGuidelines.some((line: string) => line.includes("monitor PRs, CI"))).toBeTruthy();
+		expect(tool.promptGuidelines.some((line: string) => line.includes("active and idle"))).toBeTruthy();
 	});
 
 	it("registers event handlers", () => {
 		schedulerExtension(pi as any);
-		expect(pi._handlers.has("session_start")).toBe(true);
-		expect(pi._handlers.has("session_switch")).toBe(true);
-		expect(pi._handlers.has("session_fork")).toBe(true);
-		expect(pi._handlers.has("session_tree")).toBe(true);
-		expect(pi._handlers.has("session_shutdown")).toBe(true);
+		expect(pi._handlers.has("session_start")).toBeTruthy();
+		expect(pi._handlers.has("session_switch")).toBeTruthy();
+		expect(pi._handlers.has("session_fork")).toBeTruthy();
+		expect(pi._handlers.has("session_tree")).toBeTruthy();
+		expect(pi._handlers.has("session_shutdown")).toBeTruthy();
 	});
 });
 
@@ -1730,13 +1730,13 @@ describe("command handlers", () => {
 		vi.clearAllMocks();
 		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
 		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
-		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(mkdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(writeFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(renameSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
-		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		pi = createMockPi();
 		ctx = createMockCtx();
 		schedulerExtension(pi as any);
@@ -1750,43 +1750,43 @@ describe("command handlers", () => {
 	describe("/loop", () => {
 		it("creates interval task with duration", async () => {
 			await pi._commands.get("loop").handler("5m check build", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled every 5m"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled every 5m"))).toBeTruthy();
 		});
 
 		it("creates cron task", async () => {
 			await pi._commands.get("loop").handler("cron */5 * * * * check ci", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled cron"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled cron"))).toBeTruthy();
 		});
 
 		it("creates task with default 10m interval", async () => {
 			await pi._commands.get("loop").handler("check build status", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled every 10m"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled every 10m"))).toBeTruthy();
 		});
 
 		it("creates workspace-scoped loop tasks with an explicit flag", async () => {
 			await pi._commands.get("loop").handler("--workspace 5m check build", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Scope: workspace"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Scope: workspace"))).toBeTruthy();
 		});
 
 		it("supports custom recurring expiry flags", async () => {
 			await pi._commands.get("loop").handler("--expires 1h 5m check build", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Expires in 1h"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Expires in 1h"))).toBeTruthy();
 		});
 
 		it("caps custom recurring expiry flags at 1 day", async () => {
 			await pi._commands.get("loop").handler("--expires 2 days 5m check build", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Expires in 1d"))).toBe(true);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Capped at 1d"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Expires in 1d"))).toBeTruthy();
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Capped at 1d"))).toBeTruthy();
 		});
 
 		it("shows warning on invalid expiry flags", async () => {
 			await pi._commands.get("loop").handler("--expires banana 5m check build", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("expires"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("expires"))).toBeTruthy();
 		});
 
 		it("shows warning on empty args", async () => {
 			await pi._commands.get("loop").handler("", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBeTruthy();
 		});
 
 		it("shows error when task limit reached", async () => {
@@ -1797,41 +1797,41 @@ describe("command handlers", () => {
 			ctx._notifications.length = 0;
 
 			await pi._commands.get("loop").handler("5m one more", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "error" && n.msg.includes("Task limit"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "error" && n.msg.includes("Task limit"))).toBeTruthy();
 		});
 
 		it("shows note when duration is rounded", async () => {
 			await pi._commands.get("loop").handler("30s check build", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Rounded"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Rounded"))).toBeTruthy();
 		});
 	});
 
 	describe("/remind", () => {
 		it("creates one-shot reminder with 'in' prefix", async () => {
 			await pi._commands.get("remind").handler("in 45m check tests", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Reminder set"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Reminder set"))).toBeTruthy();
 		});
 
 		it("creates one-shot reminder without 'in' prefix", async () => {
 			await pi._commands.get("remind").handler("2h follow up", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Reminder set"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Reminder set"))).toBeTruthy();
 		});
 
 		it("shows warning on invalid args", async () => {
 			await pi._commands.get("remind").handler("", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBeTruthy();
 		});
 
 		it("rejects expiry flags for one-shot reminders", async () => {
 			await pi._commands.get("remind").handler("--expires 1h in 45m check tests", ctx);
 			expect(
 				ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("only supported with /loop")),
-			).toBe(true);
+			).toBeTruthy();
 		});
 
 		it("shows warning on missing duration", async () => {
 			await pi._commands.get("remind").handler("do something later", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBeTruthy();
 		});
 
 		it("shows error when task limit reached", async () => {
@@ -1841,7 +1841,7 @@ describe("command handlers", () => {
 			ctx._notifications.length = 0;
 
 			await pi._commands.get("remind").handler("in 5m test", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "error")).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "error")).toBeTruthy();
 		});
 	});
 
@@ -1849,7 +1849,7 @@ describe("command handlers", () => {
 		it("shows list with /schedule list", async () => {
 			await pi._commands.get("loop").handler("5m check build", ctx);
 			await pi._commands.get("schedule").handler("list", ctx);
-			expect(pi._messages.some((m: any) => m.customType === "pi-scheduler")).toBe(true);
+			expect(pi._messages.some((m: any) => m.customType === "pi-scheduler")).toBeTruthy();
 		});
 
 		it("enables and disables tasks", async () => {
@@ -1858,11 +1858,11 @@ describe("command handlers", () => {
 			ctx._notifications.length = 0;
 
 			await pi._commands.get("schedule").handler(`disable ${taskId}`, ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Disabled"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Disabled"))).toBeTruthy();
 
 			ctx._notifications.length = 0;
 			await pi._commands.get("schedule").handler(`enable ${taskId}`, ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Enabled"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Enabled"))).toBeTruthy();
 		});
 
 		it("deletes tasks with /schedule delete", async () => {
@@ -1871,7 +1871,7 @@ describe("command handlers", () => {
 			ctx._notifications.length = 0;
 
 			await pi._commands.get("schedule").handler(`delete ${taskId}`, ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBeTruthy();
 		});
 
 		it("handles rm alias for delete", async () => {
@@ -1880,7 +1880,7 @@ describe("command handlers", () => {
 			ctx._notifications.length = 0;
 
 			await pi._commands.get("schedule").handler(`rm ${taskId}`, ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBeTruthy();
 		});
 
 		it("handles remove alias for delete", async () => {
@@ -1889,7 +1889,7 @@ describe("command handlers", () => {
 			ctx._notifications.length = 0;
 
 			await pi._commands.get("schedule").handler(`remove ${taskId}`, ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBeTruthy();
 		});
 
 		it("clears all tasks", async () => {
@@ -1898,7 +1898,7 @@ describe("command handlers", () => {
 			ctx._notifications.length = 0;
 
 			await pi._commands.get("schedule").handler("clear", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Cleared 2 tasks"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Cleared 2 tasks"))).toBeTruthy();
 		});
 
 		it("clears tasks not created in this instance", async () => {
@@ -1915,7 +1915,7 @@ describe("command handlers", () => {
 
 			await pi._commands.get("schedule").handler("clear-other", ctx);
 			const listAfter = await otherTask.execute("id", { action: "list" });
-			expect(ctx._notifications.some((n: any) => n.msg.includes("not created in this instance"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("not created in this instance"))).toBeTruthy();
 			expect(listAfter.details.tasks).toHaveLength(1);
 			expect(listAfter.details.tasks[0].id).toBe(localId);
 		});
@@ -1925,37 +1925,37 @@ describe("command handlers", () => {
 			ctx._notifications.length = 0;
 
 			await pi._commands.get("schedule").handler("clear", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Cleared 1 task"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Cleared 1 task"))).toBeTruthy();
 		});
 
 		it("shows warning for unknown subcommand", async () => {
 			await pi._commands.get("schedule").handler("unknown", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("Usage"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("Usage"))).toBeTruthy();
 		});
 
 		it("shows warning for enable without id", async () => {
 			await pi._commands.get("schedule").handler("enable", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("Usage"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("Usage"))).toBeTruthy();
 		});
 
 		it("shows warning for disable without id", async () => {
 			await pi._commands.get("schedule").handler("disable", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBeTruthy();
 		});
 
 		it("shows warning for delete without id", async () => {
 			await pi._commands.get("schedule").handler("delete", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "warning")).toBeTruthy();
 		});
 
 		it("shows warning for not-found task on enable", async () => {
 			await pi._commands.get("schedule").handler("enable nonexistent", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Task not found"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Task not found"))).toBeTruthy();
 		});
 
 		it("shows warning for not-found task on delete", async () => {
 			await pi._commands.get("schedule").handler("delete nonexistent", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Task not found"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Task not found"))).toBeTruthy();
 		});
 	});
 
@@ -1966,17 +1966,17 @@ describe("command handlers", () => {
 			ctx._notifications.length = 0;
 
 			await pi._commands.get("unschedule").handler(taskId!, ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBeTruthy();
 		});
 
 		it("shows warning for empty id", async () => {
 			await pi._commands.get("unschedule").handler("", ctx);
-			expect(ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("Usage"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.type === "warning" && n.msg.includes("Usage"))).toBeTruthy();
 		});
 
 		it("shows warning for not-found task", async () => {
 			await pi._commands.get("unschedule").handler("nonexistent", ctx);
-			expect(ctx._notifications.some((n: any) => n.msg.includes("Task not found"))).toBe(true);
+			expect(ctx._notifications.some((n: any) => n.msg.includes("Task not found"))).toBeTruthy();
 		});
 	});
 });
@@ -1993,13 +1993,13 @@ describe("schedule_prompt tool", () => {
 		vi.clearAllMocks();
 		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
 		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
-		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(mkdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(writeFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(renameSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
-		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		pi = createMockPi();
 		ctx = createMockCtx();
 		schedulerExtension(pi as any);
@@ -2015,9 +2015,9 @@ describe("schedule_prompt tool", () => {
 		it("adds a recurring interval task", async () => {
 			const result = await tool.execute("id", {
 				action: "add",
-				prompt: "check build",
-				kind: "recurring",
 				duration: "5m",
+				kind: "recurring",
+				prompt: "check build",
 			});
 			expect(result.content[0].text).toContain("Recurring task scheduled");
 			expect(result.content[0].text).toContain("every 5m");
@@ -2027,9 +2027,9 @@ describe("schedule_prompt tool", () => {
 		it("adds a recurring cron task", async () => {
 			const result = await tool.execute("id", {
 				action: "add",
-				prompt: "check ci",
-				kind: "recurring",
 				cron: "*/5 * * * *",
+				kind: "recurring",
+				prompt: "check ci",
 			});
 			expect(result.content[0].text).toContain("Recurring cron task scheduled");
 			expect(result.details.task).toBeDefined();
@@ -2038,9 +2038,9 @@ describe("schedule_prompt tool", () => {
 		it("adds a one-time reminder", async () => {
 			const result = await tool.execute("id", {
 				action: "add",
-				prompt: "follow up",
-				kind: "once",
 				duration: "30m",
+				kind: "once",
+				prompt: "follow up",
 			});
 			expect(result.content[0].text).toContain("Reminder scheduled");
 			expect(result.details.task).toBeDefined();
@@ -2064,8 +2064,8 @@ describe("schedule_prompt tool", () => {
 		it("returns error for missing duration on once task", async () => {
 			const result = await tool.execute("id", {
 				action: "add",
-				prompt: "test",
 				kind: "once",
+				prompt: "test",
 			});
 			expect(result.content[0].text).toContain("duration is required");
 			expect(result.details.error).toBe("missing_duration");
@@ -2074,9 +2074,9 @@ describe("schedule_prompt tool", () => {
 		it("returns error for invalid duration", async () => {
 			const result = await tool.execute("id", {
 				action: "add",
-				prompt: "test",
-				kind: "recurring",
 				duration: "banana",
+				kind: "recurring",
+				prompt: "test",
 			});
 			expect(result.content[0].text).toContain("invalid duration");
 			expect(result.details.error).toBe("invalid_duration");
@@ -2085,9 +2085,9 @@ describe("schedule_prompt tool", () => {
 		it("returns error for cron on once task", async () => {
 			const result = await tool.execute("id", {
 				action: "add",
-				prompt: "test",
-				kind: "once",
 				cron: "*/5 * * * *",
+				kind: "once",
+				prompt: "test",
 			});
 			expect(result.content[0].text).toContain("cron is only valid");
 			expect(result.details.error).toBe("invalid_cron_for_once");
@@ -2096,10 +2096,10 @@ describe("schedule_prompt tool", () => {
 		it("returns error for both duration and cron", async () => {
 			const result = await tool.execute("id", {
 				action: "add",
-				prompt: "test",
-				kind: "recurring",
-				duration: "5m",
 				cron: "*/5 * * * *",
+				duration: "5m",
+				kind: "recurring",
+				prompt: "test",
 			});
 			expect(result.content[0].text).toContain("either duration or cron");
 			expect(result.details.error).toBe("conflicting_schedule_inputs");
@@ -2108,9 +2108,9 @@ describe("schedule_prompt tool", () => {
 		it("returns error for invalid cron", async () => {
 			const result = await tool.execute("id", {
 				action: "add",
-				prompt: "test",
-				kind: "recurring",
 				cron: "not-a-cron",
+				kind: "recurring",
+				prompt: "test",
 			});
 			expect(result.content[0].text).toContain("invalid cron");
 			expect(result.details.error).toBe("invalid_cron");
@@ -2118,9 +2118,9 @@ describe("schedule_prompt tool", () => {
 
 		it("returns error when task limit reached", async () => {
 			for (let i = 0; i < MAX_TASKS; i++) {
-				await tool.execute("id", { action: "add", prompt: `task ${i}`, duration: "5m" });
+				await tool.execute("id", { action: "add", duration: "5m", prompt: `task ${i}` });
 			}
-			const result = await tool.execute("id", { action: "add", prompt: "one more", duration: "5m" });
+			const result = await tool.execute("id", { action: "add", duration: "5m", prompt: "one more" });
 			expect(result.content[0].text).toContain("Task limit reached");
 			expect(result.details.error).toBe("task_limit");
 		});
@@ -2128,9 +2128,9 @@ describe("schedule_prompt tool", () => {
 		it("includes normalization note in response", async () => {
 			const result = await tool.execute("id", {
 				action: "add",
-				prompt: "test",
-				kind: "recurring",
 				cron: "*/5 * * * *",
+				kind: "recurring",
+				prompt: "test",
 			});
 			expect(result.content[0].text).toContain("5-field cron");
 		});
@@ -2140,26 +2140,26 @@ describe("schedule_prompt tool", () => {
 		it("returns empty list message", async () => {
 			const result = await tool.execute("id", { action: "list" });
 			expect(result.content[0].text).toBe("No scheduled tasks.");
-			expect(result.details.tasks).toEqual([]);
+			expect(result.details.tasks).toStrictEqual([]);
 		});
 
 		it("lists tasks with details", async () => {
-			await tool.execute("id", { action: "add", prompt: "check build", duration: "5m" });
+			await tool.execute("id", { action: "add", duration: "5m", prompt: "check build" });
 			const result = await tool.execute("id", { action: "list" });
 			expect(result.content[0].text).toContain("check build");
 			expect(result.content[0].text).toContain("on");
-			expect(result.details.tasks.length).toBe(1);
+			expect(result.details.tasks).toHaveLength(1);
 		});
 	});
 
 	describe("action: delete", () => {
 		it("deletes existing task", async () => {
-			const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+			const addResult = await tool.execute("id", { action: "add", duration: "5m", prompt: "check" });
 			const taskId = addResult.details.task.id;
 
 			const result = await tool.execute("id", { action: "delete", id: taskId });
 			expect(result.content[0].text).toContain("Deleted");
-			expect(result.details.removed).toBe(true);
+			expect(result.details.removed).toBeTruthy();
 		});
 
 		it("returns error for missing id", async () => {
@@ -2170,28 +2170,28 @@ describe("schedule_prompt tool", () => {
 		it("returns not-found for invalid id", async () => {
 			const result = await tool.execute("id", { action: "delete", id: "nope" });
 			expect(result.content[0].text).toContain("Task not found");
-			expect(result.details.removed).toBe(false);
+			expect(result.details.removed).toBeFalsy();
 		});
 	});
 
 	describe("action: enable/disable", () => {
 		it("enables a disabled task", async () => {
-			const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+			const addResult = await tool.execute("id", { action: "add", duration: "5m", prompt: "check" });
 			const taskId = addResult.details.task.id;
 
 			await tool.execute("id", { action: "disable", id: taskId });
 			const result = await tool.execute("id", { action: "enable", id: taskId });
 			expect(result.content[0].text).toContain("Enabled");
-			expect(result.details.enabled).toBe(true);
+			expect(result.details.enabled).toBeTruthy();
 		});
 
 		it("disables an enabled task", async () => {
-			const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+			const addResult = await tool.execute("id", { action: "add", duration: "5m", prompt: "check" });
 			const taskId = addResult.details.task.id;
 
 			const result = await tool.execute("id", { action: "disable", id: taskId });
 			expect(result.content[0].text).toContain("Disabled");
-			expect(result.details.enabled).toBe(false);
+			expect(result.details.enabled).toBeFalsy();
 		});
 
 		it("returns error for missing id on enable", async () => {
@@ -2207,14 +2207,14 @@ describe("schedule_prompt tool", () => {
 		it("returns not-found for invalid id", async () => {
 			const result = await tool.execute("id", { action: "enable", id: "nope" });
 			expect(result.content[0].text).toContain("Task not found");
-			expect(result.details.updated).toBe(false);
+			expect(result.details.updated).toBeFalsy();
 		});
 	});
 
 	describe("action: clear", () => {
 		it("clears all tasks", async () => {
-			await tool.execute("id", { action: "add", prompt: "a", duration: "5m" });
-			await tool.execute("id", { action: "add", prompt: "b", duration: "10m" });
+			await tool.execute("id", { action: "add", duration: "5m", prompt: "a" });
+			await tool.execute("id", { action: "add", duration: "10m", prompt: "b" });
 
 			const result = await tool.execute("id", { action: "clear" });
 			expect(result.content[0].text).toContain("Cleared 2");
@@ -2222,14 +2222,14 @@ describe("schedule_prompt tool", () => {
 		});
 
 		it("clears tasks not created in this instance", async () => {
-			const first = await tool.execute("id", { action: "add", prompt: "local", duration: "5m" });
-			const second = await tool.execute("id", { action: "add", prompt: "other", duration: "10m" });
+			const first = await tool.execute("id", { action: "add", duration: "5m", prompt: "local" });
+			const second = await tool.execute("id", { action: "add", duration: "10m", prompt: "other" });
 			second.details.task.creatorInstanceId = "foreign-instance";
 			second.details.task.creatorSessionId = "/mock-home/.pi/agent/sessions/foreign.jsonl";
 
 			const result = await tool.execute("id", { action: "clear_other" });
 			expect(result.content[0].text).toContain("not created in this instance");
-			expect(result.details).toMatchObject({ cleared: 1, otherCount: 1, legacyCount: 0 });
+			expect(result.details).toMatchObject({ cleared: 1, legacyCount: 0, otherCount: 1 });
 
 			const listResult = await tool.execute("id", { action: "list" });
 			expect(listResult.details.tasks).toHaveLength(1);
@@ -2246,9 +2246,9 @@ describe("schedule_prompt tool", () => {
 		it("supports workspace-scoped tasks via the tool API", async () => {
 			const result = await tool.execute("id", {
 				action: "add",
-				prompt: "watch CI",
-				kind: "recurring",
 				duration: "5m",
+				kind: "recurring",
+				prompt: "watch CI",
 				scope: "workspace",
 			});
 			expect(result.content[0].text).toContain("workspace-scoped");
@@ -2256,7 +2256,7 @@ describe("schedule_prompt tool", () => {
 		});
 
 		it("adopts and releases tasks through the tool API", async () => {
-			const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+			const addResult = await tool.execute("id", { action: "add", duration: "5m", prompt: "check" });
 			const taskId = addResult.details.task.id;
 
 			const releaseResult = await tool.execute("id", { action: "release", id: taskId });
@@ -2286,13 +2286,13 @@ describe("event wiring", () => {
 		vi.clearAllMocks();
 		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
 		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
-		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(mkdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(writeFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(renameSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
-		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		pi = createMockPi();
 		schedulerExtension(pi as any);
 	});
@@ -2315,16 +2315,15 @@ describe("event wiring", () => {
 		(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((file: string) => {
 			if (file.endsWith("scheduler.lease.json")) {
 				return JSON.stringify({
-					version: 1,
-					instanceId: "foreign-instance",
-					sessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
-					pid: 123,
 					cwd: "/mock-project",
 					heartbeatAt: now,
+					instanceId: "foreign-instance",
+					pid: 123,
+					sessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
+					version: 1,
 				});
 			}
 			return JSON.stringify({
-				version: 1,
 				tasks: [
 					{
 						id: "foreign1",
@@ -2341,6 +2340,7 @@ describe("event wiring", () => {
 						ownerSessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
 					},
 				],
+				version: 1,
 			});
 		});
 
@@ -2357,7 +2357,6 @@ describe("event wiring", () => {
 		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(true);
 		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue(
 			JSON.stringify({
-				version: 1,
 				tasks: [
 					{
 						id: "overdue3",
@@ -2372,19 +2371,16 @@ describe("event wiring", () => {
 						scope: "workspace",
 					},
 				],
+				version: 1,
 			}),
 		);
 
 		const ctx = createMockCtx();
 		pi._emit("session_start", { type: "session_start" }, ctx);
-		expect(ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review"))).toBe(
-			false,
-		);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review"))).toBeFalsy();
 
 		await vi.advanceTimersByTimeAsync(250);
-		expect(ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review"))).toBe(
-			true,
-		);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review"))).toBeTruthy();
 		expect(pi._userMessages).toHaveLength(0);
 	});
 
@@ -2396,16 +2392,15 @@ describe("event wiring", () => {
 		(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((file: string) => {
 			if (file.endsWith("scheduler.lease.json")) {
 				return JSON.stringify({
-					version: 1,
-					instanceId: "foreign-instance",
-					sessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
-					pid: 123,
 					cwd: "/mock-project",
 					heartbeatAt: now,
+					instanceId: "foreign-instance",
+					pid: 123,
+					sessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
+					version: 1,
 				});
 			}
 			return JSON.stringify({
-				version: 1,
 				tasks: [
 					{
 						id: "foreign1",
@@ -2422,6 +2417,7 @@ describe("event wiring", () => {
 						ownerSessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
 					},
 				],
+				version: 1,
 			});
 		});
 
@@ -2430,8 +2426,8 @@ describe("event wiring", () => {
 		expect(ctx.ui.select).not.toHaveBeenCalled();
 
 		await vi.advanceTimersByTimeAsync(250);
-		expect(ctx.ui.select).toHaveBeenCalled();
-		expect(ctx._notifications.some((n: any) => n.msg.includes("observe scheduler tasks"))).toBe(true);
+		expect(ctx.ui.select).toHaveBeenCalledWith();
+		expect(ctx._notifications.some((n: any) => n.msg.includes("observe scheduler tasks"))).toBeTruthy();
 		expect(pi._userMessages).toHaveLength(0);
 	});
 
@@ -2443,15 +2439,15 @@ describe("event wiring", () => {
 		(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((file: string) => {
 			if (file.endsWith("scheduler.lease.json")) {
 				return JSON.stringify({
-					version: 1,
-					instanceId: "foreign-instance",
-					sessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
-					pid: 123,
 					cwd: "/mock-project",
 					heartbeatAt: now,
+					instanceId: "foreign-instance",
+					pid: 123,
+					sessionId: "/mock-home/.pi/agent/sessions/foreign.jsonl",
+					version: 1,
 				});
 			}
-			return JSON.stringify({ version: 1, tasks: [] });
+			return JSON.stringify({ tasks: [], version: 1 });
 		});
 
 		const ctx = createMockCtx({ select: vi.fn().mockResolvedValue("Review tasks") });
@@ -2459,7 +2455,7 @@ describe("event wiring", () => {
 		await vi.advanceTimersByTimeAsync(250);
 
 		expect(ctx.ui.select).not.toHaveBeenCalled();
-		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBe(false);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBeFalsy();
 	});
 
 	it("updates status on session_switch", () => {
@@ -2495,7 +2491,7 @@ describe("event wiring", () => {
 		await pi._commands.get("remind")?.handler("in 1m check build", ctx);
 
 		pi._emit("session_shutdown", { type: "session_shutdown" }, otherCtx);
-		await vi.advanceTimersByTimeAsync(ONE_MINUTE + 2_000);
+		await vi.advanceTimersByTimeAsync(ONE_MINUTE + 2000);
 
 		expect(getDispatchedPrompts(pi)).toContain("check build");
 	});
@@ -2508,7 +2504,7 @@ describe("event wiring", () => {
 		pi._commands.get("loop")?.handler("5m check build", ctx);
 
 		pi._emit("session_shutdown", { type: "session_shutdown" }, ctx);
-		expect(ctx._statusMap.has("pi-scheduler")).toBe(false);
+		expect(ctx._statusMap.has("pi-scheduler")).toBeFalsy();
 	});
 });
 
@@ -2553,13 +2549,13 @@ describe("safe mode", () => {
 
 	it("still dispatches tasks in safe mode", async () => {
 		runtime.setSafeModeEnabled(true);
-		const task = runtime.addOneShotTask("run this", 1_000);
+		const task = runtime.addOneShotTask("run this", 1000);
 		runtime.startScheduler();
 
-		vi.advanceTimersByTime(SCHEDULER_SAFE_MODE_HEARTBEAT_MS + 1_000 + 100);
+		vi.advanceTimersByTime(SCHEDULER_SAFE_MODE_HEARTBEAT_MS + 1000 + 100);
 		await runtime.tickScheduler();
 
-		expect(getDispatchedPrompts(pi).length).toBe(1);
+		expect(getDispatchedPrompts(pi)).toHaveLength(1);
 		expect(getDispatchedPrompts(pi)[0]).toBe("run this");
 	});
 
@@ -2576,7 +2572,7 @@ describe("safe mode", () => {
 
 		// No rate limit notification should appear in safe mode.
 		const rateLimitNotices = ctx._notifications.filter((n: any) => n.msg.includes("throttled"));
-		expect(rateLimitNotices.length).toBe(0);
+		expect(rateLimitNotices).toHaveLength(0);
 	});
 
 	it("suppresses resume-required notifications in safe mode", () => {
@@ -2587,7 +2583,7 @@ describe("safe mode", () => {
 		runtime.setSafeModeEnabled(true);
 		runtime.notifyResumeRequiredTasks();
 
-		expect(ctx._notifications.length).toBe(0);
+		expect(ctx._notifications).toHaveLength(0);
 	});
 
 	it("is a no-op when setting same safe mode value", () => {
@@ -2600,11 +2596,11 @@ describe("safe mode", () => {
 	});
 
 	it("exposes isSafeModeActive getter", () => {
-		expect(runtime.isSafeModeActive).toBe(false);
+		expect(runtime.isSafeModeActive).toBeFalsy();
 		runtime.setSafeModeEnabled(true);
-		expect(runtime.isSafeModeActive).toBe(true);
+		expect(runtime.isSafeModeActive).toBeTruthy();
 		runtime.setSafeModeEnabled(false);
-		expect(runtime.isSafeModeActive).toBe(false);
+		expect(runtime.isSafeModeActive).toBeFalsy();
 	});
 
 	it("wires safe mode event from pi.events bus", () => {
@@ -2632,12 +2628,12 @@ describe("dispatch timestamp bounds", () => {
 		runtime.stopScheduler();
 	});
 
-	it("MAX_DISPATCH_TIMESTAMPS constant is 64", () => {
+	it("mAX_DISPATCH_TIMESTAMPS constant is 64", () => {
 		expect(MAX_DISPATCH_TIMESTAMPS).toBe(64);
 	});
 
-	it("SCHEDULER_SAFE_MODE_HEARTBEAT_MS constant is 5000", () => {
-		expect(SCHEDULER_SAFE_MODE_HEARTBEAT_MS).toBe(5_000);
+	it("sCHEDULER_SAFE_MODE_HEARTBEAT_MS constant is 5000", () => {
+		expect(SCHEDULER_SAFE_MODE_HEARTBEAT_MS).toBe(5000);
 	});
 
 	it("stopScheduler clears dispatchTimestamps", () => {
@@ -2648,7 +2644,7 @@ describe("dispatch timestamp bounds", () => {
 		runtime.dispatchTask(task);
 		runtime.stopScheduler();
 		// After stop, internal state should be clean — verify by checking
-		// that a new start works without leftover state.
+		// That a new start works without leftover state.
 		runtime.startScheduler();
 		runtime.stopScheduler();
 	});
@@ -2696,16 +2692,15 @@ describe("lease heartbeat refresh", () => {
 		(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((file: string) => {
 			if (typeof file === "string" && file.endsWith("scheduler.lease.json")) {
 				return JSON.stringify({
-					version: 1,
-					instanceId,
-					sessionId: null,
-					pid: process.pid,
 					cwd: "/mock-project",
 					heartbeatAt: now,
+					instanceId,
+					pid: process.pid,
+					sessionId: null,
+					version: 1,
 				});
 			}
 			return JSON.stringify({
-				version: 1,
 				tasks: [
 					{
 						id: "owned123",
@@ -2722,11 +2717,12 @@ describe("lease heartbeat refresh", () => {
 						ownerSessionId: null,
 					},
 				],
+				version: 1,
 			});
 		});
 
 		// Create a context that is NOT idle.
-		const ctx = createMockCtx({ isIdle: () => false, hasPendingMessages: () => true });
+		const ctx = createMockCtx({ hasPendingMessages: () => true, isIdle: () => false });
 		runtime.setRuntimeContext(ctx as any);
 
 		// Tick — should still refresh the heartbeat even though pi is busy.
@@ -2735,7 +2731,7 @@ describe("lease heartbeat refresh", () => {
 
 		// The lease should have been refreshed.
 		expect(writtenLeases.length).toBeGreaterThanOrEqual(1);
-		const lastLease = JSON.parse(writtenLeases[writtenLeases.length - 1]);
+		const lastLease = JSON.parse(writtenLeases.at(-1));
 		expect(lastLease.instanceId).toBe(instanceId);
 	});
 });
@@ -2743,27 +2739,27 @@ describe("lease heartbeat refresh", () => {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 describe("constants", () => {
-	it("MAX_TASKS is 50", () => {
+	it("mAX_TASKS is 50", () => {
 		expect(MAX_TASKS).toBe(50);
 	});
 
-	it("ONE_MINUTE is 60000", () => {
+	it("oNE_MINUTE is 60000", () => {
 		expect(ONE_MINUTE).toBe(60_000);
 	});
 
-	it("FIFTEEN_MINUTES is 15 * ONE_MINUTE", () => {
+	it("fIFTEEN_MINUTES is 15 * ONE_MINUTE", () => {
 		expect(FIFTEEN_MINUTES).toBe(15 * 60_000);
 	});
 
-	it("THREE_DAYS is 3 days in ms", () => {
+	it("tHREE_DAYS is 3 days in ms", () => {
 		expect(THREE_DAYS).toBe(3 * 24 * 60 * 60_000);
 	});
 
-	it("DEFAULT_LOOP_INTERVAL is 10 * ONE_MINUTE", () => {
+	it("dEFAULT_LOOP_INTERVAL is 10 * ONE_MINUTE", () => {
 		expect(DEFAULT_LOOP_INTERVAL).toBe(10 * 60_000);
 	});
 
-	it("MIN_RECURRING_INTERVAL is 1 minute", () => {
+	it("mIN_RECURRING_INTERVAL is 1 minute", () => {
 		expect(MIN_RECURRING_INTERVAL).toBe(ONE_MINUTE);
 	});
 
@@ -2784,13 +2780,13 @@ describe("edge cases", () => {
 		vi.clearAllMocks();
 		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
 		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
-		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(mkdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(writeFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(renameSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
-		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		pi = createMockPi();
 		ctx = createMockCtx();
 		schedulerExtension(pi as any);
@@ -2803,29 +2799,29 @@ describe("edge cases", () => {
 
 	it("handles /loop with word-form trailing duration", async () => {
 		await pi._commands.get("loop").handler("check deploy every 30 minutes", ctx);
-		expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled every 30m"))).toBe(true);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled every 30m"))).toBeTruthy();
 	});
 
 	it("handles /loop with very long prompt", async () => {
 		const longPrompt = "a".repeat(200);
 		await pi._commands.get("loop").handler(`5m ${longPrompt}`, ctx);
-		expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled every 5m"))).toBe(true);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("Scheduled every 5m"))).toBeTruthy();
 	});
 
 	it("handles /schedule list with no tasks", async () => {
 		await pi._commands.get("schedule").handler("list", ctx);
-		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBe(true);
+		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBeTruthy();
 	});
 
 	it("handles /schedule tui alias", async () => {
 		// With no tasks, TUI manager should show "No scheduled tasks" notification
 		await pi._commands.get("schedule").handler("tui", ctx);
-		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBe(true);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBeTruthy();
 	});
 
 	it("handles /schedule with no args (TUI manager)", async () => {
 		await pi._commands.get("schedule").handler("", ctx);
-		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBe(true);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("No scheduled tasks"))).toBeTruthy();
 	});
 
 	it("shows colon-style guidance for unsupported scope changes", async () => {
@@ -2865,7 +2861,7 @@ describe("edge cases", () => {
 		await pi._commands.get("loop").handler("10m check worker backlog", ctx);
 		const select = vi.fn().mockResolvedValueOnce("🗑 Clear all");
 		const confirm = vi.fn().mockResolvedValueOnce(true);
-		const taskCtx = createMockCtx({ cwd: "/mock-project/apps/api", select, confirm });
+		const taskCtx = createMockCtx({ confirm, cwd: "/mock-project/apps/api", select });
 
 		await pi._commands.get("schedule").handler("", taskCtx);
 
@@ -2873,10 +2869,10 @@ describe("edge cases", () => {
 			"Clear all scheduled tasks?",
 			"Delete 2 scheduled tasks for /mock-project/apps/api?",
 		);
-		expect(taskCtx._notifications.some((n: any) => n.msg.includes("Cleared 2 scheduled tasks."))).toBe(true);
-		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBe(false);
+		expect(taskCtx._notifications.some((n: any) => n.msg.includes("Cleared 2 scheduled tasks."))).toBeTruthy();
+		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBeFalsy();
 		await pi._commands.get("schedule").handler("list", ctx);
-		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBe(true);
+		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBeTruthy();
 	});
 
 	it("can clear tasks not created here directly from the task manager list", async () => {
@@ -2890,7 +2886,7 @@ describe("edge cases", () => {
 
 		const select = vi.fn().mockResolvedValueOnce("🧹 Clear tasks not created here (1)");
 		const confirm = vi.fn().mockResolvedValueOnce(true);
-		const taskCtx = createMockCtx({ cwd: "/mock-project/apps/api", select, confirm });
+		const taskCtx = createMockCtx({ confirm, cwd: "/mock-project/apps/api", select });
 
 		await pi._commands.get("schedule").handler("", taskCtx);
 
@@ -2898,7 +2894,7 @@ describe("edge cases", () => {
 			"Clear tasks not created here?",
 			"Delete 1 scheduled task for /mock-project/apps/api not created in this instance? (1 created by another instance)",
 		);
-		expect(taskCtx._notifications.some((n: any) => n.msg.includes("not created in this instance"))).toBe(true);
+		expect(taskCtx._notifications.some((n: any) => n.msg.includes("not created in this instance"))).toBeTruthy();
 		const after = await tool.execute("id", { action: "list" });
 		expect(after.details.tasks).toHaveLength(1);
 		expect(after.details.tasks[0].prompt).toContain("local queue");
@@ -2910,16 +2906,16 @@ describe("edge cases", () => {
 		ctx._notifications.length = 0;
 
 		await pi._commands.get("unschedule").handler(taskId!, ctx);
-		expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBe(true);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBeTruthy();
 
 		// Verify task is gone
 		await pi._commands.get("schedule").handler("list", ctx);
-		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBe(true);
+		expect(pi._messages.some((m: any) => m.content.includes("No scheduled tasks"))).toBeTruthy();
 	});
 
 	it("tool add then tool list shows the task", async () => {
 		const tool = pi._tools.get("schedule_prompt");
-		await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+		await tool.execute("id", { action: "add", duration: "5m", prompt: "check" });
 		const listResult = await tool.execute("id", { action: "list" });
 		expect(listResult.content[0].text).toContain("check");
 		expect(listResult.details.tasks).toHaveLength(1);
@@ -2927,7 +2923,7 @@ describe("edge cases", () => {
 
 	it("tool add + delete + list shows empty", async () => {
 		const tool = pi._tools.get("schedule_prompt");
-		const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+		const addResult = await tool.execute("id", { action: "add", duration: "5m", prompt: "check" });
 		const taskId = addResult.details.task.id;
 
 		await tool.execute("id", { action: "delete", id: taskId });
@@ -2937,7 +2933,7 @@ describe("edge cases", () => {
 
 	it("handles whitespace in /schedule args", async () => {
 		await pi._commands.get("schedule").handler("  list  ", ctx);
-		expect(pi._messages.some((m: any) => m.customType === "pi-scheduler")).toBe(true);
+		expect(pi._messages.some((m: any) => m.customType === "pi-scheduler")).toBeTruthy();
 	});
 
 	it("handles whitespace-padded id in /unschedule", async () => {
@@ -2946,23 +2942,23 @@ describe("edge cases", () => {
 		ctx._notifications.length = 0;
 
 		await pi._commands.get("unschedule").handler(`  ${taskId}  `, ctx);
-		expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBe(true);
+		expect(ctx._notifications.some((n: any) => n.msg.includes("Deleted"))).toBeTruthy();
 	});
 
 	it("supports continue-until-complete options in schedule_prompt add", async () => {
 		const tool = pi._tools.get("schedule_prompt");
 		const result = await tool.execute("id", {
 			action: "add",
-			prompt: "check deployment and keep going",
-			duration: "5m",
-			continueUntilComplete: true,
-			retryInterval: "90s",
 			completionSignal: "DEPLOYMENT_DONE",
+			continueUntilComplete: true,
+			duration: "5m",
 			maxAttempts: 4,
+			prompt: "check deployment and keep going",
+			retryInterval: "90s",
 		});
 
 		expect(result.content[0].text).toContain("Will retry until marked complete");
-		expect(result.details.task.continueUntilComplete).toBe(true);
+		expect(result.details.task.continueUntilComplete).toBeTruthy();
 		expect(result.details.task.retryIntervalMs).toBe(2 * ONE_MINUTE);
 		expect(result.details.task.completionSignal).toBe("DEPLOYMENT_DONE");
 		expect(result.details.task.maxAttempts).toBe(4);
@@ -2972,26 +2968,26 @@ describe("edge cases", () => {
 		const runtime = new SchedulerRuntime(pi as any);
 		runtime.setRuntimeContext(ctx as any);
 		const task = runtime.addOneShotTask("check build status", ONE_MINUTE, {
-			continueUntilComplete: true,
 			completionSignal: "BUILD_DONE",
-			retryIntervalMs: ONE_MINUTE,
+			continueUntilComplete: true,
 			maxAttempts: 3,
+			retryIntervalMs: ONE_MINUTE,
 		});
 
 		runtime.dispatchTask(task);
 		expect(getDispatchedPrompts(pi).at(-1)).toBe("check build status");
-		expect(runtime.getTask(task.id)?.awaitingCompletion).toBe(true);
+		expect(runtime.getTask(task.id)?.awaitingCompletion).toBeTruthy();
 		expect(runtime.getTask(task.id)?.lastStatus).toBe("pending");
 
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "still running, not complete yet" }] });
+		runtime.handleAgentEnd({ messages: [{ content: "still running, not complete yet", role: "assistant" }] });
 		expect(runtime.getTask(task.id)).toBeDefined();
-		expect(runtime.getTask(task.id)?.awaitingCompletion).toBe(false);
+		expect(runtime.getTask(task.id)?.awaitingCompletion).toBeFalsy();
 		expect(runtime.getTask(task.id)?.lastStatus).toBe("pending");
 
 		const retryTask = runtime.getTask(task.id);
 		expect(retryTask).toBeDefined();
 		runtime.dispatchTask(retryTask!);
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "BUILD_DONE" }] });
+		runtime.handleAgentEnd({ messages: [{ content: "BUILD_DONE", role: "assistant" }] });
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 
@@ -2999,14 +2995,14 @@ describe("edge cases", () => {
 		const runtime = new SchedulerRuntime(pi as any);
 		runtime.setRuntimeContext(ctx as any);
 		const task = runtime.addOneShotTask("check deployment", ONE_MINUTE, {
-			continueUntilComplete: true,
 			completionSignal: "/deployed.*success/i",
-			retryIntervalMs: ONE_MINUTE,
+			continueUntilComplete: true,
 			maxAttempts: 3,
+			retryIntervalMs: ONE_MINUTE,
 		});
 
 		runtime.dispatchTask(task);
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "Deployed v2.0 with SUCCESS" }] });
+		runtime.handleAgentEnd({ messages: [{ content: "Deployed v2.0 with SUCCESS", role: "assistant" }] });
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 
@@ -3014,15 +3010,15 @@ describe("edge cases", () => {
 		const runtime = new SchedulerRuntime(pi as any);
 		runtime.setRuntimeContext(ctx as any);
 		const task = runtime.addOneShotTask("check status", ONE_MINUTE, {
-			continueUntilComplete: true,
 			completionSignal: "STATUS_OK",
-			retryIntervalMs: ONE_MINUTE,
+			continueUntilComplete: true,
 			maxAttempts: 3,
+			retryIntervalMs: ONE_MINUTE,
 		});
 
 		runtime.dispatchTask(task);
 		// Plain string signal should match as substring
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "The status is STATUS_OK now" }] });
+		runtime.handleAgentEnd({ messages: [{ content: "The status is STATUS_OK now", role: "assistant" }] });
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 
@@ -3030,15 +3026,15 @@ describe("edge cases", () => {
 		const runtime = new SchedulerRuntime(pi as any);
 		runtime.setRuntimeContext(ctx as any);
 		const task = runtime.addOneShotTask("check", ONE_MINUTE, {
-			continueUntilComplete: true,
 			completionSignal: "/([/",
-			retryIntervalMs: ONE_MINUTE,
+			continueUntilComplete: true,
 			maxAttempts: 3,
+			retryIntervalMs: ONE_MINUTE,
 		});
 
 		runtime.dispatchTask(task);
 		// Invalid regex should fall back to substring matching
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "The signal is /([/" }] });
+		runtime.handleAgentEnd({ messages: [{ content: "The signal is /([/", role: "assistant" }] });
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 
@@ -3046,19 +3042,19 @@ describe("edge cases", () => {
 		const runtime = new SchedulerRuntime(pi as any);
 		runtime.setRuntimeContext(ctx as any);
 		const task = runtime.addOneShotTask("check", ONE_MINUTE, {
-			continueUntilComplete: true,
 			completionSignal: "/completed/",
-			retryIntervalMs: ONE_MINUTE,
+			continueUntilComplete: true,
 			maxAttempts: 5,
+			retryIntervalMs: ONE_MINUTE,
 		});
 
 		runtime.dispatchTask(task);
 		// First check — should not match
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "still running" }] });
+		runtime.handleAgentEnd({ messages: [{ content: "still running", role: "assistant" }] });
 		expect(runtime.getTask(task.id)).toBeDefined();
 		// Second check — regex should be cached now, match on second attempt
 		runtime.dispatchTask(runtime.getTask(task.id)!);
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "Task completed!" }] });
+		runtime.handleAgentEnd({ messages: [{ content: "Task completed!", role: "assistant" }] });
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 });
@@ -3072,13 +3068,13 @@ describe("schedulePersistTasks debounce", () => {
 		vi.clearAllMocks();
 		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
 		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
-		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
-		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(mkdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(writeFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(renameSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
-		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 		pi = createMockPi();
 		ctx = createMockCtx();
 	});
@@ -3113,15 +3109,15 @@ describe("schedulePersistTasks debounce", () => {
 		expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
 
 		// Advance past debounce — advance exactly to the timer to avoid
-		// triggering the scheduler tick interval (1s) extra times.
-		vi.advanceTimersByTime(2_000);
+		// Triggering the scheduler tick interval (1s) extra times.
+		vi.advanceTimersByTime(2000);
 
 		// Should have written exactly once since the timer fired
-		expect(vi.mocked(writeFileSync)).toHaveBeenCalledTimes(1);
+		expect(vi.mocked(writeFileSync)).toHaveBeenCalledOnce();
 		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
 			expect.stringContaining(".tmp"),
 			expect.stringContaining(task1.id),
-			"utf-8",
+			"utf8",
 		);
 	});
 

@@ -7,23 +7,10 @@ import { pathToFileURL } from "node:url";
 import { appendJsonl, getArtifactPaths } from "./artifacts.js";
 import { getPiSpawnCommand } from "./pi-spawn.js";
 import { persistSingleOutput } from "./single-output.js";
-import {
-	type ArtifactConfig,
-	type ArtifactPaths,
-	DEFAULT_MAX_OUTPUT,
-	type MaxOutputConfig,
-	truncateOutput,
-	getSubagentDepthEnv,
-} from "./types.js";
-import {
-	type RunnerSubagentStep as SubagentStep,
-	type RunnerStep,
-	isParallelGroup,
-	flattenSteps,
-	mapConcurrent,
-	aggregateParallelOutputs,
-	MAX_PARALLEL_CONCURRENCY,
-} from "./parallel-utils.js";
+import { DEFAULT_MAX_OUTPUT, truncateOutput, getSubagentDepthEnv } from './types.js';
+import type { ArtifactConfig, ArtifactPaths, MaxOutputConfig } from './types.js';
+import { isParallelGroup, flattenSteps, mapConcurrent, aggregateParallelOutputs, MAX_PARALLEL_CONCURRENCY } from './parallel-utils.js';
+import type { RunnerSubagentStep as SubagentStep, RunnerStep } from './parallel-utils.js';
 
 interface SubagentRunConfig {
 	id: string;
@@ -60,7 +47,7 @@ function findLatestSessionFile(sessionDir: string): string | null {
 			.readdirSync(sessionDir)
 			.filter((f) => f.endsWith(".jsonl"))
 			.map((f) => path.join(sessionDir, f));
-		if (files.length === 0) return null;
+		if (files.length === 0) {return null;}
 		files.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
 		return files[0] ?? null;
 	} catch {
@@ -76,13 +63,13 @@ interface TokenUsage {
 
 function parseSessionTokens(sessionDir: string): TokenUsage | null {
 	const sessionFile = findLatestSessionFile(sessionDir);
-	if (!sessionFile) return null;
+	if (!sessionFile) {return null;}
 	try {
-		const content = fs.readFileSync(sessionFile, "utf-8");
+		const content = fs.readFileSync(sessionFile, "utf8");
 		let input = 0;
 		let output = 0;
 		for (const line of content.split("\n")) {
-			if (!line.trim()) continue;
+			if (!line.trim()) {continue;}
 			try {
 				const entry = JSON.parse(line);
 				if (entry.usage) {
@@ -106,9 +93,9 @@ function runPiStreaming(
 ): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
 	return new Promise((resolve) => {
 		const outputStream = fs.createWriteStream(outputFile, { flags: "w" });
-		const spawnEnv = { ...process.env, ...(env ?? {}), ...getSubagentDepthEnv() };
+		const spawnEnv = { ...process.env, ...env, ...getSubagentDepthEnv() };
 		const spawnSpec = getPiSpawnCommand(args, piPackageRoot ? { piPackageRoot } : undefined);
-		const child = spawn(spawnSpec.command, spawnSpec.args, { cwd, stdio: ["ignore", "pipe", "pipe"], env: spawnEnv });
+		const child = spawn(spawnSpec.command, spawnSpec.args, { cwd, env: spawnEnv, stdio: ["ignore", "pipe", "pipe"] });
 		let stdout = "";
 		let stderr = "";
 
@@ -126,12 +113,12 @@ function runPiStreaming(
 
 		child.on("close", (exitCode) => {
 			outputStream.end();
-			resolve({ stdout, stderr, exitCode });
+			resolve({ exitCode, stderr, stdout });
 		});
 
 		child.on("error", (err) => {
 			outputStream.end();
-			resolve({ stdout, stderr: stderr || `Process spawn error: ${err.message}`, exitCode: 1 });
+			resolve({ exitCode: 1, stderr: stderr || `Process spawn error: ${err.message}`, stdout });
 		});
 	});
 }
@@ -144,8 +131,8 @@ function resolvePiPackageRootFallback(): string {
 	while (dir !== path.dirname(dir)) {
 		const pkgJsonPath = path.join(dir, "package.json");
 		try {
-			const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf-8"));
-			if (pkg.name === "@mariozechner/pi-coding-agent") return dir;
+			const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
+			if (pkg.name === "@mariozechner/pi-coding-agent") {return dir;}
 		} catch {}
 		dir = path.dirname(dir);
 	}
@@ -157,10 +144,9 @@ async function exportSessionHtml(sessionFile: string, outputDir: string, piPacka
 	const exportModulePath = path.join(pkgRoot, "dist", "core", "export-html", "index.js");
 	const moduleUrl = pathToFileURL(exportModulePath).href;
 	const mod = await import(moduleUrl);
-	const exportFromFile = (mod as { exportFromFile?: (inputPath: string, options?: { outputPath?: string }) => string })
-		.exportFromFile;
+	const {exportFromFile} = (mod as { exportFromFile?: (inputPath: string, options?: { outputPath?: string }) => string });
 	if (typeof exportFromFile !== "function") {
-		throw new Error("exportFromFile not available");
+		throw new TypeError("exportFromFile not available");
 	}
 	const outputPath = path.join(outputDir, `${path.basename(sessionFile, ".jsonl")}.html`);
 	return exportFromFile(sessionFile, { outputPath });
@@ -168,7 +154,7 @@ async function exportSessionHtml(sessionFile: string, outputDir: string, piPacka
 
 function createShareLink(htmlPath: string): { shareUrl: string; gistUrl: string } | { error: string } {
 	try {
-		const auth = spawnSync("gh", ["auth", "status"], { encoding: "utf-8" });
+		const auth = spawnSync("gh", ["auth", "status"], { encoding: "utf8" });
 		if (auth.status !== 0) {
 			return { error: "GitHub CLI is not logged in. Run 'gh auth login' first." };
 		}
@@ -177,31 +163,31 @@ function createShareLink(htmlPath: string): { shareUrl: string; gistUrl: string 
 	}
 
 	try {
-		const result = spawnSync("gh", ["gist", "create", htmlPath], { encoding: "utf-8" });
+		const result = spawnSync("gh", ["gist", "create", htmlPath], { encoding: "utf8" });
 		if (result.status !== 0) {
 			const err = (result.stderr || "").trim() || "Failed to create gist.";
 			return { error: err };
 		}
 		const gistUrl = (result.stdout || "").trim();
 		const gistId = gistUrl.split("/").pop();
-		if (!gistId) return { error: "Failed to parse gist ID." };
+		if (!gistId) {return { error: "Failed to parse gist ID." };}
 		const shareUrl = `https://shittycodingagent.ai/session/?${gistId}`;
-		return { shareUrl, gistUrl };
-	} catch (err) {
-		return { error: String(err) };
+		return { gistUrl, shareUrl };
+	} catch (error) {
+		return { error: String(error) };
 	}
 }
 
 function writeJson(filePath: string, payload: object): void {
 	fs.mkdirSync(path.dirname(filePath), { recursive: true });
-	fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf-8");
+	fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), "utf8");
 }
 
 function formatDuration(ms: number): string {
-	if (ms < 1000) return `${ms}ms`;
-	if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-	const minutes = Math.floor(ms / 60000);
-	const seconds = Math.floor((ms % 60000) / 1000);
+	if (ms < 1000) {return `${ms}ms`;}
+	if (ms < 60_000) {return `${(ms / 1000).toFixed(1)}s`;}
+	const minutes = Math.floor(ms / 60_000);
+	const seconds = Math.floor((ms % 60_000) / 1000);
 	return `${minutes}m${seconds}s`;
 }
 
@@ -213,11 +199,11 @@ function writeRunLog(
 		cwd: string;
 		startedAt: number;
 		endedAt: number;
-		steps: Array<{
+		steps: {
 			agent: string;
 			status: string;
 			durationMs?: number;
-		}>;
+		}[];
 		summary: string;
 		truncated: boolean;
 		artifactsDir?: string;
@@ -234,10 +220,10 @@ function writeRunLog(
 	lines.push(`- **Started:** ${new Date(input.startedAt).toISOString()}`);
 	lines.push(`- **Ended:** ${new Date(input.endedAt).toISOString()}`);
 	lines.push(`- **Duration:** ${formatDuration(input.endedAt - input.startedAt)}`);
-	if (input.sessionFile) lines.push(`- **Session:** ${input.sessionFile}`);
-	if (input.shareUrl) lines.push(`- **Share:** ${input.shareUrl}`);
-	if (input.shareError) lines.push(`- **Share error:** ${input.shareError}`);
-	if (input.artifactsDir) lines.push(`- **Artifacts:** ${input.artifactsDir}`);
+	if (input.sessionFile) {lines.push(`- **Session:** ${input.sessionFile}`);}
+	if (input.shareUrl) {lines.push(`- **Share:** ${input.shareUrl}`);}
+	if (input.shareError) {lines.push(`- **Share error:** ${input.shareError}`);}
+	if (input.artifactsDir) {lines.push(`- **Artifacts:** ${input.artifactsDir}`);}
 	lines.push("");
 	lines.push("## Steps");
 	lines.push("| Step | Agent | Status | Duration |");
@@ -254,7 +240,7 @@ function writeRunLog(
 	}
 	lines.push(input.summary.trim() || "(no output)");
 	lines.push("");
-	fs.writeFileSync(logPath, lines.join("\n"), "utf-8");
+	fs.writeFileSync(logPath, lines.join("\n"), "utf8");
 }
 
 /** Context for running a single step */
@@ -288,12 +274,12 @@ async function runSingleStep(
 		} catch {}
 		args.push("--session-dir", ctx.sessionDir);
 	}
-	if (step.model) args.push("--models", step.model);
+	if (step.model) {args.push("--models", step.model);}
 
 	// Only pi's 7 builtin tools can be passed via --tools.
 	// Extension-registered tools (e.g. read_full) are not in allTools
-	// and get silently dropped when passed as --tools because the
-	// whitelist is applied before extensions load.
+	// And get silently dropped when passed as --tools because the
+	// Whitelist is applied before extensions load.
 	const BUILTIN_TOOL_NAMES = new Set(["read", "bash", "edit", "write", "grep", "find", "ls"]);
 
 	const toolExtensionPaths: string[] = [];
@@ -305,16 +291,16 @@ async function runSingleStep(
 			} else if (BUILTIN_TOOL_NAMES.has(tool)) {
 				builtinTools.push(tool);
 			}
-			// else: extension-registered tool (e.g. read_full) — let the
-			// extension register it naturally; don't pass via --tools.
+			// Else: extension-registered tool (e.g. read_full) — let the
+			// Extension register it naturally; don't pass via --tools.
 		}
-		if (builtinTools.length > 0) args.push("--tools", builtinTools.join(","));
+		if (builtinTools.length > 0) {args.push("--tools", builtinTools.join(","));}
 	}
 	if (step.extensions !== undefined) {
 		args.push("--no-extensions");
-		for (const extPath of step.extensions) args.push("--extension", extPath);
+		for (const extPath of step.extensions) {args.push("--extension", extPath);}
 	} else {
-		for (const extPath of toolExtensionPaths) args.push("--extension", extPath);
+		for (const extPath of toolExtensionPaths) {args.push("--extension", extPath);}
 	}
 
 	if (step.skills?.length) {
@@ -330,15 +316,15 @@ async function runSingleStep(
 	}
 
 	// Cache the placeholder regex — the placeholder is constant for the run
-	// so the regex only needs to be compiled once.
-	/* v8 ignore next 2 -- placeholder regex is runtime-only, tested via integration */
-	const placeholderPattern = ctx.placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // patch-coverage-ignore
-	const placeholderRegex = new RegExp(placeholderPattern, "g"); // patch-coverage-ignore
+	// So the regex only needs to be compiled once.
+	/* V8 ignore next 2 -- placeholder regex is runtime-only, tested via integration */
+	const placeholderPattern = ctx.placeholder.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`); // Patch-coverage-ignore
+	const placeholderRegex = new RegExp(placeholderPattern, "g"); // Patch-coverage-ignore
 	const task = step.task.replace(placeholderRegex, () => ctx.previousOutput);
 
 	const TASK_ARG_LIMIT = 8000;
 	if (task.length > TASK_ARG_LIMIT) {
-		if (!tmpDir) tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagent-"));
+		if (!tmpDir) {tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagent-"));}
 		const taskFilePath = path.join(tmpDir, "task.md");
 		fs.writeFileSync(taskFilePath, `Task: ${task}`, { mode: 0o600 });
 		args.push(`@${taskFilePath}`);
@@ -352,7 +338,7 @@ async function runSingleStep(
 		artifactPaths = getArtifactPaths(ctx.artifactsDir, ctx.id, step.agent, index);
 		fs.mkdirSync(ctx.artifactsDir, { recursive: true });
 		if (ctx.artifactConfig?.includeInput !== false) {
-			fs.writeFileSync(artifactPaths.inputPath, `# Task for ${step.agent}\n\n${task}`, "utf-8");
+			fs.writeFileSync(artifactPaths.inputPath, `# Task for ${step.agent}\n\n${task}`, "utf8");
 		}
 	}
 
@@ -388,24 +374,24 @@ async function runSingleStep(
 
 	if (artifactPaths && ctx.artifactConfig?.enabled !== false) {
 		if (ctx.artifactConfig?.includeOutput !== false) {
-			fs.writeFileSync(artifactPaths.outputPath, output, "utf-8");
+			fs.writeFileSync(artifactPaths.outputPath, output, "utf8");
 		}
 		if (ctx.artifactConfig?.includeMetadata !== false) {
 			fs.writeFileSync(
 				artifactPaths.metadataPath,
 				JSON.stringify(
 					{
-						runId: ctx.id,
 						agent: step.agent,
-						task,
 						exitCode: result.exitCode,
+						runId: ctx.id,
 						skills: step.skills,
+						task,
 						timestamp: Date.now(),
 					},
 					null,
 					2,
 				),
-				"utf-8",
+				"utf8",
 			);
 		}
 	}
@@ -415,7 +401,7 @@ async function runSingleStep(
 		outputForSummary = `[!] Process failed (exit ${result.exitCode}):\n${result.stderr.slice(0, 1000)}`;
 	}
 
-	return { agent: step.agent, output: outputForSummary, exitCode: result.exitCode, artifactPaths };
+	return { agent: step.agent, artifactPaths, exitCode: result.exitCode, output: outputForSummary };
 }
 
 async function runSubagent(config: SubagentRunConfig): Promise<void> {
@@ -426,7 +412,7 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 	const overallStartTime = Date.now();
 	const shareEnabled = config.share === true;
 	const sessionEnabled = Boolean(config.sessionDir) || shareEnabled;
-	const asyncDir = config.asyncDir;
+	const {asyncDir} = config;
 	const statusPath = path.join(asyncDir, "status.json");
 	const eventsPath = path.join(asyncDir, "events.jsonl");
 	const logPath = path.join(asyncDir, `subagent-log-${id}.md`);
@@ -444,7 +430,7 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 		pid: number;
 		cwd: string;
 		currentStep: number;
-		steps: Array<{
+		steps: {
 			agent: string;
 			status: "pending" | "running" | "complete" | "failed";
 			startedAt?: number;
@@ -454,7 +440,7 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 			error?: string;
 			tokens?: TokenUsage;
 			skills?: string[];
-		}>;
+		}[];
 		artifactsDir?: string;
 		sessionDir?: string;
 		outputFile?: string;
@@ -465,18 +451,18 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 		shareError?: string;
 		error?: string;
 	} = {
-		runId: id,
-		mode: flatSteps.length > 1 ? "chain" : "single",
-		state: "running",
-		startedAt: overallStartTime,
-		lastUpdate: overallStartTime,
-		pid: process.pid,
-		cwd,
-		currentStep: 0,
-		steps: flatSteps.map((step) => ({ agent: step.agent, status: "pending", skills: step.skills })),
 		artifactsDir,
-		sessionDir: config.sessionDir,
+		currentStep: 0,
+		cwd,
+		lastUpdate: overallStartTime,
+		mode: flatSteps.length > 1 ? "chain" : "single",
 		outputFile: path.join(asyncDir, "output-0.log"),
+		pid: process.pid,
+		runId: id,
+		sessionDir: config.sessionDir,
+		startedAt: overallStartTime,
+		state: "running",
+		steps: flatSteps.map((step) => ({ agent: step.agent, status: "pending", skills: step.skills })),
 	};
 
 	fs.mkdirSync(asyncDir, { recursive: true });
@@ -484,12 +470,12 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 	appendJsonl(
 		eventsPath,
 		JSON.stringify({
-			type: "subagent.run.started",
-			ts: overallStartTime,
-			runId: id,
-			mode: statusPayload.mode,
 			cwd,
+			mode: statusPayload.mode,
 			pid: process.pid,
+			runId: id,
+			ts: overallStartTime,
+			type: "subagent.run.started",
 		}),
 	);
 
@@ -522,18 +508,18 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 			appendJsonl(
 				eventsPath,
 				JSON.stringify({
-					type: "subagent.parallel.started",
-					ts: groupStartTime,
-					runId: id,
-					stepIndex,
 					agents: group.parallel.map((t) => t.agent),
 					count: group.parallel.length,
+					runId: id,
+					stepIndex,
+					ts: groupStartTime,
+					type: "subagent.parallel.started",
 				}),
 			);
 
 			const parallelResults = await mapConcurrent(group.parallel, concurrency, async (task, taskIdx) => {
 				if (aborted && failFast) {
-					return { agent: task.agent, output: "(skipped — fail-fast)", exitCode: -1 as number | null, skipped: true };
+					return { agent: task.agent, exitCode: -1 as number | null, output: "(skipped — fail-fast)", skipped: true };
 				}
 
 				const fi = groupStartFlatIndex + taskIdx;
@@ -542,11 +528,11 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 				appendJsonl(
 					eventsPath,
 					JSON.stringify({
-						type: "subagent.step.started",
-						ts: taskStartTime,
+						agent: task.agent,
 						runId: id,
 						stepIndex: fi,
-						agent: task.agent,
+						ts: taskStartTime,
+						type: "subagent.step.started",
 					}),
 				);
 
@@ -554,18 +540,18 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 				const taskSessionDir = config.sessionDir ? path.join(config.sessionDir, `parallel-${taskIdx}`) : undefined;
 
 				const singleResult = await runSingleStep(task, {
-					previousOutput,
-					placeholder,
-					cwd,
-					sessionEnabled,
-					sessionDir: taskSessionDir,
-					artifactsDir,
 					artifactConfig,
-					id,
+					artifactsDir,
+					cwd,
 					flatIndex: fi,
 					flatStepCount: flatSteps.length,
+					id,
 					outputFile: path.join(asyncDir, `output-${fi}.log`),
 					piPackageRoot: config.piPackageRoot,
+					placeholder,
+					previousOutput,
+					sessionDir: taskSessionDir,
+					sessionEnabled,
 				});
 
 				const taskEndTime = Date.now();
@@ -581,17 +567,17 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 				appendJsonl(
 					eventsPath,
 					JSON.stringify({
-						type: singleResult.exitCode === 0 ? "subagent.step.completed" : "subagent.step.failed",
-						ts: taskEndTime,
+						agent: task.agent,
+						durationMs: taskDuration,
+						exitCode: singleResult.exitCode,
 						runId: id,
 						stepIndex: fi,
-						agent: task.agent,
-						exitCode: singleResult.exitCode,
-						durationMs: taskDuration,
+						ts: taskEndTime,
+						type: singleResult.exitCode === 0 ? "subagent.step.completed" : "subagent.step.failed",
 					}),
 				);
 
-				if (singleResult.exitCode !== 0 && failFast) aborted = true;
+				if (singleResult.exitCode !== 0 && failFast) {aborted = true;}
 				return { ...singleResult, skipped: false };
 			});
 
@@ -621,26 +607,26 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 			for (const pr of parallelResults) {
 				results.push({
 					agent: pr.agent,
-					output: pr.output,
-					success: pr.exitCode === 0,
-					skipped: pr.skipped,
 					artifactPaths: pr.artifactPaths,
+					output: pr.output,
+					skipped: pr.skipped,
+					success: pr.exitCode === 0,
 				});
 			}
 
 			// Aggregate parallel outputs for {previous}
 			previousOutput = aggregateParallelOutputs(
-				parallelResults.map((r) => ({ agent: r.agent, output: r.output, exitCode: r.exitCode })),
+				parallelResults.map((r) => ({ agent: r.agent, exitCode: r.exitCode, output: r.output })),
 			);
 
 			appendJsonl(
 				eventsPath,
 				JSON.stringify({
-					type: "subagent.parallel.completed",
-					ts: Date.now(),
 					runId: id,
 					stepIndex,
 					success: parallelResults.every((r) => r.exitCode === 0 || r.exitCode === -1),
+					ts: Date.now(),
+					type: "subagent.parallel.completed",
 				}),
 			);
 
@@ -663,35 +649,35 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 			appendJsonl(
 				eventsPath,
 				JSON.stringify({
-					type: "subagent.step.started",
-					ts: stepStartTime,
+					agent: seqStep.agent,
 					runId: id,
 					stepIndex: flatIndex,
-					agent: seqStep.agent,
+					ts: stepStartTime,
+					type: "subagent.step.started",
 				}),
 			);
 
 			const singleResult = await runSingleStep(seqStep, {
-				previousOutput,
-				placeholder,
-				cwd,
-				sessionEnabled,
-				sessionDir: config.sessionDir,
-				artifactsDir,
 				artifactConfig,
-				id,
+				artifactsDir,
+				cwd,
 				flatIndex,
 				flatStepCount: flatSteps.length,
+				id,
 				outputFile: path.join(asyncDir, `output-${flatIndex}.log`),
 				piPackageRoot: config.piPackageRoot,
+				placeholder,
+				previousOutput,
+				sessionDir: config.sessionDir,
+				sessionEnabled,
 			});
 
 			previousOutput = singleResult.output;
 			results.push({
 				agent: singleResult.agent,
+				artifactPaths: singleResult.artifactPaths,
 				output: singleResult.output,
 				success: singleResult.exitCode === 0,
-				artifactPaths: singleResult.artifactPaths,
 			});
 
 			const cumulativeTokens = config.sessionDir ? parseSessionTokens(config.sessionDir) : null;
@@ -721,14 +707,14 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 			appendJsonl(
 				eventsPath,
 				JSON.stringify({
-					type: singleResult.exitCode === 0 ? "subagent.step.completed" : "subagent.step.failed",
-					ts: stepEndTime,
+					agent: seqStep.agent,
+					durationMs: stepEndTime - stepStartTime,
+					exitCode: singleResult.exitCode,
 					runId: id,
 					stepIndex: flatIndex,
-					agent: seqStep.agent,
-					exitCode: singleResult.exitCode,
-					durationMs: stepEndTime - stepStartTime,
 					tokens: stepTokens,
+					ts: stepEndTime,
+					type: singleResult.exitCode === 0 ? "subagent.step.completed" : "subagent.step.failed",
 				}),
 			);
 
@@ -744,7 +730,7 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 
 	if (maxOutput) {
 		const config = { ...DEFAULT_MAX_OUTPUT, ...maxOutput };
-		const lastArtifactPath = results[results.length - 1]?.artifactPaths?.outputPath;
+		const lastArtifactPath = results.at(-1)?.artifactPaths?.outputPath;
 		const truncResult = truncateOutput(summary, config, lastArtifactPath);
 		if (truncResult.truncated) {
 			summary = truncResult.text;
@@ -764,13 +750,13 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 			try {
 				const htmlPath = await exportSessionHtml(sessionFile, config.sessionDir, config.piPackageRoot);
 				const share = createShareLink(htmlPath);
-				if ("error" in share) shareError = share.error;
+				if ("error" in share) {shareError = share.error;}
 				else {
-					shareUrl = share.shareUrl;
-					gistUrl = share.gistUrl;
+					({ shareUrl } = share);
+					({ gistUrl } = share);
 				}
-			} catch (err) {
-				shareError = String(err);
+			} catch (error) {
+				shareError = String(error);
 			}
 		} else {
 			shareError = "Session file not found.";
@@ -795,19 +781,23 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 	appendJsonl(
 		eventsPath,
 		JSON.stringify({
-			type: "subagent.run.completed",
-			ts: runEndedAt,
+			durationMs: runEndedAt - overallStartTime,
 			runId: id,
 			status: statusPayload.state,
-			durationMs: runEndedAt - overallStartTime,
+			ts: runEndedAt,
+			type: "subagent.run.completed",
 		}),
 	);
 	writeRunLog(logPath, {
+		artifactsDir,
+		cwd,
+		endedAt: runEndedAt,
 		id,
 		mode: statusPayload.mode,
-		cwd,
+		sessionFile,
+		shareError,
+		shareUrl,
 		startedAt: overallStartTime,
-		endedAt: runEndedAt,
 		steps: statusPayload.steps.map((step) => ({
 			agent: step.agent,
 			status: step.status,
@@ -815,10 +805,6 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 		})),
 		summary,
 		truncated,
-		artifactsDir,
-		sessionFile,
-		shareUrl,
-		shareError,
 	});
 
 	try {
@@ -826,10 +812,14 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 		fs.writeFileSync(
 			resultPath,
 			JSON.stringify({
-				id,
 				agent: agentName,
-				success: results.every((r) => r.success),
-				summary,
+				artifactsDir,
+				asyncDir,
+				cwd,
+				durationMs: runEndedAt - overallStartTime,
+				exitCode: results.every((r) => r.success) ? 0 : 1,
+				gistUrl,
+				id,
 				results: results.map((r) => ({
 					agent: r.agent,
 					output: r.output,
@@ -838,44 +828,40 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 					artifactPaths: r.artifactPaths,
 					truncated: r.truncated,
 				})),
-				exitCode: results.every((r) => r.success) ? 0 : 1,
-				timestamp: runEndedAt,
-				durationMs: runEndedAt - overallStartTime,
-				truncated,
-				artifactsDir,
-				cwd,
-				asyncDir,
-				sessionId: config.sessionId,
 				sessionFile,
-				shareUrl,
-				gistUrl,
+				sessionId: config.sessionId,
 				shareError,
+				shareUrl,
+				success: results.every((r) => r.success),
+				summary,
+				timestamp: runEndedAt,
+				truncated,
 				...(taskIndex !== undefined && { taskIndex }),
 				...(totalTasks !== undefined && { totalTasks }),
 			}),
 		);
-	} catch (err) {
-		console.error(`Failed to write result file ${resultPath}:`, err);
+	} catch (error) {
+		console.error(`Failed to write result file ${resultPath}:`, error);
 	}
 }
 
 /** Write a failure result file so the parent process knows what happened. */
 function writeFailureResult(resultPath: string | undefined, id: string, error: unknown): void {
-	if (!resultPath) return;
+	if (!resultPath) {return;}
 	try {
 		const errMsg = error instanceof Error ? `${error.message}\n${error.stack || ""}` : String(error);
 		fs.mkdirSync(path.dirname(resultPath), { recursive: true });
 		fs.writeFileSync(
 			resultPath,
 			JSON.stringify({
-				id,
 				agent: "unknown",
+				error: errMsg.slice(0, 2000),
+				exitCode: 1,
+				id,
+				results: [],
 				success: false,
 				summary: `Runner crashed: ${errMsg.slice(0, 1000)}`,
-				results: [],
-				exitCode: 1,
 				timestamp: Date.now(),
-				error: errMsg.slice(0, 2000),
 			}),
 		);
 	} catch {
@@ -887,36 +873,36 @@ function writeFailureResult(resultPath: string | undefined, id: string, error: u
 const configArg = process.argv[2];
 if (configArg) {
 	try {
-		const configJson = fs.readFileSync(configArg, "utf-8");
+		const configJson = fs.readFileSync(configArg, "utf8");
 		const config = JSON.parse(configJson) as SubagentRunConfig;
 		try {
 			fs.unlinkSync(configArg);
 		} catch {}
-		runSubagent(config).catch((runErr) => {
-			console.error("Subagent runner error:", runErr);
-			writeFailureResult(config.resultPath, config.id, runErr);
+		runSubagent(config).catch((error) => {
+			console.error("Subagent runner error:", error);
+			writeFailureResult(config.resultPath, config.id, error);
 			process.exit(1);
 		});
-	} catch (err) {
-		console.error("Subagent runner error:", err);
+	} catch (error) {
+		console.error("Subagent runner error:", error);
 		process.exit(1);
 	}
 } else {
 	let input = "";
-	process.stdin.setEncoding("utf-8");
+	process.stdin.setEncoding("utf8");
 	process.stdin.on("data", (chunk) => {
 		input += chunk;
 	});
 	process.stdin.on("end", () => {
 		try {
 			const config = JSON.parse(input) as SubagentRunConfig;
-			runSubagent(config).catch((runErr) => {
-				console.error("Subagent runner error:", runErr);
-				writeFailureResult(config.resultPath, config.id, runErr);
+			runSubagent(config).catch((error) => {
+				console.error("Subagent runner error:", error);
+				writeFailureResult(config.resultPath, config.id, error);
 				process.exit(1);
 			});
-		} catch (err) {
-			console.error("Subagent runner error:", err);
+		} catch (error) {
+			console.error("Subagent runner error:", error);
 			process.exit(1);
 		}
 	});

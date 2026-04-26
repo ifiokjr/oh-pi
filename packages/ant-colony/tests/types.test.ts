@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+
 import type {
 	AntCaste,
 	PromoteFinalizeGateDecision,
@@ -9,23 +9,23 @@ import { DEFAULT_ANT_CONFIGS } from "../extensions/ant-colony/types.js";
 describe("promote/finalize gate types", () => {
 	it("supports machine-readable input/output contracts", () => {
 		const input: PromoteFinalizeGateInput = {
+			cheapPassSummary: "summary",
 			confidenceScore: 0.8,
 			coverageScore: 0.9,
-			riskFlags: [],
 			policyViolations: [],
+			riskFlags: [],
 			sloBreached: false,
-			cheapPassSummary: "summary",
 		};
 		const decision: PromoteFinalizeGateDecision = {
 			action: "promote",
-			escalationReasons: [],
 			cheapPassSummary: input.cheapPassSummary,
+			escalationReasons: [],
 		};
 		expect(decision.action).toBe("promote");
 	});
 });
 
-describe("DEFAULT_ANT_CONFIGS", () => {
+describe(DEFAULT_ANT_CONFIGS, () => {
 	const castes: AntCaste[] = ["scout", "worker", "soldier", "drone"];
 
 	it("has all castes", () => {
@@ -38,8 +38,8 @@ describe("DEFAULT_ANT_CONFIGS", () => {
 		for (const c of castes) {
 			const cfg = DEFAULT_ANT_CONFIGS[c];
 			expect(cfg.caste).toBe(c);
-			expect(typeof cfg.model).toBe("string");
-			expect(Array.isArray(cfg.tools)).toBe(true);
+			expectTypeOf(cfg.model).toBeString();
+			expect(Array.isArray(cfg.tools)).toBeTruthy();
 			expect(cfg.maxTurns).toBeGreaterThan(0);
 		}
 	});
@@ -55,7 +55,7 @@ describe("DEFAULT_ANT_CONFIGS", () => {
 	});
 
 	it("drone only has bash with 1 turn", () => {
-		expect(DEFAULT_ANT_CONFIGS.drone.tools).toEqual(["bash"]);
+		expect(DEFAULT_ANT_CONFIGS.drone.tools).toStrictEqual(["bash"]);
 		expect(DEFAULT_ANT_CONFIGS.drone.maxTurns).toBe(1);
 	});
 });

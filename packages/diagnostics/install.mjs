@@ -23,11 +23,12 @@ export function parseArgs(argv) {
 		}
 	}
 
-	return { local, remove, help };
+	return { help, local, remove };
 }
 
 export function printHelp(log = console.log) {
-	log(`
+	log(
+		`
 pi-diagnostics — install the @ifi diagnostics extension into pi
 
 Usage:
@@ -42,7 +43,8 @@ Options:
 
 Direct install:
   pi install npm:${PACKAGE_NAME}
-`.trim());
+`.trim(),
+	);
 }
 
 export function findPi(execute = execFileSync) {
@@ -73,10 +75,7 @@ export function run(pi, command, args, execute = execFileSync, error = console.e
 	}
 }
 
-export function main(
-	argv = process.argv,
-	{ execute = execFileSync, log = console.log, error = console.error } = {},
-) {
+export function main(argv = process.argv, { execute = execFileSync, log = console.log, error = console.error } = {}) {
 	let opts;
 	try {
 		opts = parseArgs(argv);
@@ -124,7 +123,7 @@ export function main(
 	return 0;
 }
 
-const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+const isMain = process.argv[1] && import.meta.filename === process.argv[1];
 
 if (isMain) {
 	process.exitCode = main();

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import schedulerExtension from "./scheduler.js";
 
@@ -22,16 +22,16 @@ describe("scheduler overlay picker", () => {
 			overlay: true,
 			overlayOptions: {
 				anchor: "center",
-				width: "80%",
 				maxHeight: "75%",
+				width: "80%",
 			},
 		});
 
 		const picker = pickerFactory(
 			{ requestRender: vi.fn() },
-			{ fg: (_color: string, text: string) => text, bold: (text: string) => text },
+			{ bold: (text: string) => text, fg: (_color: string, text: string) => text },
 			{},
-			() => undefined,
+			() => {},
 		);
 		const rendered = picker.render(140).join("\n");
 		expect(rendered).toContain("Scheduled tasks for");
@@ -76,7 +76,7 @@ describe("scheduler overlay picker", () => {
 
 		await harness.commands.get("schedule").handler("", harness.ctx);
 
-		expect(harness.notifications.some((item) => item.msg.includes("Cleared 2 scheduled tasks."))).toBe(true);
+		expect(harness.notifications.some((item) => item.msg.includes("Cleared 2 scheduled tasks."))).toBeTruthy();
 	});
 
 	it("can clear tasks not created here through the overlay picker result", async () => {
@@ -101,6 +101,6 @@ describe("scheduler overlay picker", () => {
 
 		expect(
 			harness.notifications.some((item) => item.msg.includes("Cleared 1 scheduled task not created in this instance.")),
-		).toBe(true);
+		).toBeTruthy();
 	});
 });

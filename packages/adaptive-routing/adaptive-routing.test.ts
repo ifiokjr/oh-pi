@@ -1,24 +1,22 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { createExtensionHarness } from "../../test-utils/extension-runtime-harness.js";
 
 const { getAgentDir } = vi.hoisted(() => ({
 	getAgentDir: vi.fn(() => "/mock-home/.pi/agent"),
 }));
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
 	getAgentDir,
 }));
 
-vi.mock("@ifi/oh-pi-core", async () => {
-	return await import("../core/src/model-intelligence.js");
-});
+vi.mock<typeof import('@ifi/oh-pi-core')>(import('@ifi/oh-pi-core'), async () => await import("../core/src/model-intelligence.js"));
 
-vi.mock("@mariozechner/pi-ai", () => ({
+vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({
 	completeSimple: vi.fn(async () => ({
-		role: "assistant",
+		api: "openai-responses",
 		content: [
 			{
 				type: "text",
@@ -36,19 +34,19 @@ vi.mock("@mariozechner/pi-ai", () => ({
 				}),
 			},
 		],
-		api: "openai-responses",
-		provider: "openai",
 		model: "gpt-5-mini",
-		usage: {
-			input: 0,
-			output: 0,
-			cacheRead: 0,
-			cacheWrite: 0,
-			totalTokens: 0,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-		},
+		provider: "openai",
+		role: "assistant",
 		stopReason: "stop",
 		timestamp: Date.now(),
+		usage: {
+			cacheRead: 0,
+			cacheWrite: 0,
+			cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0, total: 0 },
+			input: 0,
+			output: 0,
+			totalTokens: 0,
+		},
 	})),
 }));
 
@@ -56,9 +54,6 @@ import adaptiveRoutingExtension, { resolveDelegatedAssignmentModel } from "./ind
 
 function sampleModel(provider: string, id: string, name = id) {
 	return {
-		provider,
-		id,
-		name,
 		api:
 			provider === "anthropic"
 				? "anthropic-messages"
@@ -66,11 +61,14 @@ function sampleModel(provider: string, id: string, name = id) {
 					? "google-generative-ai"
 					: "openai-responses",
 		baseUrl: "https://example.com",
-		reasoning: true,
-		input: ["text"],
-		cost: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0 },
 		contextWindow: 200000,
+		cost: { cacheRead: 0, cacheWrite: 0, input: 1, output: 1 },
+		id,
+		input: ["text"],
 		maxTokens: 32768,
+		name,
+		provider,
+		reasoning: true,
 	};
 }
 
@@ -86,7 +84,7 @@ describe("adaptive routing extension", () => {
 
 	afterEach(() => {
 		vi.useRealTimers();
-		rmSync(tempAgentDir, { recursive: true, force: true });
+		rmSync(tempAgentDir, { force: true, recursive: true });
 		vi.clearAllMocks();
 	});
 
@@ -94,23 +92,23 @@ describe("adaptive routing extension", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = sampleModel("google", "gemini-2.5-flash", "Gemini 2.5 Flash") as never;
 		harness.ctx.modelRegistry = {
+			getApiKey: async () => "key",
 			getAvailable: () => [
 				sampleModel("google", "gemini-2.5-flash", "Gemini 2.5 Flash"),
 				sampleModel("anthropic", "claude-opus-4.6", "Claude Opus 4.6"),
 			],
-			getApiKey: async () => "key",
 		} as never;
 
 		adaptiveRoutingExtension(harness.pi as never);
 		await harness.emitAsync(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Design a better settings page UI.", systemPrompt: "system" },
+			{ prompt: "Design a better settings page UI.", systemPrompt: "system", type: "before_agent_start" },
 			harness.ctx,
 		);
 
-		expect(harness.ctx.model).toMatchObject({ provider: "google", id: "gemini-2.5-flash" });
-		expect(harness.notifications.some((item) => item.msg.includes("Adaptive route suggestion"))).toBe(false);
-		expect(harness.statusMap.has("adaptive-routing")).toBe(false);
+		expect(harness.ctx.model).toMatchObject({ id: "gemini-2.5-flash", provider: "google" });
+		expect(harness.notifications.some((item) => item.msg.includes("Adaptive route suggestion"))).toBeFalsy();
+		expect(harness.statusMap.has("adaptive-routing")).toBeFalsy();
 	});
 
 	it("defers session_start state refresh until after the startup window", async () => {
@@ -126,7 +124,7 @@ describe("adaptive routing extension", () => {
 
 		adaptiveRoutingExtension(harness.pi as never);
 		harness.emit("session_start", { type: "session_start" }, harness.ctx);
-		expect(harness.statusMap.has("adaptive-routing")).toBe(false);
+		expect(harness.statusMap.has("adaptive-routing")).toBeFalsy();
 
 		await vi.advanceTimersByTimeAsync(250);
 		expect(harness.statusMap.get("adaptive-routing")).toContain("shadow");
@@ -148,7 +146,7 @@ describe("adaptive routing extension", () => {
 		harness.emit("session_shutdown", { type: "session_shutdown" }, harness.ctx);
 		await vi.advanceTimersByTimeAsync(250);
 
-		expect(harness.statusMap.has("adaptive-routing")).toBe(false);
+		expect(harness.statusMap.has("adaptive-routing")).toBeFalsy();
 	});
 
 	it("registers route commands and auto-applies a routed premium model", async () => {
@@ -159,25 +157,25 @@ describe("adaptive routing extension", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = sampleModel("google", "gemini-2.5-flash", "Gemini 2.5 Flash") as never;
 		harness.ctx.modelRegistry = {
+			getApiKey: async () => "key",
 			getAvailable: () => [
 				sampleModel("google", "gemini-2.5-flash", "Gemini 2.5 Flash"),
 				sampleModel("anthropic", "claude-opus-4.6", "Claude Opus 4.6"),
 				sampleModel("openai", "gpt-5.4", "GPT-5.4"),
 			],
-			getApiKey: async () => "key",
 		} as never;
 
 		adaptiveRoutingExtension(harness.pi as never);
-		expect(harness.commands.has("route")).toBe(true);
-		expect(harness.commands.has("route:status")).toBe(true);
+		expect(harness.commands.has("route")).toBeTruthy();
+		expect(harness.commands.has("route:status")).toBeTruthy();
 
 		await harness.emitAsync(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Design a better settings page UI.", systemPrompt: "system" },
+			{ prompt: "Design a better settings page UI.", systemPrompt: "system", type: "before_agent_start" },
 			harness.ctx,
 		);
 
-		expect(harness.ctx.model).toMatchObject({ provider: "anthropic", id: "claude-opus-4.6" });
+		expect(harness.ctx.model).toMatchObject({ id: "claude-opus-4.6", provider: "anthropic" });
 		expect(harness.statusMap.get("adaptive-routing")).toContain("auto");
 	});
 
@@ -189,22 +187,22 @@ describe("adaptive routing extension", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = sampleModel("google", "gemini-2.5-flash", "Gemini 2.5 Flash") as never;
 		harness.ctx.modelRegistry = {
+			getApiKey: async () => "key",
 			getAvailable: () => [
 				sampleModel("google", "gemini-2.5-flash", "Gemini 2.5 Flash"),
 				sampleModel("anthropic", "claude-opus-4.6", "Claude Opus 4.6"),
 			],
-			getApiKey: async () => "key",
 		} as never;
 
 		adaptiveRoutingExtension(harness.pi as never);
 		await harness.emitAsync(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Design a better settings page UI.", systemPrompt: "system" },
+			{ prompt: "Design a better settings page UI.", systemPrompt: "system", type: "before_agent_start" },
 			harness.ctx,
 		);
 
-		expect(harness.ctx.model).toMatchObject({ provider: "google", id: "gemini-2.5-flash" });
-		expect(harness.notifications.some((item) => item.msg.includes("Adaptive route suggestion"))).toBe(true);
+		expect(harness.ctx.model).toMatchObject({ id: "gemini-2.5-flash", provider: "google" });
+		expect(harness.notifications.some((item) => item.msg.includes("Adaptive route suggestion"))).toBeTruthy();
 	});
 
 	it("routes alias feedback commands through the colon form", async () => {
@@ -227,17 +225,6 @@ describe("adaptive routing extension", () => {
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			`${JSON.stringify(
 				{
-					mode: "shadow",
-					delegatedRouting: {
-						enabled: true,
-						categories: {
-							"quick-discovery": {
-								preferredProviders: ["google", "openai"],
-								fallbackGroup: "cheap-router",
-								taskProfile: "planning",
-							},
-						},
-					},
 					delegatedModelSelection: {
 						disabledProviders: ["google"],
 						roleOverrides: {
@@ -246,6 +233,17 @@ describe("adaptive routing extension", () => {
 							},
 						},
 					},
+					delegatedRouting: {
+						categories: {
+							"quick-discovery": {
+								fallbackGroup: "cheap-router",
+								preferredProviders: ["google", "openai"],
+								taskProfile: "planning",
+							},
+						},
+						enabled: true,
+					},
+					mode: "shadow",
 				},
 				null,
 				2,
@@ -260,7 +258,7 @@ describe("adaptive routing extension", () => {
 		} as never;
 		let renderedLines: string[] = [];
 		harness.ctx.ui.custom = vi.fn(async (factory) => {
-			const component = factory({ requestRender() {} }, null, null, () => undefined);
+			const component = factory({ requestRender() {} }, null, null, () => {});
 			renderedLines = component.render(120);
 			return null;
 		}) as never;
@@ -269,7 +267,7 @@ describe("adaptive routing extension", () => {
 		const command = harness.commands.get("route");
 		await command.handler("assignments", harness.ctx);
 
-		expect(renderedLines).toEqual(
+		expect(renderedLines).toStrictEqual(
 			expect.arrayContaining([
 				"Delegated Routing Assignments",
 				expect.stringContaining("Disabled providers: google"),
@@ -285,24 +283,24 @@ describe("adaptive routing extension", () => {
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			`${JSON.stringify(
 				{
-					mode: "shadow",
+					delegatedModelSelection: {
+						allowSmallContextForSmallTasks: true,
+						disabledModels: [],
+						disabledProviders: [],
+						preferLowerUsage: true,
+						roleOverrides: {},
+					},
 					delegatedRouting: {
-						enabled: true,
 						categories: {
 							"quick-discovery": {
 								candidates: ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
-								preferredProviders: ["google", "openai"],
 								preferFastModels: true,
+								preferredProviders: ["google", "openai"],
 							},
 						},
+						enabled: true,
 					},
-					delegatedModelSelection: {
-						disabledProviders: [],
-						disabledModels: [],
-						preferLowerUsage: true,
-						allowSmallContextForSmallTasks: true,
-						roleOverrides: {},
-					},
+					mode: "shadow",
 				},
 				null,
 				2,
@@ -317,14 +315,14 @@ describe("adaptive routing extension", () => {
 		} as never;
 		let renderedLines: string[] = [];
 		harness.ctx.ui.custom = vi.fn(async (factory) => {
-			const component = factory({ requestRender() {} }, null, null, () => undefined);
+			const component = factory({ requestRender() {} }, null, null, () => {});
 			renderedLines = component.render(120);
 			return null;
 		}) as never;
 
 		adaptiveRoutingExtension(harness.pi as never);
 		await harness.commands.get("route:why")?.handler?.("quick-discovery quickly scan the repo", harness.ctx as never);
-		expect(renderedLines).toEqual(
+		expect(renderedLines).toStrictEqual(
 			expect.arrayContaining([
 				"Delegated Routing Why",
 				expect.stringContaining("selected: google/gemini-2.5-flash"),
@@ -339,15 +337,15 @@ describe("adaptive routing extension", () => {
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			`${JSON.stringify(
 				{
-					mode: "shadow",
 					delegatedRouting: {
-						enabled: true,
 						categories: {
 							"quick-discovery": {
 								preferredProviders: ["openai", "google"],
 							},
 						},
+						enabled: true,
 					},
+					mode: "shadow",
 				},
 				null,
 				2,
@@ -359,44 +357,18 @@ describe("adaptive routing extension", () => {
 		} as never;
 		let renderedLines: string[] = [];
 		harness.ctx.ui.custom = vi.fn(async (factory) => {
-			const component = factory({ requestRender() {} }, null, null, () => undefined);
+			const component = factory({ requestRender() {} }, null, null, () => {});
 			renderedLines = component.render(120);
 			return null;
 		}) as never;
 
 		adaptiveRoutingExtension(harness.pi as never);
 		await harness.commands.get("route:assignments")?.handler?.("", harness.ctx as never);
-		expect(renderedLines).toEqual(expect.arrayContaining([expect.stringContaining("groq/llama-3.3-70b-versatile")]));
+		expect(renderedLines).toStrictEqual(expect.arrayContaining([expect.stringContaining("groq/llama-3.3-70b-versatile")]));
 	});
 
 	it("resolves delegated quick-discovery fallbacks directly", () => {
 		const resolved = resolveDelegatedAssignmentModel({
-			category: "quick-discovery",
-			policy: {
-				preferredProviders: ["openai", "google"],
-				candidates: undefined,
-				fallbackGroup: undefined,
-				defaultThinking: undefined,
-			},
-			config: {
-				mode: "shadow",
-				routerModels: [],
-				stickyTurns: 1,
-				telemetry: { mode: "local", privacy: "minimal" },
-				models: { ranked: [], excluded: [] },
-				intents: {},
-				taskClasses: {},
-				providerReserves: {},
-				fallbackGroups: {},
-				delegatedRouting: { enabled: true, categories: {} },
-				delegatedModelSelection: {
-					disabledProviders: [],
-					disabledModels: [],
-					preferLowerUsage: true,
-					allowSmallContextForSmallTasks: true,
-					roleOverrides: {},
-				},
-			},
 			availableModels: [
 				{
 					provider: "groq",
@@ -405,38 +377,38 @@ describe("adaptive routing extension", () => {
 					name: "Llama 3.3 70B Versatile",
 				},
 			],
+			category: "quick-discovery",
+			config: {
+				delegatedModelSelection: {
+					allowSmallContextForSmallTasks: true,
+					disabledModels: [],
+					disabledProviders: [],
+					preferLowerUsage: true,
+					roleOverrides: {},
+				},
+				delegatedRouting: { categories: {}, enabled: true },
+				fallbackGroups: {},
+				intents: {},
+				mode: "shadow",
+				models: { excluded: [], ranked: [] },
+				providerReserves: {},
+				routerModels: [],
+				stickyTurns: 1,
+				taskClasses: {},
+				telemetry: { mode: "local", privacy: "minimal" },
+			},
+			policy: {
+				candidates: undefined,
+				defaultThinking: undefined,
+				fallbackGroup: undefined,
+				preferredProviders: ["openai", "google"],
+			},
 		});
 		expect(resolved).toBe("groq/llama-3.3-70b-versatile");
 	});
 
 	it("returns the first unblocked model when no delegated preference matches", () => {
 		const resolved = resolveDelegatedAssignmentModel({
-			category: "review-critical",
-			policy: {
-				preferredProviders: ["openai"],
-				candidates: undefined,
-				fallbackGroup: undefined,
-				defaultThinking: undefined,
-			},
-			config: {
-				mode: "shadow",
-				routerModels: [],
-				stickyTurns: 1,
-				telemetry: { mode: "local", privacy: "minimal" },
-				models: { ranked: [], excluded: [] },
-				intents: {},
-				taskClasses: {},
-				providerReserves: {},
-				fallbackGroups: {},
-				delegatedRouting: { enabled: true, categories: {} },
-				delegatedModelSelection: {
-					disabledProviders: [],
-					disabledModels: [],
-					preferLowerUsage: true,
-					allowSmallContextForSmallTasks: true,
-					roleOverrides: {},
-				},
-			},
 			availableModels: [
 				{
 					provider: "google",
@@ -445,6 +417,32 @@ describe("adaptive routing extension", () => {
 					name: "Gemini 2.5 Flash",
 				},
 			],
+			category: "review-critical",
+			config: {
+				delegatedModelSelection: {
+					allowSmallContextForSmallTasks: true,
+					disabledModels: [],
+					disabledProviders: [],
+					preferLowerUsage: true,
+					roleOverrides: {},
+				},
+				delegatedRouting: { categories: {}, enabled: true },
+				fallbackGroups: {},
+				intents: {},
+				mode: "shadow",
+				models: { excluded: [], ranked: [] },
+				providerReserves: {},
+				routerModels: [],
+				stickyTurns: 1,
+				taskClasses: {},
+				telemetry: { mode: "local", privacy: "minimal" },
+			},
+			policy: {
+				candidates: undefined,
+				defaultThinking: undefined,
+				fallbackGroup: undefined,
+				preferredProviders: ["openai"],
+			},
 		});
 		expect(resolved).toBe("google/gemini-2.5-flash");
 	});
@@ -457,12 +455,12 @@ describe("adaptive routing extension", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = sampleModel("google", "gemini-2.5-flash", "Gemini 2.5 Flash") as never;
 		harness.ctx.modelRegistry = {
-			getAvailable: () => [sampleModel("google", "gemini-2.5-flash"), sampleModel("openai", "gpt-5.4")],
 			getApiKey: async () => "key",
+			getAvailable: () => [sampleModel("google", "gemini-2.5-flash"), sampleModel("openai", "gpt-5.4")],
 		} as never;
 		let renderedLines: string[] = [];
 		harness.ctx.ui.custom = vi.fn(async (factory) => {
-			const component = factory({ requestRender() {} }, null, null, () => undefined);
+			const component = factory({ requestRender() {} }, null, null, () => {});
 			renderedLines = component.render(120);
 			return null;
 		}) as never;
@@ -470,14 +468,14 @@ describe("adaptive routing extension", () => {
 		adaptiveRoutingExtension(harness.pi as never);
 		await harness.emitAsync(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Design a better settings page UI.", systemPrompt: "system" },
+			{ prompt: "Design a better settings page UI.", systemPrompt: "system", type: "before_agent_start" },
 			harness.ctx,
 		);
 		await vi.advanceTimersByTimeAsync(3200);
 		await harness.emitAsync("agent_end", { type: "agent_end" }, harness.ctx);
 		await harness.commands.get("route:stats")?.handler?.("", harness.ctx as never);
 
-		expect(renderedLines).toEqual(
+		expect(renderedLines).toStrictEqual(
 			expect.arrayContaining([
 				expect.stringContaining("Outcomes: 1"),
 				expect.stringContaining("Avg duration:"),

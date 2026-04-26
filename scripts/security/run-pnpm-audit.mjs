@@ -45,7 +45,9 @@ if (result.status === 0) {
 
 if (isRetiredAuditEndpointError(combinedOutput)) {
 	console.warn("⚠️ pnpm audit hit npm's retired audit endpoints and will be treated as a non-fatal upstream failure.");
-	console.warn("⚠️ Dependency allowlist checks and GitHub Dependency Review still run in CI while this fallback is active.");
+	console.warn(
+		"⚠️ Dependency allowlist checks and GitHub Dependency Review still run in CI while this fallback is active.",
+	);
 	process.exit(0);
 }
 

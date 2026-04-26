@@ -1,15 +1,15 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { loadJsonConfigFile } from "./config-loader.js";
 
-describe("loadJsonConfigFile", () => {
+describe(loadJsonConfigFile, () => {
 	let tempDir: string;
 
 	afterEach(() => {
 		if (tempDir) {
-			rmSync(tempDir, { recursive: true, force: true });
+			rmSync(tempDir, { force: true, recursive: true });
 		}
 	});
 
@@ -19,14 +19,14 @@ describe("loadJsonConfigFile", () => {
 
 		tempDir = mkdtempSync(join(tmpdir(), "config-loader-"));
 		const result = loadJsonConfigFile({
-			path: join(tempDir, "missing.json"),
 			fallback,
 			normalize: (raw) => ({ value: raw as typeof fallback, warnings: [] }),
+			path: join(tempDir, "missing.json"),
 			warn: (message) => warnings.push(message),
 		});
 
-		expect(result).toEqual(fallback);
-		expect(warnings).toEqual([]);
+		expect(result).toStrictEqual(fallback);
+		expect(warnings).toStrictEqual([]);
 	});
 
 	it("returns the fallback and warns when the config JSON is invalid", () => {
@@ -34,16 +34,16 @@ describe("loadJsonConfigFile", () => {
 		const fallback = { mode: "shadow", stickyTurns: 1 };
 
 		tempDir = mkdtempSync(join(tmpdir(), "config-loader-"));
-		writeFileSync(join(tempDir, "broken.json"), "{ invalid json", "utf-8");
+		writeFileSync(join(tempDir, "broken.json"), "{ invalid json", "utf8");
 
 		const result = loadJsonConfigFile({
-			path: join(tempDir, "broken.json"),
 			fallback,
 			normalize: (raw) => ({ value: raw as typeof fallback, warnings: [] }),
+			path: join(tempDir, "broken.json"),
 			warn: (message) => warnings.push(message),
 		});
 
-		expect(result).toEqual(fallback);
+		expect(result).toStrictEqual(fallback);
 		expect(warnings).toHaveLength(1);
 		expect(warnings[0]).toContain("Failed to parse config");
 		expect(warnings[0]).toContain("broken.json");
@@ -54,19 +54,19 @@ describe("loadJsonConfigFile", () => {
 		const fallback = { mode: "shadow", stickyTurns: 1 };
 
 		tempDir = mkdtempSync(join(tmpdir(), "config-loader-"));
-		writeFileSync(join(tempDir, "config.json"), `${JSON.stringify({ mode: "auto" })}\n`, "utf-8");
+		writeFileSync(join(tempDir, "config.json"), `${JSON.stringify({ mode: "auto" })}\n`, "utf8");
 
 		const result = loadJsonConfigFile({
-			path: join(tempDir, "config.json"),
 			fallback,
 			normalize: () => {
 				throw new Error("bad normalize");
 			},
+			path: join(tempDir, "config.json"),
 			warn: (message) => warnings.push(message),
 		});
 
-		expect(result).toEqual(fallback);
-		expect(warnings).toEqual([expect.stringContaining("Failed to normalize config")]);
+		expect(result).toStrictEqual(fallback);
+		expect(warnings).toStrictEqual([expect.stringContaining("Failed to normalize config")]);
 	});
 
 	it("returns normalized config and forwards partial-config warnings", () => {
@@ -77,8 +77,8 @@ describe("loadJsonConfigFile", () => {
 		mkdirSync(tempDir, { recursive: true });
 		writeFileSync(
 			join(tempDir, "config.json"),
-			`${JSON.stringify({ mode: "auto", stickyTurns: 4, ignored: { bad: true } }, null, 2)}\n`,
-			"utf-8",
+			`${JSON.stringify({ ignored: { bad: true }, mode: "auto", stickyTurns: 4 }, null, 2)}\n`,
+			"utf8",
 		);
 
 		const normalize = vi.fn((raw: unknown) => ({
@@ -87,14 +87,14 @@ describe("loadJsonConfigFile", () => {
 		}));
 
 		const result = loadJsonConfigFile({
-			path: join(tempDir, "config.json"),
 			fallback,
 			normalize,
+			path: join(tempDir, "config.json"),
 			warn: (message) => warnings.push(message),
 		});
 
-		expect(normalize).toHaveBeenCalledOnce();
-		expect(result).toEqual({ mode: "auto", stickyTurns: 4, ignored: { bad: true } });
-		expect(warnings).toEqual(["Skipped invalid section: ignored"]);
+		expect(normalize).toHaveBeenCalledTimes(1);
+		expect(result).toStrictEqual({ ignored: { bad: true }, mode: "auto", stickyTurns: 4 });
+		expect(warnings).toStrictEqual(["Skipped invalid section: ignored"]);
 	});
 });

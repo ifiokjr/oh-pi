@@ -23,11 +23,12 @@ function parseArgs(argv) {
 		}
 	}
 
-	return { local, remove, help };
+	return { help, local, remove };
 }
 
 function printHelp() {
-	console.log(`
+	console.log(
+		`
 pi-plan — install the @ifi planning extension into pi
 
 Usage:
@@ -42,7 +43,8 @@ Options:
 
 Direct install:
   pi install npm:${PACKAGE_NAME}
-`.trim());
+`.trim(),
+	);
 }
 
 function findPi() {
@@ -91,7 +93,15 @@ if (!result.ok) {
 }
 
 if (opts.remove) {
-	console.log(result.status === "already-removed" ? "\n✅ @ifi/pi-plan is already absent from pi." : "\n✅ Removed @ifi/pi-plan from pi.");
+	console.log(
+		result.status === "already-removed"
+			? "\n✅ @ifi/pi-plan is already absent from pi."
+			: "\n✅ Removed @ifi/pi-plan from pi.",
+	);
 } else {
-	console.log(result.status === "already-installed" ? "\n✅ @ifi/pi-plan is already installed in pi." : "\n✅ Installed @ifi/pi-plan into pi. Restart pi to load it.");
+	console.log(
+		result.status === "already-installed"
+			? "\n✅ @ifi/pi-plan is already installed in pi."
+			: "\n✅ Installed @ifi/pi-plan into pi. Restart pi to load it.",
+	);
 }

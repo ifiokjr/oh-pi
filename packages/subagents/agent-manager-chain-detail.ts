@@ -1,7 +1,7 @@
 import type { Theme } from "@mariozechner/pi-coding-agent";
 import { matchesKey, truncateToWidth } from "@mariozechner/pi-tui";
 import type { ChainConfig, ChainStepConfig } from "./agents.js";
-import { row, renderFooter, renderHeader, formatPath, formatScrollInfo } from "./render-helpers.js";
+import { formatPath, formatScrollInfo, renderFooter, renderHeader, row } from "./render-helpers.js";
 
 export interface ChainDetailState {
 	scrollOffset: number;
@@ -60,10 +60,10 @@ function buildChainDetailLines(chain: ChainConfig, width: number): string[] {
 		} else if (step.output === false) {
 			lines.push(truncateToWidth("     → output: (disabled)", contentWidth));
 		}
-		if (step.model) lines.push(truncateToWidth(`     model: ${step.model}`, contentWidth));
+		if (step.model) {lines.push(truncateToWidth(`     model: ${step.model}`, contentWidth));}
 		if (step.skills !== undefined) {
 			const skillsText =
-				step.skills === false ? "(disabled)" : step.skills.length > 0 ? step.skills.join(", ") : "(none)";
+				step.skills === false ? "(disabled)" : (step.skills.length > 0 ? step.skills.join(", ") : "(none)");
 			lines.push(truncateToWidth(`     skills: ${skillsText}`, contentWidth));
 		}
 		if (step.progress !== undefined) {
@@ -125,8 +125,8 @@ export function renderChainDetail(state: ChainDetailState, chain: ChainConfig, w
 	const maxOffset = Math.max(0, contentLines.length - CHAIN_DETAIL_VIEWPORT_HEIGHT);
 	state.scrollOffset = Math.max(0, Math.min(state.scrollOffset, maxOffset));
 	const visible = contentLines.slice(state.scrollOffset, state.scrollOffset + CHAIN_DETAIL_VIEWPORT_HEIGHT);
-	for (const line of visible) lines.push(row(` ${line}`, width, theme));
-	for (let i = visible.length; i < CHAIN_DETAIL_VIEWPORT_HEIGHT; i++) lines.push(row("", width, theme));
+	for (const line of visible) {lines.push(row(` ${line}`, width, theme));}
+	for (let i = visible.length; i < CHAIN_DETAIL_VIEWPORT_HEIGHT; i++) {lines.push(row("", width, theme));}
 
 	const scrollInfo = formatScrollInfo(
 		state.scrollOffset,

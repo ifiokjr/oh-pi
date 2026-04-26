@@ -100,24 +100,26 @@ export interface CreateTerminalEmulatorOptions {
 }
 
 const DEFAULT_CELL_STYLE: CellStyle = {
+	background: null,
 	bold: false,
 	dim: false,
-	italic: false,
-	underline: false,
-	inverse: false,
-	hidden: false,
-	strikethrough: false,
 	foreground: null,
-	background: null,
+	hidden: false,
+	inverse: false,
+	italic: false,
+	strikethrough: false,
+	underline: false,
 };
 
-const DEFAULT_HEADLESS_MODULE_LOADER = async (): Promise<HeadlessModuleLike> => {
-	return (await import("@xterm/headless")) as HeadlessModuleLike;
-};
+const DEFAULT_HEADLESS_MODULE_LOADER = async (): Promise<HeadlessModuleLike> => (await import("@xterm/headless")) as HeadlessModuleLike;
 
 let headlessModuleLoader: () => Promise<HeadlessModuleLike> = DEFAULT_HEADLESS_MODULE_LOADER;
 
-function getBoolean(source: TerminalCellLike | undefined, methodName: keyof TerminalCellLike, propName: keyof TerminalCellLike): boolean {
+function getBoolean(
+	source: TerminalCellLike | undefined,
+	methodName: keyof TerminalCellLike,
+	propName: keyof TerminalCellLike,
+): boolean {
 	const method = source?.[methodName] as ((this: TerminalCellLike | undefined) => unknown) | undefined;
 	if (typeof method === "function") {
 		return Boolean(method.call(source));
@@ -126,7 +128,11 @@ function getBoolean(source: TerminalCellLike | undefined, methodName: keyof Term
 	return Boolean(source?.[propName]);
 }
 
-function getNumber(source: TerminalCellLike | undefined, methodName: keyof TerminalCellLike, propName: keyof TerminalCellLike): number | undefined {
+function getNumber(
+	source: TerminalCellLike | undefined,
+	methodName: keyof TerminalCellLike,
+	propName: keyof TerminalCellLike,
+): number | undefined {
 	const method = source?.[methodName] as ((this: TerminalCellLike | undefined) => unknown) | undefined;
 	if (typeof method === "function") {
 		const value = method.call(source);
@@ -165,9 +171,7 @@ export function sanitizeAnsiOutput(text: string): string {
 	return text
 		.replace(OSC_SEQUENCE_REGEX, "")
 		.replace(BELL_REGEX, "")
-		.replace(CSI_SEQUENCE_REGEX, (_match, params: string, intermediates: string, final: string) => {
-			return `\u001B[${sanitizeCsiParams(params)}${intermediates}${final}`;
-		})
+		.replace(CSI_SEQUENCE_REGEX, (_match, params: string, intermediates: string, final: string) => `\u001B[${sanitizeCsiParams(params)}${intermediates}${final}`)
 		.replace(C0_CONTROL_REGEX, "");
 }
 
@@ -180,7 +184,7 @@ export function stripAnsiSequences(text: string): string {
 }
 
 function decodeRgb(value: number): [number, number, number] {
-	return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
+	return [(value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF];
 }
 
 function readColor(cell: TerminalCellLike | undefined, type: "fg" | "bg"): ColorValue | null {
@@ -196,10 +200,10 @@ function readColor(cell: TerminalCellLike | undefined, type: "fg" | "bg"): Color
 	}
 
 	if (mode == null || mode === 0) {
-		return value === 0 ? null : { kind: value > 0xff ? "rgb" : "palette", value };
+		return value === 0 ? null : { kind: value > 0xFF ? "rgb" : "palette", value };
 	}
 
-	if (mode === 3 || value > 0xff) {
+	if (mode === 3 || value > 0xFF) {
 		return { kind: "rgb", value };
 	}
 
@@ -234,15 +238,15 @@ function readCellWidth(cell: TerminalCellLike | undefined): number {
 
 function readCellStyle(cell: TerminalCellLike | undefined): CellStyle {
 	return {
+		background: readColor(cell, "bg"),
 		bold: getBoolean(cell, "isBold", "bold"),
 		dim: getBoolean(cell, "isDim", "dim"),
-		italic: getBoolean(cell, "isItalic", "italic"),
-		underline: getBoolean(cell, "isUnderline", "underline"),
-		inverse: getBoolean(cell, "isInverse", "inverse"),
-		hidden: getBoolean(cell, "isInvisible", "invisible") || getBoolean(cell, "isHidden", "hidden"),
-		strikethrough: getBoolean(cell, "isStrikethrough", "strikethrough"),
 		foreground: readColor(cell, "fg"),
-		background: readColor(cell, "bg"),
+		hidden: getBoolean(cell, "isInvisible", "invisible") || getBoolean(cell, "isHidden", "hidden"),
+		inverse: getBoolean(cell, "isInverse", "inverse"),
+		italic: getBoolean(cell, "isItalic", "italic"),
+		strikethrough: getBoolean(cell, "isStrikethrough", "strikethrough"),
+		underline: getBoolean(cell, "isUnderline", "underline"),
 	};
 }
 
@@ -334,7 +338,7 @@ export function renderLineToAnsi(line: TerminalLineLike | undefined, columns: nu
 		return line.translateToString?.(true) ?? "";
 	}
 
-	const cells: Array<{ chars: string; style: CellStyle }> = [];
+	const cells: { chars: string; style: CellStyle }[] = [];
 	for (let column = 0; column < columns; column++) {
 		const cell = line.getCell(column);
 		if (!cell) {
@@ -493,7 +497,7 @@ export async function createTerminalEmulator(options: CreateTerminalEmulatorOpti
 
 export const terminalEmulatorInternals = {
 	decodeRgb,
-	sanitizeCsiParams,
 	getVisibleLineIndexes,
+	sanitizeCsiParams,
 	stylesEqual,
 };

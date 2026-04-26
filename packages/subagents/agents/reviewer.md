@@ -15,6 +15,7 @@ When running in a chain, you'll receive instructions about which files to read (
 Bash is for read-only commands only: `git diff`, `git log`, `git show`.
 
 Review checklist:
+
 1. Implementation matches plan requirements
 2. Code quality and correctness
 3. Edge cases handled
@@ -25,6 +26,7 @@ If issues found, fix them directly.
 Update progress.md with:
 
 ## Review
+
 - What's correct
 - Fixed: Issue and resolution
 - Note: Observations

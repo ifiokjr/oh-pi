@@ -1,25 +1,12 @@
-/* c8 ignore file */
+/* C8 ignore file */
 import path from "node:path";
 import process from "node:process";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { recordRuntimeSample } from "./watchdog-runtime-diagnostics";
-import {
-	buildPaiInstanceId,
-	createManagedWorktree,
-	createOwnerMetadata,
-	formatOwnerLabel,
-	formatWorktreeKind,
-	type GitWorktreeEntry,
-	getRepoWorktreeContext,
-	getRepoWorktreeSnapshot,
-	type ManagedWorktreeMetadata,
-	type RepoWorktreeContext,
-	type RepoWorktreeSnapshot,
-	removeManagedWorktree,
-	touchManagedWorktreeSeen,
-} from "./worktree-shared";
+import { buildPaiInstanceId, createManagedWorktree, createOwnerMetadata, formatOwnerLabel, formatWorktreeKind, getRepoWorktreeContext, getRepoWorktreeSnapshot, removeManagedWorktree, touchManagedWorktreeSeen } from './worktree-shared';
+import type { GitWorktreeEntry, ManagedWorktreeMetadata, RepoWorktreeContext, RepoWorktreeSnapshot } from './worktree-shared';
 
 const COMMAND = "worktree";
 const COMMAND_ALIASES = [COMMAND, "Worktree", "wt"] as const;
@@ -98,7 +85,7 @@ function appendInventory(lines: string[], snapshot: RepoWorktreeSnapshot): void 
 }
 
 function buildStatusReport(snapshot: RepoWorktreeSnapshot): string {
-	const current = snapshot.current;
+	const {current} = snapshot;
 	const lines = ["# /worktree status", "", "## Current checkout"];
 	lines.push(`- Repo: ${path.basename(snapshot.repoRoot)}`);
 	lines.push(`- Repo root: ${snapshot.repoRoot}`);
@@ -153,8 +140,8 @@ function buildListReport(snapshot: RepoWorktreeSnapshot): string {
 
 function sendReport(pi: ExtensionAPI, content: string): void {
 	pi.sendMessage({
-		customType: "pi-worktree",
 		content,
+		customType: "pi-worktree",
 		display: true,
 	});
 }
@@ -171,7 +158,7 @@ function parseCreateArgs(input: string): { branch: string; purpose: string } | n
 
 	const purposeFlag = " --purpose ";
 	const flagIndex = trimmed.indexOf(purposeFlag);
-	if (flagIndex >= 0) {
+	if (flagIndex !== -1) {
 		const branch = trimmed.slice(0, flagIndex).trim();
 		const purpose = trimmed.slice(flagIndex + purposeFlag.length).trim();
 		return branch ? { branch, purpose } : null;
@@ -239,9 +226,9 @@ async function chooseWorktreeTarget(
 	}
 
 	const options = snapshot.worktrees.map((entry) => ({
-		value: entry.path,
-		label: `${currentBadge(entry)}${kindBadge(entry)} ${entry.branch ?? "(detached)"}`.trim(),
 		description: entry.metadata?.purpose ?? entry.path,
+		label: `${currentBadge(entry)}${kindBadge(entry)} ${entry.branch ?? "(detached)"}`.trim(),
+		value: entry.path,
 	}));
 	const selected = await ctx.ui.select("Select a worktree to open", options);
 	return selected ? findWorktreeEntry(snapshot, selected) : null;
@@ -276,16 +263,16 @@ function refreshStatus(ctx: ExtensionContext): RepoWorktreeContext | null {
 
 async function openPath(pi: ExtensionAPI, targetPath: string): Promise<boolean> {
 	const normalized = path.resolve(targetPath);
-	const platform = process.platform;
+	const {platform} = process;
 	const command =
 		platform === "darwin"
-			? { bin: "open", args: [normalized] }
-			: platform === "win32"
+			? { args: [normalized], bin: "open" }
+			: (platform === "win32"
 				? { bin: "cmd", args: ["/c", "start", "", normalized] }
-				: { bin: "xdg-open", args: [normalized] };
+				: { bin: "xdg-open", args: [normalized] });
 
 	try {
-		const result = await pi.exec(command.bin, command.args, { timeout: 8_000 });
+		const result = await pi.exec(command.bin, command.args, { timeout: 8000 });
 		return result.exitCode === 0;
 	} catch {
 		return false;
@@ -322,7 +309,7 @@ async function handleCreate(pi: ExtensionAPI, args: string, ctx: ExtensionContex
 		return;
 	}
 
-	let purpose = parsed.purpose;
+	let {purpose} = parsed;
 	if (!purpose) {
 		purpose = (await ctx.ui.input("Worktree purpose", "Why are you creating this worktree?"))?.trim() ?? "";
 	}
@@ -333,15 +320,15 @@ async function handleCreate(pi: ExtensionAPI, args: string, ctx: ExtensionContex
 
 	try {
 		const result = createManagedWorktree({
-			cwd: ctx.cwd,
 			branch: parsed.branch,
-			purpose,
+			cwd: ctx.cwd,
 			owner: createOwnerMetadata({
 				instanceId,
 				cwd: ctx.cwd,
 				sessionFile: ctx.sessionManager.getSessionFile?.() ?? null,
 				sessionName: getCurrentSessionName(pi),
 			}),
+			purpose,
 		});
 
 		refreshStatus(ctx);
@@ -593,7 +580,7 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 		lines.push("");
 		lines.push("## Worktrees");
 		for (const entry of snapshot.worktrees) {
-			const kind = entry.isMain ? "[main]" : entry.isManaged ? "[pi-owned]" : "[external]";
+			const kind = entry.isMain ? "[main]" : (entry.isManaged ? "[pi-owned]" : "[external]");
 			const current = entry.isCurrent ? "[current] " : "";
 			lines.push(`- ${current}${kind} ${entry.branch ?? "(detached)"}`);
 			lines.push(`  path: ${entry.path}`);
@@ -641,12 +628,12 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 				Type.Literal("list"),
 				Type.Literal("cleanup"),
 			]),
+			baseRef: Type.Optional(Type.String({ description: "Base ref for the new branch (default: HEAD)" })),
 			branch: Type.Optional(Type.String({ description: "Branch name for the worktree (required for create)" })),
 			purpose: Type.Optional(Type.String({ description: "Why this worktree exists (required for create)" })),
 			target: Type.Optional(Type.String({ description: "Branch name, path, or worktree id for cleanup" })),
-			baseRef: Type.Optional(Type.String({ description: "Base ref for the new branch (default: HEAD)" })),
 		}),
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: tool handler dispatching to sub-functions
+		// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: tool handler dispatching to sub-functions
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const { action } = params;
 
@@ -655,39 +642,39 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 				const purpose = params.purpose?.trim();
 				if (!branch) {
 					return {
-						content: [{ type: "text" as const, text: "Error: branch is required for create action." }],
+						content: [{ text: "Error: branch is required for create action.", type: "text" as const }],
 						isError: true,
 					};
 				}
 				if (!purpose) {
 					return {
-						content: [{ type: "text" as const, text: "Error: purpose is required for create action." }],
+						content: [{ text: "Error: purpose is required for create action.", type: "text" as const }],
 						isError: true,
 					};
 				}
 
 				try {
 					const owner = createOwnerMetadata({
-						instanceId: toolInstance,
 						cwd: ctx.cwd,
+						instanceId: toolInstance,
 						sessionFile: ctx.sessionManager?.getSessionFile?.() ?? undefined,
 						sessionName: typeof pi.getSessionName === "function" ? (pi.getSessionName() ?? undefined) : undefined,
 					});
 					const result = createManagedWorktree({
-						cwd: ctx.cwd,
-						branch,
-						purpose,
-						owner,
 						baseRef: params.baseRef?.trim() || undefined,
+						branch,
+						cwd: ctx.cwd,
+						owner,
+						purpose,
 					});
 					toolRefreshStatus(ctx);
-					return { content: [{ type: "text" as const, text: formatToolCreateResult(result) }] };
+					return { content: [{ text: formatToolCreateResult(result), type: "text" as const }] };
 				} catch (error) {
 					return {
 						content: [
 							{
-								type: "text" as const,
 								text: `Error creating worktree: ${error instanceof Error ? error.message : String(error)}`,
+								type: "text" as const,
 							},
 						],
 						isError: true,
@@ -698,18 +685,18 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 			if (action === "status") {
 				const context = toolRefreshStatus(ctx);
 				if (!context) {
-					return { content: [{ type: "text" as const, text: "Not inside a git repository." }], isError: true };
+					return { content: [{ text: "Not inside a git repository.", type: "text" as const }], isError: true };
 				}
-				return { content: [{ type: "text" as const, text: formatToolStatus(context) }] };
+				return { content: [{ text: formatToolStatus(context), type: "text" as const }] };
 			}
 
 			if (action === "list") {
 				toolRefreshStatus(ctx);
 				const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
 				if (!snapshot) {
-					return { content: [{ type: "text" as const, text: "Not inside a git repository." }], isError: true };
+					return { content: [{ text: "Not inside a git repository.", type: "text" as const }], isError: true };
 				}
-				return { content: [{ type: "text" as const, text: formatToolList(snapshot) }] };
+				return { content: [{ text: formatToolList(snapshot), type: "text" as const }] };
 			}
 
 			if (action === "cleanup") {
@@ -718,8 +705,8 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 					return {
 						content: [
 							{
-								type: "text" as const,
 								text: "Error: target is required for cleanup action. Use a branch name, path, or worktree id.",
+								type: "text" as const,
 							},
 						],
 						isError: true,
@@ -729,7 +716,7 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 				toolRefreshStatus(ctx);
 				const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
 				if (!snapshot) {
-					return { content: [{ type: "text" as const, text: "Not inside a git repository." }], isError: true };
+					return { content: [{ text: "Not inside a git repository.", type: "text" as const }], isError: true };
 				}
 
 				const managedTargets = findManagedTargets(snapshot, target);
@@ -739,15 +726,15 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 						return {
 							content: [
 								{
-									type: "text" as const,
 									text: `Matched external worktree ${externalMatch.path}. pi only cleans pi-owned worktrees by default.`,
+									type: "text" as const,
 								},
 							],
 							isError: true,
 						};
 					}
 					return {
-						content: [{ type: "text" as const, text: `No pi-owned worktree matched: ${target}` }],
+						content: [{ text: `No pi-owned worktree matched: ${target}`, type: "text" as const }],
 						isError: true,
 					};
 				}
@@ -758,8 +745,8 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 					return {
 						content: [
 							{
-								type: "text" as const,
 								text: "Refusing to clean up the current worktree. Switch to another checkout first.",
+								type: "text" as const,
 							},
 						],
 						isError: true,
@@ -782,13 +769,13 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 						lines.push(`  path: ${result.metadata.worktreePath}`);
 						lines.push(`  purpose: ${result.metadata.purpose}`);
 					}
-					return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+					return { content: [{ text: lines.join("\n"), type: "text" as const }] };
 				} catch (error) {
 					return {
 						content: [
 							{
-								type: "text" as const,
 								text: `Error cleaning up worktree: ${error instanceof Error ? error.message : String(error)}`,
+								type: "text" as const,
 							},
 						],
 						isError: true,
@@ -797,7 +784,7 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 			}
 
 			return {
-				content: [{ type: "text" as const, text: "Unknown action. Use: create, status, list, or cleanup." }],
+				content: [{ text: "Unknown action. Use: create, status, list, or cleanup.", type: "text" as const }],
 				isError: true,
 			};
 		},
@@ -805,7 +792,7 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 		renderCall(args, theme) {
 			const action = args.action ?? "?";
 			const detail =
-				action === "create" ? `${args.branch ?? "?"}` : action === "cleanup" ? `${args.target ?? "?"}` : "";
+				action === "create" ? `${args.branch ?? "?"}` : (action === "cleanup" ? `${args.target ?? "?"}` : "");
 			return new Text(`${theme.fg("toolTitle", theme.bold("⌥ worktree"))} ${action} ${detail}`, 0, 0);
 		},
 

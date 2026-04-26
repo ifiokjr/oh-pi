@@ -1,9 +1,9 @@
-type StatusTarget = {
+interface StatusTarget {
 	hasUI?: boolean;
 	ui?: {
 		setStatus?: (key: string, value: string | undefined) => unknown;
 	};
-};
+}
 
 /**
  * Coalesce repeated status-bar writes so periodic timers do not re-send identical text.

@@ -1,32 +1,32 @@
-export type PlanModeState = {
+export interface PlanModeState {
 	version: number;
 	active: boolean;
 	originLeafId?: string;
 	planFilePath?: string;
 	lastPlanLeafId?: string;
-};
+}
 
-export type TaskAgentTask = {
+export interface TaskAgentTask {
 	id?: string;
 	prompt: string;
 	cwd?: string;
-};
+}
 
-export type NormalizedTaskAgentTask = {
+export interface NormalizedTaskAgentTask {
 	id: string;
 	prompt: string;
 	cwd?: string;
-};
+}
 
 export type TaskAgentActivityKind = "status" | "tool" | "assistant" | "toolResult" | "stderr";
 
-export type TaskAgentActivity = {
+export interface TaskAgentActivity {
 	kind: TaskAgentActivityKind;
 	text: string;
 	timestamp: number;
-};
+}
 
-export type TaskAgentTaskResult = {
+export interface TaskAgentTaskResult {
 	taskId: string;
 	task: string;
 	cwd: string;
@@ -38,61 +38,61 @@ export type TaskAgentTaskResult = {
 	startedAt: number;
 	finishedAt: number;
 	steeringNotes: string[];
-};
+}
 
-export type TaskAgentTaskProgress = {
+export interface TaskAgentTaskProgress {
 	taskId: string;
 	prompt: string;
 	status: "queued" | "running" | "completed" | "failed";
 	latestActivity?: string;
 	activityCount: number;
-};
+}
 
-export type TaskAgentRunDetails = {
+export interface TaskAgentRunDetails {
 	runId: string;
 	tasks: TaskAgentTaskResult[];
 	successCount: number;
 	totalCount: number;
-};
+}
 
-export type TaskAgentProgressDetails = {
+export interface TaskAgentProgressDetails {
 	runId: string;
 	completed: number;
 	total: number;
 	tasks: TaskAgentTaskProgress[];
-};
+}
 
-export type TaskAgentRunRecord = {
+export interface TaskAgentRunRecord {
 	runId: string;
 	createdAt: number;
 	tasks: TaskAgentTaskResult[];
-};
+}
 
-export type RequestUserInputOption = {
+export interface RequestUserInputOption {
 	label: string;
 	description: string;
-};
+}
 
-export type RequestUserInputQuestion = {
+export interface RequestUserInputQuestion {
 	id: string;
 	header: string;
 	question: string;
 	options?: RequestUserInputOption[];
-};
+}
 
 export type NormalizedRequestUserInputQuestion = Omit<RequestUserInputQuestion, "options"> & {
 	options: RequestUserInputOption[];
 };
 
-export type RequestUserInputAnswer = {
+export interface RequestUserInputAnswer {
 	answers: string[];
-};
+}
 
-export type RequestUserInputResponse = {
+export interface RequestUserInputResponse {
 	answers: Record<string, RequestUserInputAnswer>;
-};
+}
 
-export type RequestUserInputDetails = {
+export interface RequestUserInputDetails {
 	questions: NormalizedRequestUserInputQuestion[];
 	response: RequestUserInputResponse;
-};
+}

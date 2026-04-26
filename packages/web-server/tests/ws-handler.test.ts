@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import type { AgentSessionLike } from "../src/ws-handler.js";
 import { handleWebSocketConnection } from "../src/ws-handler.js";
 
@@ -8,7 +8,7 @@ class MockWebSocket extends EventEmitter {
 	OPEN = 1;
 	readyState = MockWebSocket.OPEN;
 	sent: unknown[] = [];
-	closeCalls: Array<{ code: number; reason: string }> = [];
+	closeCalls: { code: number; reason: string }[] = [];
 
 	send(data: string): void {
 		this.sent.push(JSON.parse(data));
@@ -29,80 +29,80 @@ class MockWebSocket extends EventEmitter {
 
 function createSession(overrides: Partial<AgentSessionLike> = {}): AgentSessionLike {
 	return {
-		prompt: vi.fn(async () => {}),
-		steer: vi.fn(async () => {}),
-		followUp: vi.fn(async () => {}),
 		abort: vi.fn(async () => {}),
+		agent: { state: { systemPrompt: "You are helpful", tools: [] } },
 		compact: vi.fn(async () => ({ compacted: true })),
-		setModel: vi.fn(async () => true),
-		setThinkingLevel: vi.fn(),
-		subscribe: vi.fn(() => vi.fn()),
+		followUp: vi.fn(async () => {}),
 		isStreaming: false,
 		messages: [{ role: "user", content: "hello" }],
 		model: "openai/gpt-5-mini",
-		thinkingLevel: "medium",
-		sessionId: "session-1",
-		sessionFile: "/tmp/session-1.jsonl",
-		agent: { state: { systemPrompt: "You are helpful", tools: [] } },
 		newSession: vi.fn(async () => ({ cancelled: false })),
+		prompt: vi.fn(async () => {}),
+		sessionFile: "/tmp/session-1.jsonl",
+		sessionId: "session-1",
+		setModel: vi.fn(async () => true),
+		setThinkingLevel: vi.fn(),
+		steer: vi.fn(async () => {}),
+		subscribe: vi.fn(() => vi.fn()),
+		thinkingLevel: "medium",
 		...overrides,
 	};
 }
 
 async function authenticateSocket(ws: MockWebSocket, token = "test-token") {
-	await ws.emitMessage(JSON.stringify({ type: "auth", token }));
+	await ws.emitMessage(JSON.stringify({ token, type: "auth" }));
 }
 
 afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe("handleWebSocketConnection", () => {
+describe(handleWebSocketConnection, () => {
 	it("rejects invalid JSON before authentication", async () => {
 		const ws = new MockWebSocket();
 		handleWebSocketConnection(ws as never, {
-			token: "test-token",
-			instanceId: "instance-1",
 			getSession: () => undefined,
+			instanceId: "instance-1",
+			token: "test-token",
 		});
 
 		await ws.emitMessage("not-json");
 
-		expect(ws.sent).toEqual([{ type: "error", error: "Invalid JSON" }]);
-		expect(ws.closeCalls).toEqual([]);
+		expect(ws.sent).toStrictEqual([{ error: "Invalid JSON", type: "error" }]);
+		expect(ws.closeCalls).toStrictEqual([]);
 	});
 
 	it("requires an auth handshake before processing commands", async () => {
 		const ws = new MockWebSocket();
 		handleWebSocketConnection(ws as never, {
-			token: "test-token",
-			instanceId: "instance-1",
 			getSession: () => undefined,
+			instanceId: "instance-1",
+			token: "test-token",
 		});
 
-		await ws.emitMessage(JSON.stringify({ type: "prompt", message: "hello" }));
+		await ws.emitMessage(JSON.stringify({ message: "hello", type: "prompt" }));
 
-		expect(ws.sent).toEqual([{ type: "auth_error", reason: "auth_required" }]);
-		expect(ws.closeCalls).toEqual([{ code: 4001, reason: "Auth required" }]);
+		expect(ws.sent).toStrictEqual([{ reason: "auth_required", type: "auth_error" }]);
+		expect(ws.closeCalls).toStrictEqual([{ code: 4001, reason: "Auth required" }]);
 	});
 
 	it("rejects invalid tokens", async () => {
 		const ws = new MockWebSocket();
 		handleWebSocketConnection(ws as never, {
-			token: "test-token",
-			instanceId: "instance-1",
 			getSession: () => undefined,
+			instanceId: "instance-1",
+			token: "test-token",
 		});
 
 		await authenticateSocket(ws, "wrong-token");
 
-		expect(ws.sent).toEqual([{ type: "auth_error", reason: "invalid_token" }]);
-		expect(ws.closeCalls).toEqual([{ code: 4001, reason: "Invalid token" }]);
+		expect(ws.sent).toStrictEqual([{ reason: "invalid_token", type: "auth_error" }]);
+		expect(ws.closeCalls).toStrictEqual([{ code: 4001, reason: "Invalid token" }]);
 	});
 
 	it("authenticates, forwards session events, and disconnects cleanly", async () => {
 		const ws = new MockWebSocket();
-		const sessionEventListeners: Array<(event: unknown) => void> = [];
+		const sessionEventListeners: ((event: unknown) => void)[] = [];
 		const unsubscribe = vi.fn();
 		const session = createSession({
 			subscribe: vi.fn((listener) => {
@@ -114,53 +114,53 @@ describe("handleWebSocketConnection", () => {
 		const onClientDisconnect = vi.fn();
 
 		handleWebSocketConnection(ws as never, {
-			token: "test-token",
-			instanceId: "instance-1",
 			getSession: () => session,
+			instanceId: "instance-1",
 			onClientConnect,
 			onClientDisconnect,
+			token: "test-token",
 		});
 
 		await authenticateSocket(ws);
-		expect(ws.sent[0]).toEqual({
-			type: "auth_ok",
+		expect(ws.sent[0]).toStrictEqual({
 			instanceId: "instance-1",
 			session: {
-				sessionId: "session-1",
 				isStreaming: false,
 				model: "openai/gpt-5-mini",
+				sessionId: "session-1",
 				thinkingLevel: "medium",
 			},
+			type: "auth_ok",
 		});
-		expect(onClientConnect).toHaveBeenCalledTimes(1);
+		expect(onClientConnect).toHaveBeenCalledOnce();
 		const clientId = onClientConnect.mock.calls[0]?.[0];
-		expect(clientId).toEqual(expect.any(String));
+		expect(clientId).toStrictEqual(expect.any(String));
 
-		sessionEventListeners[0]?.({ type: "agent_event", detail: "tick" });
-		expect(ws.sent.at(-1)).toEqual({ type: "agent_event", detail: "tick" });
+		sessionEventListeners[0]?.({ detail: "tick", type: "agent_event" });
+		expect(ws.sent.at(-1)).toStrictEqual({ detail: "tick", type: "agent_event" });
 
 		ws.close(1000, "done");
-		expect(unsubscribe).toHaveBeenCalledTimes(1);
+		expect(unsubscribe).toHaveBeenCalledOnce();
 		expect(onClientDisconnect).toHaveBeenCalledWith(clientId);
 	});
 
 	it("returns a structured error when authenticated but no session is attached", async () => {
 		const ws = new MockWebSocket();
 		handleWebSocketConnection(ws as never, {
-			token: "test-token",
-			instanceId: "instance-1",
 			getSession: () => undefined,
+			instanceId: "instance-1",
+			token: "test-token",
 		});
 
 		await authenticateSocket(ws);
 		await ws.emitMessage(JSON.stringify({ id: "cmd-1", type: "get_state" }));
 
-		expect(ws.sent.at(-1)).toEqual({
-			type: "response",
+		expect(ws.sent.at(-1)).toStrictEqual({
 			command: "get_state",
-			success: false,
 			error: "No session attached",
 			id: "cmd-1",
+			success: false,
+			type: "response",
 		});
 	});
 
@@ -169,22 +169,22 @@ describe("handleWebSocketConnection", () => {
 		const session = createSession({ isStreaming: true });
 
 		handleWebSocketConnection(ws as never, {
-			token: "test-token",
-			instanceId: "instance-1",
 			getSession: () => session,
+			instanceId: "instance-1",
+			token: "test-token",
 		});
 
 		await authenticateSocket(ws);
 		await ws.emitMessage(
-			JSON.stringify({ id: "cmd-1", type: "prompt", message: "stream me", streamingBehavior: "steer" }),
+			JSON.stringify({ id: "cmd-1", message: "stream me", streamingBehavior: "steer", type: "prompt" }),
 		);
-		await ws.emitMessage(JSON.stringify({ id: "cmd-2", type: "steer", message: "faster" }));
-		await ws.emitMessage(JSON.stringify({ id: "cmd-3", type: "follow_up", message: "more detail" }));
+		await ws.emitMessage(JSON.stringify({ id: "cmd-2", message: "faster", type: "steer" }));
+		await ws.emitMessage(JSON.stringify({ id: "cmd-3", message: "more detail", type: "follow_up" }));
 		await ws.emitMessage(JSON.stringify({ id: "cmd-4", type: "abort" }));
 		await ws.emitMessage(JSON.stringify({ id: "cmd-5", type: "get_state" }));
 		await ws.emitMessage(JSON.stringify({ id: "cmd-6", type: "get_messages" }));
-		await ws.emitMessage(JSON.stringify({ id: "cmd-7", type: "set_thinking_level", level: "high" }));
-		await ws.emitMessage(JSON.stringify({ id: "cmd-8", type: "compact", customInstructions: "trim" }));
+		await ws.emitMessage(JSON.stringify({ id: "cmd-7", level: "high", type: "set_thinking_level" }));
+		await ws.emitMessage(JSON.stringify({ customInstructions: "trim", id: "cmd-8", type: "compact" }));
 		await ws.emitMessage(JSON.stringify({ id: "cmd-9", type: "new_session" }));
 		await ws.emitMessage(JSON.stringify({ id: "cmd-10", type: "extension_ui_response" }));
 		await ws.emitMessage(JSON.stringify({ id: "cmd-11", type: "unknown_command" }));
@@ -192,53 +192,53 @@ describe("handleWebSocketConnection", () => {
 		expect(session.prompt).toHaveBeenCalledWith("stream me", { streamingBehavior: "steer" });
 		expect(session.steer).toHaveBeenCalledWith("faster");
 		expect(session.followUp).toHaveBeenCalledWith("more detail");
-		expect(session.abort).toHaveBeenCalledTimes(1);
+		expect(session.abort).toHaveBeenCalledOnce();
 		expect(session.setThinkingLevel).toHaveBeenCalledWith("high");
 		expect(session.compact).toHaveBeenCalledWith("trim");
-		expect(session.newSession).toHaveBeenCalledTimes(1);
+		expect(session.newSession).toHaveBeenCalledOnce();
 
-		expect(ws.sent).toContainEqual({ type: "response", command: "prompt", success: true, id: "cmd-1" });
+		expect(ws.sent).toContainEqual({ command: "prompt", id: "cmd-1", success: true, type: "response" });
 		expect(ws.sent).toContainEqual({
-			type: "response",
 			command: "get_state",
-			success: true,
 			data: {
-				model: "openai/gpt-5-mini",
-				thinkingLevel: "medium",
 				isStreaming: true,
-				sessionId: "session-1",
-				sessionFile: "/tmp/session-1.jsonl",
 				messageCount: 1,
+				model: "openai/gpt-5-mini",
+				sessionFile: "/tmp/session-1.jsonl",
+				sessionId: "session-1",
+				thinkingLevel: "medium",
 			},
 			id: "cmd-5",
+			success: true,
+			type: "response",
 		});
 		expect(ws.sent).toContainEqual({
-			type: "response",
 			command: "get_messages",
-			success: true,
 			data: { messages: session.messages },
 			id: "cmd-6",
+			success: true,
+			type: "response",
 		});
 		expect(ws.sent).toContainEqual({
-			type: "response",
 			command: "compact",
-			success: true,
 			data: { compacted: true },
 			id: "cmd-8",
+			success: true,
+			type: "response",
 		});
 		expect(ws.sent).toContainEqual({
-			type: "response",
 			command: "new_session",
-			success: true,
 			data: { cancelled: false },
 			id: "cmd-9",
+			success: true,
+			type: "response",
 		});
 		expect(ws.sent).toContainEqual({
-			type: "response",
 			command: "unknown_command",
-			success: false,
 			error: "Unknown command: unknown_command",
 			id: "cmd-11",
+			success: false,
+			type: "response",
 		});
 	});
 
@@ -249,22 +249,22 @@ describe("handleWebSocketConnection", () => {
 		});
 
 		handleWebSocketConnection(ws as never, {
-			token: "test-token",
-			instanceId: "instance-1",
 			getSession: () => session,
+			instanceId: "instance-1",
+			token: "test-token",
 		});
 
 		await authenticateSocket(ws);
 		await ws.emitMessage(JSON.stringify({ id: "cmd-1", type: "compact" }));
-		expect(ws.sent.at(-1)).toEqual({
-			type: "response",
+		expect(ws.sent.at(-1)).toStrictEqual({
 			command: "compact",
-			success: false,
 			error: "compact failed",
 			id: "cmd-1",
+			success: false,
+			type: "response",
 		});
 
 		ws.emit("error", new Error("socket error"));
-		expect((session.subscribe as ReturnType<typeof vi.fn>).mock.results[0]?.value).toHaveBeenCalledTimes(1);
+		expect((session.subscribe as ReturnType<typeof vi.fn>).mock.results[0]?.value).toHaveBeenCalledOnce();
 	});
 });

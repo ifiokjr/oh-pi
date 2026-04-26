@@ -14,12 +14,12 @@ export async function selectExtensions(initialValues?: string[]): Promise<string
 	);
 
 	const exts = await p.multiselect({
+		initialValues: seeded,
 		message: t("ext.select"),
 		options: EXTENSIONS.map((e) => ({
 			value: e.name,
 			label: e.label,
 		})),
-		initialValues: seeded,
 	});
 	if (p.isCancel(exts)) {
 		p.cancel(t("cancelled"));

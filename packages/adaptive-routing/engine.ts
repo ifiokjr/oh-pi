@@ -35,17 +35,17 @@ export function decideRoute(input: RoutingDecisionInput): RouteDecision | undefi
 		if (lockedCandidate) {
 			const appliedThinking = clampThinking(lock.thinking, lockedCandidate.maxThinkingLevel);
 			return {
-				selectedModel: lockedCandidate.fullId,
-				selectedThinking: appliedThinking,
-				fallbacks: buildFallbacks(candidates, lockedCandidate.fullId, config, classification),
 				explanation: {
-					summary: `locked to ${lockedCandidate.fullId} · ${appliedThinking}`,
-					codes: ["manual_lock_applied"],
-					classification,
 					clampedThinking:
 						appliedThinking === lock.thinking ? undefined : { requested: lock.thinking, applied: appliedThinking },
+					classification,
+					codes: ["manual_lock_applied"],
 					quota: buildQuotaSummary(usage),
+					summary: `locked to ${lockedCandidate.fullId} · ${appliedThinking}`,
 				},
+				fallbacks: buildFallbacks(candidates, lockedCandidate.fullId, config, classification),
+				selectedModel: lockedCandidate.fullId,
+				selectedThinking: appliedThinking,
 			};
 		}
 	}
@@ -66,14 +66,14 @@ export function decideRoute(input: RoutingDecisionInput): RouteDecision | undefi
 	const explanation = buildExplanation(selected, selectedThinking, best, scores.slice(0, 3), classification, usage);
 
 	return {
+		explanation,
+		fallbacks: scores.slice(1, 4).map((score) => score.model),
 		selectedModel: selected.fullId,
 		selectedThinking,
-		fallbacks: scores.slice(1, 4).map((score) => score.model),
-		explanation,
 	};
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: candidate scoring intentionally combines multiple weighted routing signals.
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: candidate scoring intentionally combines multiple weighted routing signals.
 function scoreCandidate(candidate: NormalizedRouteCandidate, input: RoutingDecisionInput): RouteCandidateScore {
 	const reasons: string[] = [];
 	let score = 0;
@@ -81,7 +81,7 @@ function scoreCandidate(candidate: NormalizedRouteCandidate, input: RoutingDecis
 	const intentPolicy = config.intents[classification.intent];
 
 	const rankingIndex = config.models.ranked.findIndex((entry) => matchesModelRef(entry, candidate));
-	if (rankingIndex >= 0) {
+	if (rankingIndex !== -1) {
 		score += Math.max(30 - rankingIndex * 3, 3);
 		reasons.push(`rank:${rankingIndex + 1}`);
 	}
@@ -160,8 +160,8 @@ function scoreCandidate(candidate: NormalizedRouteCandidate, input: RoutingDecis
 
 	return {
 		model: candidate.fullId,
-		score,
 		reasons,
+		score,
 	};
 }
 
@@ -203,13 +203,13 @@ function buildExplanation(
 	}
 
 	return {
-		summary: `${selected.fullId} · ${selectedThinking} · ${classification.intent} · ${classification.recommendedTier}`,
-		codes: Array.from(codes),
-		classification,
+		candidates: topCandidates,
 		clampedThinking:
 			selectedThinking === requestedThinking ? undefined : { requested: requestedThinking, applied: selectedThinking },
+		classification,
+		codes: Array.from(codes),
 		quota: buildQuotaSummary(usage),
-		candidates: topCandidates,
+		summary: `${selected.fullId} · ${selectedThinking} · ${classification.intent} · ${classification.recommendedTier}`,
 	};
 }
 
@@ -221,7 +221,7 @@ function buildFallbacks(
 ): string[] {
 	return candidates
 		.filter((candidate) => candidate.fullId !== excludedModel)
-		.sort((a, b) => tierOrder(b.tier) - tierOrder(a.tier) || a.fullId.localeCompare(b.fullId))
+		.toSorted((a, b) => tierOrder(b.tier) - tierOrder(a.tier) || a.fullId.localeCompare(b.fullId))
 		.filter((candidate) => !config.models.excluded.some((entry) => matchesModelRef(entry, candidate)))
 		.filter(
 			(candidate) => matchesTier(candidate.tier, classification.recommendedTier) || candidate.fallbackGroups.length > 0,
@@ -263,14 +263,18 @@ function shouldApplyReserve(applyToTiers: RouteTier[] | undefined, recommendedTi
 
 function tierOrder(tier: RouteTier): number {
 	switch (tier) {
-		case "cheap":
+		case "cheap": {
 			return 0;
-		case "balanced":
+		}
+		case "balanced": {
 			return 1;
-		case "premium":
+		}
+		case "premium": {
 			return 2;
-		case "peak":
+		}
+		case "peak": {
 			return 3;
+		}
 	}
 }
 
@@ -280,16 +284,16 @@ function matchesTier(candidateTier: RouteTier, requestedTier: RouteTier): boolea
 
 export function buildFallbackClassification(intent: RouteIntent): PromptRouteClassification {
 	return {
-		intent,
-		complexity: intent === "design" || intent === "architecture" ? 4 : 3,
-		risk: intent === "quick-qna" ? "low" : "medium",
-		expectedTurns: intent === "quick-qna" ? "one" : "few",
-		toolIntensity: intent === "implementation" || intent === "debugging" ? "high" : "medium",
-		contextBreadth: intent === "architecture" ? "large" : "medium",
-		recommendedTier: intent === "design" || intent === "architecture" ? "premium" : "balanced",
-		recommendedThinking: intent === "quick-qna" ? "minimal" : "medium",
-		confidence: 0.35,
-		reason: "Fallback classification applied.",
 		classifierMode: "heuristic",
+		complexity: intent === "design" || intent === "architecture" ? 4 : 3,
+		confidence: 0.35,
+		contextBreadth: intent === "architecture" ? "large" : "medium",
+		expectedTurns: intent === "quick-qna" ? "one" : "few",
+		intent,
+		reason: "Fallback classification applied.",
+		recommendedThinking: intent === "quick-qna" ? "minimal" : "medium",
+		recommendedTier: intent === "design" || intent === "architecture" ? "premium" : "balanced",
+		risk: intent === "quick-qna" ? "low" : "medium",
+		toolIntensity: intent === "implementation" || intent === "debugging" ? "high" : "medium",
 	};
 }

@@ -1,26 +1,27 @@
-import { describe, expect, it } from "vitest";
-import { type ExtensionOption, pickExtensions } from "./extension-picker.js";
+
+import { pickExtensions } from './extension-picker.js';
+import type { ExtensionOption } from './extension-picker.js';
 
 function createMockStreams() {
 	const stdoutChunks: string[] = [];
 	const listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
 	const stdin = {
+		emit: (event: string, ...args: unknown[]) => {
+			for (const h of listeners[event] ?? []) {
+				h(...args);
+			}
+		},
 		isTTY: true,
-		setRawMode: (_flag: boolean) => {},
-		pause: () => {},
-		removeListener: (_event: string, _handler: unknown) => {},
+		listenerCount: (_event: string) => 0,
 		on: (event: string, handler: (...args: unknown[]) => void) => {
 			if (!listeners[event]) {
 				listeners[event] = [];
 			}
 			listeners[event].push(handler);
 		},
-		listenerCount: (_event: string) => 0,
-		emit: (event: string, ...args: unknown[]) => {
-			for (const h of listeners[event] ?? []) {
-				h(...args);
-			}
-		},
+		pause: () => {},
+		removeListener: (_event: string, _handler: unknown) => {},
+		setRawMode: (_flag: boolean) => {},
 	} as unknown as NodeJS.ReadStream;
 	const stdout = {
 		write: (chunk: string) => {
@@ -31,17 +32,17 @@ function createMockStreams() {
 }
 
 const OPTIONS: ExtensionOption[] = [
-	{ value: "git-guard", label: "Git Guard", default: true },
-	{ value: "auto-session-name", label: "Auto Session Name", default: true },
-	{ value: "plan", label: "Plan Mode", default: false },
+	{ default: true, label: "Git Guard", value: "git-guard" },
+	{ default: true, label: "Auto Session Name", value: "auto-session-name" },
+	{ default: false, label: "Plan Mode", value: "plan" },
 ];
 
-describe("pickExtensions", () => {
+describe(pickExtensions, () => {
 	it("returns defaults immediately in non-TTY", async () => {
 		const { stdin, stdout } = createMockStreams();
 		(stdin as any).isTTY = false;
 		const result = await pickExtensions(OPTIONS, { stdin, stdout });
-		expect(result).toEqual(["git-guard", "auto-session-name"]);
+		expect(result).toStrictEqual(["git-guard", "auto-session-name"]);
 	});
 
 	it("selects all on A and confirms", async () => {
@@ -50,12 +51,12 @@ describe("pickExtensions", () => {
 
 		// Simulate A then Enter after a microtask flush
 		setTimeout(() => {
-			(stdin as any).emit("keypress", "a", { name: "a", ctrl: false });
-			(stdin as any).emit("keypress", "\r", { name: "return", ctrl: false });
+			(stdin as any).emit("keypress", "a", { ctrl: false, name: "a" });
+			(stdin as any).emit("keypress", "\r", { ctrl: false, name: "return" });
 		}, 10);
 
 		const result = await promise;
-		expect(result).toEqual(["git-guard", "auto-session-name", "plan"]);
+		expect(result).toStrictEqual(["git-guard", "auto-session-name", "plan"]);
 	});
 
 	it("deselects all on second A", async () => {
@@ -63,13 +64,13 @@ describe("pickExtensions", () => {
 		const promise = pickExtensions(OPTIONS, { stdin, stdout });
 
 		setTimeout(() => {
-			(stdin as any).emit("keypress", "a", { name: "a", ctrl: false });
-			(stdin as any).emit("keypress", "a", { name: "a", ctrl: false });
-			(stdin as any).emit("keypress", "\r", { name: "return", ctrl: false });
+			(stdin as any).emit("keypress", "a", { ctrl: false, name: "a" });
+			(stdin as any).emit("keypress", "a", { ctrl: false, name: "a" });
+			(stdin as any).emit("keypress", "\r", { ctrl: false, name: "return" });
 		}, 10);
 
 		const result = await promise;
-		expect(result).toEqual([]);
+		expect(result).toStrictEqual([]);
 	});
 
 	it("toggles with space and confirms", async () => {
@@ -78,10 +79,10 @@ describe("pickExtensions", () => {
 
 		setTimeout(() => {
 			// Move down to plan, toggle, confirm
-			(stdin as any).emit("keypress", "j", { name: "down", ctrl: false });
-			(stdin as any).emit("keypress", "j", { name: "down", ctrl: false });
-			(stdin as any).emit("keypress", " ", { name: "space", ctrl: false });
-			(stdin as any).emit("keypress", "\r", { name: "return", ctrl: false });
+			(stdin as any).emit("keypress", "j", { ctrl: false, name: "down" });
+			(stdin as any).emit("keypress", "j", { ctrl: false, name: "down" });
+			(stdin as any).emit("keypress", " ", { ctrl: false, name: "space" });
+			(stdin as any).emit("keypress", "\r", { ctrl: false, name: "return" });
 		}, 10);
 
 		const result = await promise;
@@ -96,8 +97,8 @@ describe("pickExtensions", () => {
 
 		setTimeout(() => {
 			// Cursor starts at 0 (git-guard, pre-selected). Toggle off.
-			(stdin as any).emit("keypress", " ", { name: "space", ctrl: false });
-			(stdin as any).emit("keypress", "\r", { name: "return", ctrl: false });
+			(stdin as any).emit("keypress", " ", { ctrl: false, name: "space" });
+			(stdin as any).emit("keypress", "\r", { ctrl: false, name: "return" });
 		}, 10);
 
 		const result = await promise;

@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { resolvePiAgentDir } from "@ifi/oh-pi-core";
 
@@ -36,7 +36,7 @@ function scanDir(dir: string, prefix = ""): string[] {
 			}
 		}
 	} catch {
-		/* skip */
+		/* Skip */
 	}
 	return files;
 }
@@ -56,11 +56,11 @@ function dirSizeKB(dir: string): number {
 			try {
 				bytes += statSync(join(dir, f)).size;
 			} catch {
-				/* skip */
+				/* Skip */
 			}
 		}
 	} catch {
-		/* skip */
+		/* Skip */
 	}
 	return Math.round(bytes / 1024);
 }
@@ -71,7 +71,7 @@ function dirSizeKB(dir: string): number {
  * @returns Array of configured provider names
  */
 function detectProviders(agentDir: string): string[] {
-	const providers: Set<string> = new Set();
+	const providers = new Set<string>();
 
 	// From auth.json keys
 	try {
@@ -80,7 +80,7 @@ function detectProviders(agentDir: string): string[] {
 			providers.add(key);
 		}
 	} catch {
-		/* skip */
+		/* Skip */
 	}
 
 	// From settings.json defaultProvider
@@ -90,7 +90,7 @@ function detectProviders(agentDir: string): string[] {
 			providers.add(settings.defaultProvider);
 		}
 	} catch {
-		/* skip */
+		/* Skip */
 	}
 
 	// From models.json custom providers
@@ -101,7 +101,7 @@ function detectProviders(agentDir: string): string[] {
 			providers.add(key);
 		}
 	} catch {
-		/* skip */
+		/* Skip */
 	}
 
 	return [...providers];
@@ -128,14 +128,14 @@ export async function detectEnv(): Promise<EnvInfo> {
 	]);
 
 	return {
+		agentDir,
+		configSizeKB: dirSizeKB(agentDir),
+		existingFiles,
+		existingProviders: detectProviders(agentDir),
+		hasExistingConfig: existsSync(join(agentDir, "settings.json")),
+		os: process.platform,
 		piInstalled: versionResult.installed,
 		piVersion: versionResult.version,
-		hasExistingConfig: existsSync(join(agentDir, "settings.json")),
-		agentDir,
 		terminal: process.env.TERM_PROGRAM ?? process.env.TERM ?? "unknown",
-		os: process.platform,
-		existingFiles,
-		configSizeKB: dirSizeKB(agentDir),
-		existingProviders: detectProviders(agentDir),
 	};
 }

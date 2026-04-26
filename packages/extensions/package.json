@@ -1,53 +1,53 @@
 {
-  "name": "@ifi/oh-pi-extensions",
-  "version": "0.4.4",
-  "description": "Core pi extensions: git-guard, auto-session, custom-footer, and more.",
-  "keywords": [
-    "pi-package"
-  ],
-  "pi": {
-    "extensions": [
-      "./extensions/answer.ts",
-      "./extensions/watchdog.ts",
-      "./extensions/auto-session-name.ts",
-      "./extensions/auto-update.ts",
-      "./extensions/btw.ts",
-      "./extensions/compact-header.ts",
-      "./extensions/custom-footer.ts",
-      "./extensions/external-editor.ts",
-      "./extensions/git-guard.ts",
-      "./extensions/scheduler.ts",
-      "./extensions/tool-metadata.ts",
-      "./extensions/usage-tracker.ts",
-      "./extensions/worktree.ts"
-    ]
-  },
-  "files": [
-    "extensions",
-    "README.md",
-    "!**/*.test.ts"
-  ],
-  "license": "MIT",
-  "dependencies": {
-    "@ifi/oh-pi-core": "0.4.4",
-    "@ifi/pi-background-tasks": "0.4.4",
-    "@ifi/pi-shared-qna": "0.4.4",
-    "croner": "^10.0.1"
-  },
-  "peerDependencies": {
-    "@mariozechner/pi-agent-core": ">=0.56.1",
-    "@mariozechner/pi-ai": ">=0.56.1",
-    "@mariozechner/pi-coding-agent": ">=0.56.1",
-    "@mariozechner/pi-tui": ">=0.56.1",
-    "@sinclair/typebox": "*"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/extensions"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/extensions",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  }
+	"name": "@ifi/oh-pi-extensions",
+	"version": "0.4.4",
+	"description": "Core pi extensions: git-guard, auto-session, custom-footer, and more.",
+	"keywords": [
+		"pi-package"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/extensions",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/extensions"
+	},
+	"files": [
+		"extensions",
+		"README.md",
+		"!**/*.test.ts"
+	],
+	"dependencies": {
+		"@ifi/oh-pi-core": "0.4.4",
+		"@ifi/pi-background-tasks": "0.4.4",
+		"@ifi/pi-shared-qna": "0.4.4",
+		"croner": "^10.0.1"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-agent-core": ">=0.56.1",
+		"@mariozechner/pi-ai": ">=0.56.1",
+		"@mariozechner/pi-coding-agent": ">=0.56.1",
+		"@mariozechner/pi-tui": ">=0.56.1",
+		"@sinclair/typebox": "*"
+	},
+	"pi": {
+		"extensions": [
+			"./extensions/answer.ts",
+			"./extensions/watchdog.ts",
+			"./extensions/auto-session-name.ts",
+			"./extensions/auto-update.ts",
+			"./extensions/btw.ts",
+			"./extensions/compact-header.ts",
+			"./extensions/custom-footer.ts",
+			"./extensions/external-editor.ts",
+			"./extensions/git-guard.ts",
+			"./extensions/scheduler.ts",
+			"./extensions/tool-metadata.ts",
+			"./extensions/usage-tracker.ts",
+			"./extensions/worktree.ts"
+		]
+	}
 }

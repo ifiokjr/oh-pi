@@ -11,10 +11,7 @@ versioned_files = [
 ]
 scopes = ["core", "cli"]
 changelog = "changelog.md"
-extra_changelog_sections = [
-	{ name = "Notes", types = ["note"] },
-	{ name = "Documentation", types = ["docs"] },
-]
+extra_changelog_sections = [{ name = "Notes", types = ["note"] }, { name = "Documentation", types = ["docs"] }]
 
 [[workflows]]
 name = "release"

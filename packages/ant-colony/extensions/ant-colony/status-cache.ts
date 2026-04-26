@@ -1,9 +1,9 @@
-type StatusTarget = {
+interface StatusTarget {
 	hasUI?: boolean;
 	ui?: {
 		setStatus?: (key: string, value: string | undefined) => unknown;
 	};
-};
+}
 
 /**
  * Coalesce repeated ant-colony status-bar writes so background progress signals do not re-send

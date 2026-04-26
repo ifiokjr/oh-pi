@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+
 import { createRuntimeBenchmarkSuite } from "./suite";
 
 const benchmarkIt = process.env.OH_PI_RUN_BENCHMARKS === "1" ? it : it.skip;
@@ -15,10 +15,10 @@ describe("runtime churn benchmark suite", () => {
 				const schedulerIdle = suite.report.results.find((result) => result.id === "extension-runtime-idle-scheduler");
 				if (schedulerIdle) {
 					expect(schedulerIdle).toMatchObject({
-						widgetRenderRequests: 0,
 						footerRenderRequests: 0,
-						statusUpdates: 0,
 						notifications: 0,
+						statusUpdates: 0,
+						widgetRenderRequests: 0,
 					});
 				}
 

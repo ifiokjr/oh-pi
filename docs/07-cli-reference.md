@@ -121,6 +121,7 @@ pnpm verify:completion
 ```
 
 What it does:
+
 - Runs a focused Vitest suite at `packages/ant-colony/tests/commands.test.ts`
 - Verifies `/colony-status`, `/colony-stop`, and `/colony-resume` completion wiring
 - Avoids interactive/TUI startup and shell-specific behavior

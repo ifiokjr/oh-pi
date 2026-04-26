@@ -23,11 +23,12 @@ function parseArgs(argv) {
 		}
 	}
 
-	return { local, remove, help };
+	return { help, local, remove };
 }
 
 function printHelp() {
-	console.log(`
+	console.log(
+		`
 pi-extension-subagents — install the @ifi subagents extension into pi
 
 Usage:
@@ -42,7 +43,8 @@ Options:
 
 Direct install:
   pi install npm:${PACKAGE_NAME}
-`.trim());
+`.trim(),
+	);
 }
 
 function findPi() {

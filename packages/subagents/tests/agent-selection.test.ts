@@ -1,17 +1,17 @@
-import { describe, expect, it } from "vitest";
+
 import { mergeAgentsForScope } from "../agent-selection.js";
 
-type TestAgent = {
+interface TestAgent {
 	name: string;
 	source: "builtin" | "user" | "project";
 	systemPrompt: string;
-};
+}
 
 function makeAgent(name: string, source: TestAgent["source"], systemPrompt: string): TestAgent {
 	return { name, source, systemPrompt };
 }
 
-describe("mergeAgentsForScope", () => {
+describe(mergeAgentsForScope, () => {
 	it("returns project agents when scope is project", () => {
 		const userAgents = [makeAgent("shared", "user", "user prompt")];
 		const projectAgents = [makeAgent("shared", "project", "project prompt")];
@@ -42,8 +42,8 @@ describe("mergeAgentsForScope", () => {
 		const projectAgents = [makeAgent("project-only", "project", "project prompt")];
 		const result = mergeAgentsForScope("both", userAgents as never[], projectAgents as never[]);
 		expect(result).toHaveLength(2);
-		expect(result.some((agent) => agent.name === "user-only" && agent.source === "user")).toBe(true);
-		expect(result.some((agent) => agent.name === "project-only" && agent.source === "project")).toBe(true);
+		expect(result.some((agent) => agent.name === "user-only" && agent.source === "user")).toBeTruthy();
+		expect(result.some((agent) => agent.name === "project-only" && agent.source === "project")).toBeTruthy();
 	});
 
 	it("includes builtin agents when no user or project override exists", () => {

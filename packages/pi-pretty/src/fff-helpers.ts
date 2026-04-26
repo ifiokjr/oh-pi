@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -26,16 +26,16 @@ export async function checkHealth(): Promise<FffStatus> {
 		const cursor = (fff as any).CursorStore ? new (fff as any).CursorStore() : null;
 		const stats = cursor?.stats?.() ?? {};
 		return {
-			ok: true,
-			message: `FFF index healthy — ${stats.fileCount ?? "unknown"} files indexed`,
-			indexed: true,
 			fileCount: stats.fileCount,
+			indexed: true,
+			message: `FFF index healthy — ${stats.fileCount ?? "unknown"} files indexed`,
+			ok: true,
 		};
 	} catch {
 		return {
-			ok: false,
-			message: "FFF index not initialized or module unavailable",
 			indexed: false,
+			message: "FFF index not initialized or module unavailable",
+			ok: false,
 		};
 	}
 }
@@ -48,21 +48,21 @@ export async function rescan(): Promise<FffStatus> {
 		if (cursor?.rescan) {
 			await cursor.rescan(process.cwd());
 			return {
-				ok: true,
-				message: `Rescan complete for ${process.cwd()}`,
 				indexed: true,
+				message: `Rescan complete for ${process.cwd()}`,
+				ok: true,
 			};
 		}
 		return {
-			ok: true,
-			message: "Index initialized (no rescan method available)",
 			indexed: true,
+			message: "Index initialized (no rescan method available)",
+			ok: true,
 		};
 	} catch {
 		return {
-			ok: false,
-			message: "Failed to rescan — FFF module unavailable",
 			indexed: false,
+			message: "Failed to rescan — FFF module unavailable",
+			ok: false,
 		};
 	}
 }

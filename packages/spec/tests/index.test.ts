@@ -2,23 +2,23 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 
 const { gitClientMock } = vi.hoisted(() => ({
 	gitClientMock: {
-		getRepoRoot: vi.fn<(cwd: string) => string | null>(),
-		getCurrentBranch: vi.fn<(repoRoot: string) => string | null>(),
-		listBranches: vi.fn<(repoRoot: string) => string[]>(),
-		isDirty: vi.fn<(repoRoot: string) => boolean>(),
 		createAndSwitchBranch: vi.fn<(repoRoot: string, branchName: string) => void>(),
+		getCurrentBranch: vi.fn<(repoRoot: string) => string | null>(),
+		getRepoRoot: vi.fn<(cwd: string) => string | null>(),
+		isDirty: vi.fn<(repoRoot: string) => boolean>(),
+		listBranches: vi.fn<(repoRoot: string) => string[]>(),
 	},
 }));
 
-vi.mock("../extension/git.js", () => ({
+vi.mock<typeof import('../extension/git.js')>(import('../extension/git.js'), () => ({
 	createGitClient: () => gitClientMock,
 }));
 
-vi.mock("@mariozechner/pi-tui", () => ({
+vi.mock<typeof import('@mariozechner/pi-tui')>(import('@mariozechner/pi-tui'), () => ({
 	Text: class {
 		constructor(public text: string) {}
 	},
@@ -26,24 +26,24 @@ vi.mock("@mariozechner/pi-tui", () => ({
 
 import specExtension from "../extension/index.js";
 
-type CommandSpec = {
+interface CommandSpec {
 	description?: string;
 	getArgumentCompletions?: (prefix: string) => Array<{ value: string; label?: string }> | null;
 	handler?: (args: string, ctx: any) => Promise<void> | void;
-};
+}
 
 function createPiMock() {
 	const commands = new Map<string, CommandSpec>();
 	const renderers = new Map<string, any>();
 	return {
 		commands,
-		renderers,
 		registerCommand(name: string, spec: CommandSpec) {
 			commands.set(name, spec);
 		},
 		registerMessageRenderer(type: string, renderer: any) {
 			renderers.set(type, renderer);
 		},
+		renderers,
 		sendMessage: vi.fn(),
 		sendUserMessage: vi.fn(),
 	};
@@ -54,11 +54,11 @@ function createCtx(cwd: string, overrides: Partial<any> = {}) {
 		cwd,
 		hasUI: true,
 		ui: {
-			notify: vi.fn(),
 			confirm: vi.fn().mockResolvedValue(true),
-			select: vi.fn().mockResolvedValue(undefined),
 			editor: vi.fn().mockResolvedValue(undefined),
 			input: vi.fn().mockResolvedValue(undefined),
+			notify: vi.fn(),
+			select: vi.fn().mockResolvedValue(undefined),
 		},
 		...overrides,
 	};
@@ -74,7 +74,7 @@ function createTempRepo(prefix: string): string {
 }
 
 afterEach(async () => {
-	await Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true })));
+	await Promise.all(tempDirs.map((dir) => rm(dir, { force: true, recursive: true })));
 	tempDirs.length = 0;
 });
 
@@ -84,7 +84,7 @@ beforeEach(() => {
 	gitClientMock.getCurrentBranch.mockReturnValue("main");
 	gitClientMock.listBranches.mockReturnValue([]);
 	gitClientMock.isDirty.mockReturnValue(false);
-	gitClientMock.createAndSwitchBranch.mockImplementation(() => undefined);
+	gitClientMock.createAndSwitchBranch.mockReturnValue(undefined);
 });
 
 describe("@ifi/pi-spec extension", () => {
@@ -92,10 +92,10 @@ describe("@ifi/pi-spec extension", () => {
 		const pi = createPiMock();
 		specExtension(pi as any);
 
-		expect(pi.commands.has("spec")).toBe(true);
-		expect(pi.commands.has("spec:help")).toBe(true);
-		expect(pi.commands.has("spec:init")).toBe(true);
-		expect(pi.renderers.has("pi-spec-report")).toBe(true);
+		expect(pi.commands.has("spec")).toBeTruthy();
+		expect(pi.commands.has("spec:help")).toBeTruthy();
+		expect(pi.commands.has("spec:init")).toBeTruthy();
+		expect(pi.renderers.has("pi-spec-report")).toBeTruthy();
 		expect(pi.commands.get("spec")?.description).toContain("/spec:init");
 	});
 
@@ -107,10 +107,10 @@ describe("@ifi/pi-spec extension", () => {
 
 		await pi.commands.get("spec:init")?.handler?.("", ctx);
 
-		expect(pi.sendMessage).toHaveBeenCalledTimes(1);
+		expect(pi.sendMessage).toHaveBeenCalledOnce();
 		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("/spec:init");
 		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("Created");
-		expect(existsSync(path.join(repoRoot, ".specify", "memory", "constitution.md"))).toBe(true);
+		expect(existsSync(path.join(repoRoot, ".specify", "memory", "constitution.md"))).toBeTruthy();
 	});
 
 	it("/spec:status does not auto-initialize an unprepared repository", async () => {
@@ -121,7 +121,7 @@ describe("@ifi/pi-spec extension", () => {
 
 		await pi.commands.get("spec:status")?.handler?.("", ctx);
 
-		expect(existsSync(path.join(repoRoot, ".specify"))).toBe(false);
+		expect(existsSync(path.join(repoRoot, ".specify"))).toBeFalsy();
 		expect(String(pi.sendMessage.mock.calls[0][0].content)).toContain("- Initialized: no");
 	});
 
@@ -133,11 +133,11 @@ describe("@ifi/pi-spec extension", () => {
 		specExtension(pi as any);
 		const ctx = createCtx(repoRoot, {
 			ui: {
-				notify: vi.fn(),
 				confirm: vi.fn().mockResolvedValue(true),
-				select: vi.fn().mockResolvedValue("001-auth-flow"),
 				editor: vi.fn().mockResolvedValue(undefined),
 				input: vi.fn().mockResolvedValue(undefined),
+				notify: vi.fn(),
+				select: vi.fn().mockResolvedValue("001-auth-flow"),
 			},
 		});
 
@@ -189,7 +189,7 @@ describe("@ifi/pi-spec extension", () => {
 			repoRoot,
 			"003-build-realtime-dashboard-analytics",
 		);
-		expect(pi.sendUserMessage).toHaveBeenCalledTimes(1);
+		expect(pi.sendUserMessage).toHaveBeenCalledOnce();
 		const prompt = String(pi.sendUserMessage.mock.calls[0][0]);
 		expect(prompt).toContain("Do NOT run any shell or PowerShell scripts");
 		expect(prompt).toContain(path.join(repoRoot, "specs", "003-build-realtime-dashboard-analytics", "spec.md"));
@@ -207,8 +207,8 @@ describe("@ifi/pi-spec extension", () => {
 
 		await pi.commands.get("spec")?.handler?.("plan Use TypeScript with Vitest and minimal dependencies", ctx);
 
-		expect(existsSync(path.join(repoRoot, "specs", "001-auth-flow", "plan.md"))).toBe(true);
-		expect(pi.sendUserMessage).toHaveBeenCalledTimes(1);
+		expect(existsSync(path.join(repoRoot, "specs", "001-auth-flow", "plan.md"))).toBeTruthy();
+		expect(pi.sendUserMessage).toHaveBeenCalledOnce();
 		const prompt = String(pi.sendUserMessage.mock.calls[0][0]);
 		expect(prompt).toContain(path.join(repoRoot, ".specify", "memory", "pi-agent.md"));
 		expect(prompt).toContain(path.join(repoRoot, ".specify", "templates", "commands", "plan.md"));
@@ -227,17 +227,17 @@ describe("@ifi/pi-spec extension", () => {
 		specExtension(pi as any);
 		const ctx = createCtx(repoRoot, {
 			ui: {
-				notify: vi.fn(),
 				confirm: vi.fn().mockResolvedValue(false),
-				select: vi.fn().mockResolvedValue(undefined),
 				editor: vi.fn().mockResolvedValue(undefined),
 				input: vi.fn().mockResolvedValue(undefined),
+				notify: vi.fn(),
+				select: vi.fn().mockResolvedValue(undefined),
 			},
 		});
 
 		await pi.commands.get("spec")?.handler?.("implement", ctx);
 
-		expect(ctx.ui.confirm).toHaveBeenCalledTimes(1);
+		expect(ctx.ui.confirm).toHaveBeenCalledOnce();
 		expect(pi.sendUserMessage).not.toHaveBeenCalled();
 		expect(ctx.ui.notify).toHaveBeenCalledWith(
 			"Implementation cancelled until the checklist review is complete.",

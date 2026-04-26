@@ -12,62 +12,62 @@ const SkillOverride = Type.Any({
 
 export const TaskItem = Type.Object({
 	agent: Type.String(),
-	task: Type.String(),
 	cwd: Type.Optional(Type.String()),
 	model: Type.Optional(Type.String({ description: "Override model for this task (e.g. 'google/gemini-3-pro')" })),
 	skill: Type.Optional(SkillOverride),
+	task: Type.String(),
 });
 
 // Sequential chain step (single agent)
 export const SequentialStepSchema = Type.Object({
 	agent: Type.String(),
+	cwd: Type.Optional(Type.String()),
+	model: Type.Optional(Type.String({ description: "Override model for this step" })),
+	output: Type.Optional(
+		Type.Any({ description: "Output filename to write in {chain_dir} (string), or false to disable file output" }),
+	),
+	progress: Type.Optional(Type.Boolean({ description: "Enable progress.md tracking in {chain_dir}" })),
+	reads: Type.Optional(
+		Type.Any({
+			description: "Files to read from {chain_dir} before running (array of filenames), or false to disable",
+		}),
+	),
+	skill: Type.Optional(SkillOverride),
 	task: Type.Optional(
 		Type.String({
 			description:
 				"Task template with variables: {task}=original request, {previous}=prior step's text response, {chain_dir}=shared folder. Required for first step, defaults to '{previous}' for subsequent steps.",
 		}),
 	),
-	cwd: Type.Optional(Type.String()),
-	output: Type.Optional(
-		Type.Any({ description: "Output filename to write in {chain_dir} (string), or false to disable file output" }),
-	),
-	reads: Type.Optional(
-		Type.Any({
-			description: "Files to read from {chain_dir} before running (array of filenames), or false to disable",
-		}),
-	),
-	progress: Type.Optional(Type.Boolean({ description: "Enable progress.md tracking in {chain_dir}" })),
-	skill: Type.Optional(SkillOverride),
-	model: Type.Optional(Type.String({ description: "Override model for this step" })),
 });
 
 // Parallel task item (within a parallel step)
 export const ParallelTaskSchema = Type.Object({
 	agent: Type.String(),
-	task: Type.Optional(
-		Type.String({
-			description: "Task template with {task}, {previous}, {chain_dir} variables. Defaults to {previous}.",
-		}),
-	),
 	cwd: Type.Optional(Type.String()),
+	model: Type.Optional(Type.String({ description: "Override model for this task" })),
 	output: Type.Optional(
 		Type.Any({ description: "Output filename to write in {chain_dir} (string), or false to disable file output" }),
 	),
+	progress: Type.Optional(Type.Boolean({ description: "Enable progress.md tracking in {chain_dir}" })),
 	reads: Type.Optional(
 		Type.Any({
 			description: "Files to read from {chain_dir} before running (array of filenames), or false to disable",
 		}),
 	),
-	progress: Type.Optional(Type.Boolean({ description: "Enable progress.md tracking in {chain_dir}" })),
 	skill: Type.Optional(SkillOverride),
-	model: Type.Optional(Type.String({ description: "Override model for this task" })),
+	task: Type.Optional(
+		Type.String({
+			description: "Task template with {task}, {previous}, {chain_dir} variables. Defaults to {previous}.",
+		}),
+	),
 });
 
 // Parallel chain step (multiple agents running concurrently)
 export const ParallelStepSchema = Type.Object({
-	parallel: Type.Array(ParallelTaskSchema, { minItems: 1, description: "Tasks to run in parallel" }),
 	concurrency: Type.Optional(Type.Number({ description: "Max concurrent tasks (default: 4)" })),
 	failFast: Type.Optional(Type.Boolean({ description: "Stop on first failure (default: false)" })),
+	parallel: Type.Array(ParallelTaskSchema, { minItems: 1, description: "Tasks to run in parallel" }),
 });
 
 // Chain item can be either sequential or parallel
@@ -159,6 +159,6 @@ export const SubagentParams = Type.Object({
 });
 
 export const StatusParams = Type.Object({
-	id: Type.Optional(Type.String({ description: "Async run id or prefix" })),
 	dir: Type.Optional(Type.String({ description: "Async run directory (overrides id search)" })),
+	id: Type.Optional(Type.String({ description: "Async run id or prefix" })),
 });

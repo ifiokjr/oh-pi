@@ -131,12 +131,12 @@ JSON files defining TUI colors. Supports hot reload.
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
-  "name": "my-theme",
-  "vars": { "primary": "#00aaff", "secondary": 242 },
-  "colors": {
-    /* all 51 color tokens must be defined */
-  }
+	"$schema": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
+	"name": "my-theme",
+	"vars": { "primary": "#00aaff", "secondary": 242 },
+	"colors": {
+		/* all 51 color tokens must be defined */
+	}
 }
 ```
 
@@ -188,14 +188,14 @@ Try temporarily: `pi -e npm:@foo/bar`
 
 ```json
 {
-  "name": "my-package",
-  "keywords": ["pi-package"],
-  "pi": {
-    "extensions": ["./extensions"],
-    "skills": ["./skills"],
-    "prompts": ["./prompts"],
-    "themes": ["./themes"]
-  }
+	"name": "my-package",
+	"keywords": ["pi-package"],
+	"pi": {
+		"extensions": ["./extensions"],
+		"skills": ["./skills"],
+		"prompts": ["./prompts"],
+		"themes": ["./themes"]
+	}
 }
 ```
 
@@ -214,14 +214,14 @@ auto-discovered.
 
 ```json
 {
-  "packages": [
-    {
-      "source": "npm:my-package",
-      "extensions": ["ext/*.ts"],
-      "skills": [],
-      "prompts": ["prompts/review.md"]
-    }
-  ]
+	"packages": [
+		{
+			"source": "npm:my-package",
+			"extensions": ["ext/*.ts"],
+			"skills": [],
+			"prompts": ["prompts/review.md"]
+		}
+	]
 }
 ```
 

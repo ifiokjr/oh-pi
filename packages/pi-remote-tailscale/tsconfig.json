@@ -1,10 +1,10 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "noEmit": true,
-    "paths": {
-      "@ifi/pi-web-server": ["../web-server/src/index.ts"]
-    }
-  },
-  "include": ["index.ts", "src/**/*.ts", "tests/**/*.ts"]
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"paths": {
+			"@ifi/pi-web-server": ["../web-server/src/index.ts"]
+		}
+	},
+	"include": ["index.ts", "src/**/*.ts", "tests/**/*.ts"]
 }

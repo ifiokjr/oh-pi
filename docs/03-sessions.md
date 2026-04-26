@@ -34,11 +34,11 @@ pi --session <path>    # Use specific session file or ID
 
 ```json
 {
-  "type": "session",
-  "version": 3,
-  "id": "uuid",
-  "timestamp": "...",
-  "cwd": "/path"
+	"type": "session",
+	"version": 3,
+	"id": "uuid",
+	"timestamp": "...",
+	"cwd": "/path"
 }
 ```
 
@@ -152,11 +152,11 @@ Or manually: `/compact [instructions]`
 
 ```json
 {
-  "compaction": {
-    "enabled": true,
-    "reserveTokens": 16384,
-    "keepRecentTokens": 20000
-  }
+	"compaction": {
+		"enabled": true,
+		"reserveTokens": 16384,
+		"keepRecentTokens": 20000
+	}
 }
 ```
 

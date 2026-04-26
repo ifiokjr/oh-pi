@@ -41,6 +41,7 @@ That's it. Scan the QR code with your phone. The web UI opens. You're connected.
 Type on your phone or in the terminal — both work on the same session.
 
 Everything else is automatic:
+
 - Token generated, embedded in the QR URL
 - Server started on a free port
 - If `cloudflared` or `tailscale` is installed, a tunnel is created so it works
@@ -71,12 +72,14 @@ everywhere:
 import { PiWebClient } from "@ifi/pi-web-client";
 
 const client = new PiWebClient({
-  url: "wss://abc123.trycloudflare.com/ws",
-  token: "b8e2d4f1a3c9...",
+	url: "wss://abc123.trycloudflare.com/ws",
+	token: "b8e2d4f1a3c9...",
 });
 
 await client.connect();
-client.on("message_update", (e) => { /* render in your app */ });
+client.on("message_update", (e) => {
+	/* render in your app */
+});
 await client.prompt("What's the status of the build?");
 ```
 
@@ -109,16 +112,16 @@ This token is the sole credential for accessing that instance.
 
 ### What the Token Protects
 
-| Concern | How It's Handled |
-|---------|-----------------|
-| **Unauthorized access** | Token required for every WebSocket connection and REST call |
-| **Token guessing** | 256-bit random = 2²⁵⁶ possibilities. Infeasible to brute-force |
-| **Token leakage** | Token only shown once in terminal. URL contains it for convenience but can be stripped after first use |
-| **Network sniffing** | TLS required for non-localhost. `--tls` flag or reverse proxy |
-| **Instance enumeration** | No discovery endpoint. Must know the exact token to connect |
-| **Cross-instance access** | Each instance has a unique token. No shared state between instances |
-| **Replay attacks** | WebSocket is a persistent connection. Optional: token expiry via `--token-ttl 24h` |
-| **Multiple users** | Each user runs their own pi instance with their own token |
+| Concern                   | How It's Handled                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Unauthorized access**   | Token required for every WebSocket connection and REST call                                            |
+| **Token guessing**        | 256-bit random = 2²⁵⁶ possibilities. Infeasible to brute-force                                         |
+| **Token leakage**         | Token only shown once in terminal. URL contains it for convenience but can be stripped after first use |
+| **Network sniffing**      | TLS required for non-localhost. `--tls` flag or reverse proxy                                          |
+| **Instance enumeration**  | No discovery endpoint. Must know the exact token to connect                                            |
+| **Cross-instance access** | Each instance has a unique token. No shared state between instances                                    |
+| **Replay attacks**        | WebSocket is a persistent connection. Optional: token expiry via `--token-ttl 24h`                     |
+| **Multiple users**        | Each user runs their own pi instance with their own token                                              |
 
 ### Connection Flow
 
@@ -150,10 +153,10 @@ Client                                 Server
 
 The QR code encodes a single URL. The format is chosen automatically:
 
-| Situation | QR URL |
-|-----------|--------|
+| Situation        | QR URL                                                           |
+| ---------------- | ---------------------------------------------------------------- |
 | Tunnel available | `https://pi-remote.dev?host=wss://abc.trycloudflare.com&t=TOKEN` |
-| LAN only | `http://192.168.1.42:3100?t=TOKEN` |
+| LAN only         | `http://192.168.1.42:3100?t=TOKEN`                               |
 
 The user never chooses between these. `/remote` detects the best option and
 shows one QR code.
@@ -206,6 +209,7 @@ concept of "users" or "accounts" on the server. The security boundary is:
 ```
 
 There is **no way** for User B to access User A's instance:
+
 - Different machines, different tokens, different ports
 - No shared service or registry to enumerate instances
 - Even on the same machine, each instance binds to a different port with a
@@ -227,16 +231,16 @@ the agent. This is intentional — it's **your** instance on **your** devices.
 
 ### Preventing Takeover
 
-| Attack Vector | Defense |
-|---------------|---------|
-| **Guess the token** | 256-bit entropy. The sun will burn out first. |
-| **Find the port** | Port scan finds HTTP, but every endpoint requires the token. 401 without it. |
-| **Intercept the token** | Localhost is immune. Remote requires TLS. QR code is shown only in your terminal. |
-| **Steal the token from URL** | Token stripped from URL bar after connection. Never stored in localStorage. Kept only in JS memory. |
-| **MITM on the WebSocket** | TLS (WSS) prevents this. Server validates token on every connection, not just first message. |
-| **Shared machine, different users** | Each user runs their own instance on a different port. OS-level process isolation. |
-| **Token persisted to disk (daemon mode)** | Token file created with `0600` permissions (owner-only read). Path is user-configurable. |
-| **Hosted UI on CDN** | CDN serves static files only. Token goes browser → your pi-web server directly. CDN never sees it. |
+| Attack Vector                             | Defense                                                                                             |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Guess the token**                       | 256-bit entropy. The sun will burn out first.                                                       |
+| **Find the port**                         | Port scan finds HTTP, but every endpoint requires the token. 401 without it.                        |
+| **Intercept the token**                   | Localhost is immune. Remote requires TLS. QR code is shown only in your terminal.                   |
+| **Steal the token from URL**              | Token stripped from URL bar after connection. Never stored in localStorage. Kept only in JS memory. |
+| **MITM on the WebSocket**                 | TLS (WSS) prevents this. Server validates token on every connection, not just first message.        |
+| **Shared machine, different users**       | Each user runs their own instance on a different port. OS-level process isolation.                  |
+| **Token persisted to disk (daemon mode)** | Token file created with `0600` permissions (owner-only read). Path is user-configurable.            |
+| **Hosted UI on CDN**                      | CDN serves static files only. Token goes browser → your pi-web server directly. CDN never sees it.  |
 
 ### Optional Hardening (Phase 5)
 
@@ -301,13 +305,13 @@ This is a **static SPA** — just HTML, CSS, and JavaScript served from a CDN.
 
 ### LAN vs Tunnel
 
-| | LAN (no tunnel) | Tunnel (cloudflared/tailscale) |
-|-|-----------------|-------------------------------|
-| **Phone on same WiFi?** | ✅ Required | Not required |
-| **Works from anywhere?** | ❌ | ✅ |
-| **TLS** | Not needed (HTTP) | Auto (HTTPS) |
-| **QR points to** | `http://LAN_IP:PORT` | `https://pi-remote.dev?host=wss://...` |
-| **Install needed** | Nothing | `cloudflared` or `tailscale` |
+|                          | LAN (no tunnel)      | Tunnel (cloudflared/tailscale)         |
+| ------------------------ | -------------------- | -------------------------------------- |
+| **Phone on same WiFi?**  | ✅ Required          | Not required                           |
+| **Works from anywhere?** | ❌                   | ✅                                     |
+| **TLS**                  | Not needed (HTTP)    | Auto (HTTPS)                           |
+| **QR points to**         | `http://LAN_IP:PORT` | `https://pi-remote.dev?host=wss://...` |
+| **Install needed**       | Nothing              | `cloudflared` or `tailscale`           |
 
 The user doesn't choose. `/remote` picks whichever is available.
 
@@ -315,12 +319,12 @@ The user doesn't choose. `/remote` picks whichever is available.
 
 ## New Packages
 
-| Package | Name | Type | Ships |
-|---------|------|------|-------|
-| `packages/web-server/` | `@ifi/pi-web-server` | Compiled (dist/) | Embedded HTTP + WebSocket server |
-| `packages/web-remote/` | `@ifi/pi-web-remote` | Raw .ts | Pi extension: `/remote` command |
+| Package                | Name                 | Type             | Ships                               |
+| ---------------------- | -------------------- | ---------------- | ----------------------------------- |
+| `packages/web-server/` | `@ifi/pi-web-server` | Compiled (dist/) | Embedded HTTP + WebSocket server    |
+| `packages/web-remote/` | `@ifi/pi-web-remote` | Raw .ts          | Pi extension: `/remote` command     |
 | `packages/web-client/` | `@ifi/pi-web-client` | Compiled (dist/) | Platform-agnostic TypeScript client |
-| `packages/web-ui/` | `@ifi/pi-web-ui` | Bundled (dist/) | React SPA (served by web-server) |
+| `packages/web-ui/`     | `@ifi/pi-web-ui`     | Bundled (dist/)  | React SPA (served by web-server)    |
 
 All four packages join the lockstep versioning in `knope.toml`.
 
@@ -362,40 +366,41 @@ to remote clients with token-based auth.
 ### 1.3 — Embeddable Web Server
 
 - [ ] `src/server.ts` — `PiWebServer` class (used by both `/remote` and daemon)
+
   ```typescript
   class PiWebServer {
-    constructor(options: PiWebServerOptions);
+  	constructor(options: PiWebServerOptions);
 
-    // Lifecycle
-    start(): Promise<{ url: string; token: string; instanceId: string }>;
-    stop(): Promise<void>;
-    readonly isRunning: boolean;
+  	// Lifecycle
+  	start(): Promise<{ url: string; token: string; instanceId: string }>;
+  	stop(): Promise<void>;
+  	readonly isRunning: boolean;
 
-    // Attach a pi session (from extension or daemon)
-    attachSession(session: AgentSession): void;
-    detachSession(): void;
+  	// Attach a pi session (from extension or daemon)
+  	attachSession(session: AgentSession): void;
+  	detachSession(): void;
 
-    // Connection info
-    readonly connectedClients: number;
-    readonly url: string;
-    readonly token: string;
-    readonly instanceId: string;
+  	// Connection info
+  	readonly connectedClients: number;
+  	readonly url: string;
+  	readonly token: string;
+  	readonly instanceId: string;
 
-    // Events
-    on(event: "client_connect", handler: (clientId: string) => void): void;
-    on(event: "client_disconnect", handler: (clientId: string) => void): void;
+  	// Events
+  	on(event: "client_connect", handler: (clientId: string) => void): void;
+  	on(event: "client_disconnect", handler: (clientId: string) => void): void;
   }
 
   interface PiWebServerOptions {
-    port?: number;          // default: auto (3100, then increment)
-    host?: string;          // default: "0.0.0.0"
-    token?: string;         // auto-generated if not provided
-    tokenFile?: string;     // persist token to file for daemon restarts
-    tunnel?: boolean;       // default: auto-detect (true if provider found)
-    tls?: { cert: string; key: string };
-    maxClients?: number;    // default: 5
-    staticDir?: string;     // path to web-ui dist/ assets
-    hostedUiUrl?: string;   // default: "https://pi-remote.dev"
+  	port?: number; // default: auto (3100, then increment)
+  	host?: string; // default: "0.0.0.0"
+  	token?: string; // auto-generated if not provided
+  	tokenFile?: string; // persist token to file for daemon restarts
+  	tunnel?: boolean; // default: auto-detect (true if provider found)
+  	tls?: { cert: string; key: string };
+  	maxClients?: number; // default: 5
+  	staticDir?: string; // path to web-ui dist/ assets
+  	hostedUiUrl?: string; // default: "https://pi-remote.dev"
   }
   ```
 
@@ -517,8 +522,8 @@ zero config. Starts the server, detects connectivity, shows a QR code.
 ### 2.3 — Permission Gate
 
 - [ ] When remote clients are connected, dangerous tool calls (`rm -rf`, `sudo`,
-  sensitive path writes) trigger `ctx.ui.confirm()` which routes to the web
-  client as an `extension_ui_request` dialog. Terminal user can also approve.
+      sensitive path writes) trigger `ctx.ui.confirm()` which routes to the web
+      client as an `extension_ui_request` dialog. Terminal user can also approve.
 
 ### 2.4 — Tests
 
@@ -564,55 +569,56 @@ React Native, and Node.js.
   - No dependency on pi packages — types are self-contained
 
 - [ ] `src/client.ts` — `PiWebClient` class
+
   ```typescript
   class PiWebClient {
-    constructor(options: PiWebClientOptions);
+  	constructor(options: PiWebClientOptions);
 
-    // Connection
-    connect(): Promise<InstanceInfo>;
-    disconnect(): void;
-    readonly state: "disconnected" | "connecting" | "authenticating" | "connected";
-    readonly instanceId: string | undefined;
+  	// Connection
+  	connect(): Promise<InstanceInfo>;
+  	disconnect(): void;
+  	readonly state: "disconnected" | "connecting" | "authenticating" | "connected";
+  	readonly instanceId: string | undefined;
 
-    // Conversation (mirrors RPC)
-    prompt(message: string, options?: PromptOptions): Promise<void>;
-    steer(message: string): Promise<void>;
-    followUp(message: string): Promise<void>;
-    abort(): Promise<void>;
+  	// Conversation (mirrors RPC)
+  	prompt(message: string, options?: PromptOptions): Promise<void>;
+  	steer(message: string): Promise<void>;
+  	followUp(message: string): Promise<void>;
+  	abort(): Promise<void>;
 
-    // State queries
-    getState(): Promise<SessionState>;
-    getMessages(): Promise<AgentMessage[]>;
-    getSessionStats(): Promise<SessionStats>;
-    getCommands(): Promise<CommandInfo[]>;
+  	// State queries
+  	getState(): Promise<SessionState>;
+  	getMessages(): Promise<AgentMessage[]>;
+  	getSessionStats(): Promise<SessionStats>;
+  	getCommands(): Promise<CommandInfo[]>;
 
-    // Model control
-    setModel(provider: string, modelId: string): Promise<Model>;
-    getAvailableModels(): Promise<Model[]>;
-    setThinkingLevel(level: ThinkingLevel): Promise<void>;
+  	// Model control
+  	setModel(provider: string, modelId: string): Promise<Model>;
+  	getAvailableModels(): Promise<Model[]>;
+  	setThinkingLevel(level: ThinkingLevel): Promise<void>;
 
-    // Session management
-    compact(instructions?: string): Promise<CompactionResult>;
-    newSession(): Promise<{ cancelled: boolean }>;
+  	// Session management
+  	compact(instructions?: string): Promise<CompactionResult>;
+  	newSession(): Promise<{ cancelled: boolean }>;
 
-    // Event subscription (typed overloads)
-    on(event: "message_update", handler: (e: MessageUpdateEvent) => void): Unsubscribe;
-    on(event: "agent_start" | "agent_end", handler: (e: AgentEvent) => void): Unsubscribe;
-    on(event: "tool_execution_start", handler: (e: ToolStartEvent) => void): Unsubscribe;
-    on(event: "extension_ui_request", handler: (e: ExtensionUIRequest) => void): Unsubscribe;
-    on(event: "connection", handler: (state: ConnectionState) => void): Unsubscribe;
-    on(event: "error", handler: (error: Error) => void): Unsubscribe;
+  	// Event subscription (typed overloads)
+  	on(event: "message_update", handler: (e: MessageUpdateEvent) => void): Unsubscribe;
+  	on(event: "agent_start" | "agent_end", handler: (e: AgentEvent) => void): Unsubscribe;
+  	on(event: "tool_execution_start", handler: (e: ToolStartEvent) => void): Unsubscribe;
+  	on(event: "extension_ui_request", handler: (e: ExtensionUIRequest) => void): Unsubscribe;
+  	on(event: "connection", handler: (state: ConnectionState) => void): Unsubscribe;
+  	on(event: "error", handler: (error: Error) => void): Unsubscribe;
 
-    // Extension UI responses
-    respondToUI(requestId: string, response: ExtensionUIResponse): void;
+  	// Extension UI responses
+  	respondToUI(requestId: string, response: ExtensionUIResponse): void;
   }
 
   interface PiWebClientOptions {
-    url: string;              // ws://host:port/ws or wss://
-    token: string;
-    autoReconnect?: boolean;  // default: true
-    reconnectInterval?: number;
-    WebSocket?: typeof WebSocket; // for environments without native WS
+  	url: string; // ws://host:port/ws or wss://
+  	token: string;
+  	autoReconnect?: boolean; // default: true
+  	reconnectInterval?: number;
+  	WebSocket?: typeof WebSocket; // for environments without native WS
   }
   ```
 
@@ -630,9 +636,9 @@ React Native, and Node.js.
   ```typescript
   import WebSocket from "ws";
   const client = new PiWebClient({
-    url: "ws://localhost:3100/ws",
-    token: "...",
-    WebSocket: WebSocket as any,
+  	url: "ws://localhost:3100/ws",
+  	token: "...",
+  	WebSocket: WebSocket as any,
   });
   ```
 - [ ] No `Buffer`, `process`, `fs`, or other Node-only APIs in client code
@@ -651,16 +657,16 @@ React Native, and Node.js.
 import { PiWebClient } from "@ifi/pi-web-client";
 
 const client = new PiWebClient({
-  url: "ws://192.168.1.42:3100/ws",
-  token: "a7f3b2c1...",
+	url: "ws://192.168.1.42:3100/ws",
+	token: "a7f3b2c1...",
 });
 
 await client.connect();
 
 client.on("message_update", (e) => {
-  if (e.assistantMessageEvent.type === "text_delta") {
-    console.log(e.assistantMessageEvent.delta);
-  }
+	if (e.assistantMessageEvent.type === "text_delta") {
+		console.log(e.assistantMessageEvent.delta);
+	}
 });
 
 await client.prompt("What files are here?");
@@ -790,7 +796,7 @@ pi
 ### 5.4 — Hosted UI Deployment
 
 - [ ] Publish and maintain `https://pi-remote.dev` (static SPA on Deno Deploy)
-  so `/remote` with tunnel just works — no user deployment needed
+      so `/remote` with tunnel just works — no user deployment needed
 - [ ] Vercel / Netlify / Deno Deploy adapters for self-hosting the UI
 
 ### 5.5 — React Native Starter
@@ -884,6 +890,7 @@ Phase 1 (server) and Phase 3 (client) can be developed in parallel.
 Phase 2 (extension) needs Phase 1. Phase 4 (UI) needs Phase 3.
 
 **Estimated effort:**
+
 - Phase 1: ~3–4 days
 - Phase 2: ~2 days
 - Phase 3: ~2 days

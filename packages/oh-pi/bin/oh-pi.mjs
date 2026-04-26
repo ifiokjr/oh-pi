@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * oh-pi installer — registers all oh-pi sub-packages with pi.
+ * Oh-pi installer — registers all oh-pi sub-packages with pi.
  *
  * Usage:
  *   npx @ifi/oh-pi              # install latest versions
@@ -43,11 +43,12 @@ function parseArgs(argv) {
 		}
 	}
 
-	return { version, local, remove, help };
+	return { help, local, remove, version };
 }
 
 function printHelp() {
-	console.log(`
+	console.log(
+		`
 oh-pi — install all oh-pi packages into pi
 
 Usage:
@@ -64,7 +65,8 @@ Options:
 
 Packages installed:
 ${INSTALLER_PACKAGES.map((p) => `  • ${p}`).join("\n")}
-`.trim());
+`.trim(),
+	);
 }
 
 function findPi() {
@@ -72,10 +74,10 @@ function findPi() {
 
 	for (const cmd of candidates) {
 		try {
-			execFileSync(cmd, ["--version"], { stdio: "ignore", shell: IS_WINDOWS });
+			execFileSync(cmd, ["--version"], { shell: IS_WINDOWS, stdio: "ignore" });
 			return cmd;
 		} catch {
-			// try next candidate
+			// Try next candidate
 		}
 	}
 
@@ -88,11 +90,11 @@ function run(pi, command, args, { label }) {
 	const display = [pi, command, ...args].join(" ");
 	process.stdout.write(`  ${label} ... `);
 	try {
-		execFileSync(pi, [command, ...args], { stdio: "pipe", timeout: 60_000, shell: IS_WINDOWS });
+		execFileSync(pi, [command, ...args], { shell: IS_WINDOWS, stdio: "pipe", timeout: 60_000 });
 		console.log("✓");
 	} catch (error) {
 		const stderr = error.stderr?.toString().trim();
-		// pi install exits 0 on success; treat already-installed as success
+		// Pi install exits 0 on success; treat already-installed as success
 		if (stderr?.includes("already installed") || stderr?.includes("already exists")) {
 			console.log("✓ (already installed)");
 		} else {
@@ -121,9 +123,11 @@ if (opts.remove) {
 	let failures = 0;
 	for (const pkg of INSTALLER_PACKAGES) {
 		const ok = run(pi, "remove", [`npm:${pkg}`, ...localFlag], { label: pkg });
-		if (!ok) failures++;
+		if (!ok) {failures++;}
 	}
-	console.log(failures === 0 ? "\n✅ All oh-pi packages removed." : `\n⚠️  ${failures} package(s) could not be removed.`);
+	console.log(
+		failures === 0 ? "\n✅ All oh-pi packages removed." : `\n⚠️  ${failures} package(s) could not be removed.`,
+	);
 	process.exit(failures > 0 ? 1 : 0);
 }
 
@@ -136,7 +140,7 @@ let failures = 0;
 for (const pkg of INSTALLER_PACKAGES) {
 	const source = `npm:${pkg}${suffix}`;
 	const ok = run(pi, "install", [source, ...localFlag], { label: pkg });
-	if (!ok) failures++;
+	if (!ok) {failures++;}
 }
 
 if (failures === 0) {

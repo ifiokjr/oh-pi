@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,7 +7,7 @@ const { getAgentDir } = vi.hoisted(() => ({
 	getAgentDir: vi.fn(() => "/mock-home/.pi/agent"),
 }));
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
 	getAgentDir,
 }));
 
@@ -16,7 +16,7 @@ import { getAdaptiveRoutingStatePath, readAdaptiveRoutingState, writeAdaptiveRou
 describe("adaptive routing state", () => {
 	it("reads default state when file does not exist", () => {
 		const state = readAdaptiveRoutingState();
-		expect(state).toEqual({});
+		expect(state).toStrictEqual({});
 	});
 
 	it("debounces state writes", () => {
@@ -27,16 +27,16 @@ describe("adaptive routing state", () => {
 		try {
 			writeAdaptiveRoutingState({ mode: "auto" });
 			// Before timer fires, file should not exist
-			expect(() => readFileSync(getAdaptiveRoutingStatePath(), "utf-8")).toThrow();
+			expect(() => readFileSync(getAdaptiveRoutingStatePath(), "utf8")).toThrow();
 
-			vi.advanceTimersByTime(2_100);
+			vi.advanceTimersByTime(2100);
 
-			const raw = readFileSync(getAdaptiveRoutingStatePath(), "utf-8");
+			const raw = readFileSync(getAdaptiveRoutingStatePath(), "utf8");
 			const parsed = JSON.parse(raw);
 			expect(parsed.mode).toBe("auto");
 		} finally {
 			vi.useRealTimers();
-			rmSync(tempDir, { recursive: true, force: true });
+			rmSync(tempDir, { force: true, recursive: true });
 		}
 	});
 
@@ -50,15 +50,15 @@ describe("adaptive routing state", () => {
 			writeAdaptiveRoutingState({ mode: "shadow" });
 			writeAdaptiveRoutingState({ mode: "off" });
 
-			vi.advanceTimersByTime(2_100);
+			vi.advanceTimersByTime(2100);
 
-			const raw = readFileSync(getAdaptiveRoutingStatePath(), "utf-8");
+			const raw = readFileSync(getAdaptiveRoutingStatePath(), "utf8");
 			const parsed = JSON.parse(raw);
 			// Should contain the last value written
 			expect(parsed.mode).toBe("off");
 		} finally {
 			vi.useRealTimers();
-			rmSync(tempDir, { recursive: true, force: true });
+			rmSync(tempDir, { force: true, recursive: true });
 		}
 	});
 });

@@ -29,49 +29,49 @@ In addition to prompt routing, the config can declare delegated categories for s
 
 ```json
 {
-  "delegatedRouting": {
-    "enabled": true,
-    "categories": {
-      "quick-discovery": {
-        "preferredProviders": ["google", "openai"],
-        "fallbackGroup": "cheap-router",
-        "taskProfile": "planning",
-        "preferFastModels": true
-      },
-      "implementation-default": {
-        "preferredProviders": ["openai", "google"],
-        "taskProfile": "coding",
-        "minContextWindow": 64000
-      },
-      "review-critical": {
-        "preferredProviders": ["openai", "google"],
-        "fallbackGroup": "peak-reasoning",
-        "taskProfile": "planning",
-        "minContextWindow": 128000,
-        "requireReasoning": true
-      },
-      "visual-engineering": {
-        "preferredProviders": ["google", "openai"],
-        "fallbackGroup": "design-premium",
-        "taskProfile": "design",
-        "minContextWindow": 128000
-      }
-    }
-  },
-  "delegatedModelSelection": {
-    "disabledProviders": ["cursor"],
-    "preferLowerUsage": true,
-    "allowSmallContextForSmallTasks": true,
-    "roleOverrides": {
-      "subagent:planner": {
-        "preferredModels": ["google/gemini-3.1-pro", "openai/gpt-5.4"]
-      },
-      "colony:scout": {
-        "preferredModels": ["openai/gpt-5-mini"],
-        "preferFastModels": true
-      }
-    }
-  }
+	"delegatedRouting": {
+		"enabled": true,
+		"categories": {
+			"quick-discovery": {
+				"preferredProviders": ["google", "openai"],
+				"fallbackGroup": "cheap-router",
+				"taskProfile": "planning",
+				"preferFastModels": true
+			},
+			"implementation-default": {
+				"preferredProviders": ["openai", "google"],
+				"taskProfile": "coding",
+				"minContextWindow": 64000
+			},
+			"review-critical": {
+				"preferredProviders": ["openai", "google"],
+				"fallbackGroup": "peak-reasoning",
+				"taskProfile": "planning",
+				"minContextWindow": 128000,
+				"requireReasoning": true
+			},
+			"visual-engineering": {
+				"preferredProviders": ["google", "openai"],
+				"fallbackGroup": "design-premium",
+				"taskProfile": "design",
+				"minContextWindow": 128000
+			}
+		}
+	},
+	"delegatedModelSelection": {
+		"disabledProviders": ["cursor"],
+		"preferLowerUsage": true,
+		"allowSmallContextForSmallTasks": true,
+		"roleOverrides": {
+			"subagent:planner": {
+				"preferredModels": ["google/gemini-3.1-pro", "openai/gpt-5.4"]
+			},
+			"colony:scout": {
+				"preferredModels": ["openai/gpt-5-mini"],
+				"preferFastModels": true
+			}
+		}
+	}
 }
 ```
 

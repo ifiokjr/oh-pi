@@ -1,50 +1,50 @@
 {
-  "name": "@ifi/oh-pi-core",
-  "version": "0.4.4",
-  "description": "Shared types, registries, and i18n for oh-pi packages.",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "scripts": {
-    "clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist',{ recursive: true, force: true }))\"",
-    "build": "pnpm clean && tsc --project tsconfig.json",
-    "build:fast": "pnpm clean && tsgo --project tsconfig.json",
-    "typecheck": "tsgo --project tsconfig.json --noEmit"
-  },
-  "license": "MIT",
-  "dependencies": {
-    "@clack/prompts": "^1.0.1",
-    "chalk": "^5.4.0"
-  },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "keywords": [
-    "pi",
-    "pi-coding-agent",
-    "oh-pi",
-    "core",
-    "types",
-    "registry",
-    "i18n"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/core"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/core",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  }
+	"name": "@ifi/oh-pi-core",
+	"version": "0.4.4",
+	"description": "Shared types, registries, and i18n for oh-pi packages.",
+	"keywords": [
+		"core",
+		"i18n",
+		"oh-pi",
+		"pi",
+		"pi-coding-agent",
+		"registry",
+		"types"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/core",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/core"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist',{ recursive: true, force: true }))\"",
+		"build": "pnpm clean && tsc --project tsconfig.json",
+		"build:fast": "pnpm clean && tsgo --project tsconfig.json",
+		"typecheck": "tsgo --project tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"@clack/prompts": "^1.0.1",
+		"chalk": "^5.4.0"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	}
 }

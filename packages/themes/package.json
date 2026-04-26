@@ -1,27 +1,27 @@
 {
-  "name": "@ifi/oh-pi-themes",
-  "version": "0.4.4",
-  "description": "Color themes for pi: cyberpunk, nord, gruvbox, tokyo-night, catppuccin, and more.",
-  "keywords": [
-    "pi-package"
-  ],
-  "pi": {
-    "themes": [
-      "./themes"
-    ]
-  },
-  "files": [
-    "themes",
-    "README.md"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/themes"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/themes",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  }
+	"name": "@ifi/oh-pi-themes",
+	"version": "0.4.4",
+	"description": "Color themes for pi: cyberpunk, nord, gruvbox, tokyo-night, catppuccin, and more.",
+	"keywords": [
+		"pi-package"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/themes",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/themes"
+	},
+	"files": [
+		"themes",
+		"README.md"
+	],
+	"pi": {
+		"themes": [
+			"./themes"
+		]
+	}
 }

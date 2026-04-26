@@ -9,8 +9,8 @@ interface FileCoalescer {
 }
 
 const defaultTimerApi: TimerApi = {
-	setTimeout: (handler, delayMs) => setTimeout(handler, delayMs),
 	clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+	setTimeout: (handler, delayMs) => setTimeout(handler, delayMs),
 };
 
 export function createFileCoalescer(
@@ -21,6 +21,12 @@ export function createFileCoalescer(
 	const pending = new Map<string, unknown>();
 
 	return {
+		clear(): void {
+			for (const timer of pending.values()) {
+				timerApi.clearTimeout(timer);
+			}
+			pending.clear();
+		},
 		schedule(file: string, delayMs = defaultDelayMs): boolean {
 			if (pending.has(file)) return false;
 			const timer = timerApi.setTimeout(() => {
@@ -29,12 +35,6 @@ export function createFileCoalescer(
 			}, delayMs);
 			pending.set(file, timer);
 			return true;
-		},
-		clear(): void {
-			for (const timer of pending.values()) {
-				timerApi.clearTimeout(timer);
-			}
-			pending.clear();
 		},
 	};
 }

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { Menu, X, Github, ExternalLink, Search } from "lucide-react";
+import { ExternalLink, Github, Menu, Search, X } from "lucide-react";
 import type { MdxPageData } from "@/hooks/useMdxPages";
 import { SearchDialog } from "@/components/SearchDialog";
 
@@ -109,9 +109,7 @@ export function Layout({ children, pages }: LayoutProps) {
 									`}
 									onClick={() => setSidebarOpen(false)}
 								>
-									<span className="text-zinc-600 mr-2 tabular-nums">
-										{String(page.order).padStart(2, "0")}
-									</span>
+									<span className="text-zinc-600 mr-2 tabular-nums">{String(page.order).padStart(2, "0")}</span>
 									{page.title}
 								</Link>
 							</li>

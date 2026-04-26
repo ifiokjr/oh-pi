@@ -19,51 +19,51 @@ export const ADAPTIVE_ROUTING_EXPLANATION_CODES: AdaptiveRoutingExplanationCode[
 ];
 
 export const DEFAULT_INTENT_POLICIES: Record<RouteIntent, IntentRoutingPolicy> = {
-	"quick-qna": {
-		preferredTier: "cheap",
-		defaultThinking: "minimal",
-		fallbackGroup: "cheap-router",
-	},
-	planning: {
-		preferredTier: "balanced",
-		defaultThinking: "medium",
-	},
-	research: {
-		preferredTier: "balanced",
-		defaultThinking: "medium",
-	},
-	implementation: {
-		preferredTier: "balanced",
-		defaultThinking: "medium",
-	},
-	debugging: {
-		preferredTier: "premium",
-		defaultThinking: "high",
-	},
-	design: {
-		preferredTier: "premium",
-		defaultThinking: "high",
-		preferredProviders: ["openai", "ollama-cloud", "ollama"],
-		fallbackGroup: "design-premium",
-	},
 	architecture: {
-		preferredTier: "peak",
 		defaultThinking: "xhigh",
-		preferredProviders: ["openai"],
 		fallbackGroup: "peak-reasoning",
-	},
-	review: {
-		preferredTier: "balanced",
-		defaultThinking: "medium",
-	},
-	refactor: {
-		preferredTier: "premium",
-		defaultThinking: "high",
+		preferredProviders: ["openai"],
+		preferredTier: "peak",
 	},
 	autonomous: {
-		preferredTier: "peak",
 		defaultThinking: "xhigh",
 		fallbackGroup: "peak-reasoning",
+		preferredTier: "peak",
+	},
+	debugging: {
+		defaultThinking: "high",
+		preferredTier: "premium",
+	},
+	design: {
+		defaultThinking: "high",
+		fallbackGroup: "design-premium",
+		preferredProviders: ["openai", "ollama-cloud", "ollama"],
+		preferredTier: "premium",
+	},
+	implementation: {
+		defaultThinking: "medium",
+		preferredTier: "balanced",
+	},
+	planning: {
+		defaultThinking: "medium",
+		preferredTier: "balanced",
+	},
+	"quick-qna": {
+		defaultThinking: "minimal",
+		fallbackGroup: "cheap-router",
+		preferredTier: "cheap",
+	},
+	refactor: {
+		defaultThinking: "high",
+		preferredTier: "premium",
+	},
+	research: {
+		defaultThinking: "medium",
+		preferredTier: "balanced",
+	},
+	review: {
+		defaultThinking: "medium",
+		preferredTier: "balanced",
 	},
 };
 
@@ -77,109 +77,119 @@ export const DEFAULT_FALLBACK_GROUPS: Record<string, FallbackGroupPolicy> = {
 		description: "Premium design-focused routing pool with strong open-model backups.",
 	},
 	"peak-reasoning": {
-		candidates: ["openai/gpt-5.4", "ollama-cloud/qwen3-next:80b", "ollama-cloud/gpt-oss:120b", "cursor-agent/<best-available>"],
+		candidates: [
+			"openai/gpt-5.4",
+			"ollama-cloud/qwen3-next:80b",
+			"ollama-cloud/gpt-oss:120b",
+			"cursor-agent/<best-available>",
+		],
 		description: "Peak reasoning pool with open-source and premium cross-provider fallbacks.",
 	},
 };
 
 export const DEFAULT_ADAPTIVE_ROUTING_CONFIG: AdaptiveRoutingConfig = {
-	mode: "off",
-	routerModels: ["openai/gpt-5-mini", "groq/llama-3.3-70b-versatile", "ollama-cloud/gpt-oss:20b"],
-	stickyTurns: 1,
-	telemetry: {
-		mode: "local",
-		privacy: "minimal",
+	delegatedModelSelection: {
+		allowSmallContextForSmallTasks: true,
+		disabledModels: [],
+		disabledProviders: [],
+		preferLowerUsage: true,
+		roleOverrides: {},
 	},
-	models: {
-		ranked: [],
-		excluded: [],
-	},
-	intents: DEFAULT_INTENT_POLICIES,
-	taskClasses: {
-		quick: {
-			defaultThinking: "minimal",
-			candidates: ["openai/gpt-5-mini", "groq/llama-3.3-70b-versatile", "ollama-cloud/gpt-oss:20b"],
-			fallbackGroup: "cheap-router",
-		},
-		"design-premium": {
-			defaultThinking: "high",
-			candidates: ["openai/gpt-5.4", "ollama-cloud/qwen3-coder-next", "ollama-cloud/qwen3.5:397b"],
-			fallbackGroup: "design-premium",
-		},
-		peak: {
-			defaultThinking: "xhigh",
-			candidates: ["openai/gpt-5.4", "ollama-cloud/qwen3-next:80b", "ollama-cloud/gpt-oss:120b", "cursor-agent/<best-available>"],
-			fallbackGroup: "peak-reasoning",
-		},
-	},
-	providerReserves: {
-		openai: { minRemainingPct: 15, applyToTiers: ["premium", "peak"], allowOverrideForPeak: true },
-		groq: { minRemainingPct: 10, applyToTiers: ["cheap", "balanced"], allowOverrideForPeak: false },
-		"cursor-agent": {
-			minRemainingPct: 20,
-			applyToTiers: ["premium", "peak"],
-			allowOverrideForPeak: true,
-			confidence: "estimated",
-		},
-	},
-	fallbackGroups: DEFAULT_FALLBACK_GROUPS,
 	delegatedRouting: {
-		enabled: true,
 		categories: {
-			"quick-discovery": {
-				preferredProviders: ["groq", "ollama-cloud", "ollama", "openai"],
-				fallbackGroup: "cheap-router",
-				defaultThinking: "minimal",
-				taskProfile: "planning",
-				preferFastModels: true,
-				allowSmallContextForSmallTasks: true,
+			"implementation-default": {
+				defaultThinking: "medium",
+				minContextWindow: 64000,
+				preferredProviders: ["openai", "ollama-cloud", "ollama", "groq"],
+				taskProfile: "coding",
+			},
+			"multimodal-default": {
+				defaultThinking: "medium",
+				minContextWindow: 128000,
+				preferredProviders: ["ollama-cloud", "ollama", "openai", "groq"],
+				requireMultimodal: true,
+				taskProfile: "design",
 			},
 			"planning-default": {
-				preferredProviders: ["openai", "ollama-cloud", "ollama", "groq"],
 				defaultThinking: "medium",
+				minContextWindow: 64000,
+				preferredProviders: ["openai", "ollama-cloud", "ollama", "groq"],
 				taskProfile: "planning",
-				minContextWindow: 64000,
 			},
-			"implementation-default": {
-				preferredProviders: ["openai", "ollama-cloud", "ollama", "groq"],
-				defaultThinking: "medium",
-				taskProfile: "coding",
-				minContextWindow: 64000,
+			"quick-discovery": {
+				allowSmallContextForSmallTasks: true,
+				defaultThinking: "minimal",
+				fallbackGroup: "cheap-router",
+				preferFastModels: true,
+				preferredProviders: ["groq", "ollama-cloud", "ollama", "openai"],
+				taskProfile: "planning",
 			},
 			"research-default": {
-				preferredProviders: ["openai", "groq", "ollama-cloud", "ollama"],
 				defaultThinking: "medium",
+				preferredProviders: ["openai", "groq", "ollama-cloud", "ollama"],
 				taskProfile: "planning",
 			},
 			"review-critical": {
-				preferredProviders: ["openai", "ollama-cloud", "ollama", "groq"],
-				fallbackGroup: "peak-reasoning",
 				defaultThinking: "high",
-				taskProfile: "planning",
-				requireReasoning: true,
+				fallbackGroup: "peak-reasoning",
 				minContextWindow: 128000,
+				preferredProviders: ["openai", "ollama-cloud", "ollama", "groq"],
+				requireReasoning: true,
+				taskProfile: "planning",
 			},
 			"visual-engineering": {
-				preferredProviders: ["ollama-cloud", "ollama", "openai", "groq"],
-				fallbackGroup: "design-premium",
 				defaultThinking: "high",
-				taskProfile: "design",
+				fallbackGroup: "design-premium",
 				minContextWindow: 128000,
-			},
-			"multimodal-default": {
 				preferredProviders: ["ollama-cloud", "ollama", "openai", "groq"],
-				defaultThinking: "medium",
 				taskProfile: "design",
-				requireMultimodal: true,
-				minContextWindow: 128000,
 			},
 		},
+		enabled: true,
 	},
-	delegatedModelSelection: {
-		disabledProviders: [],
-		disabledModels: [],
-		preferLowerUsage: true,
-		allowSmallContextForSmallTasks: true,
-		roleOverrides: {},
+	fallbackGroups: DEFAULT_FALLBACK_GROUPS,
+	intents: DEFAULT_INTENT_POLICIES,
+	mode: "off",
+	models: {
+		excluded: [],
+		ranked: [],
+	},
+	providerReserves: {
+		"cursor-agent": {
+			allowOverrideForPeak: true,
+			applyToTiers: ["premium", "peak"],
+			confidence: "estimated",
+			minRemainingPct: 20,
+		},
+		groq: { allowOverrideForPeak: false, applyToTiers: ["cheap", "balanced"], minRemainingPct: 10 },
+		openai: { allowOverrideForPeak: true, applyToTiers: ["premium", "peak"], minRemainingPct: 15 },
+	},
+	routerModels: ["openai/gpt-5-mini", "groq/llama-3.3-70b-versatile", "ollama-cloud/gpt-oss:20b"],
+	stickyTurns: 1,
+	taskClasses: {
+		"design-premium": {
+			candidates: ["openai/gpt-5.4", "ollama-cloud/qwen3-coder-next", "ollama-cloud/qwen3.5:397b"],
+			defaultThinking: "high",
+			fallbackGroup: "design-premium",
+		},
+		peak: {
+			candidates: [
+				"openai/gpt-5.4",
+				"ollama-cloud/qwen3-next:80b",
+				"ollama-cloud/gpt-oss:120b",
+				"cursor-agent/<best-available>",
+			],
+			defaultThinking: "xhigh",
+			fallbackGroup: "peak-reasoning",
+		},
+		quick: {
+			candidates: ["openai/gpt-5-mini", "groq/llama-3.3-70b-versatile", "ollama-cloud/gpt-oss:20b"],
+			defaultThinking: "minimal",
+			fallbackGroup: "cheap-router",
+		},
+	},
+	telemetry: {
+		mode: "local",
+		privacy: "minimal",
 	},
 };

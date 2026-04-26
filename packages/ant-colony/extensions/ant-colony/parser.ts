@@ -53,7 +53,7 @@ function normalizeCaste(v: unknown): AntCaste {
 }
 
 function extractFileLike(value: string): string[] {
-	const normalized = value.replace(/;/g, ",").replace(/["']/g, "").replace(/`/g, "");
+	const normalized = value.replaceAll(/;/g, ",").replaceAll(/["']/g, "").replaceAll(/`/g, "");
 	const tokens = normalized
 		.split(",")
 		.map((s) => s.trim())
@@ -74,7 +74,7 @@ function isJsonTaskLike(value: unknown): value is Record<string, unknown> {
 	return isRecord(value) && (hasNonEmptyText(value.title) || hasNonEmptyText(value.description));
 }
 
-function extractJsonTaskCandidates(parsed: unknown): Array<Record<string, unknown>> {
+function extractJsonTaskCandidates(parsed: unknown): Record<string, unknown>[] {
 	if (Array.isArray(parsed)) {
 		return parsed.filter(isJsonTaskLike);
 	}
@@ -95,7 +95,8 @@ function normalizeJsonTasks(parsed: unknown): ParsedSubTask[] {
 		const title = String(t.title || t.description || "Untitled").trim() || "Untitled";
 		const description = String(t.description || t.title || title).trim() || title;
 		return {
-			title,
+			caste: normalizeCaste(t.caste),
+			context: t.context ? String(t.context) : undefined,
 			description,
 			files: Array.isArray(t.files)
 				? t.files
@@ -103,9 +104,8 @@ function normalizeJsonTasks(parsed: unknown): ParsedSubTask[] {
 						.map((f) => f.trim())
 						.filter(Boolean)
 				: extractFileLike(String(t.files || "")),
-			caste: normalizeCaste(t.caste),
 			priority: normalizePriority(t.priority),
-			context: t.context ? String(t.context) : undefined,
+			title,
 		};
 	});
 }
@@ -114,7 +114,7 @@ function normalizeJsonTasks(parsed: unknown): ParsedSubTask[] {
 const STRUCTURED_FIELD_RE =
 	/^\s*(?:[-*]|\d+\.)?\s*(?:\*\*|__)?\s*(description|desc|files?|caste|role|priority|prio|context)\s*(?:\*\*|__)?\s*:\s*(.*)$/i;
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Parser must handle many field variants (en/zh) and edge cases
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Parser must handle many field variants (en/zh) and edge cases
 function parseTasksFromStructuredLines(output: string): ParsedSubTask[] {
 	const lines = output.split(/\r?\n/);
 	const tasks: ParsedSubTask[] = [];
@@ -137,9 +137,7 @@ function parseTasksFromStructuredLines(output: string): ParsedSubTask[] {
 		current = null;
 	};
 
-	const fieldMatch = (line: string) => {
-		return STRUCTURED_FIELD_RE.exec(line);
-	};
+	const fieldMatch = (line: string) => STRUCTURED_FIELD_RE.exec(line);
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
@@ -148,11 +146,11 @@ function parseTasksFromStructuredLines(output: string): ParsedSubTask[] {
 		if (header) {
 			flushCurrent();
 			current = {
-				title: header[1]?.trim() || "Untitled",
+				caste: "worker",
 				description: "",
 				files: [],
-				caste: "worker",
 				priority: 3,
+				title: header[1]?.trim() || "Untitled",
 			};
 			continue;
 		}
@@ -223,7 +221,7 @@ export function parseSubTasks(output: string): ParsedSubTask[] {
 				return jsonTasks;
 			}
 		} catch {
-			/* fallback */
+			/* Fallback */
 		}
 	}
 
@@ -254,30 +252,30 @@ export function extractPheromones(
 							? "completion"
 							: "progress";
 			pheromones.push({
-				id: makePheromoneId(),
-				type,
-				antId,
 				antCaste: caste,
-				taskId,
+				antId,
 				content: match[1].trim().slice(0, 2000),
-				files,
-				strength: 1.0,
 				createdAt: now,
+				files,
+				id: makePheromoneId(),
+				strength: 1.0,
+				taskId,
+				type,
 			});
 		}
 	}
 
 	if (failed && files.length > 0) {
 		pheromones.push({
-			id: makePheromoneId(),
-			type: "repellent",
-			antId,
 			antCaste: caste,
-			taskId,
+			antId,
 			content: `Task failed on files: ${files.join(", ")}`,
-			files,
-			strength: 1.0,
 			createdAt: now,
+			files,
+			id: makePheromoneId(),
+			strength: 1.0,
+			taskId,
+			type: "repellent",
 		});
 	}
 	return pheromones;

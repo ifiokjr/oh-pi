@@ -12,10 +12,11 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI, ModelRegistry } from "@mariozechner/pi-coding-agent";
-import { Container, matchesKey, Text } from "@mariozechner/pi-tui";
+import { Container, Text, matchesKey } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { Nest } from "./nest.js";
-import { createUsageLimitsTracker, type QueenCallbacks, resumeColony, runColony } from "./queen.js";
+import { createUsageLimitsTracker, resumeColony, runColony } from './queen.js';
+import type { QueenCallbacks } from './queen.js';
 import { createStatusBarState } from "./status-cache.js";
 import { resolveColonyStorageOptions, shouldManageProjectGitignore } from "./storage.js";
 
@@ -60,9 +61,9 @@ import {
 /** Ensure project-local `.ant-colony/` is ignored when legacy project storage is enabled. */
 function ensureGitignore(cwd: string) {
 	const gitignorePath = join(cwd, ".gitignore");
-	const content = existsSync(gitignorePath) ? readFileSync(gitignorePath, "utf-8") : "";
+	const content = existsSync(gitignorePath) ? readFileSync(gitignorePath, "utf8") : "";
 	if (!content.includes(".ant-colony/")) {
-		appendFileSync(gitignorePath, `${content.length && !content.endsWith("\n") ? "\n" : ""}.ant-colony/\n`);
+		appendFileSync(gitignorePath, `${content.length > 0 && !content.endsWith("\n") ? "\n" : ""}.ant-colony/\n`);
 	}
 }
 
@@ -185,7 +186,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 	const lastUserMessageText = (ctx: unknown): string => {
 		try {
-			const c = ctx as { sessionManager?: { getBranch?: () => Array<{ type: string; message?: { role: string } }> } };
+			const c = ctx as { sessionManager?: { getBranch?: () => { type: string; message?: { role: string } }[] } };
 			const branch = c?.sessionManager?.getBranch?.() ?? [];
 			for (let i = branch.length - 1; i >= 0; i--) {
 				const e = branch[i];
@@ -194,7 +195,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				}
 			}
 		} catch {
-			// ignore
+			// Ignore
 		}
 		return "";
 	};
@@ -235,22 +236,22 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		workspace: ColonyWorkspace,
 		colony?: BackgroundColony,
 	) => {
-		const usage = event.usage;
+		const {usage} = event;
 		if (usage.input + usage.output + usage.cacheRead + usage.cacheWrite + usage.costTotal <= 0) {
 			return;
 		}
 		pi.events.emit("usage:record", {
-			source: "ant-colony",
-			scope: runMode,
-			workspaceMode: workspace.mode,
-			colonyRuntimeId: colony?.identity.runtimeId ?? null,
-			colonyId: colony?.identity.stableId ?? null,
 			antId: event.antId,
 			caste: event.caste,
-			taskId: event.taskId,
-			provider: event.provider,
+			colonyId: colony?.identity.stableId ?? null,
+			colonyRuntimeId: colony?.identity.runtimeId ?? null,
 			model: event.model,
+			provider: event.provider,
+			scope: runMode,
+			source: "ant-colony",
+			taskId: event.taskId,
 			usage,
+			workspaceMode: workspace.mode,
 		});
 	};
 
@@ -368,8 +369,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		}
 		const workspace = prepareColonyWorkspace({
 			cwd: params.cwd,
-			runtimeId: `sync-${Date.now().toString(36)}`,
 			goal: params.goal,
+			runtimeId: `sync-${Date.now().toString(36)}`,
 			sessionFile: params.sessionFile,
 			sessionName: params.sessionName,
 			storageOptions,
@@ -400,13 +401,13 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			});
 
 			return {
-				content: [{ type: "text" as const, text: withWorkspaceReport(workspace, buildReport(state)) }],
+				content: [{ text: withWorkspaceReport(workspace, buildReport(state)), type: "text" as const }],
 				isError: state.status === "failed" || state.status === "budget_exceeded",
 			};
-		} catch (e) {
-			const report = withWorkspaceReport(workspace, `Colony failed: ${e}`);
+		} catch (error) {
+			const report = withWorkspaceReport(workspace, `Colony failed: ${error}`);
 			return {
-				content: [{ type: "text" as const, text: report }],
+				content: [{ text: report, type: "text" as const }],
 				isError: true,
 			};
 		}
@@ -435,55 +436,55 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		const workspace = resume
 			? resumeColonyWorkspace({
 					cwd: params.cwd,
-					runtimeId: colonyId,
 					goal: params.goal,
+					runtimeId: colonyId,
+					savedWorkspace: options?.workspaceHint ?? null,
 					sessionFile: params.sessionFile,
 					sessionName: params.sessionName,
-					savedWorkspace: options?.workspaceHint ?? null,
 					storageOptions,
 				})
 			: prepareColonyWorkspace({
 					cwd: params.cwd,
-					runtimeId: colonyId,
 					goal: params.goal,
+					runtimeId: colonyId,
 					sessionFile: params.sessionFile,
 					sessionName: params.sessionName,
 					storageOptions,
 				});
 		const now = Date.now();
 		const colony: BackgroundColony = {
+			abortController,
+			antStreams: new Map(),
+			goal: params.goal,
 			id: colonyId,
 			identity: { runtimeId: colonyId, stableId: options?.stableIdHint ?? UNKNOWN_STABLE_COLONY_ID },
-			goal: params.goal,
-			workspace,
-			abortController,
+			logs: [],
+			phase: "initializing",
 			state: {
-				id: options?.stableIdHint ?? colonyId,
-				goal: params.goal,
-				status: "scouting",
-				tasks: [],
 				ants: [],
-				pheromones: [],
-				concurrency: { current: 0, min: 1, max: params.maxAnts ?? 8, optimal: 1, history: [] },
-				metrics: {
-					tasksTotal: 0,
-					tasksDone: 0,
-					tasksFailed: 0,
-					antsSpawned: 0,
-					totalCost: 0,
-					totalTokens: 0,
-					startTime: now,
-					throughputHistory: [],
-				},
-				maxCost: params.maxCost ?? null,
-				modelOverrides: params.modelOverrides as ColonyState["modelOverrides"],
-				workspace,
+				concurrency: { current: 0, history: [], max: params.maxAnts ?? 8, min: 1, optimal: 1 },
 				createdAt: now,
 				finishedAt: null,
+				goal: params.goal,
+				id: options?.stableIdHint ?? colonyId,
+				maxCost: params.maxCost ?? null,
+				metrics: {
+					antsSpawned: 0,
+					startTime: now,
+					tasksDone: 0,
+					tasksFailed: 0,
+					tasksTotal: 0,
+					throughputHistory: [],
+					totalCost: 0,
+					totalTokens: 0,
+				},
+				modelOverrides: params.modelOverrides as ColonyState["modelOverrides"],
+				pheromones: [],
+				status: "scouting",
+				tasks: [],
+				workspace,
 			},
-			phase: "initializing",
-			antStreams: new Map(),
-			logs: [],
+			workspace,
 		};
 
 		pushLog(colony, {
@@ -494,6 +495,77 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		let lastPhase = "";
 
 		const callbacks: QueenCallbacks = {
+			onAntDone(ant, task) {
+				colony.antStreams.delete(ant.id);
+				// Inject a one-liner to main process on each task completion
+				const m = colony.state?.metrics;
+				const icon = ant.status === "done" ? checkMark() : crossMark();
+				const progress = m ? `${m.tasksDone}/${m.tasksTotal}` : "";
+				const cost = m ? formatCost(m.totalCost) : "";
+				const errorSuffix = ant.status !== "done" && task.error ? ` — ${task.error.slice(0, 150)}` : "";
+				pushLog(colony, {
+					level: ant.status === "done" ? "info" : "warning",
+					text: `${icon} ${task.title.slice(0, 120)} (${progress}${cost ? `, ${cost}` : ""})${errorSuffix}`,
+				});
+				pi.sendMessage(
+					{
+						customType: "ant-colony-progress",
+						content: `[COLONY_SIGNAL:TASK_DONE] ${antIcon()}[${colonyIdentity(colony)}] ${icon} ${task.title.slice(0, 60)} (${progress}, ${cost})`,
+						display: true,
+					},
+					{ triggerTurn: false, deliverAs: "followUp" },
+				);
+				throttledRender();
+			},
+			onAntSpawn(ant, _task) {
+				colony.antStreams.set(ant.id, {
+					antId: ant.id,
+					caste: ant.caste,
+					lastLine: "starting...",
+					tokens: 0,
+				});
+				throttledRender();
+			},
+			onAntStream(event: AntStreamEvent) {
+				const stream = colony.antStreams.get(event.antId);
+				if (stream) {
+					stream.tokens++;
+					const lines = event.totalText.split("\n").filter((l) => l.trim());
+					stream.lastLine = lines[lines.length - 1]?.trim() || "...";
+				}
+			},
+			onAntUsage(event: AntUsageEvent) {
+				emitAntUsageRecord(event, "background", workspace, colony);
+			},
+			onComplete(state) {
+				colony.state = state;
+				if (!colony.state.workspace) {
+					colony.state.workspace = workspace;
+				}
+				registerStableId(colony, state.id);
+				colony.phase =
+					state.status === "done" ? "Colony mission complete" : `Colony ${state.status.replace(/_/g, " ")}`;
+				pushLog(colony, {
+					level: state.status === "done" ? "info" : "error",
+					text: `${statusLabel(state.status)} · ${state.metrics.tasksDone}/${state.metrics.tasksTotal} · ${formatCost(state.metrics.totalCost)}`,
+				});
+				colony.antStreams.clear();
+				throttledRender();
+			},
+			onPhase(phase, detail) {
+				colony.phase = detail;
+				if (colony.state) {
+					colony.state.status = phase;
+				}
+				pushLog(colony, { level: "info", text: `${statusLabel(phase)} · ${detail}` });
+				throttledRender();
+			},
+			onProgress(metrics) {
+				if (colony.state) {
+					colony.state.metrics = metrics;
+				}
+				throttledRender();
+			},
 			onSignal(signal) {
 				registerStableId(colony, signal.colonyId);
 				colony.phase = signal.message;
@@ -517,77 +589,6 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						{ triggerTurn: false, deliverAs: "followUp" },
 					);
 				}
-				throttledRender();
-			},
-			onPhase(phase, detail) {
-				colony.phase = detail;
-				if (colony.state) {
-					colony.state.status = phase;
-				}
-				pushLog(colony, { level: "info", text: `${statusLabel(phase)} · ${detail}` });
-				throttledRender();
-			},
-			onAntSpawn(ant, _task) {
-				colony.antStreams.set(ant.id, {
-					antId: ant.id,
-					caste: ant.caste,
-					lastLine: "starting...",
-					tokens: 0,
-				});
-				throttledRender();
-			},
-			onAntDone(ant, task) {
-				colony.antStreams.delete(ant.id);
-				// Inject a one-liner to main process on each task completion
-				const m = colony.state?.metrics;
-				const icon = ant.status === "done" ? checkMark() : crossMark();
-				const progress = m ? `${m.tasksDone}/${m.tasksTotal}` : "";
-				const cost = m ? formatCost(m.totalCost) : "";
-				const errorSuffix = ant.status !== "done" && task.error ? ` — ${task.error.slice(0, 150)}` : "";
-				pushLog(colony, {
-					level: ant.status === "done" ? "info" : "warning",
-					text: `${icon} ${task.title.slice(0, 120)} (${progress}${cost ? `, ${cost}` : ""})${errorSuffix}`,
-				});
-				pi.sendMessage(
-					{
-						customType: "ant-colony-progress",
-						content: `[COLONY_SIGNAL:TASK_DONE] ${antIcon()}[${colonyIdentity(colony)}] ${icon} ${task.title.slice(0, 60)} (${progress}, ${cost})`,
-						display: true,
-					},
-					{ triggerTurn: false, deliverAs: "followUp" },
-				);
-				throttledRender();
-			},
-			onAntStream(event: AntStreamEvent) {
-				const stream = colony.antStreams.get(event.antId);
-				if (stream) {
-					stream.tokens++;
-					const lines = event.totalText.split("\n").filter((l) => l.trim());
-					stream.lastLine = lines[lines.length - 1]?.trim() || "...";
-				}
-			},
-			onAntUsage(event: AntUsageEvent) {
-				emitAntUsageRecord(event, "background", workspace, colony);
-			},
-			onProgress(metrics) {
-				if (colony.state) {
-					colony.state.metrics = metrics;
-				}
-				throttledRender();
-			},
-			onComplete(state) {
-				colony.state = state;
-				if (!colony.state.workspace) {
-					colony.state.workspace = workspace;
-				}
-				registerStableId(colony, state.id);
-				colony.phase =
-					state.status === "done" ? "Colony mission complete" : `Colony ${state.status.replace(/_/g, " ")}`;
-				pushLog(colony, {
-					level: state.status === "done" ? "info" : "error",
-					text: `${statusLabel(state.status)} · ${state.metrics.tasksDone}/${state.metrics.tasksTotal} · ${formatCost(state.metrics.totalCost)}`,
-				});
-				colony.antStreams.clear();
 				throttledRender();
 			},
 		};
@@ -656,20 +657,20 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				// Inject results into conversation
 				pi.sendMessage(
 					{
-						customType: "ant-colony-report",
 						content: `[COLONY_SIGNAL:${signalLabel}] [${reportId}]\n${report}`,
+						customType: "ant-colony-report",
 						display: true,
 					},
-					{ triggerTurn: true, deliverAs: "followUp" },
+					{ deliverAs: "followUp", triggerTurn: true },
 				);
 
 				pi.events.emit("ant-colony:notify", {
-					msg: `${antIcon()}[${colonyIdentityVerbose(colony)}] Colony ${ok ? "completed" : phase.replace(/_/g, " ")}: ${m.tasksDone}/${m.tasksTotal} tasks │ ${formatCost(m.totalCost)} │ ${formatWorkspaceSummary(workspace)}`,
 					level: ok ? "success" : "error",
+					msg: `${antIcon()}[${colonyIdentityVerbose(colony)}] Colony ${ok ? "completed" : phase.replace(/_/g, " ")}: ${m.tasksDone}/${m.tasksTotal} tasks │ ${formatCost(m.totalCost)} │ ${formatWorkspaceSummary(workspace)}`,
 				});
 			})
-			.catch((e) => {
-				const crashDetail = e instanceof Error ? `${e.message}\n${e.stack || ""}` : String(e);
+			.catch((error) => {
+				const crashDetail = error instanceof Error ? `${error.message}\n${error.stack || ""}` : String(error);
 				pushLog(colony, { level: "error", text: `CRASHED · ${crashDetail.slice(0, 500)}` });
 				cleanupWorkspace("crash");
 				colonies.delete(colonyId);
@@ -677,17 +678,17 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 					pi.events.emit("ant-colony:clear-ui");
 				}
 				pi.events.emit("ant-colony:notify", {
-					msg: `${antIcon()}[${colonyIdentityVerbose(colony)}] Colony crashed: ${e} │ ${formatWorkspaceSummary(workspace)}`,
+					msg: `${antIcon()}[${colonyIdentityVerbose(colony)}] Colony crashed: ${error} │ ${formatWorkspaceSummary(workspace)}`,
 					level: "error",
 				});
-				const crashReport = withWorkspaceReport(workspace, `## ${antIcon()} Colony Crashed\n${e}`);
+				const crashReport = withWorkspaceReport(workspace, `## ${antIcon()} Colony Crashed\n${error}`);
 				pi.sendMessage(
 					{
-						customType: "ant-colony-report",
 						content: `[COLONY_SIGNAL:FAILED] [${colonyIdentity(colony)}]\n${crashReport}`,
+						customType: "ant-colony-report",
 						display: true,
 					},
-					{ triggerTurn: true, deliverAs: "followUp" },
+					{ deliverAs: "followUp", triggerTurn: true },
 				);
 			});
 
@@ -730,10 +731,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 		container.addChild(
 			new Text(
-				(ok ? theme.fg("success", checkMark()) : theme.fg("error", crossMark())) +
-					" " +
-					theme.fg("toolTitle", theme.bold(`${antIcon()} Ant Colony Report`)) +
-					(durationMatch ? theme.fg("muted", ` │ ${durationMatch[1]}`) : ""),
+				`${ok ? theme.fg("success", checkMark()) : theme.fg("error", crossMark()) 
+					} ${ 
+					theme.fg("toolTitle", theme.bold(`${antIcon()} Ant Colony Report`)) 
+					}${durationMatch ? theme.fg("muted", ` │ ${durationMatch[1]}`) : ""}`,
 				0,
 				0,
 			),
@@ -791,7 +792,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						return colonies.get(ids[idx]) ?? null;
 					};
 
-					// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Rich TUI view intentionally handles many tabs/states.
+					// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Rich TUI view intentionally handles many tabs/states.
 					const buildLines = (width: number): string[] => {
 						const c = getSelectedColony();
 						if (!c) {
@@ -799,7 +800,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						}
 
 						const lines: string[] = [];
-						const w = width - 2; // padding
+						const w = width - 2; // Padding
 
 						// ── Header ──
 						const elapsed = c.state ? formatDuration(Date.now() - c.state.createdAt) : "0s";
@@ -846,10 +847,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						lines.push("");
 
 						// ── Tabs ──
-						const tabs: Array<{ key: "tasks" | "streams" | "log"; hotkey: string; label: string }> = [
-							{ key: "tasks", hotkey: "1", label: "Tasks" },
-							{ key: "streams", hotkey: "2", label: "Streams" },
-							{ key: "log", hotkey: "3", label: "Log" },
+						const tabs: { key: "tasks" | "streams" | "log"; hotkey: string; label: string }[] = [
+							{ hotkey: "1", key: "tasks", label: "Tasks" },
+							{ hotkey: "2", key: "streams", label: "Streams" },
+							{ hotkey: "3", key: "log", label: "Log" },
 						];
 						const tabLine = tabs
 							.map((t) => {
@@ -861,13 +862,13 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						lines.push("");
 
 						const tasks = c.state?.tasks || [];
-						const streams = Array.from(c.antStreams.values());
+						const streams = [...c.antStreams.values()];
 
 						// ── Tab: Tasks ──
 						if (currentTab === "tasks") {
 							const counts = {
-								done: tasks.filter((t) => t.status === "done").length,
 								active: tasks.filter((t) => t.status === "active").length,
+								done: tasks.filter((t) => t.status === "done").length,
 								failed: tasks.filter((t) => t.status === "failed").length,
 								pending: tasks.filter((t) => t.status === "pending" || t.status === "claimed" || t.status === "blocked")
 									.length,
@@ -927,7 +928,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 								lines.push(theme.fg("muted", "  (no active streams right now)"));
 							} else {
 								for (const s of streams.slice(0, 10)) {
-									const excerpt = trim((s.lastLine || "...").replace(/\s+/g, " "), Math.max(20, w - 24));
+									const excerpt = trim((s.lastLine || "...").replaceAll(/\s+/g, " "), Math.max(20, w - 24));
 									lines.push(
 										`  ${casteIcon(s.caste)} ${theme.fg("muted", s.antId.slice(0, 12))} ${theme.fg("muted", `${formatTokens(s.tokens)}t`)} ${theme.fg("text", excerpt)}`,
 									);
@@ -964,9 +965,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 									const levelIcon =
 										log.level === "error"
 											? theme.fg("error", crossMark())
-											: log.level === "warning"
+											: (log.level === "warning"
 												? theme.fg("warning", "!")
-												: theme.fg("muted", ".");
+												: theme.fg("muted", "."));
 									lines.push(`  ${levelIcon} ${theme.fg("muted", age)} ${theme.fg("text", trim(log.text, w - 12))}`);
 								}
 							}
@@ -992,19 +993,6 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 					};
 
 					return {
-						render(width: number): string[] {
-							if (cachedLines && cachedWidth === width) {
-								return cachedLines;
-							}
-							cachedLines = buildLines(width);
-							cachedWidth = width;
-							return cachedLines;
-						},
-						invalidate() {
-							cachedWidth = undefined;
-							cachedLines = undefined;
-							cleanup();
-						},
 						handleInput(data: string) {
 							if (matchesKey(data, "escape")) {
 								cleanup();
@@ -1041,17 +1029,28 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 							cachedLines = undefined;
 							tui.requestRender();
 						},
+						invalidate() {
+							cachedWidth = undefined;
+							cachedLines = undefined;
+							cleanup();
+						},
+						render(width: number): string[] {
+							if (cachedLines && cachedWidth === width) {
+								return cachedLines;
+							}
+							cachedLines = buildLines(width);
+							cachedWidth = width;
+							return cachedLines;
+						},
 					};
 				},
-				{ overlay: true, overlayOptions: { anchor: "center", width: "80%", maxHeight: "80%" } },
+				{ overlay: true, overlayOptions: { anchor: "center", maxHeight: "80%", width: "80%" } },
 			);
 		},
 	});
 
 	// ═══ Tool: ant_colony ═══
 	pi.registerTool({
-		name: "ant_colony",
-		label: "Ant Colony",
 		description: [
 			"Launch an autonomous ant colony in the BACKGROUND to accomplish a complex goal.",
 			"The colony runs asynchronously — you can continue chatting while it works.",
@@ -1061,16 +1060,6 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			"Use for multi-file changes, large refactors, or complex features.",
 			"Model selection is handled by adaptive routing — scouts, workers, and soldiers each use the best available model for their task category (quick-discovery, implementation-default, review-critical). Configure via /route settings.",
 		].join(" "),
-		parameters: Type.Object({
-			goal: Type.String({ description: "What the colony should accomplish" }),
-			maxAnts: Type.Optional(
-				Type.Number({ description: "Max concurrent ants (default: auto-adapt)", minimum: 1, maximum: 8 }),
-			),
-			maxCost: Type.Optional(
-				Type.Number({ description: "Max cost budget in USD (default: unlimited)", minimum: 0.01 }),
-			),
-		}),
-
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const currentModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : null;
 			if (!currentModel) {
@@ -1109,6 +1098,18 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				],
 			};
 		},
+		label: "Ant Colony",
+		name: "ant_colony",
+
+		parameters: Type.Object({
+			goal: Type.String({ description: "What the colony should accomplish" }),
+			maxAnts: Type.Optional(
+				Type.Number({ description: "Max concurrent ants (default: auto-adapt)", minimum: 1, maximum: 8 }),
+			),
+			maxCost: Type.Optional(
+				Type.Number({ description: "Max cost budget in USD (default: unlimited)", minimum: 0.01 }),
+			),
+		}),
 
 		renderCall(args, theme) {
 			const goal = args.goal?.length > 70 ? `${args.goal.slice(0, 67)}...` : args.goal;
@@ -1170,7 +1171,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 	/** Build a status summary for a single colony. */
 	function buildColonyStatusText(c: BackgroundColony): string {
-		const state = c.state;
+		const {state} = c;
 		const elapsed = state ? formatDuration(Date.now() - state.createdAt) : "0s";
 		const m = state?.metrics;
 		const phase = state?.status || "scouting";
@@ -1192,7 +1193,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		if (c.workspace.note) {
 			lines.push(`Workspace note: ${trim(c.workspace.note, 100)}`);
 		}
-		const lastLog = c.logs[c.logs.length - 1];
+		const lastLog = c.logs.at(-1);
 		if (lastLog) {
 			lines.push(`Last: ${trim(lastLog.text, 100)}`);
 		}
@@ -1222,18 +1223,18 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 	const activeColonyIdsText = () => [...colonies.values()].map((c) => colonyIdentityVerbose(c)).join(", ");
 
 	const colonyIdCompletions = (prefix: string) => {
-		const items: Array<{ value: string; label: string }> = [];
+		const items: { value: string; label: string }[] = [];
 		for (const colony of colonies.values()) {
 			if (colony.identity.runtimeId.startsWith(prefix)) {
 				items.push({
-					value: colony.identity.runtimeId,
 					label: `${colony.identity.runtimeId} — ${colony.goal.slice(0, 50)}${hasStableId(colony.identity) ? ` (stable: ${colony.identity.stableId})` : ""}`,
+					value: colony.identity.runtimeId,
 				});
 			}
 			if (hasStableId(colony.identity) && colony.identity.stableId.startsWith(prefix)) {
 				items.push({
-					value: colony.identity.stableId,
 					label: `${colony.identity.stableId} — runtime ${colony.identity.runtimeId}`,
+					value: colony.identity.stableId,
 				});
 			}
 		}
@@ -1242,11 +1243,8 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 	// ═══ Tool: bg_colony_status ═══
 	pi.registerTool({
-		name: "bg_colony_status",
-		label: "Colony Status",
 		description:
 			"Optional manual snapshot for running colonies. Progress is pushed passively via COLONY_SIGNAL follow-up messages; call this only when the user explicitly asks.",
-		parameters: Type.Object({}),
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
 			if (colonies.size === 0) {
 				return {
@@ -1287,6 +1285,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				content: [{ type: "text" as const, text: buildStatusText() }],
 			};
 		},
+		label: "Colony Status",
+		name: "bg_colony_status",
+		parameters: Type.Object({}),
 	});
 
 	// ═══ Command: /colony ═══
@@ -1306,9 +1307,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			}
 
 			const launched = launchBackgroundColony({
+				currentModel,
 				cwd: ctx.cwd,
 				goal,
-				currentModel,
 				modelOverrides: {},
 				modelRegistry: ctx.modelRegistry ?? undefined,
 				sessionFile: ctx.sessionManager?.getSessionFile?.() ?? null,
@@ -1364,7 +1365,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 	pi.registerCommand("colony-stop", {
 		description: "Stop a colony (runtime/stable ID), or all if omitted or 'all'",
 		getArgumentCompletions(prefix) {
-			const items = [{ value: "all", label: "all — Stop all running colonies" }, ...colonyIdCompletions(prefix)].filter(
+			const items = [{ label: "all — Stop all running colonies", value: "all" }, ...colonyIdCompletions(prefix)].filter(
 				(i) => i.value.startsWith(prefix),
 			);
 			return items.length > 0 ? items : null;
@@ -1418,10 +1419,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			for (const found of toResume) {
 				const launched = launchBackgroundColony(
 					{
+						currentModel: ctx.currentModel,
 						cwd: ctx.cwd,
 						goal: found.state.goal,
 						maxCost: found.state.maxCost ?? undefined,
-						currentModel: ctx.currentModel,
 						modelOverrides: {},
 						modelRegistry: ctx.modelRegistry,
 						sessionFile: ctx.sessionManager?.getSessionFile?.() ?? null,
@@ -1450,7 +1451,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 					new Promise((r) => setTimeout(r, 5000)),
 				]);
 			} catch {
-				/* ignore */
+				/* Ignore */
 			}
 			pi.events.emit("ant-colony:clear-ui");
 			colonies.clear();

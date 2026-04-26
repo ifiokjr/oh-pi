@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+
 import { serializeAgent, updateFrontmatterField } from "../agent-serializer.js";
 
 const tempDirs: string[] = [];
@@ -12,7 +12,7 @@ afterEach(() => {
 		if (!dir) {
 			continue;
 		}
-		fs.rmSync(dir, { recursive: true, force: true });
+		fs.rmSync(dir, { force: true, recursive: true });
 	}
 });
 
@@ -20,29 +20,29 @@ function createAgentFile(content: string): string {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "subagents-agent-serializer-"));
 	tempDirs.push(dir);
 	const filePath = path.join(dir, "agent.md");
-	fs.writeFileSync(filePath, content, "utf-8");
+	fs.writeFileSync(filePath, content, "utf8");
 	return filePath;
 }
 
-describe("serializeAgent", () => {
+describe(serializeAgent, () => {
 	it("serializes tools, mcp tools, skills, extensions, and extra fields", () => {
 		const serialized = serializeAgent({
-			name: "scout",
+			defaultProgress: true,
+			defaultReads: ["context.md"],
 			description: "Fast recon",
-			tools: ["read", "bash"],
+			extensions: ["/abs/ext-a.ts"],
+			extraFields: { category: "analysis" },
+			filePath: "/tmp/scout.md",
+			interactive: true,
 			mcpDirectTools: ["github/search_repositories"],
 			model: "claude-haiku-4-5",
-			thinking: "high",
-			systemPrompt: "You are a scout.",
-			source: "user",
-			filePath: "/tmp/scout.md",
-			skills: ["safe-bash", "context7"],
-			extensions: ["/abs/ext-a.ts"],
+			name: "scout",
 			output: "context.md",
-			defaultReads: ["context.md"],
-			defaultProgress: true,
-			interactive: true,
-			extraFields: { category: "analysis" },
+			skills: ["safe-bash", "context7"],
+			source: "user",
+			systemPrompt: "You are a scout.",
+			thinking: "high",
+			tools: ["read", "bash"],
 		});
 
 		expect(serialized).toContain("name: scout");
@@ -62,11 +62,11 @@ describe("serializeAgent", () => {
 
 	it("omits thinking when it is off", () => {
 		const serialized = serializeAgent({
-			name: "worker",
 			description: "Executes work",
-			systemPrompt: "Prompt",
-			source: "user",
 			filePath: "/tmp/worker.md",
+			name: "worker",
+			source: "user",
+			systemPrompt: "Prompt",
 			thinking: "off",
 		});
 
@@ -74,18 +74,18 @@ describe("serializeAgent", () => {
 	});
 });
 
-describe("updateFrontmatterField", () => {
+describe(updateFrontmatterField, () => {
 	it("updates an existing field in frontmatter", () => {
 		const filePath = createAgentFile("---\nname: scout\ndescription: Scout\nmodel: old-model\n---\n\nPrompt\n");
 		updateFrontmatterField(filePath, "model", "new-model");
-		expect(fs.readFileSync(filePath, "utf-8")).toContain("model: new-model");
-		expect(fs.readFileSync(filePath, "utf-8")).not.toContain("model: old-model");
+		expect(fs.readFileSync(filePath, "utf8")).toContain("model: new-model");
+		expect(fs.readFileSync(filePath, "utf8")).not.toContain("model: old-model");
 	});
 
 	it("normalizes skill updates to the skills field", () => {
 		const filePath = createAgentFile("---\nname: scout\ndescription: Scout\nskill: old-skill\n---\n\nPrompt\n");
 		updateFrontmatterField(filePath, "skill", "safe-bash, context7");
-		const content = fs.readFileSync(filePath, "utf-8");
+		const content = fs.readFileSync(filePath, "utf8");
 		expect(content).toContain("skills: safe-bash, context7");
 		expect(content).not.toContain("skill: old-skill");
 	});
@@ -93,12 +93,12 @@ describe("updateFrontmatterField", () => {
 	it("adds a missing field when it does not exist", () => {
 		const filePath = createAgentFile("---\nname: scout\ndescription: Scout\n---\n\nPrompt\n");
 		updateFrontmatterField(filePath, "model", "claude-sonnet-4");
-		expect(fs.readFileSync(filePath, "utf-8")).toContain("model: claude-sonnet-4");
+		expect(fs.readFileSync(filePath, "utf8")).toContain("model: claude-sonnet-4");
 	});
 
 	it("removes a field when the new value is undefined", () => {
 		const filePath = createAgentFile("---\nname: scout\ndescription: Scout\nmodel: claude-sonnet-4\n---\n\nPrompt\n");
-		updateFrontmatterField(filePath, "model", undefined);
-		expect(fs.readFileSync(filePath, "utf-8")).not.toContain("model:");
+		updateFrontmatterField(filePath, "model");
+		expect(fs.readFileSync(filePath, "utf8")).not.toContain("model:");
 	});
 });

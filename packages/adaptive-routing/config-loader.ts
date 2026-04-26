@@ -19,7 +19,7 @@ export function loadJsonConfigFile<T>({ path, fallback, normalize, warn }: LoadJ
 
 	let raw: unknown;
 	try {
-		raw = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+		raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
 	} catch (error) {
 		const detail = error instanceof Error ? error.message : String(error);
 		warn?.(`Failed to parse config ${path}: ${detail}`);

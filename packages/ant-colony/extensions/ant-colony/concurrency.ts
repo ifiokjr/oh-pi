@@ -15,10 +15,10 @@ const CPU_CORES = os.cpus().length;
 export function defaultConcurrency(): ConcurrencyConfig {
 	return {
 		current: 2,
-		min: 1,
-		max: Math.min(CPU_CORES, 8),
-		optimal: 3,
 		history: [],
+		max: Math.min(CPU_CORES, 8),
+		min: 1,
+		optimal: 3,
 	};
 }
 
@@ -35,11 +35,11 @@ export function sampleSystem(activeTasks: number, completedRecently: number, win
 	const throughput = windowMinutes > 0 ? completedRecently / windowMinutes : 0;
 
 	return {
-		timestamp: Date.now(),
 		concurrency: activeTasks,
 		cpuLoad,
 		memFree: mem,
 		throughput,
+		timestamp: Date.now(),
 	};
 }
 
@@ -74,15 +74,15 @@ export function adapt(config: ConcurrencyConfig, pendingTasks: number): Concurre
 		return next;
 	}
 
-	const latest = samples[samples.length - 1];
-	const prev = samples[samples.length - 2];
+	const latest = samples.at(-1);
+	const prev = samples.at(-2);
 
 	// CPU sliding window: average of last 3 samples
 	const recentCpuSamples = samples.slice(-3);
 	const avgCpu = recentCpuSamples.reduce((s, x) => s + x.cpuLoad, 0) / recentCpuSamples.length;
 
 	// 429 cooldown: no concurrency increases within 30s of rate limit
-	const inRateLimitCooldown = config.lastRateLimitAt != null && Date.now() - config.lastRateLimitAt < 30000;
+	const inRateLimitCooldown = config.lastRateLimitAt != null && Date.now() - config.lastRateLimitAt < 30_000;
 
 	// Hard constraint: reduce immediately on overload (hysteresis: >85% reduce, 60-85% hold)
 	if (avgCpu > 0.85 || latest.memFree < 500 * 1024 * 1024) {

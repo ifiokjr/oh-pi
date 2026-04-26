@@ -2,21 +2,32 @@
 	"name": "@ifi/pi-pretty",
 	"version": "0.4.4",
 	"description": "Pretty terminal output for pi — syntax-highlighted file reads, colored bash output, tree-view directory listings, and more.",
-	"type": "module",
 	"keywords": [
-		"pi-package",
 		"pi",
 		"pi-extension",
-		"syntax-highlighting",
+		"pi-package",
+		"pretty-print",
 		"shiki",
-		"terminal",
-		"pretty-print"
+		"syntax-highlighting",
+		"terminal"
 	],
-	"pi": {
-		"extensions": [
-			"./dist/index.js"
-		]
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/pi-pretty",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
 	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/pi-pretty"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"!**/*.test.ts",
+		"!tests/**"
+	],
+	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
@@ -25,13 +36,6 @@
 			"import": "./dist/index.js"
 		}
 	},
-	"files": [
-		"dist",
-		"README.md",
-		"!**/*.test.ts",
-		"!tests/**"
-	],
-	"license": "MIT",
 	"scripts": {
 		"clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist',{ recursive: true, force: true }))\"",
 		"build": "pnpm clean && tsc --project tsconfig.json",
@@ -43,25 +47,21 @@
 	"dependencies": {
 		"@shikijs/cli": "^4.0.2"
 	},
-	"optionalDependencies": {
-		"@ff-labs/fff-node": "^0.5.2"
+	"devDependencies": {
+		"@types/node": "^20.0.0",
+		"typescript": "^5.0.0"
 	},
 	"peerDependencies": {
 		"@mariozechner/pi-coding-agent": ">=0.56.1",
 		"@mariozechner/pi-tui": ">=0.56.1",
 		"@sinclair/typebox": "*"
 	},
-	"devDependencies": {
-		"@types/node": "^20.0.0",
-		"typescript": "^5.0.0"
+	"optionalDependencies": {
+		"@ff-labs/fff-node": "^0.5.2"
 	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/ifiokjr/oh-pi.git",
-		"directory": "packages/pi-pretty"
-	},
-	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/pi-pretty",
-	"bugs": {
-		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	"pi": {
+		"extensions": [
+			"./dist/index.js"
+		]
 	}
 }

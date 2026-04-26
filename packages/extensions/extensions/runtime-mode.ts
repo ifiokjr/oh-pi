@@ -1,22 +1,22 @@
 export type SafeModeSource = "manual" | "watchdog";
 
-export type SafeModeState = {
+export interface SafeModeState {
 	enabled: boolean;
 	source: SafeModeSource | null;
 	reason: string | null;
 	auto: boolean;
 	updatedAt: number;
-};
+}
 
 type SafeModeListener = (state: SafeModeState) => void;
 
 const listeners = new Set<SafeModeListener>();
 
 let safeModeState: SafeModeState = {
-	enabled: false,
-	source: null,
-	reason: null,
 	auto: false,
+	enabled: false,
+	reason: null,
+	source: null,
 	updatedAt: Date.now(),
 };
 
@@ -33,10 +33,10 @@ export function setSafeModeState(
 	options: { source?: SafeModeSource | null; reason?: string | null; auto?: boolean; updatedAt?: number } = {},
 ): SafeModeState {
 	const nextState: SafeModeState = {
-		enabled,
-		source: enabled ? (options.source ?? safeModeState.source ?? "manual") : null,
-		reason: enabled ? (options.reason ?? safeModeState.reason ?? null) : null,
 		auto: enabled ? (options.auto ?? safeModeState.auto) : false,
+		enabled,
+		reason: enabled ? (options.reason ?? safeModeState.reason ?? null) : null,
+		source: enabled ? (options.source ?? safeModeState.source ?? "manual") : null,
 		updatedAt: options.updatedAt ?? Date.now(),
 	};
 
@@ -66,10 +66,10 @@ export function subscribeSafeMode(listener: SafeModeListener): () => void {
 export function resetSafeModeStateForTests(): void {
 	listeners.clear();
 	safeModeState = {
-		enabled: false,
-		source: null,
-		reason: null,
 		auto: false,
+		enabled: false,
+		reason: null,
+		source: null,
 		updatedAt: Date.now(),
 	};
 }

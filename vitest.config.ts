@@ -1,9 +1,9 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
-const coreEntry = fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url));
-const sharedQnaEntry = fileURLToPath(new URL("./packages/shared-qna/index.ts", import.meta.url));
-const webServerEntry = fileURLToPath(new URL("./packages/web-server/src/index.ts", import.meta.url));
+const coreEntry = fileURLToPath(new URL("packages/core/src/index.ts", import.meta.url));
+const sharedQnaEntry = fileURLToPath(new URL("packages/shared-qna/index.ts", import.meta.url));
+const webServerEntry = fileURLToPath(new URL("packages/web-server/src/index.ts", import.meta.url));
 
 const coverageInclude = ["scripts/**/*.{ts,mts,mjs}", "packages/**/*.{ts,tsx,mts,mjs}"];
 const coverageExclude = [
@@ -45,7 +45,14 @@ export default defineConfig({
 		},
 	},
 	test: {
-		pool: "forks",
+		coverage: {
+			all: true,
+			exclude: coverageExclude,
+			include: coverageInclude,
+			provider: "v8",
+			reporter: ["text", "html", "json-summary", "lcovonly"],
+			reportsDirectory: "./coverage",
+		},
 		include: [
 			"benchmarks/**/*.test.ts",
 			"scripts/**/*.test.ts",
@@ -71,13 +78,6 @@ export default defineConfig({
 			"packages/pi-bash-live-view/tests/**/*.test.ts",
 			"packages/pi-pretty/tests/**/*.test.ts",
 		],
-		coverage: {
-			provider: "v8",
-			all: true,
-			include: coverageInclude,
-			exclude: coverageExclude,
-			reporter: ["text", "html", "json-summary", "lcovonly"],
-			reportsDirectory: "./coverage",
-		},
+		pool: "forks",
 	},
 });

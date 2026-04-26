@@ -6,7 +6,7 @@ import { getAgentDir } from "@mariozechner/pi-coding-agent";
 const PLAN_MODE_PROMPT_FILENAME = "PLAN.prompt.md";
 
 function getBundledPromptPath(): string {
-	return path.join(path.dirname(fileURLToPath(import.meta.url)), "prompts", PLAN_MODE_PROMPT_FILENAME);
+	return path.join(import.meta.dirname, "prompts", PLAN_MODE_PROMPT_FILENAME);
 }
 
 async function readNonEmptyFile(filePath: string): Promise<string | null> {
@@ -15,7 +15,7 @@ async function readNonEmptyFile(filePath: string): Promise<string | null> {
 		const trimmed = content.trim();
 		return trimmed.length > 0 ? trimmed : null;
 	} catch (error) {
-		const code = (error as NodeJS.ErrnoException).code;
+		const {code} = (error as NodeJS.ErrnoException);
 		if (code === "ENOENT") {
 			return null;
 		}

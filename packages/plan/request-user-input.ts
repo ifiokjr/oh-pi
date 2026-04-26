@@ -1,6 +1,7 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { QnATuiComponent, requirePiTuiModule, type QnAResponse, type QnAResult } from "@ifi/pi-shared-qna";
+import { QnATuiComponent, requirePiTuiModule } from '@ifi/pi-shared-qna';
+import type { QnAResponse, QnAResult } from '@ifi/pi-shared-qna';
 import type {
 	NormalizedRequestUserInputQuestion,
 	PlanModeState,
@@ -127,8 +128,7 @@ async function collectRequestUserInputAnswers(
 	ctx: ExtensionContext,
 	questions: NormalizedRequestUserInputQuestion[],
 ): Promise<RequestUserInputResponse | null> {
-	const result = await ctx.ui.custom<QnAResult | null>((tui, theme, _kb, done) => {
-		return new QnATuiComponent(questions, tui, done, {
+	const result = await ctx.ui.custom<QnAResult | null>((tui, theme, _kb, done) => new QnATuiComponent(questions, tui, done, {
 			title: "Questions",
 			questionSummaryLabel: (question) => question.header?.trim() || question.question,
 			accentColor: (text) => theme.fg("accent", text),
@@ -137,8 +137,7 @@ async function collectRequestUserInputAnswers(
 			mutedColor: (text) => theme.fg("muted", text),
 			dimColor: (text) => theme.fg("dim", text),
 			boldText: (text) => theme.bold(text),
-		});
-	});
+		}));
 
 	if (!result) {
 		return null;
@@ -155,43 +154,8 @@ export function registerRequestUserInputTool(
 	},
 ) {
 	pi.registerTool({
-		name: "request_user_input",
-		label: "request_user_input",
 		description:
 			"Request user input for one to three short questions and wait for the response. This tool is only available in Plan mode.",
-		parameters: dependencies.requestUserInputSchema,
-		renderCall(args, theme) {
-			const questions = ((args.questions as RequestUserInputQuestion[] | undefined) ?? []).length;
-			const label = `${questions} question${questions === 1 ? "" : "s"}`;
-			return createText(
-				`${theme.fg("toolTitle", theme.bold("request_user_input "))}${theme.fg("muted", label)}`,
-			);
-		},
-		renderResult(result, { isPartial }, theme) {
-			if (isPartial) {
-				return createText(theme.fg("muted", "Waiting for user input..."));
-			}
-
-			const details = result.details as RequestUserInputDetails | undefined;
-			if (!details) {
-				const text = result.content.find((item) => item.type === "text");
-				return createText(text?.type === "text" ? text.text : "(no output)");
-			}
-
-			const lines: string[] = [];
-			for (let i = 0; i < details.questions.length; i++) {
-				const question = details.questions[i];
-				const answer = summarizeRequestUserInputAnswer(details.response.answers[question.id]);
-				lines.push(`${theme.fg("accent", `${i + 1}.`)} ${question.question}`);
-				if (answer === "(no answer)") {
-					lines.push(`   ${theme.fg("muted", "Answer:")} ${theme.fg("warning", answer)}`);
-				} else {
-					lines.push(`   ${theme.fg("muted", "Answer:")} ${answer}`);
-				}
-			}
-
-			return createText(lines.join("\n"));
-		},
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx): Promise<AgentToolResult<RequestUserInputDetails>> {
 			if (!dependencies.getState().active) {
 				return {
@@ -228,6 +192,39 @@ export function registerRequestUserInputTool(
 				content: [{ type: "text", text: buildRequestUserInputSummary(details) }],
 				details,
 			};
+		},
+		label: "request_user_input",
+		name: "request_user_input",
+		parameters: dependencies.requestUserInputSchema,
+		renderCall(args, theme) {
+			const questions = ((args.questions as RequestUserInputQuestion[] | undefined) ?? []).length;
+			const label = `${questions} question${questions === 1 ? "" : "s"}`;
+			return createText(`${theme.fg("toolTitle", theme.bold("request_user_input "))}${theme.fg("muted", label)}`);
+		},
+		renderResult(result, { isPartial }, theme) {
+			if (isPartial) {
+				return createText(theme.fg("muted", "Waiting for user input..."));
+			}
+
+			const details = result.details as RequestUserInputDetails | undefined;
+			if (!details) {
+				const text = result.content.find((item) => item.type === "text");
+				return createText(text?.type === "text" ? text.text : "(no output)");
+			}
+
+			const lines: string[] = [];
+			for (let i = 0; i < details.questions.length; i++) {
+				const question = details.questions[i];
+				const answer = summarizeRequestUserInputAnswer(details.response.answers[question.id]);
+				lines.push(`${theme.fg("accent", `${i + 1}.`)} ${question.question}`);
+				if (answer === "(no answer)") {
+					lines.push(`   ${theme.fg("muted", "Answer:")} ${theme.fg("warning", answer)}`);
+				} else {
+					lines.push(`   ${theme.fg("muted", "Answer:")} ${answer}`);
+				}
+			}
+
+			return createText(lines.join("\n"));
 		},
 	});
 }

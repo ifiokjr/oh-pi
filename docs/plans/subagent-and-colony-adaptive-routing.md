@@ -155,11 +155,11 @@ This RFC proposes adding routing categories to those castes rather than hard-cod
 
 ### Initial default caste mapping
 
-| Caste | Suggested category | Reason |
-|------|---------------------|--------|
-| scout | `quick-discovery` | cheap, broad, many parallel calls |
-| worker | `balanced-execution` | implementation should prefer balanced quality/cost |
-| soldier | `review-critical` | review benefits from stronger reasoning/judgment |
+| Caste   | Suggested category   | Reason                                             |
+| ------- | -------------------- | -------------------------------------------------- |
+| scout   | `quick-discovery`    | cheap, broad, many parallel calls                  |
+| worker  | `balanced-execution` | implementation should prefer balanced quality/cost |
+| soldier | `review-critical`    | review benefits from stronger reasoning/judgment   |
 
 These are defaults, not lock-ins.
 
@@ -176,15 +176,19 @@ Rather than creating a second routing engine inside `subagents` or `ant-colony`,
 ### Proposed integration modes
 
 #### Mode A — category only
+
 Agent/caste category maps directly to configured fallback group / task class.
 
 #### Mode B — category plus task text
+
 Adaptive router may optionally classify delegated task text to refine thinking level or candidate ranking.
 
 #### V1 recommendation
+
 Start with **Mode A**.
 
 Reason:
+
 - cheaper
 - easier to explain
 - lower risk of invisible routing surprises
@@ -200,27 +204,27 @@ Illustrative shape:
 
 ```json
 {
-  "delegatedRouting": {
-    "enabled": true,
-    "categories": {
-      "quick-discovery": {
-        "fallbackGroup": "cheap-router",
-        "defaultThinking": "minimal"
-      },
-      "balanced-execution": {
-        "fallbackGroup": "standard-coding",
-        "defaultThinking": "medium"
-      },
-      "review-critical": {
-        "fallbackGroup": "peak-reasoning",
-        "defaultThinking": "high"
-      },
-      "visual-engineering": {
-        "fallbackGroup": "design-premium",
-        "defaultThinking": "high"
-      }
-    }
-  }
+	"delegatedRouting": {
+		"enabled": true,
+		"categories": {
+			"quick-discovery": {
+				"fallbackGroup": "cheap-router",
+				"defaultThinking": "minimal"
+			},
+			"balanced-execution": {
+				"fallbackGroup": "standard-coding",
+				"defaultThinking": "medium"
+			},
+			"review-critical": {
+				"fallbackGroup": "peak-reasoning",
+				"defaultThinking": "high"
+			},
+			"visual-engineering": {
+				"fallbackGroup": "design-premium",
+				"defaultThinking": "high"
+			}
+		}
+	}
 }
 ```
 
@@ -238,21 +242,11 @@ Illustrative examples:
 
 ```json
 {
-  "fallbackGroups": {
-    "cheap-router": [
-      "google/gemini-2.5-flash",
-      "openai/gpt-5-mini"
-    ],
-    "standard-coding": [
-      "anthropic/claude-sonnet-4-6",
-      "openai/gpt-5.4-mini",
-      "google/gemini-2.5-pro"
-    ],
-    "peak-reasoning": [
-      "openai/gpt-5.4",
-      "anthropic/claude-opus-4.6"
-    ]
-  }
+	"fallbackGroups": {
+		"cheap-router": ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
+		"standard-coding": ["anthropic/claude-sonnet-4-6", "openai/gpt-5.4-mini", "google/gemini-2.5-pro"],
+		"peak-reasoning": ["openai/gpt-5.4", "anthropic/claude-opus-4.6"]
+	}
 }
 ```
 
@@ -351,6 +345,7 @@ can tolerate invalid sections without disabling the entire feature.
 Rejected.
 
 Why:
+
 - ages badly
 - hard to override cleanly
 - pushes project toward the `oh-my-openagent` style persona stack
@@ -361,6 +356,7 @@ Why:
 Rejected.
 
 Why:
+
 - conflicts with pi's modular philosophy
 - duplicates subagents + plan + colony primitives
 - introduces brand/theater instead of interface discipline
@@ -370,6 +366,7 @@ Why:
 Rejected for V1.
 
 Why:
+
 - subagents have same underlying problem
 - two different delegated model-selection stories would create unnecessary confusion
 
@@ -378,6 +375,7 @@ Why:
 Deferred.
 
 Why:
+
 - more expensive
 - less predictable
 - category-only routing is enough to deliver value first
@@ -389,6 +387,7 @@ Why:
 If delegated routing silently changes model behavior, users will distrust it.
 
 **Mitigation:**
+
 - explicit precedence order
 - explain decisions in UI/status
 - shadow/explain mode support where possible
@@ -398,6 +397,7 @@ If delegated routing silently changes model behavior, users will distrust it.
 If subagents and colony invent separate fallback logic, the system becomes inconsistent.
 
 **Mitigation:**
+
 - reuse adaptive-routing concepts and helper utilities
 - keep one shared routing vocabulary
 
@@ -406,6 +406,7 @@ If subagents and colony invent separate fallback logic, the system becomes incon
 The easiest wrong move is to imitate `oh-my-openagent`'s orchestration stack rather than adapting its strongest ideas.
 
 **Mitigation:**
+
 - clean-room implementation
 - explicit rejection list in this RFC
 - keep feature scope narrow and composable
@@ -415,6 +416,7 @@ The easiest wrong move is to imitate `oh-my-openagent`'s orchestration stack rat
 Capability warnings can become ignored if they are too frequent or too vague.
 
 **Mitigation:**
+
 - start with only high-confidence warnings
 - allow opt-out later if needed
 

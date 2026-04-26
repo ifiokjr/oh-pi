@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import autoSessionNameExtension from "./auto-session-name.js";
 
@@ -11,8 +11,8 @@ describe("auto-session-name extension", () => {
 		await harness.emitAsync(
 			"agent_end",
 			{
-				type: "agent_end",
 				messages: [{ role: "user", content: "Refactor scheduler startup ownership checks and notifications" }],
+				type: "agent_end",
 			},
 			harness.ctx,
 		);
@@ -28,8 +28,8 @@ describe("auto-session-name extension", () => {
 		await harness.emitAsync(
 			"agent_end",
 			{
-				type: "agent_end",
 				messages: [{ role: "user", content: "Investigate scheduler ownership handling" }],
+				type: "agent_end",
 			},
 			harness.ctx,
 		);
@@ -37,7 +37,6 @@ describe("auto-session-name extension", () => {
 		await harness.emitAsync(
 			"agent_end",
 			{
-				type: "agent_end",
 				messages: [
 					{ role: "user", content: "Investigate scheduler ownership handling" },
 					{
@@ -45,6 +44,7 @@ describe("auto-session-name extension", () => {
 						content: "Implement auto-continue after compaction and improve resume hints for shutdown",
 					},
 				],
+				type: "agent_end",
 			},
 			harness.ctx,
 		);
@@ -60,8 +60,8 @@ describe("auto-session-name extension", () => {
 		await harness.emitAsync(
 			"agent_end",
 			{
-				type: "agent_end",
 				messages: [{ role: "user", content: "Investigate scheduler ownership handling" }],
+				type: "agent_end",
 			},
 			harness.ctx,
 		);
@@ -71,7 +71,6 @@ describe("auto-session-name extension", () => {
 		await harness.emitAsync(
 			"agent_end",
 			{
-				type: "agent_end",
 				messages: [
 					{ role: "user", content: "Investigate scheduler ownership handling" },
 					{
@@ -79,6 +78,7 @@ describe("auto-session-name extension", () => {
 						content: "Implement auto-continue after compaction and improve resume hints for shutdown",
 					},
 				],
+				type: "agent_end",
 			},
 			harness.ctx,
 		);
@@ -96,8 +96,8 @@ describe("auto-session-name extension", () => {
 		await harness.emitAsync(
 			"agent_end",
 			{
-				type: "agent_end",
 				messages: [{ role: "user", content: "Refactor scheduler startup ownership checks and notifications" }],
+				type: "agent_end",
 			},
 			harness.ctx,
 		);

@@ -1,18 +1,8 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-import {
-	type AssistantMessageEventStream,
-	type Context,
-	type Model,
-	type SimpleStreamOptions,
-	streamSimpleOpenAICompletions,
-} from "@mariozechner/pi-ai";
-import {
-	createOllamaCloudOAuthProvider,
-	type CloudModelsGetter,
-	loginOllamaCloud,
-	refreshOllamaCloudCredential,
-	refreshOllamaCloudCredentialModels,
-} from "./auth.js";
+import { streamSimpleOpenAICompletions } from '@mariozechner/pi-ai';
+import type { AssistantMessageEventStream, Context, Model, SimpleStreamOptions } from '@mariozechner/pi-ai';
+import { createOllamaCloudOAuthProvider, loginOllamaCloud, refreshOllamaCloudCredential, refreshOllamaCloudCredentialModels } from './auth.js';
+import type { CloudModelsGetter } from './auth.js';
 import {
 	OLLAMA_API,
 	OLLAMA_CLOUD_API_KEY_ENV,
@@ -22,46 +12,38 @@ import {
 	getOllamaCloudRuntimeConfig,
 	getOllamaLocalRuntimeConfig,
 } from "./config.js";
-import { clearOllamaCliStatusCache, getOllamaCliStatus, pullOllamaModel, type OllamaCliStatus } from "./local.js";
-import {
-	discoverOllamaCloudModels,
-	discoverOllamaLocalModels,
-	getCredentialModels,
-	getFallbackOllamaCloudModels,
-	mergeOllamaLocalCatalog,
-	toDownloadableOllamaLocalModel,
-	toProviderModels,
-	type OllamaCloudCredentials,
-	type OllamaProviderModel,
-} from "./models.js";
+import { clearOllamaCliStatusCache, getOllamaCliStatus, pullOllamaModel } from './local.js';
+import type { OllamaCliStatus } from './local.js';
+import { discoverOllamaCloudModels, discoverOllamaLocalModels, getCredentialModels, getFallbackOllamaCloudModels, mergeOllamaLocalCatalog, toDownloadableOllamaLocalModel, toProviderModels } from './models.js';
+import type { OllamaCloudCredentials, OllamaProviderModel } from './models.js';
 
-type RuntimeDiscoveryState = {
+interface RuntimeDiscoveryState {
 	models: OllamaProviderModel[];
 	lastRefresh: number | null;
 	lastError: string | null;
-};
+}
 
-type ModelRegistryAuthStorage = {
+interface ModelRegistryAuthStorage {
 	get: (provider: string) => unknown;
 	set: (provider: string, credential: any) => void;
-};
+}
 
-type ModelRegistryLike = {
+interface ModelRegistryLike {
 	authStorage: ModelRegistryAuthStorage;
 	refresh?: () => void;
-};
+}
 
-type UiLike = {
+interface UiLike {
 	notify: (msg: string, type?: "error" | "info" | "warning") => void;
 	setStatus: (key: string, value: string | undefined) => void;
 	confirm?: (title: string, message: string) => Promise<boolean>;
-};
+}
 
-type CommandContextLike = {
+interface CommandContextLike {
 	hasUI?: boolean;
 	ui: UiLike;
 	modelRegistry: ModelRegistryLike;
-};
+}
 
 type CollectedOllamaModel = OllamaProviderModel & {
 	provider: string;
@@ -69,15 +51,15 @@ type CollectedOllamaModel = OllamaProviderModel & {
 };
 
 const localDiscoveryState: RuntimeDiscoveryState = {
-	models: [],
-	lastRefresh: null,
 	lastError: null,
+	lastRefresh: null,
+	models: [],
 };
 
 const cloudEnvDiscoveryState: RuntimeDiscoveryState = {
-	models: getFallbackOllamaCloudModels(),
-	lastRefresh: null,
 	lastError: null,
+	lastRefresh: null,
+	models: getFallbackOllamaCloudModels(),
 };
 
 const activeLocalPulls = new Map<string, Promise<boolean>>();
@@ -103,13 +85,16 @@ function registerOllamaCloudProvider(pi: ExtensionAPI): void {
 		api: OLLAMA_API,
 		apiKey: OLLAMA_CLOUD_API_KEY_ENV,
 		baseUrl: getOllamaCloudRuntimeConfig().apiUrl,
-		oauth: createOllamaCloudOAuthProvider(() => cloudEnvDiscoveryState.models),
 		models: toProviderModels(cloudEnvDiscoveryState.models),
+		oauth: createOllamaCloudOAuthProvider(() => cloudEnvDiscoveryState.models),
 		streamSimple: streamSimpleOllama,
 	});
 }
 
-async function refreshRegisteredLocalModels(pi: ExtensionAPI, options: { forceCli?: boolean } = {}): Promise<OllamaProviderModel[]> {
+async function refreshRegisteredLocalModels(
+	pi: ExtensionAPI,
+	options: { forceCli?: boolean } = {},
+): Promise<OllamaProviderModel[]> {
 	ollamaCliStatus = await getOllamaCliStatus({ force: options.forceCli });
 	if (!ollamaCliStatus.available) {
 		localDiscoveryState.models = [];
@@ -151,7 +136,8 @@ async function refreshRegisteredCloudEnvModels(pi: ExtensionAPI): Promise<Ollama
 
 function registerOllamaCommands(pi: ExtensionAPI): void {
 	const ollamaCommand = {
-		description: "Inspect or refresh local + cloud Ollama providers: /ollama, /ollama:status, /ollama:refresh-models, /ollama:models, /ollama:info <model>, /ollama:pull <model>",
+		description:
+			"Inspect or refresh local + cloud Ollama providers: /ollama, /ollama:status, /ollama:refresh-models, /ollama:models, /ollama:info <model>, /ollama:pull <model>",
 		async handler(args: string, ctx: ExtensionCommandContext) {
 			const trimmed = args.trim();
 			const [rawAction = "status", ...rest] = trimmed ? trimmed.split(/\s+/) : ["status"];
@@ -191,7 +177,7 @@ function registerOllamaCommands(pi: ExtensionAPI): void {
 
 				const localModel = findLocalModelForQuery(query, credential);
 				if (!localModel) {
-					ctx.ui.notify(`No Ollama model matched \"${query}\". Run /ollama:refresh-models first.`, "warning");
+					ctx.ui.notify(`No Ollama model matched "${query}". Run /ollama:refresh-models first.`, "warning");
 					return;
 				}
 
@@ -212,7 +198,7 @@ function registerOllamaCommands(pi: ExtensionAPI): void {
 				}
 				const model = findModelForQuery(query, collectOllamaModels(credential));
 				if (!model) {
-					ctx.ui.notify(`No Ollama model matched \"${query}\". Run /ollama:refresh-models first.`, "warning");
+					ctx.ui.notify(`No Ollama model matched "${query}". Run /ollama:refresh-models first.`, "warning");
 					return;
 				}
 				ctx.ui.notify(renderModelInfo(model), "info");
@@ -225,12 +211,16 @@ function registerOllamaCommands(pi: ExtensionAPI): void {
 
 	pi.registerCommand("ollama", ollamaCommand);
 
-	const ollamaAliases: Array<{ name: string; subcommand: string; description: string }> = [
-		{ name: "ollama:status", subcommand: "status", description: "Show local and cloud Ollama status." },
-		{ name: "ollama:refresh-models", subcommand: "refresh-models", description: "Refresh local and cloud Ollama models." },
-		{ name: "ollama:models", subcommand: "models", description: "List local and cloud Ollama models." },
-		{ name: "ollama:info", subcommand: "info", description: "Show detailed metadata for one Ollama model." },
-		{ name: "ollama:pull", subcommand: "pull", description: "Download a local Ollama model via the CLI." },
+	const ollamaAliases: { name: string; subcommand: string; description: string }[] = [
+		{ description: "Show local and cloud Ollama status.", name: "ollama:status", subcommand: "status" },
+		{
+			description: "Refresh local and cloud Ollama models.",
+			name: "ollama:refresh-models",
+			subcommand: "refresh-models",
+		},
+		{ description: "List local and cloud Ollama models.", name: "ollama:models", subcommand: "models" },
+		{ description: "Show detailed metadata for one Ollama model.", name: "ollama:info", subcommand: "info" },
+		{ description: "Download a local Ollama model via the CLI.", name: "ollama:pull", subcommand: "pull" },
 	];
 
 	for (const alias of ollamaAliases) {
@@ -242,7 +232,8 @@ function registerOllamaCommands(pi: ExtensionAPI): void {
 	}
 
 	pi.registerCommand("ollama-cloud", {
-		description: "Backward-compatible alias for cloud-only Ollama status and refresh: /ollama-cloud [status|refresh-models]",
+		description:
+			"Backward-compatible alias for cloud-only Ollama status and refresh: /ollama-cloud [status|refresh-models]",
 		async handler(args: string, ctx: ExtensionCommandContext) {
 			const action = args.trim().toLowerCase() || "status";
 			const credential = getStoredCloudCredential(ctx);
@@ -295,7 +286,12 @@ function registerOllamaLifecycle(pi: ExtensionAPI): {
 	};
 
 	const clearPendingStartupContext = () => {
-		if (startupCliRefreshTimer || startupCloudRefreshTimer || pendingLocalBootstrapRefresh || pendingCloudBootstrapRefresh) {
+		if (
+			startupCliRefreshTimer ||
+			startupCloudRefreshTimer ||
+			pendingLocalBootstrapRefresh ||
+			pendingCloudBootstrapRefresh
+		) {
 			return;
 		}
 		pendingStartupContext = null;
@@ -420,11 +416,16 @@ function registerOllamaLifecycle(pi: ExtensionAPI): {
 	return { scheduleCloudBootstrapRefresh, scheduleLocalBootstrapRefresh };
 }
 
-async function refreshCloudModels(pi: ExtensionAPI, ctx: CommandContextLike, credential: OllamaCloudCredentials | null): Promise<OllamaProviderModel[]> {
+async function refreshCloudModels(
+	pi: ExtensionAPI,
+	ctx: CommandContextLike,
+	credential: OllamaCloudCredentials | null,
+): Promise<OllamaProviderModel[]> {
 	if (credential) {
-		const refreshed = credential.expires <= Date.now()
-			? await refreshOllamaCloudCredential(credential)
-			: await refreshOllamaCloudCredentialModels(credential);
+		const refreshed =
+			credential.expires <= Date.now()
+				? await refreshOllamaCloudCredential(credential)
+				: await refreshOllamaCloudCredentialModels(credential);
 		setCloudCredentialInContext(ctx, refreshed);
 		cloudEnvDiscoveryState.models = getCredentialModels(refreshed);
 		cloudEnvDiscoveryState.lastRefresh = Date.now();
@@ -474,7 +475,10 @@ async function pullLocalModel(pi: ExtensionAPI, ctx: CommandContextLike, modelId
 			ctx.ui.notify(`Downloaded ollama/${modelId}.`, "info");
 			return true;
 		} catch (error) {
-			ctx.ui.notify(`Failed to download ollama/${modelId}: ${error instanceof Error ? error.message : String(error)}`, "error");
+			ctx.ui.notify(
+				`Failed to download ollama/${modelId}: ${error instanceof Error ? error.message : String(error)}`,
+				"error",
+			);
 			return false;
 		} finally {
 			ctx.ui.setStatus(PULL_STATUS_KEY, undefined);
@@ -486,7 +490,11 @@ async function pullLocalModel(pi: ExtensionAPI, ctx: CommandContextLike, modelId
 	return run;
 }
 
-function streamSimpleOllama(model: Model<any>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream {
+function streamSimpleOllama(
+	model: Model<any>,
+	context: Context,
+	options?: SimpleStreamOptions,
+): AssistantMessageEventStream {
 	if (model.provider === OLLAMA_LOCAL_PROVIDER) {
 		return streamSimpleOllamaLocal(model, context, options);
 	}
@@ -498,11 +506,19 @@ function streamSimpleOllama(model: Model<any>, context: Context, options?: Simpl
 	return streamSimpleOpenAICompletions(model as Model<"openai-completions">, context, options);
 }
 
-function streamSimpleOllamaCloud(model: Model<any>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream {
+function streamSimpleOllamaCloud(
+	model: Model<any>,
+	context: Context,
+	options?: SimpleStreamOptions,
+): AssistantMessageEventStream {
 	return streamSimpleOpenAICompletions(model as Model<"openai-completions">, context, options);
 }
 
-function streamSimpleOllamaLocal(model: Model<any>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream {
+function streamSimpleOllamaLocal(
+	model: Model<any>,
+	context: Context,
+	options?: SimpleStreamOptions,
+): AssistantMessageEventStream {
 	if (!isLocalModelInstalled(model.id)) {
 		if (!ollamaCliStatus?.available) {
 			throw new Error("Ollama CLI is not installed. Only ollama-cloud models are available right now.");
@@ -518,7 +534,9 @@ function streamSimpleOllamaLocal(model: Model<any>, context: Context, options?: 
 function getCloudModels(credential: OllamaCloudCredentials | null): OllamaProviderModel[] {
 	return cloudEnvDiscoveryState.models.length > 0
 		? cloudEnvDiscoveryState.models
-		: (credential ? getCredentialModels(credential) : getFallbackOllamaCloudModels());
+		: (credential
+			? getCredentialModels(credential)
+			: getFallbackOllamaCloudModels());
 }
 
 function getCloudRefreshAge(credential: OllamaCloudCredentials | null): string {
@@ -569,14 +587,22 @@ function collectOllamaModels(credential: OllamaCloudCredentials | null): Collect
 	const cloudConfig = getOllamaCloudRuntimeConfig();
 	const cloudModels = getCloudModels(credential);
 	return [
-		...cloudModels.map((model) => ({ ...model, provider: OLLAMA_CLOUD_PROVIDER, baseUrl: cloudConfig.apiUrl })),
-		...getRegisteredLocalModels().map((model) => ({ ...model, provider: OLLAMA_LOCAL_PROVIDER, baseUrl: localConfig.apiUrl })),
+		...cloudModels.map((model) => ({ ...model, baseUrl: cloudConfig.apiUrl, provider: OLLAMA_CLOUD_PROVIDER })),
+		...getRegisteredLocalModels().map((model) => ({
+			...model,
+			baseUrl: localConfig.apiUrl,
+			provider: OLLAMA_LOCAL_PROVIDER,
+		})),
 	];
 }
 
 function findLocalModelForQuery(query: string, credential: OllamaCloudCredentials | null): OllamaProviderModel | null {
 	const localModels = getRegisteredLocalModels();
-	const localCollectedModels = localModels.map((model) => ({ ...model, provider: OLLAMA_LOCAL_PROVIDER, baseUrl: getOllamaLocalRuntimeConfig().apiUrl }));
+	const localCollectedModels = localModels.map((model) => ({
+		...model,
+		baseUrl: getOllamaLocalRuntimeConfig().apiUrl,
+		provider: OLLAMA_LOCAL_PROVIDER,
+	}));
 	const localMatch = findModelForQuery(query, localCollectedModels);
 	if (localMatch) {
 		return localMatch;
@@ -584,8 +610,8 @@ function findLocalModelForQuery(query: string, credential: OllamaCloudCredential
 
 	const cloudModels = getCloudModels(credential).map((model) => ({
 		...model,
-		provider: OLLAMA_CLOUD_PROVIDER,
 		baseUrl: getOllamaCloudRuntimeConfig().apiUrl,
+		provider: OLLAMA_CLOUD_PROVIDER,
 	}));
 	const cloudMatch = findModelForQuery(query, cloudModels);
 	if (!cloudMatch) {
@@ -622,7 +648,11 @@ function renderModelInfo(model: CollectedOllamaModel): string {
 		`Base URL: ${model.baseUrl}`,
 	];
 	if (model.provider === OLLAMA_LOCAL_PROVIDER) {
-		lines.splice(3, 0, `Local availability: ${model.localAvailability === "downloadable" ? "download required" : "installed"}`);
+		lines.splice(
+			3,
+			0,
+			`Local availability: ${model.localAvailability === "downloadable" ? "download required" : "installed"}`,
+		);
 	}
 	if (model.family) {
 		lines.splice(4, 0, `Family: ${model.family}`);
@@ -635,7 +665,7 @@ function renderModelInfo(model: CollectedOllamaModel): string {
 	}
 	const capabilitySummary = summarizeCapabilities(model);
 	if (capabilitySummary) {
-		lines.splice(lines.length - 1, 0, `Capabilities: ${capabilitySummary}`);
+		lines.splice(- 1, 0, `Capabilities: ${capabilitySummary}`);
 	}
 	return lines.join("\n");
 }
@@ -647,25 +677,27 @@ function renderModelList(models: CollectedOllamaModel[]): string {
 
 	const sections = [
 		{
-			title: "Cloud",
 			models: models.filter((model) => model.provider === OLLAMA_CLOUD_PROVIDER),
+			title: "Cloud",
 		},
 		{
-			title: "Local",
 			models: models.filter((model) => model.provider === OLLAMA_LOCAL_PROVIDER),
+			title: "Local",
 		},
 	].filter((section) => section.models.length > 0);
 
 	return sections
-		.map((section) => [
-			`Ollama ${section.title}:`,
-			...section.models
-				.sort((left, right) => sortCollectedModels(left, right))
-				.map(
-					(model) =>
-						`  ${sourceIcon(model.provider)} ${model.provider}/${model.id} — ${model.name}${renderModelBadges(model)} · ${model.contextWindow.toLocaleString()} ctx`,
-				),
-		].join("\n"))
+		.map((section) =>
+			[
+				`Ollama ${section.title}:`,
+				...section.models
+					.toSorted((left, right) => sortCollectedModels(left, right))
+					.map(
+						(model) =>
+							`  ${sourceIcon(model.provider)} ${model.provider}/${model.id} — ${model.name}${renderModelBadges(model)} · ${model.contextWindow.toLocaleString()} ctx`,
+					),
+			].join("\n"),
+		)
 		.join("\n\n");
 }
 
@@ -707,7 +739,8 @@ function getRegisteredLocalModels(): OllamaProviderModel[] {
 	if (!ollamaCliStatus?.available) {
 		return [];
 	}
-	const cloudCatalog = cloudEnvDiscoveryState.models.length > 0 ? cloudEnvDiscoveryState.models : getFallbackOllamaCloudModels();
+	const cloudCatalog =
+		cloudEnvDiscoveryState.models.length > 0 ? cloudEnvDiscoveryState.models : getFallbackOllamaCloudModels();
 	return mergeOllamaLocalCatalog(localDiscoveryState.models, cloudCatalog);
 }
 
@@ -783,7 +816,9 @@ function formatRefreshAge(timestamp: number | null | undefined): string {
 	return ` (${hours}h ago)`;
 }
 
-function getStoredCloudCredential(ctx: { modelRegistry: { authStorage: { get: (provider: string) => unknown } } }): OllamaCloudCredentials | null {
+function getStoredCloudCredential(ctx: {
+	modelRegistry: { authStorage: { get: (provider: string) => unknown } };
+}): OllamaCloudCredentials | null {
 	const credential = ctx.modelRegistry.authStorage.get(OLLAMA_CLOUD_PROVIDER);
 	return credential && typeof credential === "object" && (credential as { type?: string }).type === "oauth"
 		? (credential as OllamaCloudCredentials)

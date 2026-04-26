@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 
 const { mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
 	mockExistsSync: vi.fn(() => false),
@@ -6,24 +6,24 @@ const { mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
 }));
 
 const histogram = {
-	enable: vi.fn(),
 	disable: vi.fn(),
-	reset: vi.fn(),
-	percentile: vi.fn(() => 0),
-	mean: 0,
+	enable: vi.fn(),
 	max: 0,
+	mean: 0,
+	percentile: vi.fn(() => 0),
+	reset: vi.fn(),
 };
 
-vi.mock("node:fs", () => ({
+vi.mock<typeof import('node:fs')>(import('node:fs'), () => ({
 	existsSync: mockExistsSync,
 	readFileSync: mockReadFileSync,
 }));
 
-vi.mock("node:perf_hooks", () => ({
+vi.mock<typeof import('node:perf_hooks')>(import('node:perf_hooks'), () => ({
 	monitorEventLoopDelay: vi.fn(() => histogram),
 }));
 
-vi.mock("node:os", async (importOriginal) => {
+vi.mock<typeof import('node:os')>(import('node:os'), async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:os")>();
 	return {
 		...actual,
@@ -31,7 +31,7 @@ vi.mock("node:os", async (importOriginal) => {
 	};
 });
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({}));
+vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({}));
 
 import { getSafeModeState, resetSafeModeStateForTests } from "./runtime-mode";
 import watchdogExtension, {
@@ -55,6 +55,27 @@ function createMockPi() {
 	const eventHandlers = new Map<string, ((data: unknown) => void)[]>();
 
 	return {
+		_commands: commands,
+		async _emit(event: string, ...args: any[]) {
+			for (const handler of handlers.get(event) ?? []) {
+				await handler(...args);
+			}
+		},
+		_shortcuts: shortcuts,
+		_tools: tools,
+		events: {
+			emit(event: string, data: unknown) {
+				for (const handler of eventHandlers.get(event) ?? []) {
+					handler(data);
+				}
+			},
+			on(event: string, handler: (data: unknown) => void) {
+				if (!eventHandlers.has(event)) {
+					eventHandlers.set(event, []);
+				}
+				eventHandlers.get(event)?.push(handler);
+			},
+		},
 		on(event: string, handler: (...args: any[]) => any) {
 			if (!handlers.has(event)) {
 				handlers.set(event, []);
@@ -64,44 +85,28 @@ function createMockPi() {
 		registerCommand(name: string, command: any) {
 			commands.set(name, command);
 		},
-		registerTool(tool: any) {
-			tools.set(tool.name, tool);
-		},
 		registerShortcut(name: string, shortcut: any) {
 			shortcuts.set(name, shortcut);
 		},
-		events: {
-			on(event: string, handler: (data: unknown) => void) {
-				if (!eventHandlers.has(event)) {
-					eventHandlers.set(event, []);
-				}
-				eventHandlers.get(event)?.push(handler);
-			},
-			emit(event: string, data: unknown) {
-				for (const handler of eventHandlers.get(event) ?? []) {
-					handler(data);
-				}
-			},
-		},
-		_commands: commands,
-		_tools: tools,
-		_shortcuts: shortcuts,
-		async _emit(event: string, ...args: any[]) {
-			for (const handler of handlers.get(event) ?? []) {
-				await handler(...args);
-			}
+		registerTool(tool: any) {
+			tools.set(tool.name, tool);
 		},
 	};
 }
 
 function createMockCtx() {
-	const notifications: Array<{ msg: string; level: string }> = [];
+	const notifications: { msg: string; level: string }[] = [];
 	const statuses = new Map<string, string | undefined>();
-	const statusCalls: Array<{ key: string; value: string | undefined }> = [];
-	const custom = vi.fn().mockResolvedValue(undefined);
+	const statusCalls: { key: string; value: string | undefined }[] = [];
+	const custom = vi.fn().mockResolvedValue();
 	return {
+		_custom: custom,
+		_notifications: notifications,
+		_statusCalls: statusCalls,
+		_statuses: statuses,
 		hasUI: true,
 		ui: {
+			custom,
 			notify(msg: string, level: string) {
 				notifications.push({ msg, level });
 			},
@@ -109,27 +114,22 @@ function createMockCtx() {
 				statusCalls.push({ key, value });
 				statuses.set(key, value);
 			},
-			custom,
 		},
-		_notifications: notifications,
-		_statuses: statuses,
-		_statusCalls: statusCalls,
-		_custom: custom,
 	};
 }
 
-function mockCpuUsageSequence(values: Array<{ user: number; system: number }>) {
-	const fallback = values[values.length - 1] ?? { user: 0, system: 0 };
+function mockCpuUsageSequence(values: { user: number; system: number }[]) {
+	const fallback = values.at(-1) ?? { system: 0, user: 0 };
 	return vi.spyOn(process, "cpuUsage").mockImplementation(() => values.shift() ?? fallback);
 }
 
 function mockMemoryUsage(overrides: Partial<NodeJS.MemoryUsage> = {}) {
 	return vi.spyOn(process, "memoryUsage").mockReturnValue({
-		rss: 200 * 1024 * 1024,
+		arrayBuffers: 5,
+		external: 10,
 		heapTotal: 100 * 1024 * 1024,
 		heapUsed: 80 * 1024 * 1024,
-		external: 10,
-		arrayBuffers: 5,
+		rss: 200 * 1024 * 1024,
 		...overrides,
 	});
 }
@@ -155,24 +155,24 @@ afterEach(() => {
 
 describe("watchdog helpers", () => {
 	it("calculates process cpu percentage across cores", () => {
-		expect(calculateCpuPercent({ user: 400_000, system: 0 }, 1_000, 4)).toBeCloseTo(10);
+		expect(calculateCpuPercent({ system: 0, user: 400_000 }, 1000, 4)).toBeCloseTo(10);
 	});
 
 	it("builds a normalized watchdog sample", () => {
 		const sample = createWatchdogSample({
-			timestamp: 123,
-			cpuUsage: { user: 500_000, system: 250_000 },
-			elapsedMs: 1_000,
 			coreCount: 2,
-			memoryUsage: {
-				rss: 300 * 1024 * 1024,
-				heapUsed: 150 * 1024 * 1024,
-				heapTotal: 200 * 1024 * 1024,
-			},
+			cpuUsage: { system: 250_000, user: 500_000 },
+			elapsedMs: 1_000,
+			eventLoopMaxNs: 300_000_000,
 			eventLoopMeanNs: 10_000_000,
 			eventLoopP99Ns: 120_000_000,
-			eventLoopMaxNs: 300_000_000,
+			memoryUsage: {
+				heapTotal: 200 * 1024 * 1024,
+				heapUsed: 150 * 1024 * 1024,
+				rss: 300 * 1024 * 1024,
+			},
 			safeModeEnabled: false,
+			timestamp: 123,
 		});
 
 		expect(sample.cpuPercent).toBeCloseTo(37.5);
@@ -183,15 +183,15 @@ describe("watchdog helpers", () => {
 
 	it("classifies problematic samples", () => {
 		const alert = evaluateWatchdogSample({
-			timestamp: Date.now(),
 			cpuPercent: 92,
-			rssMb: 1400,
-			heapUsedMb: 900,
-			heapTotalMb: 1000,
+			eventLoopMaxMs: 320,
 			eventLoopMeanMs: 40,
 			eventLoopP99Ms: 180,
-			eventLoopMaxMs: 320,
+			heapTotalMb: 1000,
+			heapUsedMb: 900,
+			rssMb: 1400,
 			safeModeEnabled: false,
+			timestamp: Date.now(),
 		});
 
 		expect(alert?.severity).toBe("critical");
@@ -202,15 +202,15 @@ describe("watchdog helpers", () => {
 
 	it("formats a readable status line", () => {
 		const text = formatWatchdogStatus({
-			timestamp: Date.now(),
 			cpuPercent: 12,
-			rssMb: 320,
-			heapUsedMb: 140,
-			heapTotalMb: 256,
+			eventLoopMaxMs: 40,
 			eventLoopMeanMs: 5,
 			eventLoopP99Ms: 25,
-			eventLoopMaxMs: 40,
+			heapTotalMb: 256,
+			heapUsedMb: 140,
+			rssMb: 320,
 			safeModeEnabled: true,
+			timestamp: Date.now(),
 		});
 
 		expect(text).toContain("cpu 12%");
@@ -229,7 +229,7 @@ describe("watchdog helpers", () => {
 
 		const config = loadWatchdogConfig(WATCHDOG_CONFIG_PATH);
 
-		expect(config.enabled).toBe(false);
+		expect(config.enabled).toBeFalsy();
 		expect(resolveWatchdogSampleIntervalMs(config)).toBe(2500);
 		expect(resolveWatchdogThresholds(config)).toMatchObject({
 			cpuPercent: 70,
@@ -260,8 +260,8 @@ describe("watchdog extension", () => {
 		expect(mockReadFileSync).not.toHaveBeenCalled();
 
 		await vi.advanceTimersByTimeAsync(250);
-		expect(mockExistsSync).toHaveBeenCalledTimes(1);
-		expect(mockReadFileSync).toHaveBeenCalledTimes(1);
+		expect(mockExistsSync).toHaveBeenCalledOnce();
+		expect(mockReadFileSync).toHaveBeenCalledOnce();
 	});
 
 	it("cancels deferred watchdog config loading on session_shutdown", async () => {
@@ -284,10 +284,10 @@ describe("watchdog extension", () => {
 		const seen: any[] = [];
 		pi.events.on("oh-pi:safe-mode", (state) => seen.push(state));
 
-		const state = applySafeMode(pi as any, true, { source: "manual", reason: "test", auto: false });
+		const state = applySafeMode(pi as any, true, { auto: false, reason: "test", source: "manual" });
 
-		expect(state.enabled).toBe(true);
-		expect(getSafeModeState().enabled).toBe(true);
+		expect(state.enabled).toBeTruthy();
+		expect(getSafeModeState().enabled).toBeTruthy();
 		expect(seen).toHaveLength(1);
 	});
 
@@ -297,15 +297,15 @@ describe("watchdog extension", () => {
 		watchdogExtension(pi as any);
 
 		mockCpuUsageSequence([
-			{ user: 0, system: 0 },
-			{ user: 0, system: 0 },
-			{ user: 4_500_000, system: 0 },
-			{ user: 4_500_000, system: 0 },
+			{ system: 0, user: 0 },
+			{ system: 0, user: 0 },
+			{ system: 0, user: 4_500_000 },
+			{ system: 0, user: 4_500_000 },
 		]);
 		mockMemoryUsage({
-			rss: 1400 * 1024 * 1024,
-			heapUsed: 900 * 1024 * 1024,
 			heapTotal: 1000 * 1024 * 1024,
+			heapUsed: 900 * 1024 * 1024,
+			rss: 1400 * 1024 * 1024,
 		});
 		histogram.mean = 30_000_000;
 		histogram.max = 320_000_000;
@@ -314,10 +314,10 @@ describe("watchdog extension", () => {
 		await pi._emit("session_start", {}, ctx);
 		await vi.advanceTimersByTimeAsync(10_000);
 
-		expect(getSafeModeState().enabled).toBe(true);
+		expect(getSafeModeState().enabled).toBeTruthy();
 		expect(ctx._statuses.get("watchdog")).toContain("event-loop");
 		expect(ctx._statuses.get("safe-mode")).toContain("watchdog");
-		expect(ctx._notifications.some((item) => item.msg.includes("safe mode automatically"))).toBe(true);
+		expect(ctx._notifications.some((item) => item.msg.includes("safe mode automatically"))).toBeTruthy();
 	});
 
 	it("suppresses repeated alert notifications after the limit", async () => {
@@ -326,17 +326,17 @@ describe("watchdog extension", () => {
 		watchdogExtension(pi as any);
 
 		mockCpuUsageSequence([
-			{ user: 0, system: 0 },
-			{ user: 0, system: 0 },
-			{ user: 4_500_000, system: 0 },
-			{ user: 4_500_000, system: 0 },
-			{ user: 4_500_000, system: 0 },
-			{ user: 4_500_000, system: 0 },
+			{ system: 0, user: 0 },
+			{ system: 0, user: 0 },
+			{ system: 0, user: 4_500_000 },
+			{ system: 0, user: 4_500_000 },
+			{ system: 0, user: 4_500_000 },
+			{ system: 0, user: 4_500_000 },
 		]);
 		mockMemoryUsage({
-			rss: 1400 * 1024 * 1024,
-			heapUsed: 900 * 1024 * 1024,
 			heapTotal: 1000 * 1024 * 1024,
+			heapUsed: 900 * 1024 * 1024,
+			rss: 1400 * 1024 * 1024,
 		});
 		histogram.mean = 30_000_000;
 		histogram.max = 320_000_000;
@@ -346,7 +346,7 @@ describe("watchdog extension", () => {
 		await vi.advanceTimersByTimeAsync(10_000);
 		await vi.advanceTimersByTimeAsync(55_000);
 
-		expect(ctx._notifications.some((item) => item.msg.includes("Further alerts suppressed"))).toBe(true);
+		expect(ctx._notifications.some((item) => item.msg.includes("Further alerts suppressed"))).toBeTruthy();
 	});
 
 	it("registers safe-mode commands that toggle shared state", async () => {
@@ -354,15 +354,15 @@ describe("watchdog extension", () => {
 		const ctx = createMockCtx();
 		watchdogExtension(pi as any);
 
-		expect(pi._commands.has("watchdog:status")).toBe(true);
+		expect(pi._commands.has("watchdog:status")).toBeTruthy();
 		const command = pi._commands.get("safe-mode");
 		expect(command).toBeDefined();
 
 		await command.handler("on", ctx);
-		expect(getSafeModeState().enabled).toBe(true);
+		expect(getSafeModeState().enabled).toBeTruthy();
 
 		await command.handler("off", ctx);
-		expect(getSafeModeState().enabled).toBe(false);
+		expect(getSafeModeState().enabled).toBeFalsy();
 		expect(ctx._statuses.get("safe-mode")).toBeUndefined();
 	});
 
@@ -372,9 +372,9 @@ describe("watchdog extension", () => {
 		watchdogExtension(pi as any);
 
 		mockCpuUsageSequence([
-			{ user: 0, system: 0 },
-			{ user: 0, system: 0 },
-			{ user: 0, system: 0 },
+			{ system: 0, user: 0 },
+			{ system: 0, user: 0 },
+			{ system: 0, user: 0 },
 		]);
 		mockMemoryUsage();
 
@@ -382,7 +382,7 @@ describe("watchdog extension", () => {
 		await vi.advanceTimersByTimeAsync(10_000);
 
 		const watchdogCalls = ctx._statusCalls.filter((call) => call.key === "watchdog");
-		expect(watchdogCalls).toEqual([]);
+		expect(watchdogCalls).toStrictEqual([]);
 	});
 
 	it("resets watchdog history and clears alert status", async () => {
@@ -390,15 +390,15 @@ describe("watchdog extension", () => {
 		const ctx = createMockCtx();
 		watchdogExtension(pi as any);
 		mockCpuUsageSequence([
-			{ user: 0, system: 0 },
-			{ user: 4_500_000, system: 0 },
-			{ user: 4_500_000, system: 0 },
-			{ user: 4_500_000, system: 0 },
+			{ system: 0, user: 0 },
+			{ system: 0, user: 4_500_000 },
+			{ system: 0, user: 4_500_000 },
+			{ system: 0, user: 4_500_000 },
 		]);
 		mockMemoryUsage({
-			rss: 1400 * 1024 * 1024,
-			heapUsed: 900 * 1024 * 1024,
 			heapTotal: 1000 * 1024 * 1024,
+			heapUsed: 900 * 1024 * 1024,
+			rss: 1400 * 1024 * 1024,
 		});
 		histogram.mean = 30_000_000;
 		histogram.max = 320_000_000;
@@ -410,11 +410,11 @@ describe("watchdog extension", () => {
 
 		await pi._commands.get("watchdog").handler("reset", ctx);
 		expect(ctx._statuses.get("watchdog")).toBeUndefined();
-		expect(ctx._notifications.some((item) => item.msg.includes("history reset"))).toBe(true);
+		expect(ctx._notifications.some((item) => item.msg.includes("history reset"))).toBeTruthy();
 
 		mockCpuUsageSequence([
-			{ user: 0, system: 0 },
-			{ user: 0, system: 0 },
+			{ system: 0, user: 0 },
+			{ system: 0, user: 0 },
 		]);
 		mockMemoryUsage();
 		histogram.mean = 0;
@@ -425,7 +425,7 @@ describe("watchdog extension", () => {
 		const factory = ctx._custom.mock.calls.at(-1)[0] as (...args: unknown[]) => { render: (width: number) => string[] };
 		const component = factory(
 			{ requestRender: vi.fn() },
-			{ fg: (_color: string, text: string) => text, bold: (text: string) => text },
+			{ bold: (text: string) => text, fg: (_color: string, text: string) => text },
 			{},
 			vi.fn(),
 		);
@@ -436,7 +436,7 @@ describe("watchdog extension", () => {
 		const pi = createMockPi();
 		const ctx = createMockCtx();
 		watchdogExtension(pi as any);
-		recordRuntimeMetric({ extensionId: "scheduler", pendingTasks: 8, dueTasks: 3, note: "dispatch throttled" });
+		recordRuntimeMetric({ dueTasks: 3, extensionId: "scheduler", note: "dispatch throttled", pendingTasks: 8 });
 
 		await pi._commands.get("watchdog").handler("blame", ctx);
 
@@ -449,8 +449,8 @@ describe("watchdog extension", () => {
 		const ctx = createMockCtx();
 		watchdogExtension(pi as any);
 		mockCpuUsageSequence([
-			{ user: 0, system: 0 },
-			{ user: 0, system: 0 },
+			{ system: 0, user: 0 },
+			{ system: 0, user: 0 },
 		]);
 		mockMemoryUsage();
 
@@ -459,13 +459,13 @@ describe("watchdog extension", () => {
 
 		expect(ctx._custom).toHaveBeenCalledWith(expect.any(Function), {
 			overlay: true,
-			overlayOptions: { anchor: "center", width: 84, maxHeight: "80%" },
+			overlayOptions: { anchor: "center", maxHeight: "80%", width: 84 },
 		});
 
 		const factory = ctx._custom.mock.calls[0][0] as (...args: unknown[]) => { render: (width: number) => string[] };
 		const component = factory(
 			{ requestRender: vi.fn() },
-			{ fg: (_color: string, text: string) => text, bold: (text: string) => text },
+			{ bold: (text: string) => text, fg: (_color: string, text: string) => text },
 			{},
 			vi.fn(),
 		);

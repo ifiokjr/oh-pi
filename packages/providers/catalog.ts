@@ -1,12 +1,8 @@
 import type { Api, Model, OAuthCredentials } from "@mariozechner/pi-ai";
-import {
-	MODELS_DEV_CACHE_TTL_MS,
-	MODELS_DEV_CATALOG_URL,
-	normalizeProviderBaseUrl,
-	type SupportedProviderDefinition,
-} from "./config.js";
+import { MODELS_DEV_CACHE_TTL_MS, MODELS_DEV_CATALOG_URL, normalizeProviderBaseUrl } from './config.js';
+import type { SupportedProviderDefinition } from './config.js';
 
-export type ProviderCatalogModel = {
+export interface ProviderCatalogModel {
 	id: string;
 	name: string;
 	reasoning: boolean;
@@ -20,7 +16,7 @@ export type ProviderCatalogModel = {
 	contextWindow: number;
 	maxTokens: number;
 	compat?: Model<Api>["compat"];
-};
+}
 
 export type ProviderCatalogCredentials = OAuthCredentials & {
 	providerId?: string;
@@ -41,9 +37,9 @@ interface ModelsDevCatalogModel {
 	cost?: {
 		input?: number;
 		output?: number;
-		// biome-ignore lint/style/useNamingConvention: External API field name.
+		// Biome-ignore lint/style/useNamingConvention: External API field name.
 		cache_read?: number;
-		// biome-ignore lint/style/useNamingConvention: External API field name.
+		// Biome-ignore lint/style/useNamingConvention: External API field name.
 		cache_write?: number;
 	};
 	limit?: {
@@ -58,9 +54,9 @@ interface ModelsDevCatalogModel {
 
 interface AnthropicModelResponseItem {
 	id: string;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	thinking_enabled?: boolean;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	max_tokens?: number;
 }
 
@@ -72,25 +68,25 @@ interface GoogleModelResponseItem {
 
 interface OpenAIModelResponseItem {
 	id: string;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	thinking_enabled?: boolean;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	context_window?: number;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	max_tokens?: number;
-	// biome-ignore lint/style/useNamingConvention: External API field name.
+	// Biome-ignore lint/style/useNamingConvention: External API field name.
 	max_output?: number;
 }
 
 type ModelsDevCatalog = Record<string, ModelsDevCatalogProvider>;
 
-type LiveDiscoveredModel = {
+interface LiveDiscoveredModel {
 	id: string;
 	reasoning?: boolean;
 	input?: ("text" | "image")[];
 	contextWindow?: number;
 	maxTokens?: number;
-};
+}
 
 const DEFAULT_CONTEXT_WINDOW = 128_000;
 const DEFAULT_MAX_TOKENS = 16_384;
@@ -130,24 +126,24 @@ export async function getCatalogModels(provider: SupportedProviderDefinition): P
 		.filter(isTextGenerationModel)
 		.map((model) =>
 			toProviderCatalogModel({
-				id: model.id ?? "",
-				name: model.name,
-				reasoning: model.reasoning,
-				input: model.modalities?.input?.includes("image") || model.attachment ? ["text", "image"] : ["text"],
+				contextWindow: positiveNumber(model.limit?.context) ?? DEFAULT_CONTEXT_WINDOW,
 				cost: {
-					input: positiveNumber(model.cost?.input) ?? 0,
-					output: positiveNumber(model.cost?.output) ?? 0,
 					cacheRead: positiveNumber(model.cost?.cache_read) ?? 0,
 					cacheWrite: positiveNumber(model.cost?.cache_write) ?? 0,
+					input: positiveNumber(model.cost?.input) ?? 0,
+					output: positiveNumber(model.cost?.output) ?? 0,
 				},
-				contextWindow: positiveNumber(model.limit?.context) ?? DEFAULT_CONTEXT_WINDOW,
+				id: model.id ?? "",
+				input: model.modalities?.input?.includes("image") || model.attachment ? ["text", "image"] : ["text"],
 				maxTokens:
 					positiveNumber(model.limit?.output) ??
 					inferMaxTokens(positiveNumber(model.limit?.context) ?? DEFAULT_CONTEXT_WINDOW),
+				name: model.name,
+				reasoning: model.reasoning,
 			}),
 		)
 		.filter((model) => model.id.length > 0)
-		.sort((left, right) => left.id.localeCompare(right.id));
+		.toSorted((left, right) => left.id.localeCompare(right.id));
 }
 
 export async function resolveProviderModels(
@@ -159,14 +155,14 @@ export async function resolveProviderModels(
 
 	try {
 		const discovered = await discoverProviderModels(provider, apiKey, {
-			signal: options.signal,
 			fallbackModels: catalogModels,
+			signal: options.signal,
 		});
 		if (discovered.length > 0) {
 			return discovered;
 		}
 	} catch {
-		// fall back below
+		// Fall back below
 	}
 
 	if (options.previous && options.previous.length > 0) {
@@ -206,10 +202,8 @@ export function toProviderCatalogModel(
 		Array.isArray(model.input) && model.input.includes("image") ? (["text", "image"] as const) : (["text"] as const);
 
 	return {
-		id: model.id,
-		name: model.name?.trim() || formatDisplayName(model.id),
-		reasoning: Boolean(model.reasoning),
-		input: [...input],
+		compat: model.compat ? { ...model.compat } : undefined,
+		contextWindow,
 		cost: model.cost
 			? { ...model.cost }
 			: {
@@ -218,9 +212,11 @@ export function toProviderCatalogModel(
 					cacheRead: 0,
 					cacheWrite: 0,
 				},
-		contextWindow,
+		id: model.id,
+		input: [...input],
 		maxTokens,
-		compat: model.compat ? { ...model.compat } : undefined,
+		name: model.name?.trim() || formatDisplayName(model.id),
+		reasoning: Boolean(model.reasoning),
 	};
 }
 
@@ -259,11 +255,11 @@ async function discoverAnthropicModels(
 
 	return mergeDiscoveredModels(
 		(response.data ?? []).map((model) => ({
-			id: model.id,
-			reasoning: model.thinking_enabled ?? guessReasoning(model.id),
-			input: ["text", "image"],
 			contextWindow: undefined,
+			id: model.id,
+			input: ["text", "image"],
 			maxTokens: positiveNumber(model.max_tokens),
+			reasoning: model.thinking_enabled ?? guessReasoning(model.id),
 		})),
 		options.fallbackModels,
 	);
@@ -285,11 +281,11 @@ async function discoverGoogleModels(
 		(response.models ?? [])
 			.filter((model) => model.name.includes("gemini"))
 			.map((model) => ({
-				id: model.name.replace(/^models\//, ""),
-				reasoning: guessReasoning(model.name),
-				input: ["text", "image"],
 				contextWindow: positiveNumber(model.inputTokenLimit),
+				id: model.name.replace(/^models\//, ""),
+				input: ["text", "image"],
 				maxTokens: positiveNumber(model.outputTokenLimit),
+				reasoning: guessReasoning(model.name),
 			})),
 		options.fallbackModels,
 	);
@@ -312,11 +308,11 @@ async function discoverOpenAICompatibleModels(
 
 	return mergeDiscoveredModels(
 		(response.data ?? []).map((model) => ({
-			id: model.id,
-			reasoning: model.thinking_enabled ?? guessReasoning(model.id),
-			input: guessInput(model.id),
 			contextWindow: positiveNumber(model.context_window) ?? positiveNumber(model.max_tokens),
+			id: model.id,
+			input: guessInput(model.id),
 			maxTokens: positiveNumber(model.max_output),
+			reasoning: model.thinking_enabled ?? guessReasoning(model.id),
 		})),
 		options.fallbackModels,
 	);
@@ -338,19 +334,19 @@ function mergeDiscoveredModels(
 		next.set(
 			model.id,
 			toProviderCatalogModel({
+				compat: fallback?.compat,
+				contextWindow: model.contextWindow ?? fallback?.contextWindow,
+				cost: fallback?.cost,
 				id: model.id,
+				input: model.input ?? fallback?.input ?? guessInput(model.id),
+				maxTokens: model.maxTokens ?? fallback?.maxTokens,
 				name: fallback?.name ?? formatDisplayName(model.id),
 				reasoning: model.reasoning ?? fallback?.reasoning ?? guessReasoning(model.id),
-				input: model.input ?? fallback?.input ?? guessInput(model.id),
-				cost: fallback?.cost,
-				contextWindow: model.contextWindow ?? fallback?.contextWindow,
-				maxTokens: model.maxTokens ?? fallback?.maxTokens,
-				compat: fallback?.compat,
 			}),
 		);
 	}
 
-	return [...next.values()].sort((left, right) => left.id.localeCompare(right.id));
+	return [...next.values()].toSorted((left, right) => left.id.localeCompare(right.id));
 }
 
 async function fetchJsonFromCandidates<T>(
@@ -362,7 +358,7 @@ async function fetchJsonFromCandidates<T>(
 	for (const url of urls) {
 		const response = await fetch(url, {
 			headers: options.headers,
-			signal: options.signal ?? AbortSignal.timeout(8_000),
+			signal: options.signal ?? AbortSignal.timeout(8000),
 		}).catch((error) => {
 			lastError = error instanceof Error ? error.message : String(error);
 			return null;
@@ -421,11 +417,11 @@ function guessInput(id: string): ("text" | "image")[] {
 
 function formatDisplayName(id: string): string {
 	return id
-		.replace(/[/:_-]+/g, " ")
-		.replace(/\bglm\b/gi, "GLM")
-		.replace(/\bgpt\b/gi, "GPT")
-		.replace(/\bvl\b/gi, "VL")
-		.replace(/\bai\b/gi, "AI")
+		.replaceAll(/[/:_-]+/g, " ")
+		.replaceAll(/\bglm\b/gi, "GLM")
+		.replaceAll(/\bgpt\b/gi, "GPT")
+		.replaceAll(/\bvl\b/gi, "VL")
+		.replaceAll(/\bai\b/gi, "AI")
 		.split(/\s+/)
 		.filter(Boolean)
 		.map((part) => {

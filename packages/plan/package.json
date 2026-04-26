@@ -1,52 +1,52 @@
 {
-  "name": "@ifi/pi-plan",
-  "version": "0.4.4",
-  "description": "Planning mode extension for pi with persistent plan files, branch-aware planning, and delegated research tasks.",
-  "type": "module",
-  "keywords": [
-    "pi-package",
-    "pi",
-    "pi-coding-agent",
-    "planning",
-    "plan-mode",
-    "branch-planning",
-    "research"
-  ],
-  "bin": {
-    "pi-plan": "install.mjs"
-  },
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
-  },
-  "files": [
-    "*.ts",
-    "*.mjs",
-    "prompts",
-    "README.md",
-    "!**/*.test.ts",
-    "!tests/**"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/plan"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/plan",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  },
-  "dependencies": {
-    "@ifi/pi-extension-subagents": "0.4.4",
-    "@ifi/pi-shared-qna": "0.4.4"
-  },
-  "peerDependencies": {
-    "@mariozechner/pi-agent-core": ">=0.56.1",
-    "@mariozechner/pi-ai": ">=0.56.1",
-    "@mariozechner/pi-coding-agent": ">=0.56.1",
-    "@mariozechner/pi-tui": ">=0.56.1",
-    "@sinclair/typebox": "*"
-  }
+	"name": "@ifi/pi-plan",
+	"version": "0.4.4",
+	"description": "Planning mode extension for pi with persistent plan files, branch-aware planning, and delegated research tasks.",
+	"keywords": [
+		"branch-planning",
+		"pi",
+		"pi-coding-agent",
+		"pi-package",
+		"plan-mode",
+		"planning",
+		"research"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/plan",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/plan"
+	},
+	"bin": {
+		"pi-plan": "install.mjs"
+	},
+	"files": [
+		"*.ts",
+		"*.mjs",
+		"prompts",
+		"README.md",
+		"!**/*.test.ts",
+		"!tests/**"
+	],
+	"type": "module",
+	"dependencies": {
+		"@ifi/pi-extension-subagents": "0.4.4",
+		"@ifi/pi-shared-qna": "0.4.4"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-agent-core": ">=0.56.1",
+		"@mariozechner/pi-ai": ">=0.56.1",
+		"@mariozechner/pi-coding-agent": ">=0.56.1",
+		"@mariozechner/pi-tui": ">=0.56.1",
+		"@sinclair/typebox": "*"
+	},
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	}
 }

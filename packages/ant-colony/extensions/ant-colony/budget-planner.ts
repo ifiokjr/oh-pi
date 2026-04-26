@@ -99,49 +99,49 @@ export interface BudgetPlan {
 
 /** Default turn counts per caste when budget is unconstrained. */
 const DEFAULT_TURNS: Record<AntCaste, number> = {
-	scout: 8,
-	worker: 15,
-	soldier: 8,
 	drone: 1,
+	scout: 8,
+	soldier: 8,
+	worker: 15,
 };
 
 /** Budget share per caste (must sum to 1.0). */
 const BUDGET_SHARES: Record<AntCaste, number> = {
+	drone: 0.0,
 	scout: 0.1,
-	worker: 0.7,
 	soldier: 0.2,
-	drone: 0.0, // drones are free (execSync, no LLM)
+	worker: 0.7, // Drones are free (execSync, no LLM)
 };
 
 /** Severity thresholds based on lowest rate limit %. */
 const SEVERITY_THRESHOLDS = {
 	critical: 10,
-	tight: 25,
 	moderate: 50,
+	tight: 25,
 } as const;
 
 /** Concurrency caps per severity level. */
 const CONCURRENCY_CAPS: Record<BudgetPlan["severity"], number> = {
-	critical: 1,
-	tight: 2,
-	moderate: 3,
 	comfortable: 6,
+	critical: 1,
+	moderate: 3,
+	tight: 2,
 };
 
 /** Per-ant cost caps per severity level (USD). */
 const PER_ANT_COST_CAPS: Record<BudgetPlan["severity"], number> = {
-	critical: 0.05,
-	tight: 0.15,
-	moderate: 0.3,
 	comfortable: 0.5,
+	critical: 0.05,
+	moderate: 0.3,
+	tight: 0.15,
 };
 
 /** Turn multipliers per severity level. */
 const TURN_MULTIPLIERS: Record<BudgetPlan["severity"], number> = {
-	critical: 0.5,
-	tight: 0.7,
-	moderate: 0.85,
 	comfortable: 1.0,
+	critical: 0.5,
+	moderate: 0.85,
+	tight: 0.7,
 };
 
 // ═══ Core logic ═══
@@ -266,22 +266,26 @@ export function buildBudgetSummary(
 
 	// Severity-specific guidance
 	switch (severity) {
-		case "critical":
+		case "critical": {
 			parts.push(
 				"⚠️ CRITICAL: Resources nearly exhausted. Only execute essential high-priority tasks. Skip exploration, be extremely concise, minimize tool calls.",
 			);
 			break;
-		case "tight":
+		}
+		case "tight": {
 			parts.push(
 				"⚠️ Budget is tight. Be efficient — prefer targeted edits over broad exploration. Skip low-priority or nice-to-have tasks.",
 			);
 			break;
-		case "moderate":
+		}
+		case "moderate": {
 			parts.push("Budget is moderate. Be reasonably efficient — avoid unnecessary exploration but don't cut corners.");
 			break;
-		case "comfortable":
+		}
+		case "comfortable": {
 			// No extra guidance needed
 			break;
+		}
 	}
 
 	return parts.join(" ");
@@ -301,8 +305,8 @@ export function buildRoutingTelemetrySnapshot(metrics: ColonyMetrics): RoutingTe
 	const outcomeCounts = {
 		claimed: 0,
 		completed: 0,
-		failed: 0,
 		escalated: 0,
+		failed: 0,
 	};
 	const escalationReasonCounts: Record<string, number> = {};
 	let latencyTotal = 0;
@@ -316,10 +320,10 @@ export function buildRoutingTelemetrySnapshot(metrics: ColonyMetrics): RoutingTe
 	}
 
 	return {
-		totalRoutes: entries.length,
 		avgLatencyMs: entries.length > 0 ? Math.round(latencyTotal / entries.length) : 0,
-		outcomeCounts,
 		escalationReasonCounts,
+		outcomeCounts,
+		totalRoutes: entries.length,
 	};
 }
 
@@ -354,7 +358,7 @@ export function planBudget(
 		// Concurrency: scouts and soldiers typically need fewer slots than workers
 		let casteConcurrency: number;
 		if (caste === "drone") {
-			casteConcurrency = recommendedMaxConcurrency; // drones are free
+			casteConcurrency = recommendedMaxConcurrency; // Drones are free
 		} else if (caste === "scout" || caste === "soldier") {
 			casteConcurrency = Math.max(1, Math.ceil(recommendedMaxConcurrency * 0.5));
 		} else {
@@ -362,9 +366,9 @@ export function planBudget(
 		}
 
 		castes[caste] = {
+			maxConcurrency: casteConcurrency,
 			maxCost: casteMaxCost,
 			maxCostPerAnt,
-			maxConcurrency: casteConcurrency,
 			maxTurns: adjustedTurns,
 		};
 	}
@@ -382,11 +386,11 @@ export function planBudget(
 
 	return {
 		castes,
-		recommendedMaxConcurrency,
-		severity,
 		lowestRateLimitPct,
-		summary,
+		recommendedMaxConcurrency,
 		routingTelemetry,
+		severity,
+		summary,
 	};
 }
 
@@ -398,8 +402,8 @@ export function applyConcurrencyCap(config: ConcurrencyConfig, plan: BudgetPlan)
 	const cappedMax = Math.min(config.max, plan.recommendedMaxConcurrency);
 	return {
 		...config,
-		max: cappedMax,
 		current: Math.min(config.current, cappedMax),
+		max: cappedMax,
 		optimal: Math.min(config.optimal, cappedMax),
 	};
 }

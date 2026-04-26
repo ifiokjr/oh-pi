@@ -1,34 +1,34 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 
 const discoveryState = vi.hoisted(() => ({
 	builtin: [] as any[],
-	user: [] as any[],
-	project: [] as any[],
 	chains: [] as any[],
-	userDir: "",
+	project: [] as any[],
 	projectDir: "",
+	user: [] as any[],
+	userDir: "",
 }));
 
 const serializeAgentMock = vi.hoisted(() => vi.fn((agent: { name: string }) => `agent:${agent.name}`));
 const serializeChainMock = vi.hoisted(() => vi.fn((chain: { name: string }) => `chain:${chain.name}`));
 const discoverSkillsMock = vi.hoisted(() => vi.fn(() => [{ name: "git" }, { name: "context7" }]));
 
-vi.mock("../agents.js", () => ({
+vi.mock<typeof import('../agents.js')>(import('../agents.js'), () => ({
 	discoverAgentsAll: vi.fn(() => ({ ...discoveryState })),
 }));
 
-vi.mock("../agent-serializer.js", () => ({
+vi.mock<typeof import('../agent-serializer.js')>(import('../agent-serializer.js'), () => ({
 	serializeAgent: serializeAgentMock,
 }));
 
-vi.mock("../chain-serializer.js", () => ({
+vi.mock<typeof import('../chain-serializer.js')>(import('../chain-serializer.js'), () => ({
 	serializeChain: serializeChainMock,
 }));
 
-vi.mock("../skills.js", () => ({
+vi.mock<typeof import('../skills.js')>(import('../skills.js'), () => ({
 	discoverAvailableSkills: discoverSkillsMock,
 }));
 
@@ -38,7 +38,7 @@ function createCtx(cwd: string) {
 	return {
 		cwd,
 		modelRegistry: {
-			getAvailable: () => [{ provider: "anthropic", id: "claude-sonnet-4" }],
+			getAvailable: () => [{ id: "claude-sonnet-4", provider: "anthropic" }],
 		},
 	};
 }
@@ -54,7 +54,7 @@ function createDirs() {
 	fs.mkdirSync(projectDir, { recursive: true });
 	discoveryState.userDir = userDir;
 	discoveryState.projectDir = projectDir;
-	return { root, userDir, projectDir };
+	return { projectDir, root, userDir };
 }
 
 beforeEach(() => {
@@ -69,12 +69,12 @@ beforeEach(() => {
 
 afterEach(() => {
 	for (const dir of tempDirs.splice(0)) {
-		fs.rmSync(dir, { recursive: true, force: true });
+		fs.rmSync(dir, { force: true, recursive: true });
 	}
 	vi.restoreAllMocks();
 });
 
-describe("handleManagementAction", () => {
+describe(handleManagementAction, () => {
 	it("lists and gets agents and chains across scopes", () => {
 		const { root, userDir, projectDir } = createDirs();
 		const userAgentPath = path.join(userDir, "helper.md");
@@ -82,34 +82,34 @@ describe("handleManagementAction", () => {
 		fs.writeFileSync(userAgentPath, "agent:helper", "utf8");
 		fs.writeFileSync(chainPath, "chain:delivery", "utf8");
 		discoveryState.builtin = [
-			{ name: "scout", description: "Builtin scout", source: "builtin", filePath: "/builtin/scout.md" },
+			{ description: "Builtin scout", filePath: "/builtin/scout.md", name: "scout", source: "builtin" },
 		];
 		discoveryState.user = [
 			{
-				name: "helper",
 				description: "User helper",
-				source: "user",
-				filePath: userAgentPath,
-				systemPrompt: "Be useful",
-				skills: ["git"],
-				tools: ["read"],
 				extraFields: { category: "analysis" },
+				filePath: userAgentPath,
+				name: "helper",
+				skills: ["git"],
+				source: "user",
+				systemPrompt: "Be useful",
+				tools: ["read"],
 			},
 		];
 		discoveryState.project = [];
 		discoveryState.chains = [
 			{
-				name: "delivery",
 				description: "Ship work",
-				source: "project",
 				filePath: chainPath,
+				name: "delivery",
+				source: "project",
 				steps: [{ agent: "helper", task: "inspect", output: "report.md", reads: ["spec.md"], progress: true }],
 			},
 		];
 
 		const ctx = createCtx(root);
 		const listResult = handleManagementAction("list", {}, ctx as never);
-		expect(listResult.isError).toBeFalsy();
+		expect(listResult.isError).toBe(false);
 		expect(listResult.content[0]?.text).toContain("- scout (builtin): Builtin scout");
 		expect(listResult.content[0]?.text).toContain("- helper (user): User helper");
 		expect(listResult.content[0]?.text).toContain("- delivery (project): Ship work");
@@ -129,23 +129,23 @@ describe("handleManagementAction", () => {
 			"create",
 			{
 				config: {
-					name: "My Helper",
 					description: "Created from tests",
+					extensions: "prompt.md,npm:@scope/pkg",
+					model: "openai/gpt-5",
+					name: "My Helper",
+					progress: true,
+					reads: "spec.md,notes.md",
 					scope: "project",
+					skills: "git,missing-skill",
 					systemPrompt: "Assist with repo work",
 					tools: "read,write,mcp:github",
-					skills: "git,missing-skill",
-					model: "openai/gpt-5",
-					extensions: "prompt.md,npm:@scope/pkg",
-					reads: "spec.md,notes.md",
-					progress: true,
 				},
 			},
 			ctx as never,
 		);
 
 		const createdAgentPath = path.join(projectDir, "my-helper.md");
-		expect(fs.existsSync(createdAgentPath)).toBe(true);
+		expect(fs.existsSync(createdAgentPath)).toBeTruthy();
 		expect(fs.readFileSync(createdAgentPath, "utf8")).toBe("agent:my-helper");
 		expect(createAgent.content[0]?.text).toContain(`Created agent 'my-helper' at ${createdAgentPath}.`);
 		expect(createAgent.content[0]?.text).toContain(
@@ -157,8 +157,8 @@ describe("handleManagementAction", () => {
 			"create",
 			{
 				config: {
-					name: "Delivery Chain",
 					description: "Coordinate steps",
+					name: "Delivery Chain",
 					scope: "project",
 					steps: [
 						{ agent: "my-helper", task: "inspect" },
@@ -170,7 +170,7 @@ describe("handleManagementAction", () => {
 		);
 
 		const createdChainPath = path.join(projectDir, "delivery-chain.chain.md");
-		expect(fs.existsSync(createdChainPath)).toBe(true);
+		expect(fs.existsSync(createdChainPath)).toBeTruthy();
 		expect(fs.readFileSync(createdChainPath, "utf8")).toBe("chain:delivery-chain");
 		expect(createChain.content[0]?.text).toContain("Warning: chain steps reference unknown agents:");
 		expect(createChain.content[0]?.text).toContain("missing-agent");
@@ -188,20 +188,20 @@ describe("handleManagementAction", () => {
 		fs.writeFileSync(oldPath, "agent:helper", "utf8");
 		discoveryState.user = [
 			{
-				name: "helper",
 				description: "User helper",
-				source: "user",
-				filePath: oldPath,
-				systemPrompt: "Be useful",
 				extraFields: { createdBy: "management-api" },
+				filePath: oldPath,
+				name: "helper",
+				source: "user",
+				systemPrompt: "Be useful",
 			},
 		];
 		discoveryState.chains = [
 			{
-				name: "delivery",
 				description: "Ship work",
-				source: "project",
 				filePath: path.join(root, "delivery.chain.md"),
+				name: "delivery",
+				source: "project",
 				steps: [{ agent: "helper", task: "inspect" }],
 			},
 		];
@@ -211,8 +211,8 @@ describe("handleManagementAction", () => {
 			{
 				agent: "helper",
 				config: {
-					name: "Renamed Helper",
 					description: "Renamed helper",
+					name: "Renamed Helper",
 					skills: "git,missing-skill",
 				},
 			},
@@ -220,8 +220,8 @@ describe("handleManagementAction", () => {
 		);
 
 		const renamedPath = path.join(userDir, "renamed-helper.md");
-		expect(fs.existsSync(oldPath)).toBe(false);
-		expect(fs.existsSync(renamedPath)).toBe(true);
+		expect(fs.existsSync(oldPath)).toBeFalsy();
+		expect(fs.existsSync(renamedPath)).toBeTruthy();
 		expect(fs.readFileSync(renamedPath, "utf8")).toBe("agent:renamed-helper");
 		expect(updateResult.content[0]?.text).toContain(`Updated agent 'helper' to 'renamed-helper' at ${renamedPath}.`);
 		expect(updateResult.content[0]?.text).toContain("Warning: skills not found: missing-skill.");
@@ -234,29 +234,29 @@ describe("handleManagementAction", () => {
 		const chainPath = path.join(projectDir, "delivery.chain.md");
 		fs.writeFileSync(chainPath, "chain:delivery", "utf8");
 		discoveryState.builtin = [
-			{ name: "scout", description: "Builtin scout", source: "builtin", filePath: "/builtin/scout.md" },
+			{ description: "Builtin scout", filePath: "/builtin/scout.md", name: "scout", source: "builtin" },
 		];
 		discoveryState.chains = [
 			{
-				name: "delivery",
 				description: "Ship work",
-				source: "project",
 				filePath: chainPath,
+				name: "delivery",
+				source: "project",
 				steps: [{ agent: "scout", task: "inspect" }],
 			},
 		];
 
 		const builtinDelete = handleManagementAction("delete", { agent: "scout" }, ctx as never);
-		expect(builtinDelete.isError).toBe(true);
+		expect(builtinDelete.isError).toBeTruthy();
 		expect(builtinDelete.content[0]?.text).toContain("Agent 'scout' is builtin and cannot be modified.");
 
 		const deleteChain = handleManagementAction(
 			"delete",
-			{ chainName: "delivery", agentScope: "project" },
+			{ agentScope: "project", chainName: "delivery" },
 			ctx as never,
 		);
-		expect(deleteChain.isError).toBeFalsy();
+		expect(deleteChain.isError).toBe(false);
 		expect(deleteChain.content[0]?.text).toBe(`Deleted chain 'delivery' at ${chainPath}.`);
-		expect(fs.existsSync(chainPath)).toBe(false);
+		expect(fs.existsSync(chainPath)).toBeFalsy();
 	});
 });

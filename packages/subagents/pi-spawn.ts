@@ -7,12 +7,12 @@ const require = createRequire(import.meta.url);
 export function resolvePiPackageRoot(): string | undefined {
 	try {
 		const entry = process.argv[1];
-		if (!entry) return undefined;
+		if (!entry) {return undefined;}
 		let dir = path.dirname(fs.realpathSync(entry));
 		while (dir !== path.dirname(dir)) {
 			try {
-				const pkg = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf-8"));
-				if (pkg.name === "@mariozechner/pi-coding-agent") return dir;
+				const pkg = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8"));
+				if (pkg.name === "@mariozechner/pi-coding-agent") {return dir;}
 			} catch {}
 			dir = path.dirname(dir);
 		}
@@ -25,7 +25,7 @@ export interface PiSpawnDeps {
 	execPath?: string;
 	argv1?: string;
 	existsSync?: (filePath: string) => boolean;
-	readFileSync?: (filePath: string, encoding: "utf-8") => string;
+	readFileSync?: (filePath: string, encoding: "utf8") => string;
 	resolvePackageJson?: () => string;
 	piPackageRoot?: string;
 }
@@ -36,7 +36,7 @@ export interface PiSpawnCommand {
 }
 
 function isRunnableNodeScript(filePath: string, existsSync: (filePath: string) => boolean): boolean {
-	if (!existsSync(filePath)) return false;
+	if (!existsSync(filePath)) {return false;}
 	return /\.(?:mjs|cjs|js)$/i.test(filePath);
 }
 
@@ -61,16 +61,16 @@ export function resolveWindowsPiCliScript(deps: PiSpawnDeps = {}): string | unde
 			deps.resolvePackageJson ??
 			(() => {
 				const root = deps.piPackageRoot ?? resolvePiPackageRoot();
-				if (root) return path.join(root, "package.json");
+				if (root) {return path.join(root, "package.json");}
 				return require.resolve("@mariozechner/pi-coding-agent/package.json");
 			});
 		const packageJsonPath = resolvePackageJson();
-		const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
+		const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
 			bin?: string | Record<string, string>;
 		};
 		const binField = packageJson.bin;
 		const binPath = typeof binField === "string" ? binField : (binField?.pi ?? Object.values(binField ?? {})[0]);
-		if (!binPath) return undefined;
+		if (!binPath) {return undefined;}
 		const candidate = normalizePath(path.resolve(path.dirname(packageJsonPath), binPath));
 		if (isRunnableNodeScript(candidate, existsSync)) {
 			return candidate;
@@ -88,11 +88,11 @@ export function getPiSpawnCommand(args: string[], deps: PiSpawnDeps = {}): PiSpa
 		const piCliPath = resolveWindowsPiCliScript(deps);
 		if (piCliPath) {
 			return {
-				command: deps.execPath ?? process.execPath,
 				args: [piCliPath, ...args],
+				command: deps.execPath ?? process.execPath,
 			};
 		}
 	}
 
-	return { command: "pi", args };
+	return { args, command: "pi" };
 }

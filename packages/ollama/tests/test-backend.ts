@@ -1,7 +1,14 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 
-type BackendModel = { id: string; capabilities?: string[]; contextWindow?: number; family?: string; parameterSize?: string; quantization?: string };
+interface BackendModel {
+	id: string;
+	capabilities?: string[];
+	contextWindow?: number;
+	family?: string;
+	parameterSize?: string;
+	quantization?: string;
+}
 
 export interface TestOllamaBackend {
 	apiUrl: string;
@@ -70,12 +77,12 @@ export async function createTestOllamaBackend(): Promise<TestOllamaBackend> {
 				res.end(
 					JSON.stringify({
 						capabilities: match.capabilities ?? ["completion", "tools"],
-						model_info: { [`${family}.context_length`]: match.contextWindow ?? 131072 },
 						details: {
 							family: match.family ?? family,
 							parameter_size: match.parameterSize ?? undefined,
 							quantization_level: match.quantization ?? undefined,
 						},
+						model_info: { [`${family}.context_length`]: match.contextWindow ?? 131072 },
 					}),
 				);
 			});
@@ -93,13 +100,22 @@ export async function createTestOllamaBackend(): Promise<TestOllamaBackend> {
 	});
 
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-	const port = (server.address() as AddressInfo).port;
+	const {port} = (server.address() as AddressInfo);
 	const origin = `http://127.0.0.1:${port}`;
 
 	return {
 		apiUrl: `${origin}/v1`,
-		origin,
+		async close() {
+			await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+		},
+		getAuthHeaders() {
+			return [...authHeaders];
+		},
 		keysUrl: `${origin}/settings/keys`,
+		origin,
+		setAuthenticatedModels(nextModels) {
+			authenticatedModels = nextModels;
+		},
 		setModels(nextModels) {
 			models = nextModels;
 			publicModels = null;
@@ -108,20 +124,11 @@ export async function createTestOllamaBackend(): Promise<TestOllamaBackend> {
 		setPublicModels(nextModels) {
 			publicModels = nextModels;
 		},
-		setAuthenticatedModels(nextModels) {
-			authenticatedModels = nextModels;
-		},
 		setRejectAuth(reject) {
 			rejectAuth = reject;
 		},
 		setRejectedModelShows(modelIds) {
 			rejectedModelShows = new Set(modelIds);
-		},
-		getAuthHeaders() {
-			return [...authHeaders];
-		},
-		async close() {
-			await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
 		},
 	};
 }

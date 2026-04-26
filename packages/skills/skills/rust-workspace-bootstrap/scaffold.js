@@ -25,13 +25,13 @@ Options:
 
 function parseArgs(argv) {
 	const options = {
-		name: "",
-		dir: "",
-		owner: "your-github-org",
-		repo: "",
 		description: "",
+		dir: "",
 		force: false,
 		help: false,
+		name: "",
+		owner: "your-github-org",
+		repo: "",
 	};
 
 	for (let index = 0; index < argv.length; index += 1) {
@@ -54,23 +54,29 @@ function parseArgs(argv) {
 			index += 1;
 
 			switch (key) {
-				case "name":
+				case "name": {
 					options.name = value;
 					break;
-				case "dir":
+				}
+				case "dir": {
 					options.dir = value;
 					break;
-				case "owner":
+				}
+				case "owner": {
 					options.owner = value;
 					break;
-				case "repo":
+				}
+				case "repo": {
 					options.repo = value;
 					break;
-				case "description":
+				}
+				case "description": {
 					options.description = value;
 					break;
-				default:
+				}
+				default: {
 					throw new Error(`Unknown option: ${arg}`);
+				}
 			}
 			continue;
 		}
@@ -148,26 +154,26 @@ function main() {
 
 	const projectName = options.name;
 	const projectTitle = toTitleCase(projectName);
-	const cratePrefix = projectName.replace(/-/g, "_");
+	const cratePrefix = projectName.replaceAll(/-/g, "_");
 	const coreCrate = `${cratePrefix}_core`;
 	const cliCrate = `${cratePrefix}_cli`;
 	const targetDir = path.resolve(options.dir || projectName);
-	const owner = options.owner;
+	const {owner} = options;
 	const repo = options.repo || projectName;
 	const description = options.description || `${projectTitle} Rust workspace`;
 
 	const tokens = {
-		"__PROJECT_NAME__": projectName,
-		"__PROJECT_TITLE__": projectTitle,
-		"__CORE_CRATE__": coreCrate,
-		"__CLI_CRATE__": cliCrate,
-		"__GITHUB_OWNER__": owner,
-		"__GITHUB_REPO__": repo,
-		"__DESCRIPTION__": description,
+		__CLI_CRATE__: cliCrate,
+		__CORE_CRATE__: coreCrate,
+		__DESCRIPTION__: description,
+		__GITHUB_OWNER__: owner,
+		__GITHUB_REPO__: repo,
+		__PROJECT_NAME__: projectName,
+		__PROJECT_TITLE__: projectTitle,
 	};
 
-	const currentFile = fileURLToPath(import.meta.url);
-	const baseDir = path.dirname(currentFile);
+	const currentFile = import.meta.filename;
+	const baseDir = import.meta.dirname;
 	const templateDir = path.join(baseDir, "template");
 
 	if (!fs.existsSync(templateDir)) {

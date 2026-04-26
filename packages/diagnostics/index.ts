@@ -2,7 +2,7 @@ import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext, Theme } f
 import { Text, truncateToWidth } from "@mariozechner/pi-tui";
 import { formatDuration, formatTimestamp, summarizeContent, summarizeText } from "./diagnostics-shared.js";
 
-type PromptTurnDiagnostics = {
+interface PromptTurnDiagnostics {
 	turnIndex: number;
 	completedAt: number;
 	completedAtLabel: string;
@@ -11,9 +11,9 @@ type PromptTurnDiagnostics = {
 	toolCount: number;
 	stopReason: string | null;
 	responsePreview: string;
-};
+}
 
-export type PromptCompletionDiagnostics = {
+export interface PromptCompletionDiagnostics {
 	promptPreview: string;
 	startedAt: number;
 	startedAtLabel: string;
@@ -27,21 +27,21 @@ export type PromptCompletionDiagnostics = {
 	statusLabel: string;
 	stopReason: string | null;
 	turns: PromptTurnDiagnostics[];
-};
+}
 
-type DiagnosticsStateEntry = {
+interface DiagnosticsStateEntry {
 	enabled?: boolean;
 	updatedAt?: number;
-};
+}
 
-type ActivePromptRun = {
+interface ActivePromptRun {
 	promptPreview: string;
 	startedAt: number;
 	startedAtLabel: string;
 	turns: PromptTurnDiagnostics[];
-};
+}
 
-type SessionEntryLike = {
+interface SessionEntryLike {
 	type?: string;
 	customType?: string;
 	data?: unknown;
@@ -51,13 +51,13 @@ type SessionEntryLike = {
 		customType?: string;
 		details?: unknown;
 	};
-};
+}
 
-type AgentMessageLike = {
+interface AgentMessageLike {
 	role?: string;
 	content?: unknown;
 	stopReason?: string;
-};
+}
 
 type ThemeLike = Theme;
 
@@ -80,26 +80,26 @@ function classifyStopReason(stopReason: string | null | undefined): {
 	color: "success" | "warning" | "error" | "muted";
 } {
 	if (stopReason === "aborted") {
-		return { status: "aborted", statusLabel: "aborted", color: "warning" };
+		return { color: "warning", status: "aborted", statusLabel: "aborted" };
 	}
 
 	if (stopReason === "error") {
-		return { status: "error", statusLabel: "errored", color: "error" };
+		return { color: "error", status: "error", statusLabel: "errored" };
 	}
 
 	if (stopReason === "stop" || stopReason === "length") {
-		return { status: "completed", statusLabel: "completed", color: "success" };
+		return { color: "success", status: "completed", statusLabel: "completed" };
 	}
 
-	return { status: "unknown", statusLabel: "finished", color: "muted" };
+	return { color: "muted", status: "unknown", statusLabel: "finished" };
 }
 
 function isPromptCompletionDiagnostics(value: unknown): value is PromptCompletionDiagnostics {
-	return !!value && typeof value === "object" && typeof (value as { completedAt?: unknown }).completedAt === "number";
+	return Boolean(value) && typeof value === "object" && typeof (value as { completedAt?: unknown }).completedAt === "number";
 }
 
 function isDiagnosticsStateEntry(value: unknown): value is DiagnosticsStateEntry {
-	return !!value && typeof value === "object" && typeof (value as { enabled?: unknown }).enabled === "boolean";
+	return Boolean(value) && typeof value === "object" && typeof (value as { enabled?: unknown }).enabled === "boolean";
 }
 
 function getMessageDetails(entry: SessionEntryLike): unknown {
@@ -219,18 +219,18 @@ function buildPromptCompletion(
 	const durationMs = Math.max(0, completedAt - run.startedAt);
 
 	return {
+		completedAt,
+		completedAtLabel: formatTimestamp(completedAt),
+		durationLabel: formatDuration(durationMs),
+		durationMs,
 		promptPreview: run.promptPreview,
 		startedAt: run.startedAt,
 		startedAtLabel: run.startedAtLabel,
-		completedAt,
-		completedAtLabel: formatTimestamp(completedAt),
-		durationMs,
-		durationLabel: formatDuration(durationMs),
-		turnCount: run.turns.length,
-		toolCount,
 		status: classification.status,
 		statusLabel: classification.statusLabel,
 		stopReason: lastAssistant?.stopReason ?? null,
+		toolCount,
+		turnCount: run.turns.length,
 		turns: [...run.turns],
 	};
 }
@@ -397,7 +397,7 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 						}
 						stopTimer();
 					},
-					// biome-ignore lint/suspicious/noEmptyBlockStatements: Required by the widget component interface.
+					// Biome-ignore lint/suspicious/noEmptyBlockStatements: Required by the widget component interface.
 					invalidate() {},
 					render(width: number) {
 						syncTimer();
@@ -487,14 +487,14 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		const toolCount = countToolResults(event.toolResults);
 		const elapsedMs = Math.max(0, completedAt - currentPrompt.startedAt);
 		currentPrompt.turns.push({
-			turnIndex: typeof event.turnIndex === "number" ? event.turnIndex : currentPrompt.turns.length,
 			completedAt,
 			completedAtLabel: formatTimestamp(completedAt),
-			elapsedMs,
 			elapsedLabel: formatDuration(elapsedMs),
-			toolCount,
-			stopReason,
+			elapsedMs,
 			responsePreview: summarizeResponsePreview(event.message.content, toolCount, stopReason),
+			stopReason,
+			toolCount,
+			turnIndex: typeof event.turnIndex === "number" ? event.turnIndex : currentPrompt.turns.length,
 		});
 		requestWidgetRender?.();
 	});
@@ -519,10 +519,10 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		currentPrompt = null;
 		requestWidgetRender?.();
 		pi.sendMessage({
-			customType: DIAGNOSTICS_MESSAGE_TYPE,
 			content: buildPromptSummaryText(completion),
-			display: true,
+			customType: DIAGNOSTICS_MESSAGE_TYPE,
 			details: completion,
+			display: true,
 		});
 	});
 
@@ -535,10 +535,10 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		description: "Toggle prompt-completion diagnostics logging and widget output.",
 		getArgumentCompletions(prefix) {
 			const options = [
-				{ value: "status", label: "status", description: "Show the current diagnostics state" },
-				{ value: "toggle", label: "toggle", description: "Toggle diagnostics logging on or off" },
-				{ value: "on", label: "on", description: "Enable diagnostics logging and widget output" },
-				{ value: "off", label: "off", description: "Disable diagnostics logging and widget output" },
+				{ description: "Show the current diagnostics state", label: "status", value: "status" },
+				{ description: "Toggle diagnostics logging on or off", label: "toggle", value: "toggle" },
+				{ description: "Enable diagnostics logging and widget output", label: "on", value: "on" },
+				{ description: "Disable diagnostics logging and widget output", label: "off", value: "off" },
 			];
 			const filtered = options.filter((option) => option.value.startsWith(prefix.trim()));
 			return filtered.length > 0 ? filtered : null;
@@ -581,20 +581,20 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 }
 
 export const diagnosticsInternals = {
+	buildPromptCompletion,
+	buildPromptSummaryText,
 	classifyStopReason,
-	isPromptCompletionDiagnostics,
-	isDiagnosticsStateEntry,
-	getMessageDetails,
-	getMessageCustomType,
-	summarizePrompt,
 	countToolResults,
-	summarizeResponsePreview,
 	findLastAssistantMessage,
 	findPromptPreviewFromMessages,
-	buildPromptSummaryText,
-	buildPromptCompletion,
-	renderPromptCompletionMessage,
 	getBranchEntries,
+	getMessageCustomType,
+	getMessageDetails,
+	isDiagnosticsStateEntry,
+	isPromptCompletionDiagnostics,
+	renderPromptCompletionMessage,
 	restoreEnabledState,
 	restoreLastCompletion,
+	summarizePrompt,
+	summarizeResponsePreview,
 };

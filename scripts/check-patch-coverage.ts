@@ -6,12 +6,12 @@ import { fileURLToPath } from "node:url";
 const DEFAULT_THRESHOLD = 100;
 const DEFAULT_LCOV_PATH = "coverage/lcov.info";
 
-type PatchCoverageOptions = {
+interface PatchCoverageOptions {
 	threshold: number;
 	lcovPath: string;
 	base?: string;
 	head?: string;
-};
+}
 
 type CoverageLines = Map<number, number>;
 
@@ -19,28 +19,28 @@ type CoverageByFile = Map<string, CoverageLines>;
 
 type ChangedLinesByFile = Map<string, Set<number>>;
 
-type PatchCoverageFileSummary = {
+interface PatchCoverageFileSummary {
 	file: string;
 	covered: number;
 	total: number;
 	pct: number;
 	uncoveredLines: number[];
-};
+}
 
-type PatchCoverageSummary = {
+interface PatchCoverageSummary {
 	covered: number;
 	total: number;
 	pct: number;
 	perFile: PatchCoverageFileSummary[];
 	skipped?: boolean;
-};
+}
 
 export function parsePatchCoverageArgs(argv: string[]): PatchCoverageOptions {
 	const options: PatchCoverageOptions = {
-		threshold: DEFAULT_THRESHOLD,
-		lcovPath: DEFAULT_LCOV_PATH,
 		base: process.env.BASE_SHA,
 		head: process.env.HEAD_SHA,
+		lcovPath: DEFAULT_LCOV_PATH,
+		threshold: DEFAULT_THRESHOLD,
 	};
 
 	for (let index = 0; index < argv.length; index++) {
@@ -152,7 +152,7 @@ export function calculatePatchCoverage(
 		}
 		const executableLines = [...changed]
 			.filter((lineNumber) => coverageLines.has(lineNumber))
-			.sort((left, right) => left - right);
+			.toSorted((left, right) => left - right);
 		if (executableLines.length === 0) {
 			continue;
 		}
@@ -162,10 +162,10 @@ export function calculatePatchCoverage(
 		covered += coveredLines.length;
 		total += executableLines.length;
 		perFile.push({
-			file,
 			covered: coveredLines.length,
-			total: executableLines.length,
+			file,
 			pct: (coveredLines.length / executableLines.length) * 100,
+			total: executableLines.length,
 			uncoveredLines,
 		});
 	}
@@ -177,9 +177,9 @@ export function calculatePatchCoverage(
 
 	return {
 		covered,
-		total,
 		pct: total === 0 ? 100 : (covered / total) * 100,
 		perFile,
+		total,
 	};
 }
 
@@ -221,7 +221,7 @@ export function shouldIgnoreFileForPatchCoverage(filePath: string): boolean {
 export function runPatchCoverageCheck({ base, head, lcovPath, threshold }: PatchCoverageOptions): PatchCoverageSummary {
 	if (!base || !head) {
 		console.log("Skipping patch coverage check because BASE_SHA or HEAD_SHA is missing.");
-		return { skipped: true, pct: 100, covered: 0, total: 0, perFile: [] };
+		return { covered: 0, pct: 100, perFile: [], skipped: true, total: 0 };
 	}
 
 	const lcovText = fs.readFileSync(lcovPath, "utf8");
@@ -236,25 +236,25 @@ export function runPatchCoverageCheck({ base, head, lcovPath, threshold }: Patch
 	// Exclude lines marked with // patch-coverage-ignore from uncovered counts
 	// This handles V8 fork-pool coverage limitations with async event handlers
 	for (const entry of summary.perFile) {
-		if (entry.uncoveredLines.length === 0) continue;
-		if (!fs.existsSync(entry.file)) continue;
+		if (entry.uncoveredLines.length === 0) {continue;}
+		if (!fs.existsSync(entry.file)) {continue;}
 		const fileLines = fs.readFileSync(entry.file, "utf8").split(/\r?\n/);
 		const ignoreLines = new Set<number>();
 		for (let i = 0; i < fileLines.length; i++) {
 			// Match // patch-coverage-ignore but not inside string constants
 			const line = fileLines[i]!;
 			const commentIdx = line.indexOf("//");
-			if (commentIdx === -1) continue;
-			if (line.substring(0, commentIdx).includes('"')) continue; // inside string
+			if (commentIdx === -1) {continue;}
+			if (line.substring(0, commentIdx).includes('"')) {continue;} // Inside string
 			if (line.substring(commentIdx).includes("patch-coverage-ignore")) {
 				ignoreLines.add(i + 1); // 1-indexed
 			}
 		}
-		if (ignoreLines.size === 0) continue;
+		if (ignoreLines.size === 0) {continue;}
 		// Check each uncovered line against ignore lines (tolerance of ±3 for source-map offsets)
 		const filtered = entry.uncoveredLines.filter((ln) => {
 			for (const ig of ignoreLines) {
-				if (Math.abs(ln - ig) <= 5) return false; // patch-coverage-ignore
+				if (Math.abs(ln - ig) <= 5) {return false;} // Patch-coverage-ignore
 			}
 			return true;
 		});
@@ -277,7 +277,9 @@ export function runPatchCoverageCheck({ base, head, lcovPath, threshold }: Patch
 	const report = formatPatchCoverageReport(summary, threshold);
 	console.log(report);
 	if (summary.pct < threshold) {
-		throw new Error(`Patch coverage ${summary.pct.toFixed(2)}% is below the required ${threshold.toFixed(2)}% threshold.`);
+		throw new Error(
+			`Patch coverage ${summary.pct.toFixed(2)}% is below the required ${threshold.toFixed(2)}% threshold.`,
+		);
 	}
 
 	return summary;
@@ -286,14 +288,14 @@ export function runPatchCoverageCheck({ base, head, lcovPath, threshold }: Patch
 export function main(argv = process.argv.slice(2)): PatchCoverageSummary {
 	const options = parsePatchCoverageArgs(argv);
 	if (!Number.isFinite(options.threshold)) {
-		throw new Error(`Invalid --threshold value: ${options.threshold}`);
+		throw new TypeError(`Invalid --threshold value: ${options.threshold}`);
 	}
 	return runPatchCoverageCheck(options);
 }
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : undefined;
-const modulePath = fileURLToPath(import.meta.url);
-/* v8 ignore start -- exercised via direct script execution in CI rather than unit tests */
+const modulePath = import.meta.filename;
+/* V8 ignore start -- exercised via direct script execution in CI rather than unit tests */
 if (invokedPath && modulePath === invokedPath) {
 	try {
 		main();
@@ -302,4 +304,4 @@ if (invokedPath && modulePath === invokedPath) {
 		process.exitCode = 1;
 	}
 }
-/* v8 ignore stop */
+/* V8 ignore stop */

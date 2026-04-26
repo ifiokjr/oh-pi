@@ -18,6 +18,17 @@ function runGit(repoRoot: string, args: string[]): string {
 
 export function createGitClient(): GitClient {
 	return {
+		createAndSwitchBranch(repoRoot, branchName) {
+			runGit(repoRoot, ["checkout", "-b", branchName]);
+		},
+		getCurrentBranch(repoRoot) {
+			try {
+				const branch = runGit(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
+				return branch || null;
+			} catch {
+				return null;
+			}
+		},
 		getRepoRoot(cwd) {
 			try {
 				const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
@@ -30,12 +41,11 @@ export function createGitClient(): GitClient {
 				return null;
 			}
 		},
-		getCurrentBranch(repoRoot) {
+		isDirty(repoRoot) {
 			try {
-				const branch = runGit(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
-				return branch || null;
+				return runGit(repoRoot, ["status", "--short"]).length > 0;
 			} catch {
-				return null;
+				return false;
 			}
 		},
 		listBranches(repoRoot) {
@@ -49,16 +59,6 @@ export function createGitClient(): GitClient {
 			} catch {
 				return [];
 			}
-		},
-		isDirty(repoRoot) {
-			try {
-				return runGit(repoRoot, ["status", "--short"]).length > 0;
-			} catch {
-				return false;
-			}
-		},
-		createAndSwitchBranch(repoRoot, branchName) {
-			runGit(repoRoot, ["checkout", "-b", branchName]);
 		},
 	};
 }

@@ -7,10 +7,10 @@ const IS_WINDOWS = process.platform === "win32";
 
 type PackageSetting = string | ({ source: string } & Record<string, unknown>);
 
-type SettingsFile = {
+interface SettingsFile {
 	packages?: PackageSetting[];
 	[key: string]: unknown;
-};
+}
 
 type ExecFileRunner = (
 	file: string,
@@ -129,7 +129,7 @@ export function detectPiPackageInstallScopes(
 	return packageNames.map((packageName) => {
 		const installedInUser = userPackages.has(packageName);
 		const installedInProject = projectPackages.has(packageName);
-		const scope = installedInUser ? (installedInProject ? "both" : "user") : installedInProject ? "project" : "none";
+		const scope = installedInUser ? (installedInProject ? "both" : "user") : (installedInProject ? "project" : "none");
 		return { packageName, scope };
 	});
 }
@@ -138,10 +138,10 @@ export function findPiCommand(run: ExecFileRunner = execFileSync): string {
 	const candidates = IS_WINDOWS ? ["pi.cmd", "pi"] : ["pi"];
 	for (const candidate of candidates) {
 		try {
-			run(candidate, ["--version"], { stdio: "pipe", timeout: 3_000, shell: IS_WINDOWS });
+			run(candidate, ["--version"], { shell: IS_WINDOWS, stdio: "pipe", timeout: 3_000 });
 			return candidate;
 		} catch {
-			// try next candidate
+			// Try next candidate
 		}
 	}
 	throw new Error("pi not found. Install pi-coding-agent first.");
@@ -151,7 +151,7 @@ function readStderr(error: unknown): string {
 	if (!error || typeof error !== "object" || !("stderr" in error)) {
 		return "";
 	}
-	const stderr = (error as { stderr?: { toString(): string } }).stderr;
+	const {stderr} = (error as { stderr?: { toString(): string } });
 	return stderr ? stderr.toString().trim() : "";
 }
 
@@ -169,9 +169,9 @@ export function installPiPackages(
 	for (const packageName of packageNames) {
 		try {
 			run(pi, ["install", `npm:${packageName}`, ...scopeArgs], {
+				shell: IS_WINDOWS,
 				stdio: "pipe",
 				timeout: 60_000,
-				shell: IS_WINDOWS,
 			});
 		} catch (error) {
 			const stderr = readStderr(error);
@@ -179,7 +179,7 @@ export function installPiPackages(
 				continue;
 			}
 			const details = stderr ? `: ${stderr.split("\n")[0]}` : ".";
-			throw new Error(`Failed to install ${packageName}${details}`);
+			throw new Error(`Failed to install ${packageName}${details}`, { cause: error });
 		}
 	}
 }

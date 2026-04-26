@@ -91,10 +91,7 @@ export function HomePage() {
 
 			{/* Links */}
 			<div className="flex flex-wrap gap-4 justify-center text-sm">
-				<a
-					href="https://github.com/ifiokjr/oh-pi"
-					className="text-zinc-400 hover:text-pi-emerald transition-colors"
-				>
+				<a href="https://github.com/ifiokjr/oh-pi" className="text-zinc-400 hover:text-pi-emerald transition-colors">
 					GitHub →
 				</a>
 				<Link to="/01-overview" className="text-zinc-400 hover:text-pi-emerald transition-colors">

@@ -1,16 +1,17 @@
-import { type ChildProcessByStdio, execFile, spawn } from "node:child_process";
+import { execFile, spawn } from 'node:child_process';
+import type { ChildProcessByStdio } from 'node:child_process';
 import process from "node:process";
 import type { Readable } from "node:stream";
 
 const IS_WINDOWS = process.platform === "win32";
 const OLLAMA_COMMAND_CANDIDATES = IS_WINDOWS ? ["ollama.exe", "ollama"] : ["ollama"];
 
-type OllamaCliStatus = {
+interface OllamaCliStatus {
 	available: boolean;
 	command?: string;
 	version?: string;
 	error?: string;
-};
+}
 
 let cachedCliStatus: OllamaCliStatus | null = null;
 let pendingCliStatus: Promise<OllamaCliStatus> | null = null;
@@ -44,12 +45,12 @@ export async function pullOllamaModel(
 		throw new Error("Ollama CLI is not installed.");
 	}
 
-	const command = cli.command;
+	const {command} = cli;
 	await new Promise<void>((resolve, reject) => {
 		const child = spawn(command, ["pull", modelId], {
 			env: options.env,
-			stdio: ["ignore", "pipe", "pipe"],
 			shell: IS_WINDOWS,
+			stdio: ["ignore", "pipe", "pipe"],
 		}) as ChildProcessByStdio<null, Readable, Readable>;
 		let stderr = "";
 		let stdout = "";
@@ -75,7 +76,9 @@ export async function pullOllamaModel(
 				resolve();
 				return;
 			}
-			reject(new Error(stderr.trim() || stdout.trim() || `ollama pull ${modelId} exited with code ${code ?? "unknown"}`));
+			reject(
+				new Error(stderr.trim() || stdout.trim() || `ollama pull ${modelId} exited with code ${code ?? "unknown"}`),
+			);
 		});
 
 		options.signal?.addEventListener(
@@ -95,17 +98,17 @@ export function clearOllamaCliStatusCache(): void {
 
 function execFileText(command: string, args: string[]): Promise<{ text: string | null; error: string | null }> {
 	return new Promise((resolve) => {
-		execFile(command, args, { encoding: "utf-8", shell: IS_WINDOWS }, (error, stdout, stderr) => {
+		execFile(command, args, { encoding: "utf8", shell: IS_WINDOWS }, (error, stdout, stderr) => {
 			if (error) {
 				resolve({
-					text: null,
 					error: stderr.trim() || error.message || `Failed to execute ${command} ${args.join(" ")}`,
+					text: null,
 				});
 				return;
 			}
 
 			const text = stdout.trim();
-			resolve({ text: text || null, error: null });
+			resolve({ error: null, text: text || null });
 		});
 	});
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+
 import {
 	buildModelSelectionOptions,
 	isOpenAICompatibleApi,
@@ -7,57 +7,57 @@ import {
 	resolveOpenAIApiMode,
 } from "./provider-setup.js";
 
-describe("isUnsafeUrl", () => {
+describe(isUnsafeUrl, () => {
 	it("https remote is safe", () => {
-		expect(isUnsafeUrl("https://api.example.com")).toBe(false);
+		expect(isUnsafeUrl("https://api.example.com")).toBeFalsy();
 	});
 
 	it("http localhost is safe", () => {
-		expect(isUnsafeUrl("http://localhost:11434")).toBe(false);
+		expect(isUnsafeUrl("http://localhost:11434")).toBeFalsy();
 	});
 
 	it("http 127.0.0.1 is safe", () => {
-		expect(isUnsafeUrl("http://127.0.0.1:8080")).toBe(false);
+		expect(isUnsafeUrl("http://127.0.0.1:8080")).toBeFalsy();
 	});
 
 	it("http [::1] is blocked (contains colon in hostname)", () => {
-		expect(isUnsafeUrl("http://[::1]:8080")).toBe(true);
+		expect(isUnsafeUrl("http://[::1]:8080")).toBeTruthy();
 	});
 
 	it("10.x private is unsafe", () => {
-		expect(isUnsafeUrl("https://10.0.0.1/api")).toBe(true);
+		expect(isUnsafeUrl("https://10.0.0.1/api")).toBeTruthy();
 	});
 
 	it("172.16.x private is unsafe", () => {
-		expect(isUnsafeUrl("https://172.16.0.1/api")).toBe(true);
+		expect(isUnsafeUrl("https://172.16.0.1/api")).toBeTruthy();
 	});
 
 	it("192.168.x private is unsafe", () => {
-		expect(isUnsafeUrl("https://192.168.1.1/api")).toBe(true);
+		expect(isUnsafeUrl("https://192.168.1.1/api")).toBeTruthy();
 	});
 
 	it("http remote is unsafe", () => {
-		expect(isUnsafeUrl("http://api.example.com")).toBe(true);
+		expect(isUnsafeUrl("http://api.example.com")).toBeTruthy();
 	});
 
 	it("0.0.0.0 is unsafe", () => {
-		expect(isUnsafeUrl("https://0.0.0.0")).toBe(true);
+		expect(isUnsafeUrl("https://0.0.0.0")).toBeTruthy();
 	});
 
 	it("169.254.x link-local is unsafe", () => {
-		expect(isUnsafeUrl("https://169.254.1.1")).toBe(true);
+		expect(isUnsafeUrl("https://169.254.1.1")).toBeTruthy();
 	});
 
 	it("invalid url is unsafe", () => {
-		expect(isUnsafeUrl("not-a-url")).toBe(true);
+		expect(isUnsafeUrl("not-a-url")).toBeTruthy();
 	});
 
 	it("empty string is unsafe", () => {
-		expect(isUnsafeUrl("")).toBe(true);
+		expect(isUnsafeUrl("")).toBeTruthy();
 	});
 });
 
-describe("resolveOpenAIApiMode", () => {
+describe(resolveOpenAIApiMode, () => {
 	it("keeps explicit responses mode", () => {
 		expect(resolveOpenAIApiMode("openai-responses", "gpt-4o")).toBe("openai-responses");
 	});
@@ -75,7 +75,7 @@ describe("resolveOpenAIApiMode", () => {
 	});
 });
 
-describe("normalizeDiscoveryBaseUrl", () => {
+describe(normalizeDiscoveryBaseUrl, () => {
 	it("keeps regular host URL", () => {
 		expect(normalizeDiscoveryBaseUrl("https://api.openai.com")).toBe("https://api.openai.com");
 	});
@@ -93,32 +93,32 @@ describe("normalizeDiscoveryBaseUrl", () => {
 	});
 });
 
-describe("buildModelSelectionOptions", () => {
+describe(buildModelSelectionOptions, () => {
 	it("keeps the full discovered model list instead of truncating at 50 entries", () => {
 		const modelIds = Array.from({ length: 75 }, (_, index) => `model-${index + 1}`);
 
 		const options = buildModelSelectionOptions(modelIds);
 
 		expect(options).toHaveLength(75);
-		expect(options[0]).toEqual({ value: "model-1", label: "model-1" });
-		expect(options[74]).toEqual({ value: "model-75", label: "model-75" });
+		expect(options[0]).toStrictEqual({ label: "model-1", value: "model-1" });
+		expect(options[74]).toStrictEqual({ label: "model-75", value: "model-75" });
 	});
 });
 
-describe("isOpenAICompatibleApi", () => {
+describe(isOpenAICompatibleApi, () => {
 	it("treats undefined as openai-compatible", () => {
-		expect(isOpenAICompatibleApi(undefined)).toBe(true);
+		expect(isOpenAICompatibleApi()).toBeTruthy();
 	});
 
 	it("treats openai-completions as openai-compatible", () => {
-		expect(isOpenAICompatibleApi("openai-completions")).toBe(true);
+		expect(isOpenAICompatibleApi("openai-completions")).toBeTruthy();
 	});
 
 	it("treats openai-responses as openai-compatible", () => {
-		expect(isOpenAICompatibleApi("openai-responses")).toBe(true);
+		expect(isOpenAICompatibleApi("openai-responses")).toBeTruthy();
 	});
 
 	it("treats anthropic api as non-openai-compatible", () => {
-		expect(isOpenAICompatibleApi("anthropic-messages")).toBe(false);
+		expect(isOpenAICompatibleApi("anthropic-messages")).toBeFalsy();
 	});
 });

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
-import { Search, X, FileText } from "lucide-react";
+import { FileText, Search, X } from "lucide-react";
 import { useSearch } from "@/hooks/useSearch";
 
 interface SearchDialogProps {
@@ -22,13 +22,13 @@ export function SearchDialog({ open, onClose }: SearchDialogProps) {
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape" && open) onClose();
+			if (e.key === "Escape" && open) {onClose();}
 		};
 		document.addEventListener("keydown", handleKeyDown);
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [open, onClose]);
 
-	if (!open) return null;
+	if (!open) {return null;}
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
@@ -71,9 +71,7 @@ export function SearchDialog({ open, onClose }: SearchDialogProps) {
 				{/* Results */}
 				<div className="max-h-80 overflow-y-auto">
 					{query.trim() && results.length === 0 && !loading && (
-						<div className="px-4 py-8 text-center text-sm text-zinc-500">
-							No results for "{query}"
-						</div>
+						<div className="px-4 py-8 text-center text-sm text-zinc-500">No results for "{query}"</div>
 					)}
 
 					{results.map((result) => (
@@ -98,8 +96,7 @@ export function SearchDialog({ open, onClose }: SearchDialogProps) {
 
 				{/* Footer hint */}
 				<div className="px-4 py-2 border-t border-zinc-800 text-xs text-zinc-500">
-					Press <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-400 font-mono">Esc</kbd>{" "}
-					to close
+					Press <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-400 font-mono">Esc</kbd> to close
 				</div>
 			</div>
 		</div>

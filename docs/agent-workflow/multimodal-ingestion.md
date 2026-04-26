@@ -1,14 +1,17 @@
 # Multimodal Asset Ingestion (Low-Cost First)
 
 ## Goal
+
 Route image/video tasks through cheaper multimodal models first for extraction and summarization, then escalate to higher-tier workers/models only when confidence, risk, or complexity thresholds require it.
 
 ## Scope
+
 - Inputs: image assets, short/long videos, mixed media bundles.
 - Outputs: structured summary objects consumable by downstream workers.
 - Non-goal: replacing expert review for legal/safety critical decisions.
 
 ## Pipeline Overview
+
 1. **Intake & Classification**
    - Detect `asset_type` (`image`, `video`, `mixed`).
    - Detect `task_intent` (`describe`, `extract_text`, `qa`, `design_feedback`, `compliance_check`, `incident_review`, etc.).
@@ -54,6 +57,7 @@ asset_type?
 ```
 
 ## Cheap-First Routing Rules
+
 - Default route for all image/video tasks: **cheap multimodal tier**.
 - Promote only if one or more conditions are true:
   - `confidence_score < 0.78`
@@ -107,7 +111,9 @@ summary_schema:
 ```
 
 ## Promotion Packet (When Escalating)
+
 When promoting, forward:
+
 - original assets (or secure references),
 - preprocessing artifacts (keyframes/transcript),
 - cheap-pass `summary_schema`,
@@ -117,12 +123,14 @@ When promoting, forward:
 This avoids repeated extraction and preserves cost savings.
 
 ## Acceptance Criteria
+
 - Every multimodal task produces a `summary_schema` object.
 - At least one cheap-pass attempt occurs before premium escalation (except policy bypass).
 - Promotion includes explicit trigger reason.
 - Route metadata logs latency + cost for optimization.
 
 ## Operational Notes
+
 - Use deterministic prompts/templates for cheap model extraction to reduce variability.
 - For long videos, cap first pass to sampled key segments; escalate only if unresolved.
 - Cache reusable artifacts (OCR, transcript, keyframes) per asset hash.

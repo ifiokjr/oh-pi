@@ -1,42 +1,42 @@
 {
-  "name": "@ifi/pi-web-remote",
-  "version": "0.4.4",
-  "description": "Pi extension: /remote command for sharing sessions via web UI.",
-  "type": "module",
-  "keywords": [
-    "pi-package",
-    "pi",
-    "pi-coding-agent",
-    "remote",
-    "web",
-    "session-sharing",
-    "browser"
-  ],
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
-  },
-  "files": [
-    "*.ts",
-    "README.md",
-    "!*.test.ts"
-  ],
-  "license": "MIT",
-  "dependencies": {
-    "@ifi/pi-web-server": "0.4.4"
-  },
-  "peerDependencies": {
-    "@mariozechner/pi-coding-agent": ">=0.56.1",
-    "@sinclair/typebox": "*"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/web-remote"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/web-remote",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  }
+	"name": "@ifi/pi-web-remote",
+	"version": "0.4.4",
+	"description": "Pi extension: /remote command for sharing sessions via web UI.",
+	"keywords": [
+		"browser",
+		"pi",
+		"pi-coding-agent",
+		"pi-package",
+		"remote",
+		"session-sharing",
+		"web"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/web-remote",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/web-remote"
+	},
+	"files": [
+		"*.ts",
+		"README.md",
+		"!*.test.ts"
+	],
+	"type": "module",
+	"dependencies": {
+		"@ifi/pi-web-server": "0.4.4"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-coding-agent": ">=0.56.1",
+		"@sinclair/typebox": "*"
+	},
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	}
 }

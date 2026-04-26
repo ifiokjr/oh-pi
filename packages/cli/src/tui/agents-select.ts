@@ -11,6 +11,7 @@ import { t } from "@ifi/oh-pi-core";
  */
 export async function selectAgents(initialValue?: string): Promise<string> {
 	const agent = await p.select({
+		initialValue,
 		message: t("agent.select"),
 		options: [
 			{ value: "general-developer", label: t("agent.general"), hint: t("agent.generalHint") },
@@ -19,7 +20,6 @@ export async function selectAgents(initialValue?: string): Promise<string> {
 			{ value: "data-ai-engineer", label: t("agent.dataai"), hint: t("agent.dataaiHint") },
 			{ value: "colony-operator", label: t("agent.colony"), hint: t("agent.colonyHint") },
 		],
-		initialValue,
 	});
 	if (p.isCancel(agent)) {
 		p.cancel(t("cancelled"));

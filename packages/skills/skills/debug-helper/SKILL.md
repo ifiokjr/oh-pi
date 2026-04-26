@@ -1,7 +1,6 @@
 ---
 name: debug-helper
-description:
-  Debug assistant for error analysis, log interpretation, and performance profiling. Use when user
+description: Debug assistant for error analysis, log interpretation, and performance profiling. Use when user
   encounters errors, crashes, or performance issues.
 ---
 

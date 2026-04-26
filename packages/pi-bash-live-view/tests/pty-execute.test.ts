@@ -1,10 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-	executePtyCommand,
-	ptyExecuteInternals,
-	toAgentToolResult,
-	toUserBashResult,
-} from "../src/pty-execute.js";
+
+import { executePtyCommand, ptyExecuteInternals, toAgentToolResult, toUserBashResult } from "../src/pty-execute.js";
 import { resetHeadlessModuleLoader, setHeadlessModuleLoader } from "../src/terminal-emulator.js";
 import {
 	PtySessionManager,
@@ -60,7 +55,7 @@ class FakePty {
 	}
 }
 
-describe("PTY execution", () => {
+describe("pTY execution", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
 	});
@@ -78,29 +73,29 @@ describe("PTY execution", () => {
 		const onUpdate = vi.fn();
 		const emulatorWrites: string[] = [];
 		const widget = {
-			update: vi.fn(),
 			dispose: vi.fn(),
+			update: vi.fn(),
 		};
 		const emulator = {
+			dispose: vi.fn(),
+			getPlainText: vi.fn(() => emulatorWrites.join("")),
+			resize: vi.fn(),
+			toAnsiLines: vi.fn(() => (emulatorWrites.length === 0 ? [] : [emulatorWrites.join("")])),
 			write: vi.fn(async (data: string) => {
 				emulatorWrites.push(data);
 			}),
-			resize: vi.fn(),
-			toAnsiLines: vi.fn(() => emulatorWrites.length === 0 ? [] : [emulatorWrites.join("")]),
-			getPlainText: vi.fn(() => emulatorWrites.join("")),
-			dispose: vi.fn(),
 		};
 
 		setNodePtyModuleLoader(async () => ({ spawn }));
 		const manager = new PtySessionManager({ ensureSpawnHelper, now: () => Date.now() });
 		const executionPromise = executePtyCommand({
 			command: "echo hello",
-			cwd: "/workspace/project",
-			onUpdate,
-			ctx: { hasUI: true },
-			sessionManager: manager,
 			createEmulator: async () => emulator,
 			createWidget: () => widget as never,
+			ctx: { hasUI: true },
+			cwd: "/workspace/project",
+			onUpdate,
+			sessionManager: manager,
 		});
 
 		await vi.advanceTimersByTimeAsync(0);
@@ -108,7 +103,7 @@ describe("PTY execution", () => {
 		await vi.advanceTimersByTimeAsync(120);
 		expect(onUpdate).toHaveBeenCalledWith(
 			expect.objectContaining({
-				content: [{ type: "text", text: "hello\n" }],
+				content: [{ text: "hello\n", type: "text" }],
 				details: expect.objectContaining({ partial: true, status: "running" }),
 			}),
 		);
@@ -120,63 +115,60 @@ describe("PTY execution", () => {
 			["-lc", "echo hello"],
 			expect.objectContaining({ cwd: "/workspace/project", name: "xterm-256color" }),
 		);
-		expect(ensureSpawnHelper).toHaveBeenCalledTimes(1);
+		expect(ensureSpawnHelper).toHaveBeenCalledOnce();
 		expect(widget.update).toHaveBeenLastCalledWith(
-			expect.objectContaining({ status: "completed", exitCode: 0, ansiLines: ["hello\n"] }),
+			expect.objectContaining({ ansiLines: ["hello\n"], exitCode: 0, status: "completed" }),
 		);
-		expect(widget.dispose).toHaveBeenCalledTimes(1);
-		expect(emulator.dispose).toHaveBeenCalledTimes(1);
+		expect(widget.dispose).toHaveBeenCalledOnce();
+		expect(emulator.dispose).toHaveBeenCalledOnce();
 		expect(result).toMatchObject({
-			status: "completed",
-			exitCode: 0,
 			cancelled: false,
-			timedOut: false,
+			exitCode: 0,
 			output: "hello\n",
+			status: "completed",
+			timedOut: false,
 		});
 		expect(result.text).toContain("[Exit code: 0]");
 		expect(toAgentToolResult(result)).toMatchObject({ details: { pty: true, sessionId: result.sessionId } });
-		expect(toUserBashResult(result)).toMatchObject({ output: result.text, exitCode: 0, truncated: false });
+		expect(toUserBashResult(result)).toMatchObject({ exitCode: 0, output: result.text, truncated: false });
 	});
 
 	it("marks PTY executions as timed out or cancelled", async () => {
 		const makeSession = () => {
 			let resolveExit!: (value: { exitCode: number | null }) => void;
 			return {
+				resolveExit: (event: { exitCode: number | null }) => resolveExit(event),
 				session: {
-					id: "session-1",
-					pid: 1,
 					command: "cmd",
 					cwd: "/tmp",
-					startedAt: Date.now(),
+					dispose: vi.fn(),
 					endedAt: null,
-					status: "running",
-					stopReason: null,
+					getOutput: () => "",
+					id: "session-1",
+					kill: vi.fn(),
 					onData: vi.fn(() => () => {}),
 					onExit: vi.fn(() => () => {}),
+					pid: 1,
+					resize: vi.fn(),
+					startedAt: Date.now(),
+					status: "running",
+					stopReason: null,
 					whenExited: new Promise<{ exitCode: number | null }>((resolve) => {
 						resolveExit = resolve;
 					}),
-					getOutput: () => "",
-					kill: vi.fn(),
-					resize: vi.fn(),
 					write: vi.fn(),
-					dispose: vi.fn(),
 				},
-				resolveExit: (event: { exitCode: number | null }) => resolveExit(event),
 			};
 		};
 
 		const timedOutSession = makeSession();
 		const timedOutManager = {
-			createSession: vi.fn(async () => timedOutSession.session),
 			closeSession: vi.fn(),
+			createSession: vi.fn(async () => timedOutSession.session),
 			dispose: vi.fn(),
 		};
 		const timedOutPromise = executePtyCommand({
 			command: "sleep 5",
-			cwd: "/tmp",
-			timeout: 1,
-			sessionManager: timedOutManager as never,
 			createEmulator: async () => ({
 				write: async () => {},
 				resize: () => {},
@@ -184,8 +176,11 @@ describe("PTY execution", () => {
 				getPlainText: () => "",
 				dispose: () => {},
 			}),
+			cwd: "/tmp",
+			sessionManager: timedOutManager as never,
+			timeout: 1,
 		});
-		await vi.advanceTimersByTimeAsync(1_000);
+		await vi.advanceTimersByTimeAsync(1000);
 		expect(timedOutSession.session.kill).toHaveBeenCalledWith("timed_out");
 		timedOutSession.resolveExit({ exitCode: null });
 		const timedOut = await timedOutPromise;
@@ -195,16 +190,13 @@ describe("PTY execution", () => {
 
 		const cancelledSession = makeSession();
 		const cancelledManager = {
-			createSession: vi.fn(async () => cancelledSession.session),
 			closeSession: vi.fn(),
+			createSession: vi.fn(async () => cancelledSession.session),
 			dispose: vi.fn(),
 		};
 		const abortController = new AbortController();
 		const cancelledPromise = executePtyCommand({
 			command: "tail -f log",
-			cwd: "/tmp",
-			signal: abortController.signal,
-			sessionManager: cancelledManager as never,
 			createEmulator: async () => ({
 				write: async () => {},
 				resize: () => {},
@@ -212,6 +204,9 @@ describe("PTY execution", () => {
 				getPlainText: () => "",
 				dispose: () => {},
 			}),
+			cwd: "/tmp",
+			sessionManager: cancelledManager as never,
+			signal: abortController.signal,
 		});
 		await Promise.resolve();
 		await Promise.resolve();
@@ -220,7 +215,7 @@ describe("PTY execution", () => {
 		cancelledSession.resolveExit({ exitCode: null });
 		const cancelled = await cancelledPromise;
 		expect(cancelled.status).toBe("cancelled");
-		expect(cancelled.cancelled).toBe(true);
+		expect(cancelled.cancelled).toBeTruthy();
 		expect(cancelled.text).toContain("Command cancelled");
 		expect(ptyExecuteInternals.toExecutionStatus(null, true, false)).toBe("cancelled");
 		expect(ptyExecuteInternals.flushQueuedChunks(["a", "b"])).toBe("ab");
@@ -233,11 +228,6 @@ describe("PTY execution", () => {
 		const setWidget = vi.fn();
 		const executionPromise = executePtyCommand({
 			command: "echo owned",
-			cwd: "/owned",
-			ctx: {
-				hasUI: true,
-				ui: { setWidget },
-			},
 			createEmulator: async () => ({
 				write: async () => {},
 				resize: () => {},
@@ -245,9 +235,14 @@ describe("PTY execution", () => {
 				getPlainText: () => "owned",
 				dispose: () => {},
 			}),
+			ctx: {
+				hasUI: true,
+				ui: { setWidget },
+			},
+			cwd: "/owned",
 		});
 		await vi.waitFor(() => {
-			expect(setWidget).toHaveBeenCalledTimes(1);
+			expect(setWidget).toHaveBeenCalledOnce();
 		});
 		fakePty.emitExit({ exitCode: 0 });
 		const result = await executionPromise;
@@ -269,51 +264,54 @@ describe("PTY execution", () => {
 		setHeadlessModuleLoader(async () => ({ Terminal: MinimalTerminal as never }));
 
 		const defaultSession = {
-			id: "session-default",
-			pid: 1,
 			command: "cmd",
 			cwd: "/tmp",
-			startedAt: Date.now(),
+			dispose: vi.fn(),
 			endedAt: null,
-			status: "running",
-			stopReason: null,
+			getOutput: vi.fn().mockReturnValueOnce(undefined).mockReturnValue(""),
+			id: "session-default",
+			kill: vi.fn(),
 			onData: vi.fn(() => () => {}),
 			onExit: vi.fn(() => () => {}),
-			whenExited: Promise.resolve({ exitCode: 0 }),
-			getOutput: vi.fn().mockReturnValueOnce(undefined).mockReturnValue(""),
-			kill: vi.fn(),
+			pid: 1,
 			resize: vi.fn(),
+			startedAt: Date.now(),
+			status: "running",
+			stopReason: null,
+			whenExited: Promise.resolve({ exitCode: 0 }),
 			write: vi.fn(),
-			dispose: vi.fn(),
 		};
 		const result = await executePtyCommand({
 			command: "echo default",
+			ctx: { hasUI: false },
 			cwd: "/tmp",
 			sessionManager: {
 				createSession: vi.fn(async () => defaultSession as never),
 				closeSession: vi.fn(),
 				dispose: vi.fn(),
 			} as never,
-			ctx: { hasUI: false },
 		});
 		expect(result.output).toBe("");
 
 		const missingEmulatorResult = await executePtyCommand({
 			command: "echo none",
-			cwd: "/tmp",
 			createEmulator: async () => undefined as never,
+			createWidget: () => ({ update: vi.fn(), dispose: vi.fn() }) as never,
+			ctx: { hasUI: true },
+			cwd: "/tmp",
 			sessionManager: {
-				createSession: vi.fn(async () => ({
-					...defaultSession,
-					id: "session-none",
-					whenExited: Promise.resolve({ exitCode: 1 }),
-					getOutput: () => "plain output",
-				}) as never),
+				createSession: vi.fn(
+					async () =>
+						({
+							...defaultSession,
+							id: "session-none",
+							whenExited: Promise.resolve({ exitCode: 1 }),
+							getOutput: () => "plain output",
+						}) as never,
+				),
 				closeSession: vi.fn(),
 				dispose: vi.fn(),
 			} as never,
-			ctx: { hasUI: true },
-			createWidget: () => ({ update: vi.fn(), dispose: vi.fn() } as never),
 		});
 		expect(missingEmulatorResult.status).toBe("failed");
 
@@ -329,7 +327,7 @@ describe("PTY execution", () => {
 		const session = await manager.createSession({ command: "echo test", cwd: "/repo" });
 		const observed: string[] = [];
 		const unsubscribe = session.onData((data) => observed.push(data));
-		const exited: Array<{ exitCode: number | null }> = [];
+		const exited: { exitCode: number | null }[] = [];
 		session.onExit((event) => exited.push(event));
 
 		pty.emitData("chunk-1\n");
@@ -340,8 +338,8 @@ describe("PTY execution", () => {
 		pty.emitExit({ exitCode: 1 });
 		await session.whenExited;
 
-		expect(observed).toEqual(["chunk-1\n"]);
-		expect(exited).toEqual([{ exitCode: 1 }]);
+		expect(observed).toStrictEqual(["chunk-1\n"]);
+		expect(exited).toStrictEqual([{ exitCode: 1 }]);
 		expect(session.getOutput()).toBe("chunk-1\nchunk-2\n");
 		expect(session.status).toBe("failed");
 		expect(session.stopReason).toBeNull();
@@ -352,22 +350,28 @@ describe("PTY execution", () => {
 		manager.closeSession("missing");
 		manager.dispose();
 
-		expect(resolveShellLaunch("pwd", "linux", { SHELL: "/usr/bin/zsh" })).toEqual({ file: "/usr/bin/zsh", args: ["-lc", "pwd"] });
-		expect(resolveShellLaunch("pwd", "linux", {})).toEqual({ file: "/bin/bash", args: ["-lc", "pwd"] });
-		expect(resolveShellLaunch("dir", "win32", { SHELL: "C:/Program Files/Git/bin/bash.exe" })).toEqual({
-			file: "C:/Program Files/Git/bin/bash.exe",
-			args: ["-lc", "dir"],
+		expect(resolveShellLaunch("pwd", "linux", { SHELL: "/usr/bin/zsh" })).toStrictEqual({
+			args: ["-lc", "pwd"],
+			file: "/usr/bin/zsh",
 		});
-		expect(resolveShellLaunch("dir", "win32", { ComSpec: "cmd.exe" })).toEqual({ file: "cmd.exe", args: ["/d", "/s", "/c", "dir"] });
+		expect(resolveShellLaunch("pwd", "linux", {})).toStrictEqual({ args: ["-lc", "pwd"], file: "/bin/bash" });
+		expect(resolveShellLaunch("dir", "win32", { SHELL: "C:/Program Files/Git/bin/bash.exe" })).toStrictEqual({
+			args: ["-lc", "dir"],
+			file: "C:/Program Files/Git/bin/bash.exe",
+		});
+		expect(resolveShellLaunch("dir", "win32", { ComSpec: "cmd.exe" })).toStrictEqual({
+			args: ["/d", "/s", "/c", "dir"],
+			file: "cmd.exe",
+		});
 
-		expect(ptySessionInternals.sanitizeEnv({ FOO: "bar", BAZ: undefined })).toMatchObject({
+		expect(ptySessionInternals.sanitizeEnv({ BAZ: undefined, FOO: "bar" })).toMatchObject({
+			COLORTERM: "truecolor",
 			FOO: "bar",
 			TERM: "xterm-256color",
-			COLORTERM: "truecolor",
 		});
 		expect(ptySessionInternals.toDisposer({ dispose: vi.fn() })).toBeTypeOf("function");
-		expect(ptySessionInternals.toDisposer(() => undefined)).toBeTypeOf("function");
-		expect(ptySessionInternals.toDisposer(undefined)).toBeTypeOf("function");
+		expect(ptySessionInternals.toDisposer(() => {})).toBeTypeOf("function");
+		expect(ptySessionInternals.toDisposer()).toBeTypeOf("function");
 		expect(ptySessionInternals.createSessionStatus("cancelled", null)).toBe("cancelled");
 		expect(ptySessionInternals.createSessionStatus(null, 0)).toBe("completed");
 		expect(ptySessionInternals.createSessionStatus(null, 2)).toBe("failed");
@@ -375,20 +379,20 @@ describe("PTY execution", () => {
 		expect(ptySessionInternals.createSessionStatus("disposed", null)).toBe("disposed");
 
 		const chunks = [
-			{ text: "a", bytes: 1 },
-			{ text: "b", bytes: 1 },
-			{ text: "c", bytes: 1 },
+			{ bytes: 1, text: "a" },
+			{ bytes: 1, text: "b" },
+			{ bytes: 1, text: "c" },
 		];
 		expect(ptySessionInternals.pruneBufferedChunks(chunks, 2, 2)).toBe(2);
-		expect(chunks).toEqual([
-			{ text: "b", bytes: 1 },
-			{ text: "c", bytes: 1 },
+		expect(chunks).toStrictEqual([
+			{ bytes: 1, text: "b" },
+			{ bytes: 1, text: "c" },
 		]);
 
-		const truncated = truncateOutput("one\ntwo\nthree", { maxLines: 2, maxBytes: 100 });
+		const truncated = truncateOutput("one\ntwo\nthree", { maxBytes: 100, maxLines: 2 });
 		expect(truncated.text).toContain("[output truncated");
-		expect(truncateOutput("", { maxLines: 1, maxBytes: 1 }).text).toBe("");
-		expect(truncateOutput("very-long-line", { maxLines: 1, maxBytes: 1 }).text).toContain("[output truncated");
+		expect(truncateOutput("", { maxBytes: 1, maxLines: 1 }).text).toBe("");
+		expect(truncateOutput("very-long-line", { maxBytes: 1, maxLines: 1 }).text).toContain("[output truncated");
 		expect(tailText("1\n2\n3", 2)).toBe("2\n3");
 		expect(tailText("", 2)).toBe("");
 		expect(highlightErrorOutput("ok\nError: failed")).toContain("\u001B[31mError: failed");
@@ -399,15 +403,17 @@ describe("PTY execution", () => {
 		expect(appendExitSummary("body", 0)).toContain("body");
 		expect(appendExitSummary("", 0)).toContain("[Exit code: 0]");
 		expect(truncateInternals.normalizeNewlines("a\r\nb\r")).toBe("a\nb\n");
-		expect(truncateInternals.buildTruncationNotice({
-			truncated: true,
-			totalLines: 3,
-			totalBytes: 9,
-			keptLines: 2,
-			keptBytes: 6,
-			maxLines: 2,
-			maxBytes: 100,
-		})).toContain("kept 2/3 lines");
+		expect(
+			truncateInternals.buildTruncationNotice({
+				keptBytes: 6,
+				keptLines: 2,
+				maxBytes: 100,
+				maxLines: 2,
+				totalBytes: 9,
+				totalLines: 3,
+				truncated: true,
+			}),
+		).toContain("kept 2/3 lines");
 	});
 
 	it("ensures the node-pty spawn-helper is executable when present", async () => {
@@ -426,14 +432,22 @@ describe("PTY execution", () => {
 
 		const candidates = getSpawnHelperCandidates("/tmp/chmod-me");
 		expect(candidates[0]).toBe("/tmp/chmod-me");
-		expect(spawnHelperInternals.uniquePaths(["a", "a", "b"])).toEqual(["a", "b"]);
-		expect(await ensureSpawnHelperExecutable({ explicitPath: "/tmp/chmod-me", accessFn: accessFn as never, chmodFn: chmodFn as never })).toBe("/tmp/chmod-me");
+		expect(spawnHelperInternals.uniquePaths(["a", "a", "b"])).toStrictEqual(["a", "b"]);
+		await expect(ensureSpawnHelperExecutable({
+				explicitPath: "/tmp/chmod-me",
+				accessFn: accessFn as never,
+				chmodFn: chmodFn as never,
+			})).resolves.toBe("/tmp/chmod-me");
 		expect(chmodFn).toHaveBeenCalledWith("/tmp/chmod-me", 0o755);
 		const missingAccess = vi.fn(async () => {
 			throw new Error("missing");
 		});
-		expect(await ensureSpawnHelperExecutable({ explicitPath: "/tmp/missing", accessFn: missingAccess as never, chmodFn: chmodFn as never })).toBeNull();
-		expect(await spawnHelperInternals.isExecutable("/tmp/chmod-me", missingAccess as never)).toBe(false);
+		await expect(ensureSpawnHelperExecutable({
+				explicitPath: "/tmp/missing",
+				accessFn: missingAccess as never,
+				chmodFn: chmodFn as never,
+			})).resolves.toBeNull();
+		await expect(spawnHelperInternals.isExecutable("/tmp/chmod-me", missingAccess as never)).resolves.toBeFalsy();
 		await ensureSpawnHelperExecutable();
 	});
 
@@ -443,13 +457,13 @@ describe("PTY execution", () => {
 		vi.resetModules();
 		Object.defineProperty(process, "platform", { configurable: true, value: "win32" });
 		const win32Module = await import("../src/spawn-helper.js");
-		expect(await win32Module.ensureSpawnHelperExecutable({ explicitPath: "C:/spawn-helper.exe" })).toBe(
+		await expect(win32Module.ensureSpawnHelperExecutable({ explicitPath: "C:/spawn-helper.exe" })).resolves.toBe(
 			"C:/spawn-helper.exe",
 		);
 		process.env.NODE_PTY_SPAWN_HELPER = "C:/env-helper.exe";
-		expect(await win32Module.ensureSpawnHelperExecutable()).toBe("C:/env-helper.exe");
+		await expect(win32Module.ensureSpawnHelperExecutable()).resolves.toBe("C:/env-helper.exe");
 		delete process.env.NODE_PTY_SPAWN_HELPER;
-		expect(await win32Module.ensureSpawnHelperExecutable()).toBeNull();
+		await expect(win32Module.ensureSpawnHelperExecutable()).resolves.toBeNull();
 		if (originalHelper) {
 			process.env.NODE_PTY_SPAWN_HELPER = originalHelper;
 		} else {

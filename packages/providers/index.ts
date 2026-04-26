@@ -1,4 +1,4 @@
-/* c8 ignore file */
+/* C8 ignore file */
 import * as sharedQna from "@ifi/pi-shared-qna";
 import type {
 	ExtensionAPI,
@@ -12,21 +12,17 @@ import {
 	refreshProviderCredential,
 	refreshProviderCredentialModels,
 } from "./auth.js";
-import {
-	getCatalogModels,
-	getCredentialModels,
-	type ProviderCatalogCredentials,
-	type ProviderCatalogModel,
-	resolveProviderModels,
-} from "./catalog.js";
-import { getEnvApiKey, resolveApiKeyConfig, SUPPORTED_PROVIDERS, type SupportedProviderDefinition } from "./config.js";
+import { getCatalogModels, getCredentialModels, resolveProviderModels } from './catalog.js';
+import type { ProviderCatalogCredentials, ProviderCatalogModel } from './catalog.js';
+import { getEnvApiKey, resolveApiKeyConfig, SUPPORTED_PROVIDERS } from './config.js';
+import type { SupportedProviderDefinition } from './config.js';
 
-type ScrollSelectOption<T> = {
+interface ScrollSelectOption<T> {
 	value: T;
 	label: string;
-};
+}
 
-type ProviderScrollableSelectConfig<T> = {
+interface ProviderScrollableSelectConfig<T> {
 	title: string;
 	options: ScrollSelectOption<T>[];
 	footerHint?: string;
@@ -39,47 +35,47 @@ type ProviderScrollableSelectConfig<T> = {
 	maxVisibleOptions?: number;
 	overlayWidth?: string;
 	overlayMaxHeight?: string;
-};
+}
 
 type ProviderAuthReader = Pick<ExtensionContext["modelRegistry"]["authStorage"], "get">;
 type ProviderAuthWriter = Pick<ExtensionContext["modelRegistry"]["authStorage"], "get" | "set">;
 
-type ProviderModelRegistry = {
+interface ProviderModelRegistry {
 	authStorage: ProviderAuthWriter;
 	refresh?: ExtensionContext["modelRegistry"]["refresh"];
 	registerProvider: ExtensionContext["modelRegistry"]["registerProvider"];
-};
+}
 
-type ProviderRegistrar = {
+interface ProviderRegistrar {
 	registerProvider(name: string, config: ProviderConfig): void;
-};
+}
 
-type ProviderRegistryContext = {
+interface ProviderRegistryContext {
 	modelRegistry: ProviderModelRegistry;
-};
+}
 
-type ProviderCommandContext = {
+interface ProviderCommandContext {
 	modelRegistry: ProviderModelRegistry;
 	ui: Pick<ExtensionCommandContext["ui"], "custom" | "notify" | "select" | "input">;
-};
+}
 
-type ProviderStatusContext = {
+interface ProviderStatusContext {
 	modelRegistry: {
 		authStorage: ProviderAuthReader;
 	};
-};
+}
 
-type RuntimeProviderState = {
+interface RuntimeProviderState {
 	models: Map<string, ProviderCatalogModel[]>;
 	lastRefresh: Map<string, number>;
 	lastError: Map<string, string | null>;
 	registered: Set<string>;
-};
+}
 
 const runtimeState: RuntimeProviderState = {
-	models: new Map(),
-	lastRefresh: new Map(),
 	lastError: new Map(),
+	lastRefresh: new Map(),
+	models: new Map(),
 	registered: new Set(),
 };
 
@@ -88,8 +84,8 @@ function registerProvider(registrar: ProviderRegistrar, provider: SupportedProvi
 		api: provider.api,
 		apiKey: resolveApiKeyConfig(provider),
 		baseUrl: provider.baseUrl,
-		oauth: createApiKeyOAuthProvider(provider),
 		models: toProviderModels(runtimeState.models.get(provider.id) ?? []),
+		oauth: createApiKeyOAuthProvider(provider),
 	});
 	runtimeState.registered.add(provider.id);
 }
@@ -98,7 +94,7 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 	const providersCommand = {
 		description:
 			"Inspect, log in to, or refresh the OpenCode-backed multi-provider catalog: /providers, /providers:status, /providers:list [query], /providers:info <provider>, /providers:models <provider>, /providers:login [provider], /providers:refresh-models [provider|all]",
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This explicit command router keeps each provider subcommand readable.
+		// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This explicit command router keeps each provider subcommand readable.
 		async handler(args: string, ctx: ExtensionCommandContext) {
 			const trimmed = args.trim();
 			const [rawAction = "status", ...rest] = trimmed ? trimmed.split(/\s+/) : ["status"];
@@ -165,28 +161,28 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 
 	pi.registerCommand("providers", providersCommand);
 
-	const aliases: Array<{ name: string; subcommand: string; description: string }> = [
-		{ name: "providers:status", subcommand: "status", description: "Show multi-provider catalog status." },
-		{ name: "providers:list", subcommand: "list", description: "List supported providers and environment variables." },
+	const aliases: { name: string; subcommand: string; description: string }[] = [
+		{ description: "Show multi-provider catalog status.", name: "providers:status", subcommand: "status" },
+		{ description: "List supported providers and environment variables.", name: "providers:list", subcommand: "list" },
 		{
+			description: "Open the provider picker and log in with an API key.",
 			name: "providers:login",
 			subcommand: "login",
-			description: "Open the provider picker and log in with an API key.",
 		},
 		{
+			description: "Inspect one provider's API mode, URLs, env vars, and model count.",
 			name: "providers:info",
 			subcommand: "info",
-			description: "Inspect one provider's API mode, URLs, env vars, and model count.",
 		},
 		{
+			description: "List the current or fallback model catalog for one provider.",
 			name: "providers:models",
 			subcommand: "models",
-			description: "List the current or fallback model catalog for one provider.",
 		},
 		{
+			description: "Refresh configured providers from live discovery when possible.",
 			name: "providers:refresh-models",
 			subcommand: "refresh-models",
-			description: "Refresh configured providers from live discovery when possible.",
 		},
 	];
 
@@ -199,25 +195,25 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 	}
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Refresh handling branches clearly by stored credential vs env configuration paths.
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Refresh handling branches clearly by stored credential vs env configuration paths.
 async function refreshProviders(
 	registrar: ProviderRegistrar,
 	ctx: ProviderRegistryContext,
 	providers: readonly SupportedProviderDefinition[],
 ): Promise<
-	Array<{
+	{
 		provider: SupportedProviderDefinition;
 		status: "refreshed" | "skipped" | "failed";
 		models: number;
 		error?: string;
-	}>
+	}[]
 > {
-	const results: Array<{
+	const results: {
 		provider: SupportedProviderDefinition;
 		status: "refreshed" | "skipped" | "failed";
 		models: number;
 		error?: string;
-	}> = [];
+	}[] = [];
 
 	for (const provider of providers) {
 		const credential = getStoredCredential(ctx, provider.id);
@@ -232,14 +228,14 @@ async function refreshProviders(
 				runtimeState.lastRefresh.set(provider.id, refreshed.lastModelRefresh ?? Date.now());
 				runtimeState.lastError.set(provider.id, null);
 				registerProvider(registrar, provider);
-				results.push({ provider, status: "refreshed", models: getCredentialModels(refreshed).length });
+				results.push({ models: getCredentialModels(refreshed).length, provider, status: "refreshed" });
 				continue;
 			} catch (error) {
 				results.push({
+					error: error instanceof Error ? error.message : String(error),
+					models: getCredentialModels(credential).length,
 					provider,
 					status: "failed",
-					models: getCredentialModels(credential).length,
-					error: error instanceof Error ? error.message : String(error),
 				});
 				continue;
 			}
@@ -247,7 +243,7 @@ async function refreshProviders(
 
 		const apiKey = getEnvApiKey(provider);
 		if (!apiKey) {
-			results.push({ provider, status: "skipped", models: runtimeState.models.get(provider.id)?.length ?? 0 });
+			results.push({ models: runtimeState.models.get(provider.id)?.length ?? 0, provider, status: "skipped" });
 			continue;
 		}
 
@@ -259,16 +255,16 @@ async function refreshProviders(
 			runtimeState.lastRefresh.set(provider.id, Date.now());
 			runtimeState.lastError.set(provider.id, null);
 			registerProvider(registrar, provider);
-			results.push({ provider, status: "refreshed", models: models.length });
+			results.push({ models: models.length, provider, status: "refreshed" });
 		} catch (error) {
 			runtimeState.lastRefresh.set(provider.id, Date.now());
 			runtimeState.lastError.set(provider.id, error instanceof Error ? error.message : String(error));
 			registerProvider(registrar, provider);
 			results.push({
+				error: error instanceof Error ? error.message : String(error),
+				models: runtimeState.models.get(provider.id)?.length ?? 0,
 				provider,
 				status: "failed",
-				models: runtimeState.models.get(provider.id)?.length ?? 0,
-				error: error instanceof Error ? error.message : String(error),
 			});
 		}
 	}
@@ -321,7 +317,7 @@ async function renderProviderInfo(provider: SupportedProviderDefinition, ctx: Pr
 	const credential = getStoredCredential(ctx, provider.id);
 	const currentModels = credential ? getCredentialModels(credential) : (runtimeState.models.get(provider.id) ?? []);
 	const catalogModels = currentModels.length > 0 ? currentModels : await getCatalogModels(provider).catch(() => []);
-	const source = credential ? "login" : getEnvApiKey(provider) ? "env" : "not configured";
+	const source = credential ? "login" : (getEnvApiKey(provider) ? "env" : "not configured");
 	const refreshedAt = credential?.lastModelRefresh ?? runtimeState.lastRefresh.get(provider.id);
 
 	return [
@@ -361,12 +357,12 @@ async function renderProviderModels(
 }
 
 function renderRefreshSummary(
-	results: ReadonlyArray<{
+	results: readonly {
 		provider: SupportedProviderDefinition;
 		status: "refreshed" | "skipped" | "failed";
 		models: number;
 		error?: string;
-	}>,
+	}[],
 	total: number,
 ): string {
 	const refreshed = results.filter((result) => result.status === "refreshed");
@@ -438,9 +434,11 @@ async function selectProviderFromOverlay(
 ): Promise<SupportedProviderDefinition | null> {
 	const options = buildProviderPickerOptions(providers, ctx);
 	return await openProviderScrollableSelect(ctx.ui, {
-		title: `Select provider to log in (${providers.length} total)`,
-		options,
 		footerHint: typeof ctx.ui.input === "function" ? "type / to search" : undefined,
+		maxVisibleOptions: 12,
+		options,
+		overlayMaxHeight: "75%",
+		overlayWidth: "80%",
 		search:
 			typeof ctx.ui.input === "function"
 				? {
@@ -458,9 +456,7 @@ async function selectProviderFromOverlay(
 						},
 					}
 				: undefined,
-		maxVisibleOptions: 12,
-		overlayWidth: "80%",
-		overlayMaxHeight: "75%",
+		title: `Select provider to log in (${providers.length} total)`,
 	});
 }
 
@@ -482,6 +478,12 @@ async function openProviderScrollableSelect<T>(
 	}
 	return await ui.custom(
 		(_tui, _theme, _keybindings, _done) => ({
+			dispose() {
+				// No-op fallback cleanup.
+			},
+			handleInput() {
+				// Fallback picker relies on the surrounding ui.custom implementation.
+			},
 			invalidate() {
 				// No-op fallback invalidation.
 			},
@@ -492,19 +494,13 @@ async function openProviderScrollableSelect<T>(
 					...config.options.slice(0, config.maxVisibleOptions ?? 12).map((option) => `- ${option.label}`),
 				].map((line) => line.slice(0, width));
 			},
-			handleInput() {
-				// Fallback picker relies on the surrounding ui.custom implementation.
-			},
-			dispose() {
-				// No-op fallback cleanup.
-			},
 		}),
 		{
 			overlay: true,
 			overlayOptions: {
 				anchor: "center",
-				width: (config.overlayWidth ?? "80%") as never,
 				maxHeight: (config.overlayMaxHeight ?? "75%") as never,
+				width: (config.overlayWidth ?? "80%") as never,
 			},
 		},
 	);
@@ -515,13 +511,13 @@ function buildProviderPickerOptions(
 	ctx: ProviderStatusContext,
 ): ScrollSelectOption<SupportedProviderDefinition>[] {
 	return providers.map((provider) => ({
-		value: provider,
 		label: formatProviderPickerOption(provider, ctx),
+		value: provider,
 	}));
 }
 
 function formatProviderPickerOption(provider: SupportedProviderDefinition, ctx: ProviderStatusContext): string {
-	const state = hasStoredCredential(ctx, provider.id) ? "✓ logged in" : getEnvApiKey(provider) ? "env key" : "login";
+	const state = hasStoredCredential(ctx, provider.id) ? "✓ logged in" : (getEnvApiKey(provider) ? "env key" : "login");
 	return `${provider.name} — ${provider.id} · ${state}`;
 }
 
@@ -563,9 +559,9 @@ async function loginProviderFromCommand(
 }
 
 function promptProviderInput(ctx: ProviderCommandContext, title: string, placeholder?: string): Promise<string> {
-	const input = ctx.ui.input;
+	const {input} = ctx.ui;
 	if (typeof input !== "function") {
-		throw new Error("Interactive input is unavailable for provider login.");
+		throw new TypeError("Interactive input is unavailable for provider login.");
 	}
 	return input(title, placeholder).then((value) => value ?? "");
 }
@@ -573,9 +569,9 @@ function promptProviderInput(ctx: ProviderCommandContext, title: string, placeho
 function toProviderModels(models: readonly ProviderCatalogModel[]): ProviderCatalogModel[] {
 	return models.map((model) => ({
 		...model,
-		input: [...model.input],
-		cost: { ...model.cost },
 		compat: model.compat ? { ...model.compat } : undefined,
+		cost: { ...model.cost },
+		input: [...model.input],
 	}));
 }
 
@@ -611,8 +607,8 @@ function bootstrapProviders(pi: ExtensionAPI): void {
 		{
 			modelRegistry: {
 				authStorage: {
-					get: () => undefined,
-					set: () => undefined,
+					get: () => {},
+					set: () => {},
 				},
 				registerProvider: pi.registerProvider.bind(pi),
 			},

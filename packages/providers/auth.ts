@@ -1,14 +1,16 @@
 import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "@mariozechner/pi-ai";
-import { getCredentialModels, type ProviderCatalogCredentials, resolveProviderModels } from "./catalog.js";
-import { getEnvApiKey, STATIC_CREDENTIAL_TTL_MS, type SupportedProviderDefinition } from "./config.js";
+import { getCredentialModels, resolveProviderModels } from './catalog.js';
+import type { ProviderCatalogCredentials } from './catalog.js';
+import { getEnvApiKey, STATIC_CREDENTIAL_TTL_MS } from './config.js';
+import type { SupportedProviderDefinition } from './config.js';
 
 export async function loginProvider(
 	provider: SupportedProviderDefinition,
 	callbacks: OAuthLoginCallbacks,
 ): Promise<ProviderCatalogCredentials> {
 	callbacks.onAuth({
-		url: provider.authUrl,
 		instructions: `Create or copy a ${provider.name} API key, then paste it back into pi.`,
+		url: provider.authUrl,
 	});
 	callbacks.onProgress?.(`Waiting for a ${provider.name} API key...`);
 
@@ -33,8 +35,8 @@ export function refreshProviderCredential(
 	options: { preserveModels?: boolean; signal?: AbortSignal } = {},
 ): Promise<ProviderCatalogCredentials> {
 	return enrichProviderCredentials(provider, createStaticCredential(credentials.access), {
-		signal: options.signal,
 		previous: options.preserveModels === false ? undefined : (credentials as ProviderCatalogCredentials),
+		signal: options.signal,
 	});
 }
 
@@ -53,30 +55,26 @@ export async function enrichProviderCredentials(
 	options: { previous?: ProviderCatalogCredentials; signal?: AbortSignal } = {},
 ): Promise<ProviderCatalogCredentials> {
 	const models = await resolveProviderModels(provider, credentials.access, {
-		signal: options.signal,
 		previous: options.previous?.models,
+		signal: options.signal,
 	}).catch(() => (options.previous?.models ? getCredentialModels(options.previous) : []));
 
 	return {
 		...options.previous,
 		...credentials,
-		providerId: provider.id,
-		models,
 		lastModelRefresh: Date.now(),
+		models,
+		providerId: provider.id,
 	};
 }
 
 export function createApiKeyOAuthProvider(provider: SupportedProviderDefinition): Omit<OAuthProviderInterface, "id"> {
 	return {
-		name: `${provider.name} (experimental)`,
-		login(callbacks) {
-			return loginProvider(provider, callbacks);
-		},
-		refreshToken(credentials) {
-			return refreshProviderCredential(provider, credentials);
-		},
 		getApiKey(credentials) {
 			return credentials.access;
+		},
+		login(callbacks) {
+			return loginProvider(provider, callbacks);
 		},
 		modifyModels(models, credentials) {
 			const current = getCredentialModels(credentials as ProviderCatalogCredentials);
@@ -90,13 +88,17 @@ export function createApiKeyOAuthProvider(provider: SupportedProviderDefinition)
 				})),
 			];
 		},
+		name: `${provider.name} (experimental)`,
+		refreshToken(credentials) {
+			return refreshProviderCredential(provider, credentials);
+		},
 	};
 }
 
 function createStaticCredential(apiKey: string): OAuthCredentials {
 	return {
-		refresh: apiKey,
 		access: apiKey,
 		expires: Date.now() + STATIC_CREDENTIAL_TTL_MS,
+		refresh: apiKey,
 	};
 }

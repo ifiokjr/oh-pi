@@ -1,3 +1,3 @@
-# __PROJECT_TITLE__
+# **PROJECT_TITLE**
 
-Welcome to the __PROJECT_NAME__ documentation.
+Welcome to the **PROJECT_NAME** documentation.

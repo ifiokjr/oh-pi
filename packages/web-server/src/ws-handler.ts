@@ -39,7 +39,7 @@ let clientCounter = 0;
 
 export function handleWebSocketConnection(ws: WebSocket, options: WsHandlerOptions): WsSession {
 	const clientId = `client-${++clientCounter}`;
-	const session: WsSession = { ws, clientId, authenticated: false };
+	const session: WsSession = { authenticated: false, clientId, ws };
 
 	let unsubscribeEvents: (() => void) | undefined;
 
@@ -49,13 +49,13 @@ export function handleWebSocketConnection(ws: WebSocket, options: WsHandlerOptio
 		}
 	};
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: protocol handling branches by auth state and command type.
+	// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: protocol handling branches by auth state and command type.
 	ws.on("message", async (raw) => {
 		let msg: Record<string, unknown>;
 		try {
 			msg = JSON.parse(raw.toString());
 		} catch {
-			send({ type: "error", error: "Invalid JSON" });
+			send({ error: "Invalid JSON", type: "error" });
 			return;
 		}
 
@@ -75,7 +75,6 @@ export function handleWebSocketConnection(ws: WebSocket, options: WsHandlerOptio
 					}
 
 					send({
-						type: "auth_ok",
 						instanceId: options.instanceId,
 						session: agentSession
 							? {
@@ -85,14 +84,15 @@ export function handleWebSocketConnection(ws: WebSocket, options: WsHandlerOptio
 									thinkingLevel: agentSession.thinkingLevel,
 								}
 							: null,
+						type: "auth_ok",
 					});
 					options.onClientConnect?.(clientId);
 				} else {
-					send({ type: "auth_error", reason: "invalid_token" });
+					send({ reason: "invalid_token", type: "auth_error" });
 					ws.close(4001, "Invalid token");
 				}
 			} else {
-				send({ type: "auth_error", reason: "auth_required" });
+				send({ reason: "auth_required", type: "auth_error" });
 				ws.close(4001, "Auth required");
 			}
 			return;
@@ -102,18 +102,18 @@ export function handleWebSocketConnection(ws: WebSocket, options: WsHandlerOptio
 		const agentSession = options.getSession();
 
 		if (!agentSession) {
-			send({ type: "response", command: msg.type, success: false, error: "No session attached", id: msg.id });
+			send({ command: msg.type, error: "No session attached", id: msg.id, success: false, type: "response" });
 			return;
 		}
 
 		try {
 			await dispatchCommand(msg, agentSession, send);
-		} catch (err) {
+		} catch (error) {
 			send({
 				type: "response",
 				command: msg.type,
 				success: false,
-				error: err instanceof Error ? err.message : String(err),
+				error: error instanceof Error ? error.message : String(error),
 				id: msg.id,
 			});
 		}
@@ -138,7 +138,7 @@ async function dispatchCommand(
 	agentSession: AgentSessionLike,
 	send: (data: unknown) => void,
 ): Promise<void> {
-	const id = msg.id;
+	const {id} = msg;
 	const respond = (data: Record<string, unknown>) => send({ type: "response", ...data, id });
 
 	switch (msg.type) {
@@ -176,15 +176,15 @@ async function dispatchCommand(
 		case "get_state": {
 			respond({
 				command: "get_state",
-				success: true,
 				data: {
-					model: agentSession.model,
-					thinkingLevel: agentSession.thinkingLevel,
 					isStreaming: agentSession.isStreaming,
-					sessionId: agentSession.sessionId,
-					sessionFile: agentSession.sessionFile,
 					messageCount: agentSession.messages.length,
+					model: agentSession.model,
+					sessionFile: agentSession.sessionFile,
+					sessionId: agentSession.sessionId,
+					thinkingLevel: agentSession.thinkingLevel,
 				},
+				success: true,
 			});
 			break;
 		}
@@ -192,8 +192,8 @@ async function dispatchCommand(
 		case "get_messages": {
 			respond({
 				command: "get_messages",
-				success: true,
 				data: { messages: agentSession.messages },
+				success: true,
 			});
 			break;
 		}
@@ -206,24 +206,24 @@ async function dispatchCommand(
 
 		case "compact": {
 			const result = await agentSession.compact(msg.customInstructions as string | undefined);
-			respond({ command: "compact", success: true, data: result });
+			respond({ command: "compact", data: result, success: true });
 			break;
 		}
 
 		case "new_session": {
 			const result = await agentSession.newSession();
-			respond({ command: "new_session", success: true, data: result });
+			respond({ command: "new_session", data: result, success: true });
 			break;
 		}
 
 		case "extension_ui_response": {
 			// These are relayed back into the session — the session handles them
-			// via its internal extension UI protocol
+			// Via its internal extension UI protocol
 			break;
 		}
 
 		default: {
-			respond({ command: msg.type as string, success: false, error: `Unknown command: ${msg.type}` });
+			respond({ command: msg.type as string, error: `Unknown command: ${msg.type}`, success: false });
 		}
 	}
 }

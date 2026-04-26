@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { buildPiCommand, buildRemotePtyEnv, createPtyProcess, type CreatePtyProcessOptions } from "./pty.js";
+import { buildPiCommand, buildRemotePtyEnv, createPtyProcess } from './pty.js';
+import type { CreatePtyProcessOptions } from './pty.js';
 
 export interface CliOptions {
 	args: string[];
@@ -71,8 +72,8 @@ Options:
 
 export function buildSpawnOptions(options: CliOptions, env: NodeJS.ProcessEnv = process.env): CreatePtyProcessOptions {
 	return {
-		command: options.command,
 		args: options.args,
+		command: options.command,
 		cwd: options.cwd,
 		env: buildRemotePtyEnv(env),
 	};
@@ -112,8 +113,8 @@ export async function main(
 	}
 }
 
-/* v8 ignore next 6 -- covered by the real Node.js CLI entrypoint, not the in-process test harness. */
-const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+/* V8 ignore next 6 -- covered by the real Node.js CLI entrypoint, not the in-process test harness. */
+const isMain = process.argv[1] && import.meta.filename === process.argv[1];
 
 if (isMain) {
 	void main().then((exitCode) => {

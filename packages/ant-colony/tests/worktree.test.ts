@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+
 import { prepareColonyWorkspace, resumeColonyWorkspace } from "../extensions/ant-colony/worktree.js";
 import { getManagedWorktreeParentDir } from "../extensions/ant-colony/worktree-registry.js";
 
@@ -22,7 +22,7 @@ function initRepo(dir: string): void {
 	execFileSync("git", ["-C", dir, "init"], { stdio: "pipe" });
 	execFileSync("git", ["-C", dir, "config", "user.name", "Test Bot"], { stdio: "pipe" });
 	execFileSync("git", ["-C", dir, "config", "user.email", "test@example.com"], { stdio: "pipe" });
-	fs.writeFileSync(path.join(dir, "README.md"), "# temp\n", "utf-8");
+	fs.writeFileSync(path.join(dir, "README.md"), "# temp\n", "utf8");
 	execFileSync("git", ["-C", dir, "add", "."], { stdio: "pipe" });
 	execFileSync("git", ["-C", dir, "commit", "-m", "init"], { stdio: "pipe" });
 }
@@ -30,9 +30,9 @@ function initRepo(dir: string): void {
 afterEach(() => {
 	for (const dir of tmpDirs.splice(0)) {
 		try {
-			fs.rmSync(dir, { recursive: true, force: true });
+			fs.rmSync(dir, { force: true, recursive: true });
 		} catch {
-			/* ignore */
+			/* Ignore */
 		}
 	}
 });
@@ -54,20 +54,20 @@ describe("worktree workspace isolation", () => {
 
 		const workspace = prepareColonyWorkspace({
 			cwd: repo,
-			runtimeId: "c2",
 			goal: "Implement footer polish",
+			runtimeId: "c2",
 			storageOptions,
 		});
 		expect(workspace.mode).toBe("worktree");
-		expect(workspace.worktreeRoot).toBeTruthy();
+		expect(workspace.worktreeRoot).toBe(true);
 		expect(workspace.executionCwd).not.toBe(repo);
-		expect(fs.existsSync(workspace.executionCwd)).toBe(true);
-		expect(workspace.worktreeRoot?.startsWith(getManagedWorktreeParentDir(repo))).toBe(true);
-		expect(workspace.managedByPi).toBe(true);
+		expect(fs.existsSync(workspace.executionCwd)).toBeTruthy();
+		expect(workspace.worktreeRoot?.startsWith(getManagedWorktreeParentDir(repo))).toBeTruthy();
+		expect(workspace.managedByPi).toBeTruthy();
 		expect(workspace.purpose).toContain("Implement footer polish");
 
 		const branch = execFileSync("git", ["-C", workspace.executionCwd, "rev-parse", "--abbrev-ref", "HEAD"], {
-			encoding: "utf-8",
+			encoding: "utf8",
 			stdio: ["ignore", "pipe", "pipe"],
 		}).trim();
 		expect(branch).toBe(workspace.branch);
@@ -78,7 +78,7 @@ describe("worktree workspace isolation", () => {
 		const storageOptions = sharedStorageOptions();
 		initRepo(repo);
 
-		const initial = prepareColonyWorkspace({ cwd: repo, runtimeId: "c3", goal: "Resume worktree", storageOptions });
+		const initial = prepareColonyWorkspace({ cwd: repo, goal: "Resume worktree", runtimeId: "c3", storageOptions });
 		expect(initial.mode).toBe("worktree");
 
 		const resumed = resumeColonyWorkspace({ cwd: repo, runtimeId: "c4", savedWorkspace: initial, storageOptions });

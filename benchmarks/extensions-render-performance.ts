@@ -3,15 +3,15 @@ import { performance } from "node:perf_hooks";
 
 function makeAssistantMessage(input, output, cost) {
 	return {
-		type: "message",
 		message: {
 			role: "assistant",
 			usage: {
+				cost: { total: cost },
 				input,
 				output,
-				cost: { total: cost },
 			},
 		},
+		type: "message",
 	};
 }
 
@@ -34,7 +34,7 @@ function scanBranch(branch) {
 			cost += entry.message.usage.cost.total;
 		}
 	}
-	return { input, output, cost };
+	return { cost, input, output };
 }
 
 function renderFromCached(cached) {
@@ -48,14 +48,14 @@ function time(label, fn, iterations) {
 	}
 	const durationMs = performance.now() - start;
 	return {
-		label,
-		iterations,
-		totalMs: durationMs,
 		avgMs: durationMs / iterations,
+		iterations,
+		label,
+		totalMs: durationMs,
 	};
 }
 
-const sizes = [100, 1_000, 10_000, 50_000];
+const sizes = [100, 1000, 10_000, 50_000];
 const renders = 250;
 
 console.log(`Comparing full-branch footer scans vs cached footer reads (${renders} renders each)\n`);

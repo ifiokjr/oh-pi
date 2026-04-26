@@ -1,7 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { create, fromBinary, fromJson, toBinary, toJson, type JsonValue } from "@bufbuild/protobuf";
+import { create, fromBinary, fromJson, toBinary, toJson } from '@bufbuild/protobuf';
+import type { JsonValue } from '@bufbuild/protobuf';
 import { ValueSchema } from "@bufbuild/protobuf/wkt";
 import type { Context, Message, ToolResultMessage } from "@mariozechner/pi-ai";
+import type {
+	GetBlobArgs} from "./proto/agent_pb.js";
 import {
 	AgentClientMessageSchema,
 	AgentConversationTurnStructureSchema,
@@ -13,7 +16,6 @@ import {
 	ConversationTurnStructureSchema,
 	ConversationStepSchema,
 	ExecClientMessageSchema,
-	GetBlobArgs,
 	GetBlobResultSchema,
 	KvClientMessageSchema,
 	type KvServerMessage,
@@ -48,7 +50,7 @@ export interface PendingExec {
 export interface ParsedCursorConversation {
 	systemPrompt: string;
 	userText: string;
-	turns: Array<{ userText: string; assistantText: string }>;
+	turns: { userText: string; assistantText: string }[];
 	trailingToolResults: ToolResultInfo[];
 	seed: string;
 }
@@ -60,29 +62,29 @@ export interface CursorRequestPayload {
 }
 
 export function parseCursorConversation(context: Context): ParsedCursorConversation {
-	const messages = context.messages;
+	const {messages} = context;
 	const trailingToolResults: ToolResultInfo[] = [];
 	let cutoff = messages.length;
 	while (cutoff > 0 && messages[cutoff - 1]?.role === "toolResult") {
 		const toolMessage = messages[cutoff - 1] as ToolResultMessage;
 		trailingToolResults.unshift({
-			toolCallId: toolMessage.toolCallId,
-			toolName: toolMessage.toolName,
 			content: flattenBlocks(toolMessage.content),
 			isError: toolMessage.isError,
+			toolCallId: toolMessage.toolCallId,
+			toolName: toolMessage.toolName,
 		});
 		cutoff -= 1;
 	}
 
 	const transcript = messages.slice(0, cutoff);
-	const turns: Array<{ userText: string; assistantText: string }> = [];
+	const turns: { userText: string; assistantText: string }[] = [];
 	let pendingUser = "";
 	let pendingAssistant = "";
 
 	for (const message of transcript) {
 		if (message.role === "user") {
 			if (pendingUser) {
-				turns.push({ userText: pendingUser, assistantText: pendingAssistant.trim() });
+				turns.push({ assistantText: pendingAssistant.trim(), userText: pendingUser });
 				pendingAssistant = "";
 			}
 			pendingUser = flattenUserMessage(message);
@@ -101,7 +103,7 @@ export function parseCursorConversation(context: Context): ParsedCursorConversat
 	if (pendingUser) {
 		userText = pendingUser;
 		if (pendingAssistant.trim()) {
-			turns.push({ userText: pendingUser, assistantText: pendingAssistant.trim() });
+			turns.push({ assistantText: pendingAssistant.trim(), userText: pendingUser });
 			userText = "";
 		}
 	}
@@ -109,11 +111,11 @@ export function parseCursorConversation(context: Context): ParsedCursorConversat
 	const systemPrompt = context.systemPrompt?.trim() || "You are a helpful assistant.";
 	const seed = `${systemPrompt}\n${turns.map((turn) => `${turn.userText}\n${turn.assistantText}`).join("\n")}\n${userText}`;
 	return {
-		systemPrompt,
-		userText: userText.trim(),
-		turns,
-		trailingToolResults,
 		seed,
+		systemPrompt,
+		trailingToolResults,
+		turns,
+		userText: userText.trim(),
 	};
 }
 
@@ -122,16 +124,17 @@ export function buildMcpToolDefinitions(tools: Context["tools"]): McpToolDefinit
 		return [];
 	}
 	return tools.map((tool) => {
-		const schema = tool.parameters && typeof tool.parameters === "object"
-			? (tool.parameters as JsonValue)
-			: ({ type: "object", properties: {}, required: [] } as JsonValue);
+		const schema =
+			tool.parameters && typeof tool.parameters === "object"
+				? (tool.parameters as JsonValue)
+				: ({ properties: {}, required: [], type: "object" } as JsonValue);
 		const inputSchema = toBinary(ValueSchema, fromJson(ValueSchema, schema));
 		return create(McpToolDefinitionSchema, {
-			name: tool.name,
 			description: tool.description || "",
+			inputSchema,
+			name: tool.name,
 			providerIdentifier: "pi",
 			toolName: tool.name,
-			inputSchema,
 		});
 	});
 }
@@ -144,7 +147,7 @@ export function buildCursorRequestPayload(options: {
 	conversationState?: ConversationStateRecord;
 }): CursorRequestPayload {
 	const blobStore = new Map<string, Uint8Array>(options.conversationState?.blobStore ?? []);
-	const systemJson = JSON.stringify({ role: "system", content: options.parsed.systemPrompt });
+	const systemJson = JSON.stringify({ content: options.parsed.systemPrompt, role: "system" });
 	const systemBytes = new TextEncoder().encode(systemJson);
 	const systemBlobId = new Uint8Array(createHash("sha256").update(systemBytes).digest());
 	blobStore.set(Buffer.from(systemBlobId).toString("hex"), systemBytes);
@@ -154,8 +157,8 @@ export function buildCursorRequestPayload(options: {
 		: createConversationState(options.parsed.turns, systemBlobId);
 
 	const userMessage = create(UserMessageSchema, {
-		text: options.parsed.userText,
 		messageId: randomUUID(),
+		text: options.parsed.userText,
 	});
 	const action = create(ConversationActionSchema, {
 		action: {
@@ -164,23 +167,23 @@ export function buildCursorRequestPayload(options: {
 		},
 	});
 	const modelDetails = create(ModelDetailsSchema, {
-		modelId: options.modelId,
 		displayModelId: options.modelId,
 		displayName: options.modelId,
+		modelId: options.modelId,
 	});
 	const runRequest = create(AgentRunRequestSchema, {
-		conversationState,
 		action,
-		modelDetails,
 		conversationId: options.conversationId,
+		conversationState,
+		modelDetails,
 	});
 	const clientMessage = create(AgentClientMessageSchema, {
 		message: { case: "runRequest", value: runRequest },
 	});
 	return {
-		requestBytes: toBinary(AgentClientMessageSchema, clientMessage),
 		blobStore,
 		mcpTools: buildMcpToolDefinitions(options.tools),
+		requestBytes: toBinary(AgentClientMessageSchema, clientMessage),
 	};
 }
 
@@ -201,14 +204,14 @@ export function sendRequestContextResult(
 	sendFrame: (data: Uint8Array) => void,
 ): void {
 	const requestContext = create(RequestContextSchema, {
-		rules: [],
-		repositoryInfo: [],
-		tools: mcpTools,
-		gitRepos: [],
-		projectLayouts: [],
-		mcpInstructions: [],
-		fileContents: {},
 		customSubagents: [],
+		fileContents: {},
+		gitRepos: [],
+		mcpInstructions: [],
+		projectLayouts: [],
+		repositoryInfo: [],
+		rules: [],
+		tools: mcpTools,
 	});
 	const result = create(RequestContextResultSchema, {
 		result: {
@@ -246,8 +249,8 @@ export function sendExecResult(
 	sendFrame: (data: Uint8Array) => void,
 ): void {
 	const execClientMessage = create(ExecClientMessageSchema, {
-		id: Number(messageId),
 		execId: String(execId),
+		id: Number(messageId),
 		message: { case: messageCase as never, value: value as never },
 	});
 	const clientMessage = create(AgentClientMessageSchema, {
@@ -264,12 +267,12 @@ export function decodeMcpArgsMap(args: Record<string, Uint8Array>): Record<strin
 	return decoded;
 }
 
-function createConversationState(turns: Array<{ userText: string; assistantText: string }>, systemBlobId: Uint8Array) {
+function createConversationState(turns: { userText: string; assistantText: string }[], systemBlobId: Uint8Array) {
 	const turnBytes: Uint8Array[] = [];
 	for (const turn of turns) {
 		const userMessage = create(UserMessageSchema, {
-			text: turn.userText,
 			messageId: randomUUID(),
+			text: turn.userText,
 		});
 		const userMessageBytes = toBinary(UserMessageSchema, userMessage);
 		const steps: Uint8Array[] = [];
@@ -283,8 +286,8 @@ function createConversationState(turns: Array<{ userText: string; assistantText:
 			steps.push(toBinary(ConversationStepSchema, step));
 		}
 		const agentTurn = create(AgentConversationTurnStructureSchema, {
-			userMessage: userMessageBytes,
 			steps,
+			userMessage: userMessageBytes,
 		});
 		const turnStructure = create(ConversationTurnStructureSchema, {
 			turn: { case: "agentConversationTurn", value: agentTurn },
@@ -292,22 +295,27 @@ function createConversationState(turns: Array<{ userText: string; assistantText:
 		turnBytes.push(toBinary(ConversationTurnStructureSchema, turnStructure));
 	}
 	return create(ConversationStateStructureSchema, {
-		rootPromptMessagesJson: [systemBlobId],
-		turns: turnBytes,
-		todos: [],
-		pendingToolCalls: [],
-		previousWorkspaceUris: [],
 		fileStates: {},
 		fileStatesV2: {},
-		summaryArchives: [],
-		turnTimings: [],
-		subagentStates: {},
-		selfSummaryCount: 0,
+		pendingToolCalls: [],
+		previousWorkspaceUris: [],
 		readPaths: [],
+		rootPromptMessagesJson: [systemBlobId],
+		selfSummaryCount: 0,
+		subagentStates: {},
+		summaryArchives: [],
+		todos: [],
+		turnTimings: [],
+		turns: turnBytes,
 	});
 }
 
-function sendKvResponse(id: string | number, messageCase: string, value: unknown, sendFrame: (data: Uint8Array) => void): void {
+function sendKvResponse(
+	id: string | number,
+	messageCase: string,
+	value: unknown,
+	sendFrame: (data: Uint8Array) => void,
+): void {
 	const response = create(KvClientMessageSchema, {
 		id: Number(id),
 		message: { case: messageCase as never, value: value as never },

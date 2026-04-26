@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import http2, { type ClientHttp2Session, type ClientHttp2Stream, constants, type IncomingHttpHeaders } from "node:http2";
+import http2, { constants } from 'node:http2';
+import type { ClientHttp2Session, ClientHttp2Stream, IncomingHttpHeaders } from 'node:http2';
 import { CURSOR_HEARTBEAT_MS, getCursorRuntimeConfig } from "./config.js";
 
-const CONNECT_END_STREAM_FLAG = 0b00000010;
+const CONNECT_END_STREAM_FLAG = 0b0000_0010;
 
 export function frameConnectMessage(data: Uint8Array): Buffer {
 	const frame = Buffer.alloc(5 + data.length);
@@ -81,12 +82,12 @@ function createBaseHeaders(accessToken: string, contentType: string, rpcPath: st
 	return {
 		":method": constants.HTTP2_METHOD_POST,
 		":path": rpcPath,
+		authorization: `Bearer ${accessToken}`,
 		"content-type": contentType,
 		te: "trailers",
-		authorization: `Bearer ${accessToken}`,
-		"x-ghost-mode": "true",
-		"x-cursor-client-version": config.clientVersion,
 		"x-cursor-client-type": "cli",
+		"x-cursor-client-version": config.clientVersion,
+		"x-ghost-mode": "true",
 		"x-request-id": randomUUID(),
 	};
 }
@@ -312,14 +313,14 @@ export class CursorStreamingConnection {
 				this.stream.close();
 			}
 		} catch {
-			// ignore
+			// Ignore
 		}
 		try {
 			if (!this.session.closed && !this.session.destroyed) {
 				this.session.close();
 			}
 		} catch {
-			// ignore
+			// Ignore
 		}
 		this.closeHandler?.(code);
 	}

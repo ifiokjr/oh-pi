@@ -69,9 +69,9 @@ export async function runCommand(
 			}
 
 			resolve({
-				stdout: stdout.toString(),
-				stderr: stderr.toString(),
 				exitCode: 0,
+				stderr: stderr.toString(),
+				stdout: stdout.toString(),
 			});
 		});
 	});
@@ -111,7 +111,7 @@ export async function serveOff(servePath: string, runner: CommandRunner = runCom
 }
 
 export async function startTailscaleServe(options: TailscaleServeOptions): Promise<TailscaleServeSession> {
-	/* v8 ignore next -- tests inject a runner to avoid shelling out to a real tailscale binary. */
+	/* V8 ignore next -- tests inject a runner to avoid shelling out to a real tailscale binary. */
 	const runner = options.runner ?? runCommand;
 	const available = await isTailscaleAvailable(runner);
 
@@ -126,10 +126,10 @@ export async function startTailscaleServe(options: TailscaleServeOptions): Promi
 	let stopped = false;
 
 	return {
-		provider: "tailscale",
 		hostname,
-		servePath,
+		provider: "tailscale",
 		publicUrl: buildPublicUrl(hostname, servePath),
+		servePath,
 		stop: async () => {
 			if (stopped) {
 				return;

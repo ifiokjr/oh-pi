@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * oh-pi CLI Entry Point
+ * Oh-pi CLI Entry Point
  *
  * Handles Windows terminal UTF-8 encoding setup, then launches the main
  * configuration wizard. Windows terminals default to non-UTF-8 codepages
@@ -12,7 +12,7 @@ if (process.platform === "win32") {
 	try {
 		execSync("chcp 65001", { stdio: "ignore" });
 	} catch {
-		// chcp not available — best effort
+		// Chcp not available — best effort
 	}
 }
 
@@ -20,7 +20,7 @@ import { run } from "../index.js";
 import { parseArgs } from "../utils/args.js";
 
 const args = parseArgs(process.argv.slice(2));
-run(args).catch((e) => {
-	console.error(e);
+run(args).catch((error) => {
+	console.error(error);
 	process.exit(1);
 });

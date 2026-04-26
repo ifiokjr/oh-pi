@@ -1,4 +1,5 @@
-import { type SpawnSyncReturns, spawnSync } from "node:child_process";
+import { spawnSync } from 'node:child_process';
+import type { SpawnSyncReturns } from 'node:child_process';
 import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -9,7 +10,7 @@ export type ExternalEditorLaunchResult =
 	| { kind: "unavailable"; reason: string }
 	| { kind: "failed"; reason: string };
 
-export type ExternalEditorDependencies = {
+export interface ExternalEditorDependencies {
 	env?: NodeJS.ProcessEnv;
 	platform?: NodeJS.Platform;
 	now?: () => number;
@@ -21,7 +22,7 @@ export type ExternalEditorDependencies = {
 	suspendTui?: () => void;
 	resumeTui?: () => void;
 	requestRender?: (force?: boolean) => void;
-};
+}
 
 function toErrorMessage(error: unknown): string {
 	if (error instanceof Error && error.message) {
@@ -66,13 +67,13 @@ export function openTextInExternalEditor(
 	let tuiSuspended = false;
 
 	try {
-		writeFile(tmpFilePath, text, "utf-8");
+		writeFile(tmpFilePath, text, "utf8");
 		dependencies.suspendTui?.();
 		tuiSuspended = true;
 
 		const result = spawn(editor, [...editorArgs, tmpFilePath], {
-			stdio: "inherit",
 			shell: platform === "win32",
+			stdio: "inherit",
 		}) as SpawnSyncReturns<Buffer>;
 
 		if (result.error) {
@@ -86,7 +87,7 @@ export function openTextInExternalEditor(
 			return { kind: "cancelled" };
 		}
 
-		const nextText = readFile(tmpFilePath, "utf-8").replace(/\n$/, "");
+		const nextText = readFile(tmpFilePath, "utf8").replace(/\n$/, "");
 		return { kind: "saved", text: nextText };
 	} catch (error) {
 		return {
@@ -97,7 +98,7 @@ export function openTextInExternalEditor(
 		try {
 			unlinkFile(tmpFilePath);
 		} catch {
-			/* ignore cleanup errors */
+			/* Ignore cleanup errors */
 		}
 
 		if (tuiSuspended) {

@@ -1,34 +1,35 @@
 import { once } from "node:events";
 import { createServer } from "node:http";
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { WebSocket } from "ws";
-import { createPiWebServer, type PiWebServer } from "../src/server.js";
+import { createPiWebServer } from '../src/server.js';
+import type { PiWebServer } from '../src/server.js';
 import type { AgentSessionLike } from "../src/ws-handler.js";
 
 function createSession(): AgentSessionLike {
 	const listeners = new Set<(event: unknown) => void>();
 	return {
-		prompt: vi.fn(async () => {}),
-		steer: vi.fn(async () => {}),
-		followUp: vi.fn(async () => {}),
 		abort: vi.fn(async () => {}),
+		agent: { state: { systemPrompt: "You are helpful", tools: [] } },
 		compact: vi.fn(async () => ({ compacted: true })),
+		followUp: vi.fn(async () => {}),
+		isStreaming: false,
+		messages: [{ role: "user", content: "hello" }],
+		model: "openai/gpt-5-mini",
+		newSession: vi.fn(async () => ({ cancelled: false })),
+		prompt: vi.fn(async () => {}),
+		sessionFile: "/tmp/session-1.jsonl",
+		sessionId: "session-1",
 		setModel: vi.fn(async () => true),
 		setThinkingLevel: vi.fn(),
+		steer: vi.fn(async () => {}),
 		subscribe: vi.fn((listener) => {
 			listeners.add(listener);
 			return () => {
 				listeners.delete(listener);
 			};
 		}),
-		isStreaming: false,
-		messages: [{ role: "user", content: "hello" }],
-		model: "openai/gpt-5-mini",
 		thinkingLevel: "medium",
-		sessionId: "session-1",
-		sessionFile: "/tmp/session-1.jsonl",
-		agent: { state: { systemPrompt: "You are helpful", tools: [] } },
-		newSession: vi.fn(async () => ({ cancelled: false })),
 	};
 }
 
@@ -59,16 +60,16 @@ async function openAuthedClient(server: PiWebServer): Promise<{ ws: WebSocket; a
 	const ws = new WebSocket(server.url.replace("http://", "ws://"));
 	await once(ws, "open");
 	const authPromise = once(ws, "message").then(([message]) => JSON.parse(message.toString()));
-	ws.send(JSON.stringify({ type: "auth", token: server.token }));
+	ws.send(JSON.stringify({ token: server.token, type: "auth" }));
 	const authMessage = await authPromise;
-	return { ws, authMessage };
+	return { authMessage, ws };
 }
 
 afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe.sequential("PiWebServer", () => {
+describe.sequential("piWebServer", () => {
 	it("starts, serves authenticated routes, and stops cleanly", async () => {
 		const session = createSession();
 		const server = createPiWebServer({ host: "127.0.0.1", port: await findFreePort(), token: "test-token" });
@@ -77,24 +78,24 @@ describe.sequential("PiWebServer", () => {
 
 		try {
 			expect(started.url).toBe(server.url);
-			expect(server.isRunning).toBe(true);
-			expect(server.instanceId).toBeTruthy();
+			expect(server.isRunning).toBeTruthy();
+			expect(server.instanceId).toBe(true);
 			expect(server.connectedClients).toBe(0);
 
 			const health = await fetch(`${server.url}/api/health`);
 			expect(health.status).toBe(200);
-			expect(await health.json()).toEqual({ status: "ok", uptime: expect.any(Number) });
+			await expect(health.json()).resolves.toStrictEqual({ status: "ok", uptime: expect.any(Number) });
 
 			const state = await fetch(`${server.url}/api/session/state`, {
 				headers: { Authorization: `Bearer ${server.token}` },
 			});
 			expect(state.status).toBe(200);
-			expect(await state.json()).toEqual({
-				model: "openai/gpt-5-mini",
-				thinkingLevel: "medium",
+			await expect(state.json()).resolves.toStrictEqual({
 				isStreaming: false,
-				sessionId: "session-1",
 				messageCount: 1,
+				model: "openai/gpt-5-mini",
+				sessionId: "session-1",
+				thinkingLevel: "medium",
 			});
 
 			server.detachSession();
@@ -102,21 +103,21 @@ describe.sequential("PiWebServer", () => {
 				headers: { Authorization: `Bearer ${server.token}` },
 			});
 			expect(detached.status).toBe(503);
-			expect(await detached.json()).toEqual({ error: "No session attached" });
+			await expect(detached.json()).resolves.toStrictEqual({ error: "No session attached" });
 		} finally {
 			await server.stop();
 		}
 
-		expect(server.isRunning).toBe(false);
+		expect(server.isRunning).toBeFalsy();
 	});
 
 	it("tracks authenticated websocket clients, enforces maxClients, and emits lifecycle events", async () => {
 		const session = createSession();
 		const server = createPiWebServer({
 			host: "127.0.0.1",
+			maxClients: 1,
 			port: await findFreePort(),
 			token: "test-token",
-			maxClients: 1,
 		});
 		server.attachSession(session);
 		const onConnect = vi.fn();
@@ -132,12 +133,12 @@ describe.sequential("PiWebServer", () => {
 			firstClient = first.ws;
 			expect(first.authMessage.type).toBe("auth_ok");
 			expect(server.connectedClients).toBe(1);
-			expect(onConnect).toHaveBeenCalledTimes(1);
+			expect(onConnect).toHaveBeenCalledOnce();
 
 			secondClient = new WebSocket(server.url.replace("http://", "ws://"));
 			await once(secondClient, "open");
 			const closed = once(secondClient, "close");
-			secondClient.send(JSON.stringify({ type: "auth", token: server.token }));
+			secondClient.send(JSON.stringify({ token: server.token, type: "auth" }));
 			const [code] = await closed;
 			expect(code).toBe(4002);
 			expect(server.connectedClients).toBe(1);
@@ -146,7 +147,7 @@ describe.sequential("PiWebServer", () => {
 			firstClient.close(1000, "done");
 			await disconnected;
 			await vi.waitFor(() => {
-				expect(onDisconnect).toHaveBeenCalledTimes(1);
+				expect(onDisconnect).toHaveBeenCalledOnce();
 				expect(server.connectedClients).toBe(0);
 			});
 		} finally {
@@ -165,7 +166,7 @@ describe.sequential("PiWebServer", () => {
 		const server = createPiWebServer({ host: "127.0.0.1", port: await findFreePort(), token: "test-token" });
 		server.attachSession(session);
 		const tunnelStop = vi.fn();
-		server.setTunnel({ publicUrl: "https://example.trycloudflare.com", provider: "cloudflared", stop: tunnelStop });
+		server.setTunnel({ provider: "cloudflared", publicUrl: "https://example.trycloudflare.com", stop: tunnelStop });
 		await server.start();
 
 		const { ws } = await openAuthedClient(server);
@@ -175,7 +176,7 @@ describe.sequential("PiWebServer", () => {
 		const [code] = await closed;
 
 		expect(server.tunnelUrl).toBeUndefined();
-		expect(tunnelStop).toHaveBeenCalledTimes(1);
+		expect(tunnelStop).toHaveBeenCalledOnce();
 		expect(code).toBe(1001);
 		ws.removeAllListeners();
 	});

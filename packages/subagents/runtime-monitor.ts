@@ -4,7 +4,8 @@ import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-age
 import { buildCompletionKey, markSeenWithTtl } from "./completion-dedupe.js";
 import { createFileCoalescer } from "./file-coalescer.js";
 import { renderWidget } from "./render.js";
-import { POLL_INTERVAL_MS, RESULTS_DIR, type AsyncJobState } from "./types.js";
+import { POLL_INTERVAL_MS, RESULTS_DIR } from './types.js';
+import type { AsyncJobState } from './types.js';
 import { readStatus } from "./utils.js";
 
 interface RuntimeMonitorOptions {
@@ -28,7 +29,7 @@ export function createSubagentRuntimeMonitor(options: RuntimeMonitorOptions) {
 		if (!lastUiContext?.hasUI) {
 			return;
 		}
-		renderWidget(lastUiContext, Array.from(options.asyncJobs.values()), {
+		renderWidget(lastUiContext, [...options.asyncJobs.values()], {
 			suppressed: options.getSafeModeEnabled(),
 		});
 	};
@@ -89,7 +90,7 @@ export function createSubagentRuntimeMonitor(options: RuntimeMonitorOptions) {
 			return;
 		}
 		try {
-			const data = JSON.parse(fs.readFileSync(resultPath, "utf-8"));
+			const data = JSON.parse(fs.readFileSync(resultPath, "utf8"));
 			if (data.sessionId && data.sessionId !== options.getCurrentSessionId()) {
 				return;
 			}
@@ -164,11 +165,11 @@ export function createSubagentRuntimeMonitor(options: RuntimeMonitorOptions) {
 	};
 
 	return {
-		ensurePoller,
-		refreshWidget,
 		clearResults() {
 			resultFileCoalescer.clear();
 		},
+		ensurePoller,
+		refreshWidget,
 		stop,
 	};
 }

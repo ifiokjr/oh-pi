@@ -1,4 +1,4 @@
-/* c8 ignore file */
+/* C8 ignore file */
 /**
  * Pi Analytics Dashboard Entry Point
  */
@@ -10,24 +10,24 @@ import "./styles.css";
 
 // Create query client with sensible defaults
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Stale after 5 minutes
-      staleTime: 5 * 60 * 1000,
-      // Cache for 10 minutes
-      gcTime: 10 * 60 * 1000,
-      // Retry failed queries 2 times
-      retry: 2,
-      // Don't refetch on window focus in development
-      refetchOnWindowFocus: import.meta.env.PROD,
-    },
-  },
+	defaultOptions: {
+		queries: {
+			// Stale after 5 minutes
+			staleTime: 5 * 60 * 1000,
+			// Cache for 10 minutes
+			gcTime: 10 * 60 * 1000,
+			// Retry failed queries 2 times
+			retry: 2,
+			// Don't refetch on window focus in development
+			refetchOnWindowFocus: import.meta.env.PROD,
+		},
+	},
 });
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </React.StrictMode>
+ReactDOM.createRoot(document.querySelector("#root")!).render(
+	<React.StrictMode>
+		<QueryClientProvider client={queryClient}>
+			<App />
+		</QueryClientProvider>
+	</React.StrictMode>,
 );

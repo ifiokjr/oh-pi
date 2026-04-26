@@ -41,7 +41,7 @@ function detectLocale(): Locale | undefined {
 				.trim()
 				.toLowerCase();
 		} catch {
-			/* ignore */
+			/* Ignore */
 		}
 	}
 
@@ -67,8 +67,8 @@ export async function selectLanguage(): Promise<Locale> {
 	const locale = await p.select({
 		message: "Language / Langue:",
 		options: [
-			{ value: "en" as Locale, label: "English" },
-			{ value: "fr" as Locale, label: "Français" },
+			{ label: "English", value: "en" as Locale },
+			{ label: "Français", value: "fr" as Locale },
 		],
 	});
 	if (p.isCancel(locale)) {

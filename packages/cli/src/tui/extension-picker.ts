@@ -44,7 +44,7 @@ function render(
 	lines.push("");
 	lines.push(allSelected ? chalk.dim("  [A] deselect all") : chalk.dim("  [A] select all"));
 	const totalLines = options.length + 5;
-	stdout.write(`\x1B[${totalLines}A\x1B[J`);
+	stdout.write(`\u001B[${totalLines}A\u001B[J`);
 	stdout.write(`${lines.join("\n")}\n`);
 }
 
@@ -89,7 +89,7 @@ function toggleItem(selected: Set<string>, value: string, options: ExtensionOpti
  */
 export function pickExtensions(
 	options: ExtensionOption[],
-	deps: ExtensionPickerDeps = { stdout: process.stdout, stdin: process.stdin },
+	deps: ExtensionPickerDeps = { stdin: process.stdin, stdout: process.stdout },
 ): Promise<string[]> {
 	const { stdout, stdin } = deps;
 	const selected = new Set<string>(options.filter((o) => o.default).map((o) => o.value));
@@ -98,7 +98,7 @@ export function pickExtensions(
 	if (!stdin.isTTY) {
 		return Promise.resolve([...selected]);
 	}
-	stdout.write("\x1B[?25l");
+	stdout.write("\u001B[?25l");
 	stdin.setRawMode(true);
 	emitKeypressEvents(stdin);
 	stdout.write("\n".repeat(options.length + 5));
@@ -124,7 +124,7 @@ export function pickExtensions(
 			stdin.removeListener("keypress", onKeypress);
 			stdin.setRawMode(false);
 			stdin.pause();
-			stdout.write("\x1B[?25h");
+			stdout.write("\u001B[?25h");
 		}
 		stdin.on("keypress", onKeypress);
 	});

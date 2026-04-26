@@ -9,13 +9,33 @@ interface Preset extends Omit<OhPConfig, "providers"> {}
  * Each entry maps a preset key to its i18n label/hint keys and a full {@link Preset} config object.
  */
 export const PRESETS: Record<string, { labelKey: string; hintKey: string; config: Preset }> = {
-	full: {
-		labelKey: "preset.full",
-		hintKey: "preset.fullHint",
+	clean: {
 		config: {
-			theme: "dark",
+			agents: "general-developer",
+			extensions: [],
 			keybindings: "default",
-			thinking: "high",
+			prompts: [],
+			theme: "dark",
+			thinking: "off",
+		},
+		hintKey: "preset.cleanHint",
+		labelKey: "preset.clean",
+	},
+	colony: {
+		config: {
+			agents: "colony-operator",
+			extensions: ["ant-colony", "auto-session-name", "compact-header"],
+			keybindings: "default",
+			prompts: ["review", "fix", "explain", "commit"],
+			theme: "dark",
+			thinking: "medium",
+		},
+		hintKey: "preset.colonyHint",
+		labelKey: "preset.colony",
+	},
+	full: {
+		config: {
+			agents: "colony-operator",
 			extensions: [
 				"git-guard",
 				"auto-session-name",
@@ -25,33 +45,13 @@ export const PRESETS: Record<string, { labelKey: string; hintKey: string; config
 				"auto-update",
 				"bg-process",
 			],
+			keybindings: "default",
 			prompts: ["review", "fix", "explain", "commit", "test", "refactor", "optimize", "security", "document", "pr"],
-			agents: "colony-operator",
-		},
-	},
-	clean: {
-		labelKey: "preset.clean",
-		hintKey: "preset.cleanHint",
-		config: {
 			theme: "dark",
-			keybindings: "default",
-			thinking: "off",
-			extensions: [],
-			prompts: [],
-			agents: "general-developer",
+			thinking: "high",
 		},
-	},
-	colony: {
-		labelKey: "preset.colony",
-		hintKey: "preset.colonyHint",
-		config: {
-			theme: "dark",
-			keybindings: "default",
-			thinking: "medium",
-			extensions: ["ant-colony", "auto-session-name", "compact-header"],
-			prompts: ["review", "fix", "explain", "commit"],
-			agents: "colony-operator",
-		},
+		hintKey: "preset.fullHint",
+		labelKey: "preset.full",
 	},
 };
 
@@ -64,9 +64,9 @@ export async function selectPreset(): Promise<Preset> {
 	const key = await p.select({
 		message: t("preset.select"),
 		options: Object.entries(PRESETS).map(([k, v]) => ({
-			value: k,
-			label: t(v.labelKey),
 			hint: t(v.hintKey),
+			label: t(v.labelKey),
+			value: k,
 		})),
 	});
 	if (p.isCancel(key)) {

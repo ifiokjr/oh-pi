@@ -80,7 +80,7 @@ You can opt back into project-local storage if you want the legacy behavior:
 ```json
 // ~/.pi/agent/extensions/ant-colony/config.json
 {
-  "storageMode": "project"
+	"storageMode": "project"
 }
 ```
 

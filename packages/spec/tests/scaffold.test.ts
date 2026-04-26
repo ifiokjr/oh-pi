@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+
 import { ensureFeatureArtifacts, ensurePlanArtifact, ensureWorkflowScaffold } from "../extension/scaffold.js";
 import { buildWorkflowPaths } from "../extension/workspace.js";
 
@@ -15,7 +15,7 @@ function createTempDir(prefix: string): string {
 }
 
 afterEach(async () => {
-	await Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true })));
+	await Promise.all(tempDirs.map((dir) => rm(dir, { force: true, recursive: true })));
 	tempDirs.length = 0;
 });
 
@@ -28,9 +28,9 @@ describe("workflow scaffold", () => {
 		const created = ensureWorkflowScaffold(paths);
 
 		expect(created.length).toBeGreaterThan(0);
-		expect(existsSync(paths.constitutionFile)).toBe(true);
-		expect(existsSync(paths.agentContextFile)).toBe(true);
-		expect(existsSync(path.join(paths.templatesDir, "commands", "specify.md"))).toBe(true);
+		expect(existsSync(paths.constitutionFile)).toBeTruthy();
+		expect(existsSync(paths.agentContextFile)).toBeTruthy();
+		expect(existsSync(path.join(paths.templatesDir, "commands", "specify.md"))).toBeTruthy();
 		const workflowReadme = readFileSync(paths.workflowReadmeFile, "utf8");
 		expect(workflowReadme).toContain("/spec:init");
 		expect(workflowReadme).toContain("/spec:constitution <principles>");
@@ -58,8 +58,8 @@ describe("workflow scaffold", () => {
 
 		expect(createdSpec).toContain(featurePaths.featureSpec);
 		expect(createdPlan).toContain(featurePaths.planFile);
-		expect(existsSync(featurePaths.checklistsDir!)).toBe(true);
-		expect(existsSync(featurePaths.contractsDir!)).toBe(true);
+		expect(existsSync(featurePaths.checklistsDir!)).toBeTruthy();
+		expect(existsSync(featurePaths.contractsDir!)).toBeTruthy();
 		expect(readFileSync(featurePaths.featureSpec!, "utf8")).toContain("Feature Specification");
 		expect(readFileSync(featurePaths.planFile!, "utf8")).toContain("Implementation Plan");
 	});
@@ -74,7 +74,7 @@ describe("workflow scaffold", () => {
 		const created = ensureWorkflowScaffold(paths);
 		const after = readFileSync(paths.constitutionFile, "utf8");
 
-		expect(created).toEqual([]);
+		expect(created).toStrictEqual([]);
 		expect(after).toBe(before);
 	});
 });

@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { type ColonyStorageOptions, getColonyWorktreeParentDir, resolveColonyStorageOptions } from "./storage.js";
+import { getColonyWorktreeParentDir, resolveColonyStorageOptions } from './storage.js';
+import type { ColonyStorageOptions } from './storage.js';
 import type { ColonyWorkspace } from "./types.js";
 import {
 	buildPaiInstanceId,
@@ -32,7 +33,7 @@ const DISABLED_VALUES = new Set(["0", "false", "off", "no"]);
 
 function git(cwd: string, args: string[]): string {
 	return execFileSync("git", ["-C", cwd, ...args], {
-		encoding: "utf-8",
+		encoding: "utf8",
 		stdio: ["ignore", "pipe", "pipe"],
 	}).trim();
 }
@@ -40,8 +41,8 @@ function git(cwd: string, args: string[]): string {
 function sanitizeSegment(value: string): string {
 	const cleaned = value
 		.toLowerCase()
-		.replace(/[^a-z0-9._-]+/g, "-")
-		.replace(/^-+|-+$/g, "");
+		.replaceAll(/[^a-z0-9._-]+/g, "-")
+		.replaceAll(/^-+|-+$/g, "");
 	return cleaned || "colony";
 }
 
@@ -62,17 +63,17 @@ function buildPurpose(runtimeId: string, goal?: string): string {
 
 function fallbackWorkspace(originCwd: string, note: string): ColonyWorkspace {
 	return {
-		mode: "shared",
-		originCwd,
+		baseBranch: null,
+		branch: null,
 		executionCwd: originCwd,
+		managedByPi: false,
+		mode: "shared",
+		note,
+		originCwd,
+		ownerInstanceId: null,
+		purpose: null,
 		repoRoot: null,
 		worktreeRoot: null,
-		branch: null,
-		baseBranch: null,
-		managedByPi: false,
-		purpose: null,
-		ownerInstanceId: null,
-		note,
 	};
 }
 
@@ -96,12 +97,12 @@ function isEmptyDir(path: string): boolean {
 function cleanupFilesystemArtifacts(worktreeRoot: string): void {
 	try {
 		const parent = dirname(worktreeRoot);
-		rmSync(worktreeRoot, { recursive: true, force: true });
+		rmSync(worktreeRoot, { force: true, recursive: true });
 		if (existsSync(parent) && isEmptyDir(parent)) {
-			rmSync(parent, { recursive: true, force: true });
+			rmSync(parent, { force: true, recursive: true });
 		}
 	} catch {
-		// ignore filesystem cleanup failures
+		// Ignore filesystem cleanup failures
 	}
 }
 
@@ -122,17 +123,17 @@ function createProjectModeWorktree(
 	git(repoRoot, ["worktree", "add", "-b", branch, worktreeRoot, "HEAD"]);
 
 	return {
-		mode: "worktree",
-		originCwd,
+		baseBranch,
+		branch,
 		executionCwd: resolveExecutionCwd(worktreeRoot, repoRoot, originCwd),
+		managedByPi: false,
+		mode: "worktree",
+		note: null,
+		originCwd,
+		ownerInstanceId: null,
+		purpose: null,
 		repoRoot,
 		worktreeRoot,
-		branch,
-		baseBranch,
-		managedByPi: false,
-		purpose: null,
-		ownerInstanceId: null,
-		note: null,
 	};
 }
 
@@ -173,7 +174,7 @@ export function cleanupIsolatedWorktree(workspace: ColonyWorkspace): string | nu
 	try {
 		git(workspace.repoRoot, ["worktree", "prune"]);
 	} catch {
-		// ignore prune failures; this is best-effort hygiene.
+		// Ignore prune failures; this is best-effort hygiene.
 	}
 
 	cleanupFilesystemArtifacts(workspace.worktreeRoot);
@@ -223,29 +224,29 @@ export function prepareColonyWorkspace(opts: PrepareColonyWorkspaceOptions): Col
 		const branch = `ant-colony/${safeRuntime}-${suffix}`;
 		const purpose = buildPurpose(opts.runtimeId, opts.goal);
 		const result = createManagedWorktree({
-			cwd: originCwd,
 			branch,
-			purpose,
+			cwd: originCwd,
 			owner: createOwnerMetadata({
 				instanceId: antColonyOwnerInstanceId,
 				cwd: originCwd,
 				sessionFile: opts.sessionFile ?? null,
 				sessionName: opts.sessionName ?? null,
 			}),
+			purpose,
 		});
 
 		return {
-			mode: "worktree",
-			originCwd,
+			baseBranch,
+			branch: result.branch,
 			executionCwd: resolveExecutionCwd(result.worktreePath, repoRoot, originCwd),
+			managedByPi: true,
+			mode: "worktree",
+			note: null,
+			originCwd,
+			ownerInstanceId: antColonyOwnerInstanceId,
+			purpose,
 			repoRoot,
 			worktreeRoot: result.worktreePath,
-			branch: result.branch,
-			baseBranch,
-			managedByPi: true,
-			purpose,
-			ownerInstanceId: antColonyOwnerInstanceId,
-			note: null,
 		};
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : String(error);
@@ -266,8 +267,8 @@ export function resumeColonyWorkspace(opts: ResumeColonyWorkspaceOptions): Colon
 	if (saved.mode === "shared") {
 		return {
 			...saved,
-			originCwd,
 			executionCwd: originCwd,
+			originCwd,
 		};
 	}
 
@@ -275,9 +276,9 @@ export function resumeColonyWorkspace(opts: ResumeColonyWorkspaceOptions): Colon
 	if (existsSync(existingExecution)) {
 		return {
 			...saved,
-			originCwd,
 			executionCwd: existingExecution,
 			note: saved.note ?? "Resuming in existing isolated worktree.",
+			originCwd,
 		};
 	}
 
@@ -287,9 +288,9 @@ export function resumeColonyWorkspace(opts: ResumeColonyWorkspaceOptions): Colon
 			git(saved.repoRoot, ["worktree", "add", saved.worktreeRoot, saved.branch]);
 			return {
 				...saved,
-				originCwd,
 				executionCwd: resolveExecutionCwd(saved.worktreeRoot, saved.repoRoot, originCwd),
 				note: "Re-attached missing worktree for resume.",
+				originCwd,
 			};
 		} catch {
 			// Fall through to creating a fresh workspace.

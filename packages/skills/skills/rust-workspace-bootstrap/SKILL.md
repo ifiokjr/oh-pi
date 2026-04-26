@@ -1,7 +1,6 @@
 ---
 name: rust-workspace-bootstrap
-description:
-  Scaffold a production-ready Rust workspace with knope changesets, devenv, and GitHub Actions CI/release workflows. Use when starting a new Rust project or monorepo.
+description: Scaffold a production-ready Rust workspace with knope changesets, devenv, and GitHub Actions CI/release workflows. Use when starting a new Rust project or monorepo.
 ---
 
 # Rust Workspace Bootstrap

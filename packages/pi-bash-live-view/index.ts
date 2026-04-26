@@ -10,34 +10,44 @@ const BASH_PTY_MESSAGE_TYPE = "pi-bash-live-view:result";
 
 const BASH_TOOL_PARAMETERS = Type.Object({
 	command: Type.String({ description: "Bash command to execute" }),
-	timeout: Type.Optional(Type.Number({ description: "Optional timeout in seconds before the PTY command is terminated" })),
 	cwd: Type.Optional(Type.String({ description: "Optional working directory override for this command" })),
-	usePTY: Type.Optional(Type.Boolean({ description: "Run the command inside a pseudo-terminal with live terminal rendering" })),
+	timeout: Type.Optional(
+		Type.Number({ description: "Optional timeout in seconds before the PTY command is terminated" }),
+	),
+	usePTY: Type.Optional(
+		Type.Boolean({ description: "Run the command inside a pseudo-terminal with live terminal rendering" }),
+	),
 });
 
 function buildToolDescription(baseDescription: string): string {
 	return `${baseDescription} Set usePTY=true to stream the command through a pseudo-terminal with a live widget.`;
 }
 
-function resolveCwd(ctx: Pick<ExtensionContext, "cwd"> | undefined, fallbackCtx: Pick<ExtensionContext, "cwd"> | null, explicitCwd?: string): string {
+function resolveCwd(
+	ctx: Pick<ExtensionContext, "cwd"> | undefined,
+	fallbackCtx: Pick<ExtensionContext, "cwd"> | null,
+	explicitCwd?: string,
+): string {
 	return explicitCwd ?? ctx?.cwd ?? fallbackCtx?.cwd ?? process.cwd();
 }
 
 function toErrorToolResult(error: unknown) {
 	const message = error instanceof Error ? error.message : String(error);
 	return {
-		content: [{ type: "text" as const, text: `PTY execution failed: ${message}` }],
-		details: { pty: true, error: true },
+		content: [{ text: `PTY execution failed: ${message}`, type: "text" as const }],
+		details: { error: true, pty: true },
 	};
 }
 
 export default function bashLiveViewExtension(pi: ExtensionAPI): void {
-	const bashTemplate = createBashTool(process.cwd()) as typeof createBashTool extends (...args: any[]) => infer T ? T & {
-		renderCall?: unknown;
-		renderResult?: unknown;
-		label?: string;
-		description: string;
-	} : never;
+	const bashTemplate = createBashTool(process.cwd()) as typeof createBashTool extends (...args: any[]) => infer T
+		? T & {
+				renderCall?: unknown;
+				renderResult?: unknown;
+				label?: string;
+				description: string;
+			}
+		: never;
 	const sessionManager = new PtySessionManager();
 	let activeCtx: ExtensionContext | null = null;
 
@@ -56,17 +66,17 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.registerTool({
-		name: BASH_LIVE_VIEW_TOOL,
-		label: bashTemplate.label ?? "Bash",
 		description: buildToolDescription(bashTemplate.description),
-		parameters: BASH_TOOL_PARAMETERS,
-		renderCall: bashTemplate.renderCall as any,
-		renderResult: bashTemplate.renderResult as any,
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			const commandCwd = resolveCwd(ctx, activeCtx, params.cwd);
 			if (!params.usePTY) {
 				const originalBash = createBashTool(commandCwd);
-				return originalBash.execute(toolCallId, { command: params.command, timeout: params.timeout } as never, signal, onUpdate);
+				return originalBash.execute(
+					toolCallId,
+					{ command: params.command, timeout: params.timeout } as never,
+					signal,
+					onUpdate,
+				);
 			}
 
 			try {
@@ -84,6 +94,11 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 				return toErrorToolResult(error);
 			}
 		},
+		label: bashTemplate.label ?? "Bash",
+		name: BASH_LIVE_VIEW_TOOL,
+		parameters: BASH_TOOL_PARAMETERS,
+		renderCall: bashTemplate.renderCall as any,
+		renderResult: bashTemplate.renderResult as any,
 	});
 
 	pi.registerCommand(BASH_PTY_COMMAND, {
@@ -99,20 +114,20 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 			try {
 				const result = await executePtyCommand({
 					command,
-					cwd: resolveCwd(ctx, activeCtx),
 					ctx,
+					cwd: resolveCwd(ctx, activeCtx),
 					sessionManager,
 				});
 				pi.sendMessage({
-					customType: BASH_PTY_MESSAGE_TYPE,
 					content: result.text,
-					display: true,
+					customType: BASH_PTY_MESSAGE_TYPE,
 					details: {
+						exitCode: result.exitCode,
 						pty: true,
 						sessionId: result.sessionId,
 						status: result.status,
-						exitCode: result.exitCode,
 					},
+					display: true,
 				});
 			} catch (error) {
 				ctx.ui.notify(`PTY execution failed: ${error instanceof Error ? error.message : String(error)}`, "error");
@@ -125,8 +140,8 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 		try {
 			const result = await executePtyCommand({
 				command: event.command,
-				cwd: resolveCwd(ctx, activeCtx, event.cwd),
 				ctx,
+				cwd: resolveCwd(ctx, activeCtx, event.cwd),
 				sessionManager,
 			});
 			return {
@@ -136,9 +151,9 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 			const message = error instanceof Error ? error.message : String(error);
 			return {
 				result: {
-					output: `PTY execution failed: ${message}`,
-					exitCode: 1,
 					cancelled: false,
+					exitCode: 1,
+					output: `PTY execution failed: ${message}`,
 					truncated: false,
 				},
 			};
@@ -147,8 +162,8 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 }
 
 export const bashLiveViewInternals = {
+	BASH_TOOL_PARAMETERS,
 	buildToolDescription,
 	resolveCwd,
 	toErrorToolResult,
-	BASH_TOOL_PARAMETERS,
 };

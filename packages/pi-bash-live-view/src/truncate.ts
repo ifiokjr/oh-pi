@@ -1,4 +1,4 @@
-const DEFAULT_MAX_LINES = 2_000;
+const DEFAULT_MAX_LINES = 2000;
 const DEFAULT_MAX_BYTES = 50 * 1024;
 const DEFAULT_TAIL_LINES = 40;
 
@@ -29,7 +29,7 @@ export interface TruncateOutputResult {
 }
 
 function normalizeNewlines(text: string): string {
-	return text.replace(/\r\n?/g, "\n");
+	return text.replaceAll(/\r\n?/g, "\n");
 }
 
 function buildTruncationNotice(truncation: OutputTruncation): string {
@@ -53,13 +53,13 @@ export function truncateOutput(text: string, options: TruncateOutputOptions = {}
 		return {
 			text: "",
 			truncation: {
-				truncated: false,
-				totalLines: 0,
-				totalBytes: 0,
-				keptLines: 0,
 				keptBytes: 0,
-				maxLines,
+				keptLines: 0,
 				maxBytes,
+				maxLines,
+				totalBytes: 0,
+				totalLines: 0,
+				truncated: false,
 			},
 		};
 	}
@@ -87,13 +87,13 @@ export function truncateOutput(text: string, options: TruncateOutputOptions = {}
 	}
 
 	const truncation: OutputTruncation = {
-		truncated,
-		totalLines,
-		totalBytes,
-		keptLines: write,
 		keptBytes,
-		maxLines,
+		keptLines: write,
 		maxBytes,
+		maxLines,
+		totalBytes,
+		totalLines,
+		truncated,
 	};
 
 	if (!truncated) {
@@ -188,7 +188,7 @@ export function appendExitSummary(
 }
 
 export const truncateInternals = {
-	normalizeNewlines,
 	buildTruncationNotice,
+	normalizeNewlines,
 	toExitColor,
 };

@@ -26,13 +26,13 @@ export function readStatus(asyncDir: string): AsyncStatus | null {
 		if (cached && cached.mtime === stat.mtimeMs) {
 			return cached.status;
 		}
-		const content = fs.readFileSync(statusPath, "utf-8");
+		const content = fs.readFileSync(statusPath, "utf8");
 		const status = JSON.parse(content) as AsyncStatus;
 		statusCache.set(statusPath, { mtime: stat.mtimeMs, status });
 		// Limit cache size to prevent memory leaks
 		if (statusCache.size > 50) {
 			const firstKey = statusCache.keys().next().value;
-			if (firstKey) statusCache.delete(firstKey);
+			if (firstKey) {statusCache.delete(firstKey);}
 		}
 		return status;
 	} catch {
@@ -47,11 +47,11 @@ const outputTailCache = new Map<string, { mtime: number; size: number; lines: st
  * Get the last N lines from an output file (with mtime/size-based caching)
  */
 export function getOutputTail(outputFile: string | undefined, maxLines: number = 3): string[] {
-	if (!outputFile) return [];
+	if (!outputFile) {return [];}
 	let fd: number | null = null;
 	try {
 		const stat = fs.statSync(outputFile);
-		if (stat.size === 0) return [];
+		if (stat.size === 0) {return [];}
 
 		// Check cache using both mtime and size (size changes more frequently during writes)
 		const cached = outputTailCache.get(outputFile);
@@ -64,16 +64,16 @@ export function getOutputTail(outputFile: string | undefined, maxLines: number =
 		fd = fs.openSync(outputFile, "r");
 		const buffer = Buffer.alloc(Math.min(tailBytes, stat.size));
 		fs.readSync(fd, buffer, 0, buffer.length, start);
-		const content = buffer.toString("utf-8");
+		const content = buffer.toString("utf8");
 		const allLines = content.split("\n").filter((l) => l.trim());
 		const lines = allLines.slice(-maxLines).map((l) => l.slice(0, 120) + (l.length > 120 ? "..." : ""));
 
 		// Cache the result
-		outputTailCache.set(outputFile, { mtime: stat.mtimeMs, size: stat.size, lines });
+		outputTailCache.set(outputFile, { lines, mtime: stat.mtimeMs, size: stat.size });
 		// Limit cache size
 		if (outputTailCache.size > 20) {
 			const firstKey = outputTailCache.keys().next().value;
-			if (firstKey) outputTailCache.delete(firstKey);
+			if (firstKey) {outputTailCache.delete(firstKey);}
 		}
 
 		return lines;
@@ -92,14 +92,14 @@ export function getOutputTail(outputFile: string | undefined, maxLines: number =
  * Get human-readable last activity time for a file
  */
 export function getLastActivity(outputFile: string | undefined): string {
-	if (!outputFile) return "";
+	if (!outputFile) {return "";}
 	try {
 		// Single stat call - throws if file doesn't exist
 		const stat = fs.statSync(outputFile);
 		const ago = Date.now() - stat.mtimeMs;
-		if (ago < 1000) return "active now";
-		if (ago < 60000) return `active ${Math.floor(ago / 1000)}s ago`;
-		return `active ${Math.floor(ago / 60000)}m ago`;
+		if (ago < 1000) {return "active now";}
+		if (ago < 60_000) {return `active ${Math.floor(ago / 1000)}s ago`;}
+		return `active ${Math.floor(ago / 60_000)}m ago`;
 	} catch {
 		return "";
 	}
@@ -109,32 +109,32 @@ export function getLastActivity(outputFile: string | undefined): string {
  * Find a file/directory by prefix in a directory
  */
 export function findByPrefix(dir: string, prefix: string, suffix?: string): string | null {
-	if (!fs.existsSync(dir)) return null;
+	if (!fs.existsSync(dir)) {return null;}
 	const entries = fs.readdirSync(dir).filter((entry) => entry.startsWith(prefix));
 	if (suffix) {
 		const withSuffix = entries.filter((entry) => entry.endsWith(suffix));
-		return withSuffix.length > 0 ? path.join(dir, withSuffix.sort()[0]) : null;
+		return withSuffix.length > 0 ? path.join(dir, withSuffix.toSorted()[0]) : null;
 	}
-	if (entries.length === 0) return null;
-	return path.join(dir, entries.sort()[0]);
+	if (entries.length === 0) {return null;}
+	return path.join(dir, entries.toSorted()[0]);
 }
 
 /**
  * Find the latest session file in a directory
  */
 export function findLatestSessionFile(sessionDir: string): string | null {
-	if (!fs.existsSync(sessionDir)) return null;
+	if (!fs.existsSync(sessionDir)) {return null;}
 	const files = fs
 		.readdirSync(sessionDir)
 		.filter((f) => f.endsWith(".jsonl"))
 		.map((f) => {
 			const filePath = path.join(sessionDir, f);
 			return {
-				path: filePath,
 				mtime: fs.statSync(filePath).mtimeMs,
+				path: filePath,
 			};
 		})
-		.sort((a, b) => b.mtime - a.mtime);
+		.toSorted((a, b) => b.mtime - a.mtime);
 	return files.length > 0 ? files[0].path : null;
 }
 
@@ -143,7 +143,7 @@ export function findLatestSessionFile(sessionDir: string): string | null {
  */
 export function writePrompt(agent: string, prompt: string): { dir: string; path: string } {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagent-"));
-	const p = path.join(dir, `${agent.replace(/[^\w.-]/g, "_")}.md`);
+	const p = path.join(dir, `${agent.replaceAll(/[^\w.-]/g, "_")}.md`);
 	fs.writeFileSync(p, prompt, { mode: 0o600 });
 	return { dir, path: p };
 }
@@ -160,7 +160,7 @@ export function getFinalOutput(messages: Message[]): string {
 		const msg = messages[i];
 		if (msg.role === "assistant") {
 			for (const part of msg.content) {
-				if (part.type === "text") return part.text;
+				if (part.type === "text") {return part.text;}
 			}
 		}
 	}
@@ -175,8 +175,8 @@ export function getDisplayItems(messages: Message[]): DisplayItem[] {
 	for (const msg of messages) {
 		if (msg.role === "assistant") {
 			for (const part of msg.content) {
-				if (part.type === "text") items.push({ type: "text", text: part.text });
-				else if (part.type === "toolCall") items.push({ type: "tool", name: part.name, args: part.arguments });
+				if (part.type === "text") {items.push({ type: "text", text: part.text });}
+				else if (part.type === "toolCall") {items.push({ type: "tool", name: part.name, args: part.arguments });}
 			}
 		}
 	}
@@ -189,7 +189,7 @@ export function getDisplayItems(messages: Message[]): DisplayItem[] {
 export function detectSubagentError(messages: Message[]): ErrorInfo {
 	// Step 1: Find the last assistant message with text content.
 	// If the agent produced a text response after encountering errors,
-	// it had a chance to recover — only errors AFTER this point matter.
+	// It had a chance to recover — only errors AFTER this point matter.
 	let lastAssistantTextIndex = -1;
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const msg = messages[i];
@@ -211,38 +211,38 @@ export function detectSubagentError(messages: Message[]): ErrorInfo {
 	// Step 3: Check tool results in the post-response window
 	for (let i = messages.length - 1; i >= scanStart; i--) {
 		const msg = messages[i];
-		if (msg.role !== "toolResult") continue;
+		if (msg.role !== "toolResult") {continue;}
 
 		if ((msg as any).isError) {
 			const text = msg.content.find((c) => c.type === "text");
 			const details = text && "text" in text ? text.text : undefined;
 			const exitMatch = details?.match(/exit(?:ed)?\s*(?:with\s*)?(?:code|status)?\s*[:\s]?\s*(\d+)/i);
 			return {
-				hasError: true,
-				exitCode: exitMatch ? parseInt(exitMatch[1], 10) : 1,
-				errorType: (msg as any).toolName || "tool",
 				details: details?.slice(0, 200),
+				errorType: (msg as any).toolName || "tool",
+				exitCode: exitMatch ? parseInt(exitMatch[1], 10) : 1,
+				hasError: true,
 			};
 		}
 
-		const toolName = (msg as any).toolName;
-		if (toolName !== "bash") continue;
+		const {toolName} = (msg as any);
+		if (toolName !== "bash") {continue;}
 
 		const text = msg.content.find((c) => c.type === "text");
-		if (!text || !("text" in text)) continue;
+		if (!text || !("text" in text)) {continue;}
 		const output = text.text;
 
 		const exitMatch = output.match(/exit(?:ed)?\s*(?:with\s*)?(?:code|status)?\s*[:\s]?\s*(\d+)/i);
 		if (exitMatch) {
-			const code = parseInt(exitMatch[1], 10);
+			const code = Number.parseInt(exitMatch[1], 10);
 			if (code !== 0) {
-				return { hasError: true, exitCode: code, errorType: "bash", details: output.slice(0, 200) };
+				return { details: output.slice(0, 200), errorType: "bash", exitCode: code, hasError: true };
 			}
 		}
 
 		// NOTE: These patterns can match legitimate output (grep results, logs,
-		// testing). With the assistant-message check above, most false positives
-		// are mitigated since the agent will have responded after routine errors.
+		// Testing). With the assistant-message check above, most false positives
+		// Are mitigated since the agent will have responded after routine errors.
 		const fatalPatterns = [
 			/command not found/i,
 			/permission denied/i,
@@ -255,7 +255,7 @@ export function detectSubagentError(messages: Message[]): ErrorInfo {
 		];
 		for (const pattern of fatalPatterns) {
 			if (pattern.test(output)) {
-				return { hasError: true, exitCode: 1, errorType: "bash", details: output.slice(0, 200) };
+				return { details: output.slice(0, 200), errorType: "bash", exitCode: 1, hasError: true };
 			}
 		}
 	}
@@ -296,11 +296,11 @@ export function extractToolArgsPreview(args: Record<string, unknown>): string {
  * Extract text content from various message content formats
  */
 export function extractTextFromContent(content: unknown): string {
-	if (!content) return "";
+	if (!content) {return "";}
 	// Handle string content directly
-	if (typeof content === "string") return content;
+	if (typeof content === "string") {return content;}
 	// Handle array content
-	if (!Array.isArray(content)) return "";
+	if (!Array.isArray(content)) {return "";}
 	const texts: string[] = [];
 	for (const part of content) {
 		if (part && typeof part === "object") {
@@ -311,7 +311,7 @@ export function extractTextFromContent(content: unknown): string {
 			// Handle { type: "tool_result", content: "..." }
 			else if ("type" in part && part.type === "tool_result" && "content" in part) {
 				const inner = extractTextFromContent(part.content);
-				if (inner) texts.push(inner);
+				if (inner) {texts.push(inner);}
 			}
 			// Handle { text: "..." } without type
 			else if ("text" in part) {

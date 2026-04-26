@@ -1,12 +1,12 @@
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 
-type ContextUsageSnapshot = {
+interface ContextUsageSnapshot {
 	tokens: number | null;
 	percent: number | null;
 	contextWindow: number | null;
-};
+}
 
-export type ToolExecutionMetadata = {
+export interface ToolExecutionMetadata {
 	toolName: string;
 	startedAt: number;
 	startedAtLabel: string;
@@ -18,17 +18,17 @@ export type ToolExecutionMetadata = {
 	inputChars: number;
 	outputChars: number;
 	contextAtCompletion: ContextUsageSnapshot | null;
-};
+}
 
-type PendingToolCall = {
+interface PendingToolCall {
 	startedAt: number;
-};
+}
 
 const APPROX_TOKEN_CHARS = 4;
 const TOOL_METADATA_KEY = "toolMetadata";
 const MAX_TEXT_BLOCK_CHARS = 120_000;
-const MAX_TEXT_LINE_CHARS = 2_000;
-const MAX_TEXT_LINES = 2_000;
+const MAX_TEXT_LINE_CHARS = 2000;
+const MAX_TEXT_LINES = 2000;
 const OUTPUT_GUARD_NOTE = "\n[tool output truncated for UI safety]";
 const MAX_DETAIL_FIELDS = 256;
 const MAX_DETAIL_DEPTH = 4;
@@ -70,9 +70,9 @@ function snapshotContextUsage(ctx: Pick<ExtensionContext, "getContextUsage">): C
 	}
 
 	return {
-		tokens: typeof usage.tokens === "number" ? usage.tokens : null,
-		percent: typeof usage.percent === "number" ? usage.percent : null,
 		contextWindow: typeof usage.contextWindow === "number" ? usage.contextWindow : null,
+		percent: typeof usage.percent === "number" ? usage.percent : null,
+		tokens: typeof usage.tokens === "number" ? usage.tokens : null,
 	};
 }
 
@@ -90,7 +90,7 @@ function chunkLine(line: string, maxChars: number): string[] {
 
 function sanitizeTextBlock(text: string): { text: string; changed: boolean } {
 	if (!text) {
-		return { text, changed: false };
+		return { changed: false, text };
 	}
 
 	const cleaned = text.replaceAll("\u0000", "");
@@ -123,12 +123,12 @@ function sanitizeTextBlock(text: string): { text: string; changed: boolean } {
 	if (changed) {
 		normalized += OUTPUT_GUARD_NOTE;
 	}
-	return { text: normalized, changed };
+	return { changed, text: normalized };
 }
 
 function sanitizeContent(content: unknown): { content: unknown[]; changed: boolean } {
 	if (!Array.isArray(content)) {
-		return { content: [], changed: false };
+		return { changed: false, content: [] };
 	}
 
 	let changed = false;
@@ -147,7 +147,7 @@ function sanitizeContent(content: unknown): { content: unknown[]; changed: boole
 		changed = true;
 		return { ...(item as Record<string, unknown>), text: safeText.text };
 	});
-	return { content: normalized, changed };
+	return { changed, content: normalized };
 }
 
 function sanitizeDetailsValue(
@@ -157,16 +157,16 @@ function sanitizeDetailsValue(
 ): { value: unknown; changed: boolean } {
 	if (typeof value === "string") {
 		const safe = sanitizeTextBlock(value);
-		return { value: safe.text, changed: safe.changed };
+		return { changed: safe.changed, value: safe.text };
 	}
 	if (!(value && typeof value === "object")) {
-		return { value, changed: false };
+		return { changed: false, value };
 	}
 	if (seen.has(value)) {
-		return { value: "[circular]", changed: true };
+		return { changed: true, value: "[circular]" };
 	}
 	if (depth >= MAX_DETAIL_DEPTH) {
-		return { value: "[depth-truncated]", changed: true };
+		return { changed: true, value: "[depth-truncated]" };
 	}
 	seen.add(value);
 
@@ -183,11 +183,11 @@ function sanitizeDetailsValue(
 			}
 			return normalized.value;
 		});
-		return { value: next, changed };
+		return { changed, value: next };
 	}
 
 	let changed = false;
-	const nextEntries: Array<[string, unknown]> = [];
+	const nextEntries: [string, unknown][] = [];
 	const allEntries = Object.entries(value as Record<string, unknown>);
 	const entries = allEntries.slice(0, MAX_DETAIL_FIELDS);
 	if (entries.length !== allEntries.length) {
@@ -201,18 +201,18 @@ function sanitizeDetailsValue(
 		nextEntries.push([key, normalized.value]);
 	}
 
-	return { value: Object.fromEntries(nextEntries), changed };
+	return { changed, value: Object.fromEntries(nextEntries) };
 }
 
 function sanitizeDetails(details: unknown): { details: Record<string, unknown>; changed: boolean } {
 	if (!(details && typeof details === "object")) {
-		return { details: {}, changed: false };
+		return { changed: false, details: {} };
 	}
 	const normalized = sanitizeDetailsValue(details);
 	if (normalized.value && typeof normalized.value === "object" && !Array.isArray(normalized.value)) {
-		return { details: normalized.value as Record<string, unknown>, changed: normalized.changed };
+		return { changed: normalized.changed, details: normalized.value as Record<string, unknown> };
 	}
-	return { details: {}, changed: true };
+	return { changed: true, details: {} };
 }
 
 function collectTextContentChars(content: unknown): number {
@@ -262,17 +262,17 @@ export function buildToolMetadata(
 	const durationMs = Math.max(0, completedAt - startedAt);
 
 	return {
-		toolName,
-		startedAt,
-		startedAtLabel: formatTimestamp(startedAt),
+		approxContextTokens,
 		completedAt,
 		completedAtLabel: formatTimestamp(completedAt),
-		durationMs,
+		contextAtCompletion: snapshotContextUsage(ctx),
 		durationLabel: formatDuration(durationMs),
-		approxContextTokens,
+		durationMs,
 		inputChars,
 		outputChars,
-		contextAtCompletion: snapshotContextUsage(ctx),
+		startedAt,
+		startedAtLabel: formatTimestamp(startedAt),
+		toolName,
 	};
 }
 
@@ -325,16 +325,16 @@ export default function toolMetadataExtension(pi: ExtensionAPI): void {
 		details[TOOL_METADATA_KEY] = metadata;
 		if (contentChanged || detailsChanged) {
 			details.outputGuard = {
-				truncated: true,
+				detailsSanitized: detailsChanged,
 				maxChars: MAX_TEXT_BLOCK_CHARS,
 				maxLineChars: MAX_TEXT_LINE_CHARS,
 				maxLines: MAX_TEXT_LINES,
-				detailsSanitized: detailsChanged,
+				truncated: true,
 			};
 		}
 
 		return {
-			content: [...safeContent, { type: "text" as const, text: formatToolMetadataText(metadata) }],
+			content: [...safeContent, { text: formatToolMetadataText(metadata), type: "text" as const }],
 			details,
 		};
 	});

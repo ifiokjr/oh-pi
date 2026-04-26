@@ -1,16 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
-import {
-	calculateCost,
-	createAssistantMessageEventStream,
-	getEnvApiKey,
-	type AssistantMessage,
-	type AssistantMessageEventStream,
-	type Context,
-	type Model,
-	type SimpleStreamOptions,
-	type ToolCall,
-} from "@mariozechner/pi-ai";
+import { calculateCost, createAssistantMessageEventStream, getEnvApiKey } from '@mariozechner/pi-ai';
+import type { AssistantMessage, AssistantMessageEventStream, Context, Model, SimpleStreamOptions, ToolCall } from '@mariozechner/pi-ai';
 import {
 	AgentServerMessageSchema,
 	BackgroundShellSpawnResultSchema,
@@ -36,33 +27,14 @@ import {
 	WriteShellStdinErrorSchema,
 	WriteShellStdinResultSchema,
 } from "./proto/agent_pb.js";
-import {
-	buildCursorRequestPayload,
-	decodeMcpArgsMap,
-	makeHeartbeatFrame,
-	parseCursorConversation,
-	sendExecResult,
-	sendKvBlobResponse,
-	sendRequestContextResult,
-	type PendingExec,
-	type ToolResultInfo,
-} from "./messages.js";
+import { buildCursorRequestPayload, decodeMcpArgsMap, makeHeartbeatFrame, parseCursorConversation, sendExecResult, sendKvBlobResponse, sendRequestContextResult } from './messages.js';
+import type { PendingExec, ToolResultInfo } from './messages.js';
 import { CURSOR_RUN_PATH } from "./config.js";
+import { cleanupCursorRuntimeState, deleteActiveRun, deriveBridgeKey, deriveConversationKey, deterministicConversationId, getActiveRun, getConversationState, setActiveRun, upsertConversationState } from './runtime.js';
+import type { ActiveCursorRun } from './runtime.js';
 import {
-	cleanupCursorRuntimeState,
-	deleteActiveRun,
-	deriveBridgeKey,
-	deriveConversationKey,
-	deterministicConversationId,
-	getActiveRun,
-	getConversationState,
-	setActiveRun,
-	upsertConversationState,
-	type ActiveCursorRun,
-} from "./runtime.js";
-import {
-	createConnectFrameParser,
 	CursorStreamingConnection,
+	createConnectFrameParser,
 	frameConnectMessage,
 	parseConnectEndStream,
 } from "./transport.js";
@@ -73,22 +45,26 @@ const MAX_THINKING_TAG_LEN = 16;
 // Pre-compiled thinking tag pattern — avoid new RegExp() per stream chunk.
 const THINKING_TAG_PATTERN = new RegExp(`<(/?)(?:${THINKING_TAG_NAMES.join("|")})\\s*>`, "gi");
 
-type StreamState = {
+interface StreamState {
 	outputTokens: number;
 	totalTokens: number;
 	pendingExecs: PendingExec[];
-};
+}
 
-type RuntimeOptions = {
+interface RuntimeOptions {
 	bridgeKey: string;
 	conversationKey: string;
 	model: Model<string>;
 	output: AssistantMessage;
 	stream: AssistantMessageEventStream;
 	signal?: AbortSignal;
-};
+}
 
-export const streamSimpleCursor = (model: Model<string>, context: Context, options?: SimpleStreamOptions): AssistantMessageEventStream => {
+export const streamSimpleCursor = (
+	model: Model<string>,
+	context: Context,
+	options?: SimpleStreamOptions,
+): AssistantMessageEventStream => {
 	const apiKey = options?.apiKey || getEnvApiKey(model.provider);
 	if (!apiKey) {
 		throw new Error(`No API key for provider: ${model.provider}`);
@@ -104,12 +80,12 @@ export const streamSimpleCursor = (model: Model<string>, context: Context, optio
 			const conversationKey = deriveConversationKey(options?.sessionId, parsed.seed);
 			const bridgeKey = deriveBridgeKey(conversationKey, model.id);
 
-			stream.push({ type: "start", partial: output });
+			stream.push({ partial: output, type: "start" });
 
 			const activeRun = parsed.trailingToolResults.length > 0 ? getActiveRun(bridgeKey) : undefined;
 			if (activeRun) {
 				await resumeActiveRun(
-					{ bridgeKey, conversationKey, model, output, stream, signal: options?.signal },
+					{ bridgeKey, conversationKey, model, output, signal: options?.signal, stream },
 					activeRun,
 					parsed.trailingToolResults,
 				);
@@ -123,31 +99,35 @@ export const streamSimpleCursor = (model: Model<string>, context: Context, optio
 			const stateRecord = getConversationState(conversationKey);
 			const conversationId = stateRecord?.conversationId ?? deterministicConversationId(conversationKey);
 			const payload = buildCursorRequestPayload({
-				modelId: model.id,
 				conversationId,
+				conversationState: stateRecord,
+				modelId: model.id,
 				parsed,
 				tools: context.tools,
-				conversationState: stateRecord,
 			});
-			options?.onPayload?.({ model: model.id, conversationId, toolCount: payload.mcpTools.length });
-			const connection = new CursorStreamingConnection({ accessToken: apiKey, rpcPath: CURSOR_RUN_PATH, url: model.baseUrl });
+			options?.onPayload?.({ conversationId, model: model.id, toolCount: payload.mcpTools.length });
+			const connection = new CursorStreamingConnection({
+				accessToken: apiKey,
+				rpcPath: CURSOR_RUN_PATH,
+				url: model.baseUrl,
+			});
 			connection.startHeartbeat(makeHeartbeatFrame);
 			connection.write(toFrame(payload.requestBytes));
 
 			await streamConnection(
-				{ bridgeKey, conversationKey, model, output, stream, signal: options?.signal },
+				{ bridgeKey, conversationKey, model, output, signal: options?.signal, stream },
 				{
-					connection,
 					blobStore: payload.blobStore,
+					connection,
+					lastAccessMs: Date.now(),
 					mcpTools: payload.mcpTools,
 					pendingExecs: [],
-					lastAccessMs: Date.now(),
 				},
 			);
 		} catch (error) {
 			output.stopReason = options?.signal?.aborted ? "aborted" : "error";
 			output.errorMessage = error instanceof Error ? error.message : String(error);
-			stream.push({ type: "error", reason: output.stopReason, error: output });
+			stream.push({ error: output, reason: output.stopReason, type: "error" });
 			stream.end();
 		}
 	})();
@@ -157,21 +137,21 @@ export const streamSimpleCursor = (model: Model<string>, context: Context, optio
 
 function createOutput(model: Model<string>): AssistantMessage {
 	return {
-		role: "assistant",
-		content: [],
 		api: model.api,
-		provider: model.provider,
+		content: [],
 		model: model.id,
-		usage: {
-			input: 0,
-			output: 0,
-			cacheRead: 0,
-			cacheWrite: 0,
-			totalTokens: 0,
-			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-		},
+		provider: model.provider,
+		role: "assistant",
 		stopReason: "stop",
 		timestamp: Date.now(),
+		usage: {
+			cacheRead: 0,
+			cacheWrite: 0,
+			cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0, total: 0 },
+			input: 0,
+			output: 0,
+			totalTokens: 0,
+		},
 	};
 }
 
@@ -183,9 +163,12 @@ async function resumeActiveRun(
 	for (const pendingExec of activeRun.pendingExecs) {
 		const toolResult = toolResults.find((candidate) => candidate.toolCallId === pendingExec.toolCallId);
 		const result = toolResult
-			? toolResult.isError
+			? (toolResult.isError
 				? create(McpResultSchema, {
-						result: { case: "error", value: create(McpErrorSchema, { error: toolResult.content || "Tool execution failed" }) },
+						result: {
+							case: "error",
+							value: create(McpErrorSchema, { error: toolResult.content || "Tool execution failed" }),
+						},
 					})
 				: create(McpResultSchema, {
 						result: {
@@ -199,18 +182,20 @@ async function resumeActiveRun(
 								isError: false,
 							}),
 						},
-					})
+					}))
 			: create(McpResultSchema, {
-						result: { case: "error", value: create(McpErrorSchema, { error: "Tool result not provided" }) },
-					});
-		sendExecResult(pendingExec.execId, pendingExec.execMsgId, "mcpResult", result, (data) => activeRun.connection.write(data));
+					result: { case: "error", value: create(McpErrorSchema, { error: "Tool result not provided" }) },
+				});
+		sendExecResult(pendingExec.execId, pendingExec.execMsgId, "mcpResult", result, (data) =>
+			activeRun.connection.write(data),
+		);
 	}
 	activeRun.pendingExecs.length = 0;
 	await streamConnection(runtime, activeRun);
 }
 
 async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): Promise<void> {
-	const state: StreamState = { outputTokens: 0, totalTokens: 0, pendingExecs: run.pendingExecs };
+	const state: StreamState = { outputTokens: 0, pendingExecs: run.pendingExecs, totalTokens: 0 };
 	const emitter = new CursorOutputEmitter(runtime.output, runtime.stream);
 	const thinkingFilter = createThinkingTagFilter();
 
@@ -229,12 +214,8 @@ async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): 
 			(messageBytes) => {
 				try {
 					handleServerMessage({
-						messageBytes,
-						run,
-						state,
 						emitter,
-						thinkingFilter,
-						runtime,
+						messageBytes,
 						onToolExec: (pendingExec) => {
 							state.pendingExecs.push(pendingExec);
 							run.pendingExecs = state.pendingExecs;
@@ -253,6 +234,10 @@ async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): 
 							run.connection.clearHandlers();
 							settle(resolve);
 						},
+						run,
+						runtime,
+						state,
+						thinkingFilter,
 					});
 				} catch (error) {
 					settle(() => reject(error instanceof Error ? error : new Error(String(error))));
@@ -278,8 +263,6 @@ async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): 
 		);
 
 		run.connection.setHandlers({
-			onData: parser,
-			onError: (error) => settle(() => reject(error)),
 			onClose: () => {
 				if (yieldedToolUse) {
 					return;
@@ -291,6 +274,8 @@ async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): 
 				runtime.stream.end();
 				settle(resolve);
 			},
+			onData: parser,
+			onError: (error) => settle(() => reject(error)),
 		});
 
 		runtime.signal?.addEventListener(
@@ -339,7 +324,9 @@ function handleServerMessage(options: {
 		return;
 	}
 	if (messageCase === "kvServerMessage") {
-		sendKvBlobResponse(serverMessage.message.value, options.run.blobStore, (data) => options.run.connection.write(data));
+		sendKvBlobResponse(serverMessage.message.value, options.run.blobStore, (data) =>
+			options.run.connection.write(data),
+		);
 		return;
 	}
 	if (messageCase === "execServerMessage") {
@@ -352,15 +339,19 @@ function handleServerMessage(options: {
 		}
 		const checkpoint = toBinary(ConversationStateStructureSchema, serverMessage.message.value);
 		upsertConversationState(options.runtime.conversationKey, (current) => ({
-			conversationId: current?.conversationId ?? deterministicConversationId(options.runtime.conversationKey),
-			checkpoint,
 			blobStore: current?.blobStore ?? new Map(options.run.blobStore),
+			checkpoint,
+			conversationId: current?.conversationId ?? deterministicConversationId(options.runtime.conversationKey),
 			lastAccessMs: Date.now(),
 		}));
 	}
 }
 
-function handleExecServerMessage(execMessage: any, run: ActiveCursorRun, onToolExec: (pendingExec: PendingExec) => void): void {
+function handleExecServerMessage(
+	execMessage: any,
+	run: ActiveCursorRun,
+	onToolExec: (pendingExec: PendingExec) => void,
+): void {
 	const execCase = execMessage.message.case;
 	if (execCase === "requestContextArgs") {
 		sendRequestContextResult(execMessage.execId, execMessage.id, run.mcpTools, (data) => run.connection.write(data));
@@ -369,11 +360,11 @@ function handleExecServerMessage(execMessage: any, run: ActiveCursorRun, onToolE
 	if (execCase === "mcpArgs") {
 		const mcpArgs = execMessage.message.value;
 		onToolExec({
+			decodedArgs: JSON.stringify(decodeMcpArgsMap(mcpArgs.args ?? {})),
 			execId: execMessage.execId,
 			execMsgId: execMessage.id,
 			toolCallId: mcpArgs.toolCallId || randomUUID(),
 			toolName: mcpArgs.toolName || mcpArgs.name,
-			decodedArgs: JSON.stringify(decodeMcpArgsMap(mcpArgs.args ?? {})),
 		});
 		return;
 	}
@@ -383,7 +374,10 @@ function handleExecServerMessage(execMessage: any, run: ActiveCursorRun, onToolE
 			execMessage.id,
 			"readResult",
 			create(ReadResultSchema, {
-				result: { case: "rejected", value: create(ReadRejectedSchema, { path: execMessage.message.value.path, reason: REJECT_REASON }) },
+				result: {
+					case: "rejected",
+					value: create(ReadRejectedSchema, { path: execMessage.message.value.path, reason: REJECT_REASON }),
+				},
 			}),
 			(data) => run.connection.write(data),
 		);
@@ -395,7 +389,10 @@ function handleExecServerMessage(execMessage: any, run: ActiveCursorRun, onToolE
 			execMessage.id,
 			"writeResult",
 			create(WriteResultSchema, {
-				result: { case: "rejected", value: create(WriteRejectedSchema, { path: execMessage.message.value.path, reason: REJECT_REASON }) },
+				result: {
+					case: "rejected",
+					value: create(WriteRejectedSchema, { path: execMessage.message.value.path, reason: REJECT_REASON }),
+				},
 			}),
 			(data) => run.connection.write(data),
 		);
@@ -407,7 +404,10 @@ function handleExecServerMessage(execMessage: any, run: ActiveCursorRun, onToolE
 			execMessage.id,
 			"deleteResult",
 			create(DeleteResultSchema, {
-				result: { case: "rejected", value: create(DeleteRejectedSchema, { path: execMessage.message.value.path, reason: REJECT_REASON }) },
+				result: {
+					case: "rejected",
+					value: create(DeleteRejectedSchema, { path: execMessage.message.value.path, reason: REJECT_REASON }),
+				},
 			}),
 			(data) => run.connection.write(data),
 		);
@@ -429,7 +429,10 @@ function handleExecServerMessage(execMessage: any, run: ActiveCursorRun, onToolE
 			execMessage.id,
 			"fetchResult",
 			create(FetchResultSchema, {
-				result: { case: "error", value: create(FetchErrorSchema, { url: execMessage.message.value.url ?? "", error: REJECT_REASON }) },
+				result: {
+					case: "error",
+					value: create(FetchErrorSchema, { error: REJECT_REASON, url: execMessage.message.value.url ?? "" }),
+				},
 			}),
 			(data) => run.connection.write(data),
 		);
@@ -445,9 +448,9 @@ function handleExecServerMessage(execMessage: any, run: ActiveCursorRun, onToolE
 					case: "rejected",
 					value: create(ShellRejectedSchema, {
 						command: execMessage.message.value.command ?? "",
-						workingDirectory: execMessage.message.value.workingDirectory ?? "",
-						reason: REJECT_REASON,
 						isReadonly: false,
+						reason: REJECT_REASON,
+						workingDirectory: execMessage.message.value.workingDirectory ?? "",
 					}),
 				},
 			}),
@@ -465,9 +468,9 @@ function handleExecServerMessage(execMessage: any, run: ActiveCursorRun, onToolE
 					case: "rejected",
 					value: create(ShellRejectedSchema, {
 						command: execMessage.message.value.command ?? "",
-						workingDirectory: execMessage.message.value.workingDirectory ?? "",
-						reason: REJECT_REASON,
 						isReadonly: false,
+						reason: REJECT_REASON,
+						workingDirectory: execMessage.message.value.workingDirectory ?? "",
 					}),
 				},
 			}),
@@ -488,8 +491,12 @@ function handleExecServerMessage(execMessage: any, run: ActiveCursorRun, onToolE
 		return;
 	}
 	if (execCase === "diagnosticsArgs") {
-		sendExecResult(execMessage.execId, execMessage.id, "diagnosticsResult", create(DiagnosticsResultSchema, {}), (data) =>
-			run.connection.write(data),
+		sendExecResult(
+			execMessage.execId,
+			execMessage.id,
+			"diagnosticsResult",
+			create(DiagnosticsResultSchema, {}),
+			(data) => run.connection.write(data),
 		);
 	}
 }
@@ -529,16 +536,16 @@ class CursorOutputEmitter {
 		}
 		if (this.textIndex === undefined) {
 			this.closeThinking();
-			this.output.content.push({ type: "text", text: "" });
+			this.output.content.push({ text: "", type: "text" });
 			this.textIndex = this.output.content.length - 1;
-			this.stream.push({ type: "text_start", contentIndex: this.textIndex, partial: this.output });
+			this.stream.push({ contentIndex: this.textIndex, partial: this.output, type: "text_start" });
 		}
 		const block = this.output.content[this.textIndex];
 		if (block?.type !== "text") {
 			return;
 		}
 		block.text += text;
-		this.stream.push({ type: "text_delta", contentIndex: this.textIndex, delta: text, partial: this.output });
+		this.stream.push({ contentIndex: this.textIndex, delta: text, partial: this.output, type: "text_delta" });
 	}
 
 	appendThinking(thinking: string): void {
@@ -547,16 +554,21 @@ class CursorOutputEmitter {
 		}
 		if (this.thinkingIndex === undefined) {
 			this.closeText();
-			this.output.content.push({ type: "thinking", thinking: "" });
+			this.output.content.push({ thinking: "", type: "thinking" });
 			this.thinkingIndex = this.output.content.length - 1;
-			this.stream.push({ type: "thinking_start", contentIndex: this.thinkingIndex, partial: this.output });
+			this.stream.push({ contentIndex: this.thinkingIndex, partial: this.output, type: "thinking_start" });
 		}
 		const block = this.output.content[this.thinkingIndex];
 		if (block?.type !== "thinking") {
 			return;
 		}
 		block.thinking += thinking;
-		this.stream.push({ type: "thinking_delta", contentIndex: this.thinkingIndex, delta: thinking, partial: this.output });
+		this.stream.push({
+			contentIndex: this.thinkingIndex,
+			delta: thinking,
+			partial: this.output,
+			type: "thinking_delta",
+		});
 	}
 
 	emitToolCall(toolCall: ToolCall, rawArguments: string): void {
@@ -564,18 +576,18 @@ class CursorOutputEmitter {
 		this.closeThinking();
 		this.output.content.push(toolCall);
 		const index = this.output.content.length - 1;
-		this.stream.push({ type: "toolcall_start", contentIndex: index, partial: this.output });
+		this.stream.push({ contentIndex: index, partial: this.output, type: "toolcall_start" });
 		if (rawArguments) {
-			this.stream.push({ type: "toolcall_delta", contentIndex: index, delta: rawArguments, partial: this.output });
+			this.stream.push({ contentIndex: index, delta: rawArguments, partial: this.output, type: "toolcall_delta" });
 		}
-		this.stream.push({ type: "toolcall_end", contentIndex: index, toolCall, partial: this.output });
+		this.stream.push({ contentIndex: index, partial: this.output, toolCall, type: "toolcall_end" });
 	}
 
 	finishToolUse(): void {
 		this.closeText();
 		this.closeThinking();
 		this.output.stopReason = "toolUse";
-		this.stream.push({ type: "done", reason: "toolUse", message: this.output });
+		this.stream.push({ message: this.output, reason: "toolUse", type: "done" });
 		this.stream.end();
 	}
 
@@ -591,7 +603,7 @@ class CursorOutputEmitter {
 		}
 		const block = this.output.content[this.textIndex];
 		if (block?.type === "text") {
-			this.stream.push({ type: "text_end", contentIndex: this.textIndex, content: block.text, partial: this.output });
+			this.stream.push({ content: block.text, contentIndex: this.textIndex, partial: this.output, type: "text_end" });
 		}
 		this.textIndex = undefined;
 	}
@@ -602,7 +614,12 @@ class CursorOutputEmitter {
 		}
 		const block = this.output.content[this.thinkingIndex];
 		if (block?.type === "thinking") {
-			this.stream.push({ type: "thinking_end", contentIndex: this.thinkingIndex, content: block.thinking, partial: this.output });
+			this.stream.push({
+				content: block.thinking,
+				contentIndex: this.thinkingIndex,
+				partial: this.output,
+				type: "thinking_end",
+			});
 		}
 		this.thinkingIndex = undefined;
 	}
@@ -615,6 +632,14 @@ function createThinkingTagFilter(): {
 	let buffer = "";
 	let inThinking = false;
 	return {
+		flush() {
+			const remainder = buffer;
+			buffer = "";
+			if (!remainder) {
+				return { content: "", reasoning: "" };
+			}
+			return inThinking ? { content: "", reasoning: remainder } : { content: remainder, reasoning: "" };
+		},
 		process(text: string) {
 			const input = buffer + text;
 			buffer = "";
@@ -637,7 +662,11 @@ function createThinkingTagFilter(): {
 			}
 			const rest = input.slice(lastIndex);
 			const tagStart = rest.lastIndexOf("<");
-			if (tagStart >= 0 && rest.length - tagStart < MAX_THINKING_TAG_LEN && /^<\/?[a-z_]*$/i.test(rest.slice(tagStart))) {
+			if (
+				tagStart >= 0 &&
+				rest.length - tagStart < MAX_THINKING_TAG_LEN &&
+				/^<\/?[a-z_]*$/i.test(rest.slice(tagStart))
+			) {
 				buffer = rest.slice(tagStart);
 				const visible = rest.slice(0, tagStart);
 				if (inThinking) {
@@ -651,14 +680,6 @@ function createThinkingTagFilter(): {
 				content += rest;
 			}
 			return { content, reasoning };
-		},
-		flush() {
-			const remainder = buffer;
-			buffer = "";
-			if (!remainder) {
-				return { content: "", reasoning: "" };
-			}
-			return inThinking ? { content: "", reasoning: remainder } : { content: remainder, reasoning: "" };
 		},
 	};
 }

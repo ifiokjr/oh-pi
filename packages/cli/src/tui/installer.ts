@@ -2,9 +2,11 @@ import { EXTENSIONS } from "@ifi/oh-pi-core";
 import chalk from "chalk";
 import type { OhPConfigWithRouting } from "../types.js";
 import { compareVersion, entriesBetween, parseChangelog, readChangelog, renderChangelog } from "../utils/changelog.js";
-import { detectEnv, type EnvInfo } from "../utils/detect.js";
+import { detectEnv } from '../utils/detect.js';
+import type { EnvInfo } from '../utils/detect.js';
 import { applyConfig, backupConfig, installPi } from "../utils/install.js";
-import { type ExtensionOption, pickExtensions } from "./extension-picker.js";
+import { pickExtensions } from './extension-picker.js';
+import type { ExtensionOption } from './extension-picker.js';
 import { runWithProgress } from "./progress.js";
 
 export interface InstallerDeps {
@@ -18,23 +20,23 @@ export interface InstallerDeps {
 }
 
 export const defaultInstallerDeps: InstallerDeps = {
-	detectEnv,
-	readChangelog,
-	pickExtensions,
 	applyConfig,
-	installPi,
 	backupConfig,
+	detectEnv,
+	installPi,
+	pickExtensions,
+	readChangelog,
 	stdout: process.stdout,
 };
 
 function getDefaultConfig(extensions: string[]): OhPConfigWithRouting {
 	return {
+		agents: "general-developer",
+		extensions,
+		keybindings: "default",
+		prompts: ["review", "fix", "explain", "commit", "test"],
 		providers: [],
 		theme: "dark",
-		keybindings: "default",
-		extensions,
-		prompts: ["review", "fix", "explain", "commit", "test"],
-		agents: "general-developer",
 		thinking: "medium",
 	};
 }
@@ -46,7 +48,7 @@ export async function runInstaller(deps: InstallerDeps = defaultInstallerDeps): 
 	const env = await deps.detectEnv();
 
 	// ═══ Version banner ═══
-	const pkgVersion = "0.4.4"; // inline to avoid bundling package.json; changeset bumps this
+	const pkgVersion = "0.4.4"; // Inline to avoid bundling package.json; changeset bumps this
 	stdout.write("\n");
 	stdout.write(chalk.bold.cyan("╔══════════════════════════════════════╗\n"));
 	stdout.write(chalk.bold.cyan("║     oh-pi Interactive Installer     ║\n"));
@@ -82,7 +84,7 @@ export async function runInstaller(deps: InstallerDeps = defaultInstallerDeps): 
 			changelogText = renderChangelog(relevant);
 		}
 	} catch {
-		/* skip changelog if unreadable */
+		/* Skip changelog if unreadable */
 	}
 
 	if (changelogText) {
@@ -95,9 +97,9 @@ export async function runInstaller(deps: InstallerDeps = defaultInstallerDeps): 
 
 	// ═══ Extension picker ═══
 	const options: ExtensionOption[] = EXTENSIONS.map((e) => ({
-		value: e.name,
-		label: e.label,
 		default: e.default,
+		label: e.label,
+		value: e.name,
 	}));
 	const picked = await deps.pickExtensions(options);
 
@@ -107,26 +109,26 @@ export async function runInstaller(deps: InstallerDeps = defaultInstallerDeps): 
 	// ═══ Progress + apply ═══
 	const tasks = [
 		{
-			label: "Backing up existing config",
 			fn: () => {
 				if (env.hasExistingConfig) {
 					deps.backupConfig();
 				}
 			},
+			label: "Backing up existing config",
 		},
 		{
-			label: "Installing pi-coding-agent",
 			fn: () => {
 				if (!env.piInstalled) {
 					deps.installPi();
 				}
 			},
+			label: "Installing pi-coding-agent",
 		},
 		{
-			label: "Writing configuration files",
 			fn: () => {
 				deps.applyConfig(config);
 			},
+			label: "Writing configuration files",
 		},
 	];
 

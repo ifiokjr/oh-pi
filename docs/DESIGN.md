@@ -264,14 +264,14 @@ Unchanged.
 
 ```json
 {
-  "cursorUp": ["up", "alt+k"],
-  "cursorDown": ["down", "alt+j"],
-  "cursorLeft": ["left", "alt+h"],
-  "cursorRight": ["right", "alt+l"],
-  "cursorWordLeft": ["alt+left", "alt+b"],
-  "cursorWordRight": ["alt+right", "alt+w"],
-  "deleteToLineEnd": ["ctrl+k"],
-  "deleteToLineStart": ["ctrl+u"]
+	"cursorUp": ["up", "alt+k"],
+	"cursorDown": ["down", "alt+j"],
+	"cursorLeft": ["left", "alt+h"],
+	"cursorRight": ["right", "alt+l"],
+	"cursorWordLeft": ["alt+left", "alt+b"],
+	"cursorWordRight": ["alt+right", "alt+w"],
+	"deleteToLineEnd": ["ctrl+k"],
+	"deleteToLineStart": ["ctrl+u"]
 }
 ```
 
@@ -279,17 +279,17 @@ Unchanged.
 
 ```json
 {
-  "cursorUp": ["up", "ctrl+p"],
-  "cursorDown": ["down", "ctrl+n"],
-  "cursorLeft": ["left", "ctrl+b"],
-  "cursorRight": ["right", "ctrl+f"],
-  "cursorWordLeft": ["alt+left", "alt+b"],
-  "cursorWordRight": ["alt+right", "alt+f"],
-  "deleteCharForward": ["delete", "ctrl+d"],
-  "deleteCharBackward": ["backspace", "ctrl+h"],
-  "cursorLineStart": ["home", "ctrl+a"],
-  "cursorLineEnd": ["end", "ctrl+e"],
-  "newLine": ["shift+enter", "ctrl+j"]
+	"cursorUp": ["up", "ctrl+p"],
+	"cursorDown": ["down", "ctrl+n"],
+	"cursorLeft": ["left", "ctrl+b"],
+	"cursorRight": ["right", "ctrl+f"],
+	"cursorWordLeft": ["alt+left", "alt+b"],
+	"cursorWordRight": ["alt+right", "alt+f"],
+	"deleteCharForward": ["delete", "ctrl+d"],
+	"deleteCharBackward": ["backspace", "ctrl+h"],
+	"cursorLineStart": ["home", "ctrl+a"],
+	"cursorLineEnd": ["end", "ctrl+e"],
+	"newLine": ["shift+enter", "ctrl+j"]
 }
 ```
 
@@ -420,15 +420,15 @@ Users can use just the configurator, just the Pi Package, or both.
 
 ```json
 {
-  "name": "oh-pi",
-  "bin": { "oh-pi": "./bin/oh-pi.js" },
-  "keywords": ["pi-package", "pi-coding-agent", "configuration", "setup"],
-  "pi": {
-    "extensions": ["./pi-package/extensions"],
-    "skills": ["./pi-package/skills"],
-    "prompts": ["./pi-package/prompts"],
-    "themes": ["./pi-package/themes"]
-  }
+	"name": "oh-pi",
+	"bin": { "oh-pi": "./bin/oh-pi.js" },
+	"keywords": ["pi-package", "pi-coding-agent", "configuration", "setup"],
+	"pi": {
+		"extensions": ["./pi-package/extensions"],
+		"skills": ["./pi-package/skills"],
+		"prompts": ["./pi-package/prompts"],
+		"themes": ["./pi-package/themes"]
+	}
 }
 ```
 

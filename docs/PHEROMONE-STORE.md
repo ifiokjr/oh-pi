@@ -20,35 +20,35 @@
 
 ```ts
 export interface DecayPolicy {
-  // Default half-life in milliseconds (e.g. 10 * 60 * 1000)
-  defaultHalfLifeMs: number;
-  // Optional: per-caste override
-  perCasteHalfLifeMs?: Partial<Record<"scout" | "worker" | "soldier" | "drone", number>>;
-  // Strength threshold — entries below this are considered expired
-  minStrength?: number; // default: 0.05
+	// Default half-life in milliseconds (e.g. 10 * 60 * 1000)
+	defaultHalfLifeMs: number;
+	// Optional: per-caste override
+	perCasteHalfLifeMs?: Partial<Record<"scout" | "worker" | "soldier" | "drone", number>>;
+	// Strength threshold — entries below this are considered expired
+	minStrength?: number; // default: 0.05
 }
 
 export interface PheromoneQuery {
-  files?: string[];
-  types?: Array<"discovery" | "progress" | "warning" | "completion" | "dependency" | "repellent">;
-  limit?: number;
-  includeDecayed?: boolean;
+	files?: string[];
+	types?: Array<"discovery" | "progress" | "warning" | "completion" | "dependency" | "repellent">;
+	limit?: number;
+	includeDecayed?: boolean;
 }
 
 export interface PheromoneStoreStats {
-  totalStored: number;
-  totalActive: number;
-  lastCompactionAt: number | null;
-  storageBytes: number;
+	totalStored: number;
+	totalActive: number;
+	lastCompactionAt: number | null;
+	storageBytes: number;
 }
 
 export interface PheromoneStore {
-  append(entry: import("./types.js").Pheromone): Promise<void>;
-  query(q?: PheromoneQuery): Promise<import("./types.js").Pheromone[]>;
-  compact(now?: number): Promise<void>;
-  setDecayPolicy(policy: DecayPolicy): Promise<void>;
-  getStats(): Promise<PheromoneStoreStats>;
-  close(): Promise<void>;
+	append(entry: import("./types.js").Pheromone): Promise<void>;
+	query(q?: PheromoneQuery): Promise<import("./types.js").Pheromone[]>;
+	compact(now?: number): Promise<void>;
+	setDecayPolicy(policy: DecayPolicy): Promise<void>;
+	getStats(): Promise<PheromoneStoreStats>;
+	close(): Promise<void>;
 }
 ```
 

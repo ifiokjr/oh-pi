@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router";
+import { Route, Routes } from "react-router";
 import { Layout } from "@/components/Layout";
 import { useMdxPages } from "@/hooks/useMdxPages";
 import { HomePage } from "@/components/HomePage";

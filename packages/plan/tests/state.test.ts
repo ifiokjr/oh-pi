@@ -1,23 +1,30 @@
-import { describe, expect, test } from "vitest";
+
 import { createPlanModeStateManager, getLatestState } from "../state";
 
-describe("getLatestState", () => {
-	test("returns inactive state when no persisted state exists", () => {
+describe(getLatestState, () => {
+	it("returns inactive state when no persisted state exists", () => {
 		const ctx = {
 			sessionManager: {
-				getEntries: () => [],
 				getBranch: () => [],
+				getEntries: () => [],
 			},
 		} as any;
 
 		const state = getLatestState(ctx);
-		expect(state.active).toBe(false);
+		expect(state.active).toBeFalsy();
 		expect(state.version).toBe(1);
 	});
 
-	test("prefers latest session state even when current branch has stale active state", () => {
+	it("prefers latest session state even when current branch has stale active state", () => {
 		const ctx = {
 			sessionManager: {
+				getBranch: () => [
+					{
+						type: "custom",
+						customType: "pi-plan:state",
+						data: { version: 1, active: true, planFilePath: "/tmp/old.plan.md" },
+					},
+				],
 				getEntries: () => [
 					{
 						type: "custom",
@@ -30,18 +37,11 @@ describe("getLatestState", () => {
 						data: { version: 1, active: false, planFilePath: "/tmp/new.plan.md", lastPlanLeafId: "leaf-new" },
 					},
 				],
-				getBranch: () => [
-					{
-						type: "custom",
-						customType: "pi-plan:state",
-						data: { version: 1, active: true, planFilePath: "/tmp/old.plan.md" },
-					},
-				],
 			},
 		} as any;
 
 		const state = getLatestState(ctx);
-		expect(state.active).toBe(false);
+		expect(state.active).toBeFalsy();
 		expect(state.planFilePath).toBe("/tmp/new.plan.md");
 		expect(state.lastPlanLeafId).toBe("leaf-new");
 	});
@@ -53,14 +53,14 @@ describe("createPlanModeStateManager tool visibility", () => {
 			hasUI: false,
 			sessionManager: {
 				getEntries: () => entries,
-				getSessionFile: () => undefined,
 				getSessionDir: () => "/tmp",
+				getSessionFile: () => undefined,
 				getSessionId: () => "session-1",
 			},
 		} as any;
 	}
 
-	test("adds plan mode tools when plan mode starts", () => {
+	it("adds plan mode tools when plan mode starts", () => {
 		let activeTools = ["read", "bash", "edit", "write"];
 		const setActiveToolsCalls: string[][] = [];
 
@@ -77,12 +77,12 @@ describe("createPlanModeStateManager tool visibility", () => {
 			planFilePath: "/tmp/session.plan.md",
 		});
 
-		expect(setActiveToolsCalls).toEqual([
+		expect(setActiveToolsCalls).toStrictEqual([
 			["read", "bash", "edit", "write", "task_agents", "steer_task_agent", "request_user_input", "set_plan"],
 		]);
 	});
 
-	test("removes plan mode tools when refreshed state is inactive", () => {
+	it("removes plan mode tools when refreshed state is inactive", () => {
 		let activeTools = ["read", "bash", "set_plan", "task_agents", "steer_task_agent", "request_user_input"];
 		const setActiveToolsCalls: string[][] = [];
 
@@ -98,13 +98,13 @@ describe("createPlanModeStateManager tool visibility", () => {
 		manager.refresh(
 			createContext([
 				{
-					type: "custom",
 					customType: "pi-plan:state",
-					data: { version: 1, active: false, planFilePath: "/tmp/session.plan.md" },
+					data: { active: false, planFilePath: "/tmp/session.plan.md", version: 1 },
+					type: "custom",
 				},
 			]),
 		);
 
-		expect(setActiveToolsCalls).toEqual([["read", "bash"]]);
+		expect(setActiveToolsCalls).toStrictEqual([["read", "bash"]]);
 	});
 });

@@ -2,6 +2,7 @@
 Create a concrete implementation plan only.
 
 Guidance:
+
 - Focus on planning and analysis; do not write implementation code in this mode.
 - Start with direct local inspection for obvious, self-contained questions.
 - Use task_agents when it helps (e.g. parallel codebase exploration, independent validation, or external best-practice/documentation research).

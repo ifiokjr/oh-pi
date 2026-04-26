@@ -19,10 +19,10 @@ export function recordRun(agent: string, task: string, exitCode: number, duratio
 	try {
 		const entry: RunEntry = {
 			agent,
+			duration: durationMs,
+			status: exitCode === 0 ? "ok" : "error",
 			task: task.slice(0, 200),
 			ts: Math.floor(Date.now() / 1000),
-			status: exitCode === 0 ? "ok" : "error",
-			duration: durationMs,
 			...(exitCode !== 0 ? { exit: exitCode } : {}),
 		};
 		fs.mkdirSync(path.dirname(HISTORY_PATH), { recursive: true });
@@ -33,10 +33,10 @@ export function recordRun(agent: string, task: string, exitCode: number, duratio
 }
 
 export function loadRunsForAgent(agent: string): RunEntry[] {
-	if (!fs.existsSync(HISTORY_PATH)) return [];
+	if (!fs.existsSync(HISTORY_PATH)) {return [];}
 	let raw: string;
 	try {
-		raw = fs.readFileSync(HISTORY_PATH, "utf-8");
+		raw = fs.readFileSync(HISTORY_PATH, "utf8");
 	} catch {
 		return [];
 	}
@@ -49,7 +49,7 @@ export function loadRunsForAgent(agent: string): RunEntry[] {
 	if (lines.length > ROTATE_READ_THRESHOLD) {
 		lines = lines.slice(-ROTATE_KEEP);
 		try {
-			fs.writeFileSync(HISTORY_PATH, `${lines.join("\n")}\n`, "utf-8");
+			fs.writeFileSync(HISTORY_PATH, `${lines.join("\n")}\n`, "utf8");
 		} catch {}
 	}
 
@@ -58,9 +58,9 @@ export function loadRunsForAgent(agent: string): RunEntry[] {
 			try {
 				return JSON.parse(line) as RunEntry;
 			} catch {
-				return undefined;
+				return;
 			}
 		})
 		.filter((entry): entry is RunEntry => Boolean(entry) && entry.agent === agent)
-		.reverse();
+		.toReversed();
 }

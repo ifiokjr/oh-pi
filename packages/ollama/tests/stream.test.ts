@@ -1,19 +1,20 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { registerApiProvider, resetApiProviders, streamSimple, streamSimpleOpenAICompletions, type Model } from "@mariozechner/pi-ai";
-import { afterEach, describe, expect, it } from "vitest";
+import { registerApiProvider, resetApiProviders, streamSimple, streamSimpleOpenAICompletions } from '@mariozechner/pi-ai';
+import type { Model } from '@mariozechner/pi-ai';
+
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import ollamaProviderExtension from "../index.js";
 import { OLLAMA_API } from "../config.js";
 import { toOllamaModel } from "../models.js";
 
-type ChatCompletionPayload = {
+interface ChatCompletionPayload {
 	model?: string;
 	max_tokens?: number;
 	reasoning_effort?: string;
 	enable_thinking?: boolean;
 	stream?: boolean;
-};
+}
 
 async function createReasoningAwareChatBackend(): Promise<{
 	apiUrl: string;
@@ -67,10 +68,10 @@ async function createReasoningAwareChatBackend(): Promise<{
 			writeSse(res, {
 				choices: [{ delta: {}, finish_reason: "stop" }],
 				usage: {
-					prompt_tokens: 10,
 					completion_tokens: shouldReturnVisibleText ? 12 : 96,
-					prompt_tokens_details: { cached_tokens: 0 },
 					completion_tokens_details: { reasoning_tokens: shouldReturnVisibleText ? 4 : 96 },
+					prompt_tokens: 10,
+					prompt_tokens_details: { cached_tokens: 0 },
 				},
 			});
 			writeSse(res, "[DONE]");
@@ -79,15 +80,15 @@ async function createReasoningAwareChatBackend(): Promise<{
 	});
 
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-	const port = (server.address() as AddressInfo).port;
+	const {port} = (server.address() as AddressInfo);
 	const apiUrl = `http://127.0.0.1:${port}/v1`;
 
 	return {
 		apiUrl,
-		requests,
 		async close() {
 			await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
 		},
+		requests,
 	};
 }
 
@@ -98,15 +99,18 @@ function writeSse(res: http.ServerResponse, chunk: unknown): void {
 
 function createCloudGlmModel(baseUrl: string): Model<"openai-completions"> {
 	return {
-		...toOllamaModel({ id: "glm-5.1", source: "cloud", reasoning: true, input: ["text"], maxTokens: 25_344 }),
+		...toOllamaModel({ id: "glm-5.1", input: ["text"], maxTokens: 25_344, reasoning: true, source: "cloud" }),
 		api: "openai-completions",
-		provider: "ollama-cloud",
 		baseUrl,
+		provider: "ollama-cloud",
 	};
 }
 
-function extractText(blocks: Array<{ type: string; text?: string }>): string {
-	return blocks.filter((block) => block.type === "text").map((block) => block.text ?? "").join("");
+function extractText(blocks: { type: string; text?: string }[]): string {
+	return blocks
+		.filter((block) => block.type === "text")
+		.map((block) => block.text ?? "")
+		.join("");
 }
 
 afterEach(() => {
@@ -122,18 +126,18 @@ describe("ollama glm cloud streaming", () => {
 			const result = await streamSimpleOpenAICompletions(
 				createCloudGlmModel(backend.apiUrl),
 				{
-					messages: [{ role: "user", content: "Reply with exactly: OK", timestamp: Date.now() }],
+					messages: [{ content: "Reply with exactly: OK", role: "user", timestamp: Date.now() }],
 				},
 				{
 					apiKey: "test-key",
-					reasoning: "medium",
 					onPayload: (payload) => {
 						payloads.push(payload as ChatCompletionPayload);
 					},
+					reasoning: "medium",
 				},
 			).result();
 
-			expect(extractText(result.content as Array<{ type: string; text?: string }>)).toBe("OK");
+			expect(extractText(result.content as { type: string; text?: string }[])).toBe("OK");
 			expect(payloads[0]).toMatchObject({
 				enable_thinking: true,
 				max_tokens: 32_000,
@@ -154,7 +158,7 @@ describe("ollama glm cloud streaming", () => {
 			const result = await streamSimpleOpenAICompletions(
 				createCloudGlmModel(backend.apiUrl),
 				{
-					messages: [{ role: "user", content: "Reply with exactly: OK", timestamp: Date.now() }],
+					messages: [{ content: "Reply with exactly: OK", role: "user", timestamp: Date.now() }],
 				},
 				{
 					apiKey: "test-key",
@@ -164,7 +168,7 @@ describe("ollama glm cloud streaming", () => {
 				},
 			).result();
 
-			expect(extractText(result.content as Array<{ type: string; text?: string }>)).toBe("OK");
+			expect(extractText(result.content as { type: string; text?: string }[])).toBe("OK");
 			expect(payloads[0]).toMatchObject({
 				enable_thinking: false,
 				max_tokens: 32_000,
@@ -209,13 +213,13 @@ describe("ollama glm cloud streaming", () => {
 			const result = await streamSimple(
 				createCloudGlmModel(backend.apiUrl),
 				{
-					messages: [{ role: "user", content: "Reply with exactly: OK", timestamp: Date.now() }],
+					messages: [{ content: "Reply with exactly: OK", role: "user", timestamp: Date.now() }],
 				},
 				{ apiKey: "test-key" },
 			).result();
 
-			expect(extractText(result.content as Array<{ type: string; text?: string }>)).toBe("OK");
-			expect(backend.requests[0]).toMatchObject({ model: "glm-5.1", max_tokens: 32_000, enable_thinking: false });
+			expect(extractText(result.content as { type: string; text?: string }[])).toBe("OK");
+			expect(backend.requests[0]).toMatchObject({ enable_thinking: false, max_tokens: 32_000, model: "glm-5.1" });
 		} finally {
 			await backend.close();
 		}

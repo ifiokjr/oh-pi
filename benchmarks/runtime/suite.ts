@@ -2,20 +2,20 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
-import { vi } from "vitest";
+
 import { createBenchmarkHarness } from "../startup/harness";
 
-type ExtensionModule = {
+interface ExtensionModule {
 	default: (pi: any) => void;
-};
+}
 
-type RuntimeExtensionEntry = {
+interface RuntimeExtensionEntry {
 	id: string;
 	path: string;
 	resolvedPath: string;
-};
+}
 
-type RuntimeChurnResult = {
+interface RuntimeChurnResult {
 	id: string;
 	label: string;
 	group: "runtime idle" | "runtime scaling";
@@ -27,19 +27,19 @@ type RuntimeChurnResult = {
 	statusUpdates: number;
 	notifications: number;
 	note?: string;
-};
+}
 
-type RuntimeChurnReport = {
+interface RuntimeChurnReport {
 	suite: string;
 	generatedAt: string;
 	windowMs: number;
 	results: RuntimeChurnResult[];
-};
+}
 
-type RuntimeBenchmarkSuite = {
+interface RuntimeBenchmarkSuite {
 	report: RuntimeChurnReport;
 	cleanup: () => Promise<void>;
-};
+}
 
 const ROOT_PACKAGE_PATH = path.resolve(process.cwd(), "package.json");
 const WINDOW_MS = 65_000;
@@ -47,16 +47,16 @@ const FULL_STACK_ENTRIES = 200;
 
 function createAssistantEntry(index: number) {
 	return {
-		type: "message",
 		message: {
-			role: "assistant",
 			content: `assistant message ${index}`,
+			role: "assistant",
 			usage: {
+				cost: { total: 0.01 },
 				input: 1200 + (index % 11),
 				output: 800 + (index % 7),
-				cost: { total: 0.01 },
 			},
 		},
+		type: "message",
 	};
 }
 
@@ -65,7 +65,7 @@ function createAssistantEntries(count: number): any[] {
 }
 
 function extensionIdFromPath(extensionPath: string): string {
-	const normalizedPath = extensionPath.replace(/\\/g, "/");
+	const normalizedPath = extensionPath.replaceAll(/\\/g, "/");
 	const fileName = normalizedPath.split("/").at(-1) ?? normalizedPath;
 	if (fileName === "index.ts") {
 		return normalizedPath.split("/").at(-2) ?? "unknown";
@@ -88,7 +88,7 @@ function parseExtensionFilter(): Set<string> | null {
 }
 
 async function loadManifestExtensionEntries(): Promise<RuntimeExtensionEntry[]> {
-	const rawPackage = JSON.parse(await fs.readFile(ROOT_PACKAGE_PATH, "utf-8")) as {
+	const rawPackage = JSON.parse(await fs.readFile(ROOT_PACKAGE_PATH, "utf8")) as {
 		pi?: { extensions?: string[] };
 	};
 	const extensionPaths = rawPackage.pi?.extensions ?? [];
@@ -143,8 +143,8 @@ function toMarkdown(report: RuntimeChurnReport): string {
 
 async function writeRuntimeChurnReport(report: RuntimeChurnReport, outputDir: string): Promise<void> {
 	await fs.mkdir(outputDir, { recursive: true });
-	await fs.writeFile(path.join(outputDir, "runtime-churn.json"), `${JSON.stringify(report, null, "\t")}\n`, "utf-8");
-	await fs.writeFile(path.join(outputDir, "runtime-churn.md"), toMarkdown(report), "utf-8");
+	await fs.writeFile(path.join(outputDir, "runtime-churn.json"), `${JSON.stringify(report, null, "\t")}\n`, "utf8");
+	await fs.writeFile(path.join(outputDir, "runtime-churn.md"), toMarkdown(report), "utf8");
 }
 
 async function captureRuntimeChurn(
@@ -165,11 +165,11 @@ async function captureRuntimeChurn(
 	for (let index = 0; index < (options.instanceCount ?? 1); index++) {
 		vi.resetModules();
 		const harness = createBenchmarkHarness({
+			branch: historyEntries,
+			contextUsage: { percent: 42 },
 			cwd: process.cwd(),
 			entries: historyEntries,
-			branch: historyEntries,
 			hasUI: true,
-			contextUsage: { percent: 42 },
 		});
 		for (const entry of entries) {
 			const mod = await importExtensionModule(
@@ -187,17 +187,17 @@ async function captureRuntimeChurn(
 	await vi.advanceTimersByTimeAsync(windowMs);
 
 	const result: RuntimeChurnResult = {
+		footerRenderRequests: harnesses.reduce((total, harness) => total + harness.requestRenderCounts.footer, 0),
+		group: options.group,
 		id: options.id,
 		label: options.label,
-		group: options.group,
-		windowMs,
-		mountedWidgets: harnesses.reduce((total, harness) => total + harness.widgets.size, 0),
 		mountedFooter: harnesses.some((harness) => Boolean(harness.footerFactory)),
-		widgetRenderRequests: harnesses.reduce((total, harness) => total + harness.requestRenderCounts.widget, 0),
-		footerRenderRequests: harnesses.reduce((total, harness) => total + harness.requestRenderCounts.footer, 0),
-		statusUpdates: harnesses.reduce((total, harness) => total + harness.statusCalls.length, 0),
-		notifications: harnesses.reduce((total, harness) => total + harness.notifications.length, 0),
+		mountedWidgets: harnesses.reduce((total, harness) => total + harness.widgets.size, 0),
 		note: options.note,
+		notifications: harnesses.reduce((total, harness) => total + harness.notifications.length, 0),
+		statusUpdates: harnesses.reduce((total, harness) => total + harness.statusCalls.length, 0),
+		widgetRenderRequests: harnesses.reduce((total, harness) => total + harness.requestRenderCounts.widget, 0),
+		windowMs,
 	};
 
 	for (const harness of harnesses) {
@@ -229,19 +229,19 @@ export async function createRuntimeBenchmarkSuite(): Promise<RuntimeBenchmarkSui
 
 	results.push(
 		await captureRuntimeChurn(fullStackEntries, {
+			group: "runtime idle",
 			id: "full-stack-idle-ui",
 			label: "full stack mounted idle UI churn",
-			group: "runtime idle",
 			note: "Loads the active extension set, mounts widgets/footers, and advances a 65s idle window.",
 		}),
 	);
 
 	results.push(
 		await captureRuntimeChurn(fullStackEntries, {
-			id: "full-stack-idle-ui-4x",
-			label: "full stack mounted idle UI churn (4 instances)",
 			group: "runtime scaling",
+			id: "full-stack-idle-ui-4x",
 			instanceCount: 4,
+			label: "full stack mounted idle UI churn (4 instances)",
 			note: "Approximates multiple active pi instances by mounting four copies of the active extension set under the same fake clock window.",
 		}),
 	);
@@ -249,18 +249,16 @@ export async function createRuntimeBenchmarkSuite(): Promise<RuntimeBenchmarkSui
 	for (const entry of filteredEntries) {
 		results.push(
 			await captureRuntimeChurn([entry], {
+				group: "runtime idle",
 				id: `extension-runtime-idle-${entry.id}`,
 				label: `isolated runtime idle UI churn (${entry.id})`,
-				group: "runtime idle",
 				note: `Loads only ${entry.id} (${entry.path}) so always-on timers and redraws can be ranked in isolation.`,
 			}),
 		);
 	}
 
 	const report: RuntimeChurnReport = {
-		suite: "runtime-churn",
 		generatedAt: new Date().toISOString(),
-		windowMs: WINDOW_MS,
 		results: [
 			...results.filter((result) => result.group === "runtime scaling"),
 			...results
@@ -272,13 +270,14 @@ export async function createRuntimeBenchmarkSuite(): Promise<RuntimeBenchmarkSui
 							(left.widgetRenderRequests + left.footerRenderRequests) || left.label.localeCompare(right.label),
 				),
 		],
+		suite: "runtime-churn",
+		windowMs: WINDOW_MS,
 	};
 
 	const outputDir = path.resolve(process.cwd(), process.env.OH_PI_BENCH_OUTPUT_DIR ?? "coverage/benchmarks/runtime");
 	await writeRuntimeChurnReport(report, outputDir);
 
 	return {
-		report,
 		async cleanup() {
 			vi.clearAllTimers();
 			if (previousHome === undefined) {
@@ -295,5 +294,6 @@ export async function createRuntimeBenchmarkSuite(): Promise<RuntimeBenchmarkSui
 
 			await fs.rm(tempRoot, { recursive: true, force: true });
 		},
+		report,
 	};
 }

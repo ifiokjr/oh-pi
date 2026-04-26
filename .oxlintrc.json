@@ -1,0 +1,56 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "oxc", "jsdoc", "jest", "vitest", "promise"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "off",
+    "style": "off",
+    "nursery": "off",
+    "restriction": "off"
+  },
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "no-console": "off",
+    "require-await": "off",
+    "no-inline-comments": "off",
+    "no-negated-condition": "off",
+    "max-depth": "off",
+    "max-classes-per-file": "off",
+    "vitest/require-mock-type-parameters": "off",
+    "jest/valid-title": "off",
+    "jest/no-conditional-expect": "off",
+    "jest/no-standalone-expect": "off",
+    "jest/expect-expect": "off",
+    "jest/valid-expect": "off",
+    "jest/require-to-throw-message": "off",
+    "promise/always-return": "off",
+    "promise/no-multiple-resolved": "off",
+    "promise/no-callback-in-promise": "off",
+    "typescript/no-extraneous-class": "off"
+  },
+  "env": {
+    "builtin": true,
+    "node": true,
+    "es2024": true
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/.changeset/**",
+    "**/*.min.js",
+    "**/pnpm-lock.yaml",
+    "**/package-lock.json",
+    "**/yarn.lock"
+  ],
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "benchmarks/**/*.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "off"
+      }
+    }
+  ]
+}

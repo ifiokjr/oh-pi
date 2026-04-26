@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../skills.js", () => ({
+
+vi.mock<typeof import('../skills.js')>(import('../skills.js'), () => ({
 	normalizeSkillInput: (value: unknown) => {
 		if (value === false) {
 			return false;
@@ -17,7 +17,7 @@ vi.mock("../skills.js", () => ({
 				.map((item) => item.trim())
 				.filter(Boolean);
 		}
-		return undefined;
+		return;
 	},
 }));
 
@@ -45,7 +45,7 @@ function createTempDir(prefix: string) {
 
 afterEach(() => {
 	for (const dir of tempDirs) {
-		fs.rmSync(dir, { recursive: true, force: true });
+		fs.rmSync(dir, { force: true, recursive: true });
 	}
 	tempDirs.length = 0;
 });
@@ -60,10 +60,10 @@ describe("subagent settings helpers", () => {
 			},
 		] as const;
 
-		expect(isParallelStep(steps[2])).toBe(true);
-		expect(getStepAgents(steps[0])).toEqual(["scout"]);
-		expect(getStepAgents(steps[2])).toEqual(["reviewer", "qa"]);
-		expect(resolveChainTemplates(steps as never)).toEqual([
+		expect(isParallelStep(steps[2])).toBeTruthy();
+		expect(getStepAgents(steps[0])).toStrictEqual(["scout"]);
+		expect(getStepAgents(steps[2])).toStrictEqual(["reviewer", "qa"]);
+		expect(resolveChainTemplates(steps as never)).toStrictEqual([
 			"Inspect {task}",
 			"{previous}",
 			["Review {previous}", "{previous}"],
@@ -72,9 +72,9 @@ describe("subagent settings helpers", () => {
 
 	it("creates, removes, and cleans up stale chain directories", async () => {
 		const created = createChainDir(`settings-chain-${Date.now()}`);
-		expect(fs.existsSync(created)).toBe(true);
+		expect(fs.existsSync(created)).toBeTruthy();
 		removeChainDir(created);
-		expect(fs.existsSync(created)).toBe(false);
+		expect(fs.existsSync(created)).toBeFalsy();
 
 		const chainRunsDir = path.join(os.tmpdir(), "pi-chain-runs");
 		const staleDir = path.join(chainRunsDir, `stale-${Date.now()}`);
@@ -87,40 +87,40 @@ describe("subagent settings helpers", () => {
 
 		await cleanupOldChainDirs();
 
-		expect(fs.existsSync(staleDir)).toBe(false);
-		expect(fs.existsSync(freshDir)).toBe(true);
+		expect(fs.existsSync(staleDir)).toBeFalsy();
+		expect(fs.existsSync(freshDir)).toBeTruthy();
 	});
 
 	it("resolves step behavior with overrides and chain-level skills", () => {
 		const behavior = resolveStepBehavior(
 			{
+				defaultProgress: true,
+				defaultReads: ["brief.md"],
+				model: "anthropic/claude-sonnet-4",
 				name: "scout",
 				output: "agent.md",
-				defaultReads: ["brief.md"],
-				defaultProgress: true,
 				skills: ["git"],
-				model: "anthropic/claude-sonnet-4",
 			},
 			{
-				output: "override.md",
-				reads: ["spec.md"],
-				progress: false,
-				skills: ["context7"],
 				model: "openai/gpt-5",
+				output: "override.md",
+				progress: false,
+				reads: ["spec.md"],
+				skills: ["context7"],
 			},
 			["shared-skill"],
 		);
 
-		expect(behavior).toEqual({
-			output: "override.md",
-			reads: ["spec.md"],
-			progress: false,
-			skills: ["context7", "shared-skill"],
+		expect(behavior).toStrictEqual({
 			model: "openai/gpt-5",
+			output: "override.md",
+			progress: false,
+			reads: ["spec.md"],
+			skills: ["context7", "shared-skill"],
 		});
 		expect(
-			resolveStepBehavior({ name: "planner", skills: ["plan"], defaultProgress: false }, { skills: false }, ["shared"]),
-		).toMatchObject({ skills: false, progress: false, output: false, reads: false });
+			resolveStepBehavior({ defaultProgress: false, name: "planner", skills: ["plan"] }, { skills: false }, ["shared"]),
+		).toMatchObject({ output: false, progress: false, reads: false, skills: false });
 	});
 
 	it("builds read/write/progress instructions with previous-step summaries", () => {
@@ -128,8 +128,8 @@ describe("subagent settings helpers", () => {
 		const instructions = buildChainInstructions(
 			{
 				output: "report.md",
-				reads: ["spec.md", "/abs/notes.md"],
 				progress: true,
+				reads: ["spec.md", "/abs/notes.md"],
 				skills: ["git"],
 			},
 			chainDir,
@@ -147,69 +147,69 @@ describe("subagent settings helpers", () => {
 		const chainDir = createTempDir("pi-chain-parallel-settings-");
 		const behaviors = resolveParallelBehaviors(
 			[
-				{ agent: "planner", output: "plan.md", reads: ["spec.md"], progress: true, skill: ["plan"] },
-				{ agent: "reviewer", skill: false, output: "/abs/review.md" },
+				{ agent: "planner", output: "plan.md", progress: true, reads: ["spec.md"], skill: ["plan"] },
+				{ agent: "reviewer", output: "/abs/review.md", skill: false },
 				{ agent: "writer" },
 			],
 			[
 				{
+					defaultProgress: false,
+					defaultReads: ["default.md"],
 					name: "planner",
 					output: "planner.md",
-					defaultReads: ["default.md"],
-					defaultProgress: false,
 					skills: ["git"],
 				},
 				{ name: "reviewer", output: "review.md", skills: ["review"] },
-				{ name: "writer", output: "write.md", skills: ["docs"], model: "anthropic/claude-sonnet-4" },
+				{ model: "anthropic/claude-sonnet-4", name: "writer", output: "write.md", skills: ["docs"] },
 			],
 			2,
 			["shared"],
 		);
 
-		expect(behaviors).toEqual([
+		expect(behaviors).toStrictEqual([
 			{
+				model: undefined,
 				output: path.join("parallel-2", "0-planner", "plan.md"),
-				reads: ["spec.md"],
 				progress: true,
+				reads: ["spec.md"],
 				skills: ["plan", "shared"],
-				model: undefined,
 			},
 			{
+				model: undefined,
 				output: "/abs/review.md",
-				reads: false,
 				progress: false,
+				reads: false,
 				skills: false,
-				model: undefined,
 			},
 			{
-				output: path.join("parallel-2", "2-writer", "write.md"),
-				reads: false,
-				progress: false,
-				skills: ["docs", "shared"],
 				model: "anthropic/claude-sonnet-4",
+				output: path.join("parallel-2", "2-writer", "write.md"),
+				progress: false,
+				reads: false,
+				skills: ["docs", "shared"],
 			},
 		]);
 
 		createParallelDirs(chainDir, 2, 3, ["planner", "reviewer", "writer"]);
-		expect(fs.existsSync(path.join(chainDir, "parallel-2", "0-planner"))).toBe(true);
-		expect(fs.existsSync(path.join(chainDir, "parallel-2", "1-reviewer"))).toBe(true);
-		expect(fs.existsSync(path.join(chainDir, "parallel-2", "2-writer"))).toBe(true);
+		expect(fs.existsSync(path.join(chainDir, "parallel-2", "0-planner"))).toBeTruthy();
+		expect(fs.existsSync(path.join(chainDir, "parallel-2", "1-reviewer"))).toBeTruthy();
+		expect(fs.existsSync(path.join(chainDir, "parallel-2", "2-writer"))).toBeTruthy();
 	});
 
 	it("aggregates parallel outputs with clear status markers", () => {
 		const summary = aggregateParallelOutputs([
-			{ agent: "planner", taskIndex: 0, output: "Plan complete", exitCode: 0 },
-			{ agent: "reviewer", taskIndex: 1, output: "", exitCode: 0, error: "Used fallback file" },
+			{ agent: "planner", exitCode: 0, output: "Plan complete", taskIndex: 0 },
+			{ agent: "reviewer", error: "Used fallback file", exitCode: 0, output: "", taskIndex: 1 },
 			{
 				agent: "qa",
-				taskIndex: 2,
-				output: "",
 				exitCode: 0,
-				outputTargetPath: "/tmp/qa.md",
+				output: "",
 				outputTargetExists: false,
+				outputTargetPath: "/tmp/qa.md",
+				taskIndex: 2,
 			},
-			{ agent: "docs", taskIndex: 3, output: "", exitCode: -1 },
-			{ agent: "deploy", taskIndex: 4, output: "Logs", exitCode: 1, error: "boom" },
+			{ agent: "docs", exitCode: -1, output: "", taskIndex: 3 },
+			{ agent: "deploy", error: "boom", exitCode: 1, output: "Logs", taskIndex: 4 },
 		]);
 
 		expect(summary).toContain("=== Parallel Task 1 (planner) ===\nPlan complete");

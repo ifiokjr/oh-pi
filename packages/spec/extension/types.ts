@@ -77,7 +77,7 @@ export interface WorkflowStatus {
 	featureDirs: string[];
 	activeFeature?: string;
 	paths: WorkflowPaths;
-	artifacts: Array<{ label: string; path: string; exists: boolean }>;
+	artifacts: { label: string; path: string; exists: boolean }[];
 	checklists: ChecklistSummary[];
 	nextSteps: string[];
 }

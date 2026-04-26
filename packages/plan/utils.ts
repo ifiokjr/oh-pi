@@ -22,8 +22,8 @@ Use concise bullet points and preserve exact technical identifiers when relevant
 
 export function createInactivePlanModeState(): PlanModeState {
 	return {
-		version: PLAN_MODE_STATE_VERSION,
 		active: false,
+		version: PLAN_MODE_STATE_VERSION,
 	};
 }
 
@@ -44,8 +44,7 @@ export function resolvePlanFilePath(cwd: string, filePath: string): string | nul
 	return path.resolve(cwd, trimmed);
 }
 
-export function resolveTaskAgentConcurrency(value: number | undefined): number | null {
-	const concurrency = value ?? 2;
+export function resolveTaskAgentConcurrency(concurrency = 2: number | undefined): number | null {
 	if (!Number.isFinite(concurrency) || !Number.isInteger(concurrency)) {
 		return null;
 	}

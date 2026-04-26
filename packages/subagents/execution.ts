@@ -9,23 +9,15 @@ import * as path from "node:path";
 import type { Message } from "@mariozechner/pi-ai";
 import type { AgentConfig } from "./agents.js";
 import { ensureArtifactsDir, getArtifactPaths, writeArtifact, writeMetadata } from "./artifacts.js";
+import { DEFAULT_MAX_OUTPUT, DEFAULT_IDLE_TIMEOUT_MS, truncateOutput, getSubagentDepthEnv } from './types.js';
+import type { AgentProgress, ArtifactPaths, RunSyncOptions, SingleResult } from './types.js';
 import {
-	type AgentProgress,
-	type ArtifactPaths,
-	type RunSyncOptions,
-	type SingleResult,
-	DEFAULT_MAX_OUTPUT,
-	DEFAULT_IDLE_TIMEOUT_MS,
-	truncateOutput,
-	getSubagentDepthEnv,
-} from "./types.js";
-import {
-	writePrompt,
-	getFinalOutput,
-	findLatestSessionFile,
 	detectSubagentError,
-	extractToolArgsPreview,
 	extractTextFromContent,
+	extractToolArgsPreview,
+	findLatestSessionFile,
+	getFinalOutput,
+	writePrompt,
 } from "./utils.js";
 import { buildSkillInjection, resolveSkills } from "./skills.js";
 import { getPiSpawnCommand } from "./pi-spawn.js";
@@ -34,9 +26,9 @@ import { createJsonlWriter } from "./jsonl-writer.js";
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
 
 export function applyThinkingSuffix(model: string | undefined, thinking: string | undefined): string | undefined {
-	if (!model || !thinking || thinking === "off") return model;
+	if (!model || !thinking || thinking === "off") {return model;}
 	const colonIdx = model.lastIndexOf(":");
-	if (colonIdx !== -1 && THINKING_LEVELS.includes(model.substring(colonIdx + 1))) return model;
+	if (colonIdx !== -1 && THINKING_LEVELS.includes(model.substring(colonIdx + 1))) {return model;}
 	return `${model}:${thinking}`;
 }
 
@@ -50,16 +42,17 @@ export async function runSync(
 	task: string,
 	options: RunSyncOptions,
 ): Promise<SingleResult> {
-	const { cwd, signal, onUpdate, maxOutput, artifactsDir, artifactConfig, runId, index, modelOverride, idleTimeoutMs } = options;
+	const { cwd, signal, onUpdate, maxOutput, artifactsDir, artifactConfig, runId, index, modelOverride, idleTimeoutMs } =
+		options;
 	const agent = agents.find((a) => a.name === agentName);
 	if (!agent) {
 		return {
 			agent: agentName,
-			task,
+			error: `Unknown agent: ${agentName}`,
 			exitCode: 1,
 			messages: [],
-			usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
-			error: `Unknown agent: ${agentName}`,
+			task,
+			usage: { cacheRead: 0, cacheWrite: 0, cost: 0, input: 0, output: 0, turns: 0 },
 		};
 	}
 
@@ -78,14 +71,14 @@ export async function runSync(
 	const effectiveModel = modelOverride ?? agent.model;
 	const modelArg = applyThinkingSuffix(effectiveModel, agent.thinking);
 	// Use --models (not --model) because pi CLI silently ignores --model
-	// without a companion --provider flag. --models resolves the provider
-	// automatically via resolveModelScope. See: #8
-	if (modelArg) args.push("--models", modelArg);
+	// Without a companion --provider flag. --models resolves the provider
+	// Automatically via resolveModelScope. See: #8
+	if (modelArg) {args.push("--models", modelArg);}
 	const toolExtensionPaths: string[] = [];
 	// Only pi's 7 builtin tools can be passed via --tools.
 	// Extension-registered tools (e.g. read_full) are not in allTools
-	// and get silently dropped when passed as --tools because the
-	// whitelist is applied before extensions load.
+	// And get silently dropped when passed as --tools because the
+	// Whitelist is applied before extensions load.
 	const BUILTIN_TOOL_NAMES = new Set(["read", "bash", "edit", "write", "grep", "find", "ls"]);
 
 	if (agent.tools?.length) {
@@ -96,8 +89,8 @@ export async function runSync(
 			} else if (BUILTIN_TOOL_NAMES.has(tool)) {
 				builtinTools.push(tool);
 			}
-			// else: extension-registered tool (e.g. read_full) — let the
-			// extension register it naturally; don't pass via --tools.
+			// Else: extension-registered tool (e.g. read_full) — let the
+			// Extension register it naturally; don't pass via --tools.
 		}
 		if (builtinTools.length > 0) {
 			args.push("--tools", builtinTools.join(","));
@@ -118,7 +111,7 @@ export async function runSync(
 	const { resolved: resolvedSkills, missing: missingSkills } = resolveSkills(skillNames, cwd ?? runtimeCwd);
 
 	// When explicit skills are specified (via options or agent config), disable
-	// pi's own skill discovery so the spawned process doesn't inject the full
+	// Pi's own skill discovery so the spawned process doesn't inject the full
 	// <available_skills> catalog.  This mirrors how extensions are scoped above.
 	if (skillNames.length > 0) {
 		args.push("--no-skills");
@@ -138,7 +131,7 @@ export async function runSync(
 	}
 
 	// When the task is too long for a CLI argument (Windows ENAMETOOLONG),
-	// write it to a temp file and use pi's @file syntax instead.
+	// Write it to a temp file and use pi's @file syntax instead.
 	const TASK_ARG_LIMIT = 8000;
 	if (task.length > TASK_ARG_LIMIT) {
 		if (!tmpDir) {
@@ -153,28 +146,28 @@ export async function runSync(
 
 	const result: SingleResult = {
 		agent: agentName,
-		task,
 		exitCode: 0,
 		messages: [],
-		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
 		model: modelArg,
-		modelSource: options.modelSource,
 		modelCategory: options.modelCategory,
+		modelSource: options.modelSource,
 		skills: resolvedSkills.length > 0 ? resolvedSkills.map((s) => s.name) : undefined,
 		skillsWarning: missingSkills.length > 0 ? `Skills not found: ${missingSkills.join(", ")}` : undefined,
+		task,
+		usage: { cacheRead: 0, cacheWrite: 0, cost: 0, input: 0, output: 0, turns: 0 },
 	};
 
 	const progress: AgentProgress = {
-		index: index ?? 0,
 		agent: agentName,
+		durationMs: 0,
+		index: index ?? 0,
+		recentOutput: [],
+		recentTools: [],
+		skills: resolvedSkills.length > 0 ? resolvedSkills.map((s) => s.name) : undefined,
 		status: "running",
 		task,
-		skills: resolvedSkills.length > 0 ? resolvedSkills.map((s) => s.name) : undefined,
-		recentTools: [],
-		recentOutput: [],
-		toolCount: 0,
 		tokens: 0,
-		durationMs: 0,
+		toolCount: 0,
 	};
 	result.progress = progress;
 
@@ -189,7 +182,7 @@ export async function runSync(
 			writeArtifact(artifactPathsResult.inputPath, `# Task for ${agentName}\n\n${task}`);
 		}
 		if (artifactConfig?.includeJsonl !== false) {
-			jsonlPath = artifactPathsResult.jsonlPath;
+			({ jsonlPath } = artifactPathsResult);
 		}
 	}
 
@@ -226,12 +219,12 @@ export async function runSync(
 		let idleTimer: ReturnType<typeof setTimeout> | null = null;
 		let idleKilled = false;
 		const resetIdleTimer = () => {
-			if (idleTimeout <= 0 || processClosed) return;
-			if (idleTimer) clearTimeout(idleTimer);
+			if (idleTimeout <= 0 || processClosed) {return;}
+			if (idleTimer) {clearTimeout(idleTimer);}
 			idleTimer = setTimeout(() => {
-				if (processClosed) return;
+				if (processClosed) {return;}
 				idleKilled = true;
-				result.error = `Idle timeout: no activity for ${Math.round(idleTimeout / 60000)} min`;
+				result.error = `Idle timeout: no activity for ${Math.round(idleTimeout / 60_000)} min`;
 				progress.error = result.error;
 				progress.status = "failed";
 				proc.kill("SIGTERM");
@@ -242,7 +235,7 @@ export async function runSync(
 		resetIdleTimer();
 
 		const scheduleUpdate = () => {
-			if (!onUpdate || processClosed) return;
+			if (!onUpdate || processClosed) {return;}
 			const now = Date.now();
 			const elapsed = now - lastUpdateTime;
 
@@ -257,8 +250,8 @@ export async function runSync(
 				updatePending = false;
 				progress.durationMs = now - startTime;
 				onUpdate({
-					content: [{ type: "text", text: getFinalOutput(result.messages) || "(running...)" }],
-					details: { mode: "single", results: [result], progress: [progress] },
+					content: [{ text: getFinalOutput(result.messages) || "(running...)", type: "text" }],
+					details: { mode: "single", progress: [progress], results: [result] },
 				});
 			} else if (!updatePending) {
 				// Schedule update for later
@@ -270,8 +263,8 @@ export async function runSync(
 						lastUpdateTime = Date.now();
 						progress.durationMs = Date.now() - startTime;
 						onUpdate({
-							content: [{ type: "text", text: getFinalOutput(result.messages) || "(running...)" }],
-							details: { mode: "single", results: [result], progress: [progress] },
+							content: [{ text: getFinalOutput(result.messages) || "(running...)", type: "text" }],
+							details: { mode: "single", progress: [progress], results: [result] },
 						});
 					}
 				}, UPDATE_THROTTLE_MS - elapsed);
@@ -279,7 +272,7 @@ export async function runSync(
 		};
 
 		const processLine = (line: string) => {
-			if (!line.trim()) return;
+			if (!line.trim()) {return;}
 			jsonlWriter.writeLine(line);
 			try {
 				const evt = JSON.parse(line) as { type?: string; message?: Message; toolName?: string; args?: unknown };
@@ -299,9 +292,9 @@ export async function runSync(
 				if (evt.type === "tool_execution_end") {
 					if (progress.currentTool) {
 						progress.recentTools.unshift({
-							tool: progress.currentTool,
 							args: progress.currentToolArgs || "",
 							endMs: now,
+							tool: progress.currentTool,
 						});
 						if (progress.recentTools.length > 5) {
 							progress.recentTools.pop();
@@ -326,8 +319,8 @@ export async function runSync(
 							result.usage.cost += u.cost?.total || 0;
 							progress.tokens = result.usage.input + result.usage.output;
 						}
-						if (!result.model && evt.message.model) result.model = evt.message.model;
-						if (evt.message.errorMessage) result.error = evt.message.errorMessage;
+						if (!result.model && evt.message.model) {result.model = evt.message.model;}
+						if (evt.message.errorMessage) {result.error = evt.message.errorMessage;}
 
 						const text = extractTextFromContent(evt.message.content);
 						if (text) {
@@ -394,7 +387,7 @@ export async function runSync(
 				clearTimeout(idleTimer);
 				idleTimer = null;
 			}
-			if (buf.trim()) processLine(buf);
+			if (buf.trim()) {processLine(buf);}
 			if (code !== 0 && stderrBuf.trim() && !result.error) {
 				result.error = stderrBuf.trim();
 			}
@@ -418,10 +411,14 @@ export async function runSync(
 				kill();
 				result.aborted = true;
 			} else {
-				signal.addEventListener("abort", () => {
-					result.aborted = true;
-					kill();
-				}, { once: true });
+				signal.addEventListener(
+					"abort",
+					() => {
+						result.aborted = true;
+						kill();
+					},
+					{ once: true },
+				);
 			}
 		}
 	});
@@ -432,7 +429,7 @@ export async function runSync(
 		} catch {}
 	}
 
-	if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
+	if (tmpDir) {fs.rmSync(tmpDir, { recursive: true, force: true });}
 	result.exitCode = exitCode;
 
 	// Check for internal errors even when exit code is 0 (or non-zero without error details)
@@ -457,9 +454,9 @@ export async function runSync(
 
 	result.progress = progress;
 	result.progressSummary = {
-		toolCount: progress.toolCount,
-		tokens: progress.tokens,
 		durationMs: progress.durationMs,
+		tokens: progress.tokens,
+		toolCount: progress.toolCount,
 	};
 
 	if (artifactPathsResult && artifactConfig?.enabled !== false) {
@@ -471,18 +468,18 @@ export async function runSync(
 		}
 		if (artifactConfig?.includeMetadata !== false) {
 			writeMetadata(artifactPathsResult.metadataPath, {
-				runId,
 				agent: agentName,
-				task,
-				exitCode: result.exitCode,
-				usage: result.usage,
-				model: result.model,
 				durationMs: progress.durationMs,
-				toolCount: progress.toolCount,
 				error: result.error,
+				exitCode: result.exitCode,
+				model: result.model,
+				runId,
 				skills: result.skills,
 				skillsWarning: result.skillsWarning,
+				task,
 				timestamp: Date.now(),
+				toolCount: progress.toolCount,
+				usage: result.usage,
 			});
 		}
 

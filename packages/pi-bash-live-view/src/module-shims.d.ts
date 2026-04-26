@@ -2,7 +2,9 @@ declare module "node-pty" {
 	export interface IPty {
 		pid: number;
 		onData?: (listener: (data: string) => void) => { dispose?: () => void } | (() => void) | void;
-		onExit?: (listener: (event: { exitCode: number | null; signal?: number }) => void) => { dispose?: () => void } | (() => void) | void;
+		onExit?: (
+			listener: (event: { exitCode: number | null; signal?: number }) => void,
+		) => { dispose?: () => void } | (() => void) | void;
 		kill: () => void;
 		resize?: (columns: number, rows: number) => void;
 		write?: (data: string) => void;

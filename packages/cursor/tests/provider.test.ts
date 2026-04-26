@@ -1,28 +1,23 @@
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import { ValueSchema } from "@bufbuild/protobuf/wkt";
-import { describe, expect, it } from "vitest";
+
 import type { Context, ToolCall, ToolResultMessage } from "@mariozechner/pi-ai";
-import {
-	buildCursorRequestPayload,
-	decodeMcpArgsMap,
-	parseCursorConversation,
-} from "../messages.js";
+import { buildCursorRequestPayload, decodeMcpArgsMap, parseCursorConversation } from "../messages.js";
 import { AgentClientMessageSchema } from "../proto/agent_pb.js";
 import { deriveBridgeKey, deriveConversationKey } from "../runtime.js";
 
 describe("cursor provider request shaping", () => {
 	it("parses turns and trailing tool results from pi context", () => {
-		const toolCall: ToolCall = { type: "toolCall", id: "tool-1", name: "echo", arguments: { text: "ping" } };
+		const toolCall: ToolCall = { arguments: { text: "ping" }, id: "tool-1", name: "echo", type: "toolCall" };
 		const toolResult: ToolResultMessage = {
-			role: "toolResult",
-			toolCallId: "tool-1",
-			toolName: "echo",
 			content: [{ type: "text", text: "pong" }],
 			isError: false,
+			role: "toolResult",
 			timestamp: Date.now(),
+			toolCallId: "tool-1",
+			toolName: "echo",
 		};
 		const context: Context = {
-			systemPrompt: "You are helpful.",
 			messages: [
 				{ role: "user", content: "First question", timestamp: Date.now() - 100 },
 				{
@@ -31,7 +26,14 @@ describe("cursor provider request shaping", () => {
 					api: "cursor-agent",
 					provider: "cursor",
 					model: "composer-2",
-					usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+					usage: {
+						input: 0,
+						output: 0,
+						cacheRead: 0,
+						cacheWrite: 0,
+						totalTokens: 0,
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+					},
 					stopReason: "stop",
 					timestamp: Date.now() - 90,
 				},
@@ -42,35 +44,55 @@ describe("cursor provider request shaping", () => {
 					api: "cursor-agent",
 					provider: "cursor",
 					model: "composer-2",
-					usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+					usage: {
+						input: 0,
+						output: 0,
+						cacheRead: 0,
+						cacheWrite: 0,
+						totalTokens: 0,
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+					},
 					stopReason: "toolUse",
 					timestamp: Date.now() - 70,
 				},
 				toolResult,
 			],
+			systemPrompt: "You are helpful.",
 		};
 
 		const parsed = parseCursorConversation(context);
 		expect(parsed.systemPrompt).toBe("You are helpful.");
 		expect(parsed.turns).toHaveLength(2);
-		expect(parsed.turns[0]).toEqual({ userText: "First question", assistantText: "First answer" });
+		expect(parsed.turns[0]).toStrictEqual({ assistantText: "First answer", userText: "First question" });
 		expect(parsed.turns[1]?.assistantText).toContain("[tool call:echo]");
-		expect(parsed.trailingToolResults).toEqual([
-			{ toolCallId: "tool-1", toolName: "echo", content: "pong", isError: false },
+		expect(parsed.trailingToolResults).toStrictEqual([
+			{ content: "pong", isError: false, toolCallId: "tool-1", toolName: "echo" },
 		]);
 	});
 
 	it("builds a run request payload with MCP tool definitions", () => {
 		const parsed = parseCursorConversation({
-			systemPrompt: "You are helpful.",
 			messages: [{ role: "user", content: "Plan this task", timestamp: Date.now() }],
-			tools: [{ name: "echo", description: "Echo text", parameters: { type: "object", properties: { text: { type: "string" } } } as never }],
+			systemPrompt: "You are helpful.",
+			tools: [
+				{
+					name: "echo",
+					description: "Echo text",
+					parameters: { type: "object", properties: { text: { type: "string" } } } as never,
+				},
+			],
 		});
 		const payload = buildCursorRequestPayload({
-			modelId: "composer-2",
 			conversationId: "conv-123",
+			modelId: "composer-2",
 			parsed,
-			tools: [{ name: "echo", description: "Echo text", parameters: { type: "object", properties: { text: { type: "string" } } } as never }],
+			tools: [
+				{
+					name: "echo",
+					description: "Echo text",
+					parameters: { type: "object", properties: { text: { type: "string" } } } as never,
+				},
+			],
 		});
 		const clientMessage = fromBinary(AgentClientMessageSchema, payload.requestBytes);
 
@@ -86,10 +108,10 @@ describe("cursor provider request shaping", () => {
 
 	it("decodes protobuf-wrapped MCP arguments", () => {
 		const args = decodeMcpArgsMap({
-			text: toBinary(ValueSchema, create(ValueSchema, { kind: { case: "stringValue", value: "ping" } })),
 			count: toBinary(ValueSchema, create(ValueSchema, { kind: { case: "numberValue", value: 2 } })),
+			text: toBinary(ValueSchema, create(ValueSchema, { kind: { case: "stringValue", value: "ping" } })),
 		});
-		expect(args).toEqual({ text: "ping", count: 2 });
+		expect(args).toStrictEqual({ count: 2, text: "ping" });
 	});
 
 	it("derives stable session and bridge keys", () => {

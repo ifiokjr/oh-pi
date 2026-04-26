@@ -3,6 +3,7 @@ title: "Settings, SDK, RPC & TUI"
 order: 6
 description: "All settings, SDK programming interface, RPC protocol, TUI component system."
 ---
+
 ## 1. Settings
 
 ### File Locations
@@ -111,26 +112,21 @@ Nested objects are merged; project overrides global.
 ### Quick Start
 
 ```typescript
-import {
-  AuthStorage,
-  createAgentSession,
-  ModelRegistry,
-  SessionManager,
-} from "@mariozechner/pi-coding-agent";
+import { AuthStorage, createAgentSession, ModelRegistry, SessionManager } from "@mariozechner/pi-coding-agent";
 
 const authStorage = new AuthStorage();
 const modelRegistry = new ModelRegistry(authStorage);
 
 const { session } = await createAgentSession({
-  sessionManager: SessionManager.inMemory(),
-  authStorage,
-  modelRegistry,
+	sessionManager: SessionManager.inMemory(),
+	authStorage,
+	modelRegistry,
 });
 
 session.subscribe((event) => {
-  if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
-    process.stdout.write(event.assistantMessageEvent.delta);
-  }
+	if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
+		process.stdout.write(event.assistantMessageEvent.delta);
+	}
 });
 
 await session.prompt("What files are in the current directory?");
@@ -251,9 +247,9 @@ From the `@mariozechner/pi-tui` package.
 
 ```typescript
 interface Component {
-  render(width: number): string[]; // Each line must not exceed width
-  handleInput?(data: string): void;
-  invalidate(): void;
+	render(width: number): string[]; // Each line must not exceed width
+	handleInput?(data: string): void;
+	invalidate(): void;
 }
 ```
 
@@ -296,13 +292,13 @@ if (matchesKey(data, Key.ctrl("c"))) { ... }
 
 ```typescript
 ctx.ui.custom(component, {
-  overlay: true,
-  overlayOptions: {
-    width: "50%",
-    anchor: "center",
-    margin: 2,
-    visible: (w, h) => w >= 80,
-  },
+	overlay: true,
+	overlayOptions: {
+		width: "50%",
+		anchor: "center",
+		margin: 2,
+		visible: (w, h) => w >= 80,
+	},
 });
 ```
 
@@ -326,14 +322,14 @@ Located at `~/.pi/agent/models.json`. Auto-reloaded when opening `/model`; no re
 
 ```json
 {
-  "providers": {
-    "ollama": {
-      "baseUrl": "http://localhost:11434/v1",
-      "api": "openai-completions",
-      "apiKey": "ollama",
-      "models": [{ "id": "llama3.1:8b" }, { "id": "qwen2.5-coder:7b" }]
-    }
-  }
+	"providers": {
+		"ollama": {
+			"baseUrl": "http://localhost:11434/v1",
+			"api": "openai-completions",
+			"apiKey": "ollama",
+			"models": [{ "id": "llama3.1:8b" }, { "id": "qwen2.5-coder:7b" }]
+		}
+	}
 }
 ```
 

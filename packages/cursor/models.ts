@@ -1,10 +1,11 @@
-import { create, fromBinary, type JsonValue, toBinary } from "@bufbuild/protobuf";
+import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
+import type { JsonValue } from '@bufbuild/protobuf';
 import type { OAuthCredentials } from "@mariozechner/pi-ai";
 import { CURSOR_GET_MODELS_PATH } from "./config.js";
 import { GetUsableModelsRequestSchema, GetUsableModelsResponseSchema } from "./proto/agent_pb.js";
 import { callCursorUnaryRpc, decodeConnectUnaryBody } from "./transport.js";
 
-export type CursorProviderModel = {
+export interface CursorProviderModel {
 	id: string;
 	name: string;
 	reasoning: boolean;
@@ -17,7 +18,7 @@ export type CursorProviderModel = {
 	};
 	contextWindow: number;
 	maxTokens: number;
-};
+}
 
 export type CursorCredentials = OAuthCredentials & {
 	models?: CursorProviderModel[];
@@ -28,36 +29,36 @@ const DEFAULT_CONTEXT_WINDOW = 200_000;
 const DEFAULT_MAX_TOKENS = 64_000;
 
 const MODEL_COST_TABLE: Record<string, CursorProviderModel["cost"]> = {
-	"claude-4-sonnet": { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-	"claude-4-sonnet-1m": { input: 6, output: 22.5, cacheRead: 0.6, cacheWrite: 7.5 },
-	"claude-4.5-haiku": { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 },
-	"claude-4.5-opus": { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
-	"claude-4.5-sonnet": { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-	"claude-4.6-opus": { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
-	"claude-4.6-opus-fast": { input: 30, output: 150, cacheRead: 3, cacheWrite: 37.5 },
-	"claude-4.6-sonnet": { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-	"composer-1": { input: 1.25, output: 10, cacheRead: 0.125, cacheWrite: 0 },
-	"composer-1.5": { input: 3.5, output: 17.5, cacheRead: 0.35, cacheWrite: 0 },
-	"composer-2": { input: 0.5, output: 2.5, cacheRead: 0.2, cacheWrite: 0 },
-	"composer-2-fast": { input: 1.5, output: 7.5, cacheRead: 0.2, cacheWrite: 0 },
-	"gemini-3-flash": { input: 0.5, output: 3, cacheRead: 0.05, cacheWrite: 0 },
-	"gemini-3-pro": { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 0 },
-	"gemini-3.1-pro": { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 0 },
-	"gpt-5": { input: 1.25, output: 10, cacheRead: 0.125, cacheWrite: 0 },
-	"gpt-5-fast": { input: 2.5, output: 20, cacheRead: 0.25, cacheWrite: 0 },
-	"gpt-5-mini": { input: 0.25, output: 2, cacheRead: 0.025, cacheWrite: 0 },
-	"gpt-5-codex": { input: 1.25, output: 10, cacheRead: 0.125, cacheWrite: 0 },
-	"gpt-5.1-codex": { input: 1.25, output: 10, cacheRead: 0.125, cacheWrite: 0 },
-	"gpt-5.1-codex-max": { input: 1.25, output: 10, cacheRead: 0.125, cacheWrite: 0 },
-	"gpt-5.1-codex-mini": { input: 0.25, output: 2, cacheRead: 0.025, cacheWrite: 0 },
-	"gpt-5.2": { input: 1.75, output: 14, cacheRead: 0.175, cacheWrite: 0 },
-	"gpt-5.2-codex": { input: 1.75, output: 14, cacheRead: 0.175, cacheWrite: 0 },
-	"gpt-5.3-codex": { input: 1.75, output: 14, cacheRead: 0.175, cacheWrite: 0 },
-	"gpt-5.4": { input: 2.5, output: 15, cacheRead: 0.25, cacheWrite: 0 },
-	"gpt-5.4-mini": { input: 0.75, output: 4.5, cacheRead: 0.075, cacheWrite: 0 },
-	"gpt-5.4-nano": { input: 0.2, output: 1.25, cacheRead: 0.02, cacheWrite: 0 },
-	"grok-4.20": { input: 2, output: 6, cacheRead: 0.2, cacheWrite: 0 },
-	"kimi-k2.5": { input: 0.6, output: 3, cacheRead: 0.1, cacheWrite: 0 },
+	"claude-4-sonnet": { cacheRead: 0.3, cacheWrite: 3.75, input: 3, output: 15 },
+	"claude-4-sonnet-1m": { cacheRead: 0.6, cacheWrite: 7.5, input: 6, output: 22.5 },
+	"claude-4.5-haiku": { cacheRead: 0.1, cacheWrite: 1.25, input: 1, output: 5 },
+	"claude-4.5-opus": { cacheRead: 0.5, cacheWrite: 6.25, input: 5, output: 25 },
+	"claude-4.5-sonnet": { cacheRead: 0.3, cacheWrite: 3.75, input: 3, output: 15 },
+	"claude-4.6-opus": { cacheRead: 0.5, cacheWrite: 6.25, input: 5, output: 25 },
+	"claude-4.6-opus-fast": { cacheRead: 3, cacheWrite: 37.5, input: 30, output: 150 },
+	"claude-4.6-sonnet": { cacheRead: 0.3, cacheWrite: 3.75, input: 3, output: 15 },
+	"composer-1": { cacheRead: 0.125, cacheWrite: 0, input: 1.25, output: 10 },
+	"composer-1.5": { cacheRead: 0.35, cacheWrite: 0, input: 3.5, output: 17.5 },
+	"composer-2": { cacheRead: 0.2, cacheWrite: 0, input: 0.5, output: 2.5 },
+	"composer-2-fast": { cacheRead: 0.2, cacheWrite: 0, input: 1.5, output: 7.5 },
+	"gemini-3-flash": { cacheRead: 0.05, cacheWrite: 0, input: 0.5, output: 3 },
+	"gemini-3-pro": { cacheRead: 0.2, cacheWrite: 0, input: 2, output: 12 },
+	"gemini-3.1-pro": { cacheRead: 0.2, cacheWrite: 0, input: 2, output: 12 },
+	"gpt-5": { cacheRead: 0.125, cacheWrite: 0, input: 1.25, output: 10 },
+	"gpt-5-codex": { cacheRead: 0.125, cacheWrite: 0, input: 1.25, output: 10 },
+	"gpt-5-fast": { cacheRead: 0.25, cacheWrite: 0, input: 2.5, output: 20 },
+	"gpt-5-mini": { cacheRead: 0.025, cacheWrite: 0, input: 0.25, output: 2 },
+	"gpt-5.1-codex": { cacheRead: 0.125, cacheWrite: 0, input: 1.25, output: 10 },
+	"gpt-5.1-codex-max": { cacheRead: 0.125, cacheWrite: 0, input: 1.25, output: 10 },
+	"gpt-5.1-codex-mini": { cacheRead: 0.025, cacheWrite: 0, input: 0.25, output: 2 },
+	"gpt-5.2": { cacheRead: 0.175, cacheWrite: 0, input: 1.75, output: 14 },
+	"gpt-5.2-codex": { cacheRead: 0.175, cacheWrite: 0, input: 1.75, output: 14 },
+	"gpt-5.3-codex": { cacheRead: 0.175, cacheWrite: 0, input: 1.75, output: 14 },
+	"gpt-5.4": { cacheRead: 0.25, cacheWrite: 0, input: 2.5, output: 15 },
+	"gpt-5.4-mini": { cacheRead: 0.075, cacheWrite: 0, input: 0.75, output: 4.5 },
+	"gpt-5.4-nano": { cacheRead: 0.02, cacheWrite: 0, input: 0.2, output: 1.25 },
+	"grok-4.20": { cacheRead: 0.2, cacheWrite: 0, input: 2, output: 6 },
+	"kimi-k2.5": { cacheRead: 0.1, cacheWrite: 0, input: 0.6, output: 3 },
 };
 
 const FALLBACK_CURSOR_MODELS: CursorProviderModel[] = [
@@ -65,10 +66,28 @@ const FALLBACK_CURSOR_MODELS: CursorProviderModel[] = [
 	toCursorProviderModel({ id: "composer-2-fast", name: "Composer 2 Fast", reasoning: true }),
 	toCursorProviderModel({ id: "claude-4.6-sonnet-medium", name: "Claude 4.6 Sonnet", reasoning: true }),
 	toCursorProviderModel({ id: "claude-4.6-opus-high", name: "Claude 4.6 Opus", reasoning: true }),
-	toCursorProviderModel({ id: "gpt-5.2", name: "GPT-5.2", reasoning: true, contextWindow: 400_000, maxTokens: 128_000 }),
-	toCursorProviderModel({ id: "gpt-5.2-codex", name: "GPT-5.2 Codex", reasoning: true, contextWindow: 400_000, maxTokens: 128_000 }),
-	toCursorProviderModel({ id: "gpt-5.3-codex", name: "GPT-5.3 Codex", reasoning: true, contextWindow: 400_000, maxTokens: 128_000 }),
-	toCursorProviderModel({ id: "gemini-3.1-pro", name: "Gemini 3.1 Pro", reasoning: true, contextWindow: 1_000_000 }),
+	toCursorProviderModel({
+		contextWindow: 400_000,
+		id: "gpt-5.2",
+		maxTokens: 128_000,
+		name: "GPT-5.2",
+		reasoning: true,
+	}),
+	toCursorProviderModel({
+		contextWindow: 400_000,
+		id: "gpt-5.2-codex",
+		maxTokens: 128_000,
+		name: "GPT-5.2 Codex",
+		reasoning: true,
+	}),
+	toCursorProviderModel({
+		contextWindow: 400_000,
+		id: "gpt-5.3-codex",
+		maxTokens: 128_000,
+		name: "GPT-5.3 Codex",
+		reasoning: true,
+	}),
+	toCursorProviderModel({ contextWindow: 1_000_000, id: "gemini-3.1-pro", name: "Gemini 3.1 Pro", reasoning: true }),
 ];
 
 export function getFallbackCursorModels(): CursorProviderModel[] {
@@ -84,10 +103,10 @@ export async function discoverCursorModels(accessToken: string, url?: string): P
 	const requestPayload = create(GetUsableModelsRequestSchema, {});
 	const response = await callCursorUnaryRpc({
 		accessToken,
-		rpcPath: CURSOR_GET_MODELS_PATH,
 		requestBody: toBinary(GetUsableModelsRequestSchema, requestPayload),
-		url,
+		rpcPath: CURSOR_GET_MODELS_PATH,
 		timeoutMs: 5_000,
+		url,
 	});
 	const decoded = decodeGetUsableModelsResponse(response);
 	if (!decoded) {
@@ -110,8 +129,8 @@ export async function enrichCursorCredentials(
 	return {
 		...options.previous,
 		...credentials,
-		models: models ?? options.previous?.models ?? getFallbackCursorModels(),
 		lastModelRefresh: Date.now(),
+		models: models ?? options.previous?.models ?? getFallbackCursorModels(),
 	};
 }
 
@@ -143,7 +162,7 @@ export function normalizeCursorModels(models: readonly unknown[]): CursorProvide
 			byId.set(normalized.id, normalized);
 		}
 	}
-	return [...byId.values()].sort((left, right) => left.id.localeCompare(right.id));
+	return [...byId.values()].toSorted((left, right) => left.id.localeCompare(right.id));
 }
 
 function normalizeSingleCursorModel(model: unknown): CursorProviderModel | null {
@@ -156,13 +175,14 @@ function normalizeSingleCursorModel(model: unknown): CursorProviderModel | null 
 		return null;
 	}
 	const name = pickDisplayName(data, id);
-	const reasoning = Boolean(data.thinkingDetails) || /(?:reason|think|sonnet|opus|composer|gpt-5|gemini-3|claude)/i.test(id);
+	const reasoning =
+		Boolean(data.thinkingDetails) || /(?:reason|think|sonnet|opus|composer|gpt-5|gemini-3|claude)/i.test(id);
 	return toCursorProviderModel({
+		contextWindow: inferContextWindow(id),
 		id,
+		maxTokens: inferMaxTokens(id),
 		name,
 		reasoning,
-		contextWindow: inferContextWindow(id),
-		maxTokens: inferMaxTokens(id),
 	});
 }
 
@@ -183,7 +203,7 @@ function pickDisplayName(data: Record<string, JsonValue>, fallback: string): str
 
 function inferCost(id: string): CursorProviderModel["cost"] {
 	const lower = id.toLowerCase();
-	const entries: Array<[RegExp, CursorProviderModel["cost"]]> = [
+	const entries: [RegExp, CursorProviderModel["cost"]][] = [
 		[/claude.*opus.*fast/i, MODEL_COST_TABLE["claude-4.6-opus-fast"]],
 		[/claude.*opus/i, MODEL_COST_TABLE["claude-4.6-opus"]],
 		[/claude.*haiku/i, MODEL_COST_TABLE["claude-4.5-haiku"]],
@@ -215,7 +235,7 @@ function inferCost(id: string): CursorProviderModel["cost"] {
 			return { ...cost };
 		}
 	}
-	return { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+	return { cacheRead: 0, cacheWrite: 0, input: 0, output: 0 };
 }
 
 function inferContextWindow(id: string): number {
@@ -241,28 +261,30 @@ function inferMaxTokens(id: string): number {
 	return DEFAULT_MAX_TOKENS;
 }
 
-export function toCursorProviderModel(model: Partial<CursorProviderModel> & Pick<CursorProviderModel, "id" | "name">): CursorProviderModel {
+export function toCursorProviderModel(
+	model: Partial<CursorProviderModel> & Pick<CursorProviderModel, "id" | "name">,
+): CursorProviderModel {
 	return {
+		contextWindow: model.contextWindow ?? inferContextWindow(model.id),
+		cost: model.cost ? { ...model.cost } : inferCost(model.id),
 		id: model.id,
+		input: model.input ?? ["text"],
+		maxTokens: model.maxTokens ?? inferMaxTokens(model.id),
 		name: model.name,
 		reasoning: model.reasoning ?? false,
-		input: model.input ?? ["text"],
-		cost: model.cost ? { ...model.cost } : inferCost(model.id),
-		contextWindow: model.contextWindow ?? inferContextWindow(model.id),
-		maxTokens: model.maxTokens ?? inferMaxTokens(model.id),
 	};
 }
 
 function sanitizeStoredModels(models: readonly CursorProviderModel[]): CursorProviderModel[] {
 	return models.map((model) =>
 		toCursorProviderModel({
+			contextWindow: model.contextWindow,
+			cost: model.cost,
 			id: model.id,
+			input: model.input,
+			maxTokens: model.maxTokens,
 			name: model.name,
 			reasoning: model.reasoning,
-			input: model.input,
-			cost: model.cost,
-			contextWindow: model.contextWindow,
-			maxTokens: model.maxTokens,
 		}),
 	);
 }

@@ -75,20 +75,20 @@ oh-pi repo
 
 ## Packages
 
-| Package | Contents |
-| ------- | -------- |
-| `@ifi/oh-pi-extensions` | 13 core session features including git-guard, auto-session-name, custom-footer, tool-metadata, scheduler, usage-tracker, btw/qq, watchdog, bg-process, external-editor, and worktree |
-| `@ifi/pi-background-tasks` | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, log tails, and the `bg_task` tool |
-| `@ifi/oh-pi-ant-colony` | Multi-agent swarm extension (`ant_colony`, `/colony*`, colony panel, isolated worktrees, pheromone/task orchestration) |
-| `@ifi/pi-diagnostics` | Prompt completion timestamps, durations, per-turn timing, widget, and `/diagnostics` |
-| `@ifi/pi-extension-subagents` | Subagent orchestration runtime (`subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`, `/agents`) |
-| `@ifi/pi-plan` | Planning mode extension (`/plan`, `Alt+P`, `task_agents`, `steer_task_agent`, `set_plan`) |
-| `@ifi/pi-spec` | Native spec-driven workflow package with `/spec` and local `.specify/` scaffolding |
-| `@ifi/pi-web-remote` | `/remote` session sharing for browser-oriented remote access |
-| `@ifi/oh-pi-themes` | 6 themes: cyberpunk, nord, gruvbox, tokyo-night, catppuccin-mocha, oh-p-dark |
-| `@ifi/oh-pi-prompts` | 10 prompt templates including review, fix, explain, refactor, test, commit, pr, and document |
-| `@ifi/oh-pi-skills` | 17 skills including web-search, web-fetch, context7, debug-helper, git-workflow, quick-setup, and more |
-| `@ifi/oh-pi-agents` | 5 AGENTS.md templates for common roles |
+| Package                       | Contents                                                                                                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@ifi/oh-pi-extensions`       | 13 core session features including git-guard, auto-session-name, custom-footer, tool-metadata, scheduler, usage-tracker, btw/qq, watchdog, bg-process, external-editor, and worktree |
+| `@ifi/pi-background-tasks`    | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, log tails, and the `bg_task` tool                                                                                        |
+| `@ifi/oh-pi-ant-colony`       | Multi-agent swarm extension (`ant_colony`, `/colony*`, colony panel, isolated worktrees, pheromone/task orchestration)                                                               |
+| `@ifi/pi-diagnostics`         | Prompt completion timestamps, durations, per-turn timing, widget, and `/diagnostics`                                                                                                 |
+| `@ifi/pi-extension-subagents` | Subagent orchestration runtime (`subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`, `/agents`)                                                                             |
+| `@ifi/pi-plan`                | Planning mode extension (`/plan`, `Alt+P`, `task_agents`, `steer_task_agent`, `set_plan`)                                                                                            |
+| `@ifi/pi-spec`                | Native spec-driven workflow package with `/spec` and local `.specify/` scaffolding                                                                                                   |
+| `@ifi/pi-web-remote`          | `/remote` session sharing for browser-oriented remote access                                                                                                                         |
+| `@ifi/oh-pi-themes`           | 6 themes: cyberpunk, nord, gruvbox, tokyo-night, catppuccin-mocha, oh-p-dark                                                                                                         |
+| `@ifi/oh-pi-prompts`          | 10 prompt templates including review, fix, explain, refactor, test, commit, pr, and document                                                                                         |
+| `@ifi/oh-pi-skills`           | 17 skills including web-search, web-fetch, context7, debug-helper, git-workflow, quick-setup, and more                                                                               |
+| `@ifi/oh-pi-agents`           | 5 AGENTS.md templates for common roles                                                                                                                                               |
 
 Optional packages that stay opt-in:
 

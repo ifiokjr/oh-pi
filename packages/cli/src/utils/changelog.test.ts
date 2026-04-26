@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+
 import { compareVersion, entriesBetween, parseChangelog, renderChangelog } from "./changelog.js";
 
 const FIXTURE = `# Changelog
@@ -32,10 +32,10 @@ const FIXTURE = `# Changelog
 - Change C (#66)
 `;
 
-describe("parseChangelog", () => {
+describe(parseChangelog, () => {
 	it("extracts version entries", () => {
 		const entries = parseChangelog(FIXTURE);
-		expect(entries.map((e) => e.version)).toEqual(["0.5.0", "0.4.4", "0.4.3", "0.4.0"]);
+		expect(entries.map((e) => e.version)).toStrictEqual(["0.5.0", "0.4.4", "0.4.3", "0.4.0"]);
 	});
 
 	it("captures dates", () => {
@@ -44,29 +44,29 @@ describe("parseChangelog", () => {
 	});
 
 	it("returns empty for empty content", () => {
-		expect(parseChangelog("")).toEqual([]);
+		expect(parseChangelog("")).toStrictEqual([]);
 	});
 });
 
-describe("entriesBetween", () => {
+describe(entriesBetween, () => {
 	const entries = parseChangelog(FIXTURE);
 
 	it("returns entries up to target when no fromVersion", () => {
 		const result = entriesBetween(entries, null, "0.4.4");
-		expect(result.map((e) => e.version)).toEqual(["0.5.0", "0.4.4"]);
+		expect(result.map((e) => e.version)).toStrictEqual(["0.5.0", "0.4.4"]);
 	});
 
 	it("excludes fromVersion and includes toVersion", () => {
 		const result = entriesBetween(entries, "0.4.4", "0.4.0");
-		expect(result.map((e) => e.version)).toEqual(["0.4.3", "0.4.0"]);
+		expect(result.map((e) => e.version)).toStrictEqual(["0.4.3", "0.4.0"]);
 	});
 
 	it("returns empty when toVersion missing", () => {
-		expect(entriesBetween(entries, "0.4.4", "9.9.9")).toEqual([]);
+		expect(entriesBetween(entries, "0.4.4", "9.9.9")).toStrictEqual([]);
 	});
 });
 
-describe("compareVersion", () => {
+describe(compareVersion, () => {
 	it("returns 0 for equal", () => {
 		expect(compareVersion("0.4.4", "0.4.4")).toBe(0);
 	});
@@ -80,7 +80,7 @@ describe("compareVersion", () => {
 	});
 });
 
-describe("renderChangelog", () => {
+describe(renderChangelog, () => {
 	it("renders formatted output", () => {
 		const entries = parseChangelog(FIXTURE);
 		const text = renderChangelog(entriesBetween(entries, "0.4.4", "0.4.3"));

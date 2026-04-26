@@ -1,5 +1,5 @@
 /**
- * oh-pi BTW / QQ Extension — parallel side conversations
+ * Oh-pi BTW / QQ Extension — parallel side conversations
  *
  * Adds /btw and /qq commands that open a side conversation without interrupting
  * the main agent run. Answers stream into a widget above the editor.
@@ -14,19 +14,10 @@
  * Based on https://github.com/dbachelder/pi-btw by Dan Bachelder (MIT).
  */
 
-import {
-	type ThinkingLevel as AiThinkingLevel,
-	type AssistantMessage,
-	completeSimple,
-	type Message,
-	streamSimple,
-} from "@mariozechner/pi-ai";
-import {
-	buildSessionContext,
-	type ExtensionAPI,
-	type ExtensionCommandContext,
-	type ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+import { completeSimple, streamSimple } from '@mariozechner/pi-ai';
+import type { ThinkingLevel as AiThinkingLevel, AssistantMessage, Message } from '@mariozechner/pi-ai';
+import { buildSessionContext } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from '@mariozechner/pi-coding-agent';
 import { Text } from "@mariozechner/pi-tui";
 
 const BTW_MESSAGE_TYPE = "btw-note";
@@ -86,7 +77,7 @@ function isCustomEntry(
 	customType: string,
 ): entry is { type: "custom"; customType: string; data?: unknown } {
 	return (
-		!!entry &&
+		Boolean(entry) &&
 		typeof entry === "object" &&
 		(entry as { type?: string }).type === "custom" &&
 		(entry as { customType?: string }).customType === customType
@@ -97,13 +88,13 @@ function toReasoning(level: SessionThinkingLevel): AiThinkingLevel | undefined {
 	return level === "off" ? undefined : level;
 }
 
-type CompatibleModelRegistry = {
+interface CompatibleModelRegistry {
 	getApiKey?: (model: NonNullable<ExtensionContext["model"]>) => Promise<string | undefined> | string | undefined;
 	getApiKeyForProvider?: (provider: string) => Promise<string | undefined> | string | undefined;
 	authStorage?: {
 		getApiKey?: (provider: string) => Promise<string | undefined> | string | undefined;
 	};
-};
+}
 
 export async function resolveBtwApiKey(
 	model: NonNullable<ExtensionContext["model"]>,
@@ -127,9 +118,7 @@ export async function resolveBtwApiKey(
 		const piModule = (await import("@mariozechner/pi-coding-agent")) as Record<string, unknown>;
 		const authStorageModule = Reflect.get(piModule, "AuthStorage") as { create?: () => unknown } | undefined;
 		const modelRegistryModule = Reflect.get(piModule, "ModelRegistry") as
-			| (new (
-					authStorage: unknown,
-			  ) => CompatibleModelRegistry)
+			| (new (authStorage: unknown) => CompatibleModelRegistry)
 			| undefined;
 
 		if (typeof authStorageModule?.create === "function" && modelRegistryModule) {
@@ -174,7 +163,7 @@ function extractThinking(message: AssistantMessage): string {
 
 function parseBtwArgs(args: string): ParsedBtwArgs {
 	const save = /(?:^|\s)(?:--save|-s)(?=\s|$)/.test(args);
-	const question = args.replace(/(?:^|\s)(?:--save|-s)(?=\s|$)/g, " ").trim();
+	const question = args.replaceAll(/(?:^|\s)(?:--save|-s)(?=\s|$)/g, " ").trim();
 	return { question, save };
 }
 
@@ -187,42 +176,44 @@ function buildMainMessages(ctx: ExtensionCommandContext): Message[] {
 function buildThreadMessages(ctx: ExtensionCommandContext, thread: BtwDetails[]): Message[] {
 	const messages: Message[] = [
 		{
-			role: "user",
 			content: [{ type: "text", text: "[The following is a separate side conversation. Continue this thread.]" }],
+			role: "user",
 			timestamp: Date.now(),
 		},
 		{
-			role: "assistant",
-			content: [{ type: "text", text: "Understood, continuing our side conversation." }],
-			provider: ctx.model?.provider ?? "unknown",
-			model: ctx.model?.id ?? "unknown",
 			api: ctx.model?.api ?? "openai-responses",
-			usage: {
-				input: 0,
-				output: 0,
-				cacheRead: 0,
-				cacheWrite: 0,
-				totalTokens: 0,
-				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-			},
+			content: [{ type: "text", text: "Understood, continuing our side conversation." }],
+			model: ctx.model?.id ?? "unknown",
+			provider: ctx.model?.provider ?? "unknown",
+			role: "assistant",
 			stopReason: "stop",
 			timestamp: Date.now(),
+			usage: {
+				cacheRead: 0,
+				cacheWrite: 0,
+				cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0, total: 0 },
+				input: 0,
+				output: 0,
+				totalTokens: 0,
+			},
 		},
 	];
 
 	for (const entry of thread) {
 		messages.push(
 			{
-				role: "user",
 				content: [{ type: "text", text: entry.question }],
+				role: "user",
 				timestamp: entry.timestamp,
 			},
 			{
-				role: "assistant",
-				content: [{ type: "text", text: entry.answer }],
-				provider: entry.provider,
-				model: entry.model,
 				api: ctx.model?.api ?? "openai-responses",
+				content: [{ type: "text", text: entry.answer }],
+				model: entry.model,
+				provider: entry.provider,
+				role: "assistant",
+				stopReason: "stop",
+				timestamp: entry.timestamp,
 				usage: entry.usage ?? {
 					input: 0,
 					output: 0,
@@ -231,8 +222,6 @@ function buildThreadMessages(ctx: ExtensionCommandContext, thread: BtwDetails[])
 					totalTokens: 0,
 					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 				},
-				stopReason: "stop",
-				timestamp: entry.timestamp,
 			},
 		);
 	}
@@ -248,14 +237,14 @@ function buildBtwContext(ctx: ExtensionCommandContext, question: string, thread:
 	}
 
 	messages.push({
-		role: "user",
 		content: [{ type: "text", text: question }],
+		role: "user",
 		timestamp: Date.now(),
 	});
 
 	return {
-		systemPrompt: [ctx.getSystemPrompt(), BTW_SYSTEM_PROMPT].filter(Boolean).join("\n\n"),
 		messages,
+		systemPrompt: [ctx.getSystemPrompt(), BTW_SYSTEM_PROMPT].filter(Boolean).join("\n\n"),
 	};
 }
 
@@ -278,10 +267,10 @@ function saveVisibleBtwNote(
 	}
 
 	const message = {
-		customType: BTW_MESSAGE_TYPE,
 		content: buildBtwMessageContent(details.question, details.answer),
-		display: true,
+		customType: BTW_MESSAGE_TYPE,
 		details,
+		display: true,
 	};
 
 	if (wasBusy) {
@@ -334,7 +323,7 @@ function removeSlotAndRender(
 	render: (ctx: ExtensionContext | ExtensionCommandContext) => void,
 ) {
 	const idx = allSlots.indexOf(slot);
-	if (idx >= 0) {
+	if (idx !== -1) {
 		allSlots.splice(idx, 1);
 		render(ctx);
 	}
@@ -383,8 +372,8 @@ export default function (pi: ExtensionAPI) {
 			(_tui, theme) => {
 				const helpers: WidgetThemeHelpers = {
 					dim: (text: string) => theme.fg("dim", text),
-					success: (text: string) => theme.fg("success", text),
 					italic: (text: string) => theme.fg("dim", theme.italic(text)),
+					success: (text: string) => theme.fg("success", text),
 					warning: (text: string) => theme.fg("warning", text),
 				};
 
@@ -448,12 +437,12 @@ export default function (pi: ExtensionAPI) {
 				const details = entry.data as BtwDetails;
 				pendingThread.push(details);
 				slots.push({
-					question: details.question,
-					modelLabel: `${details.provider}/${details.model}`,
-					thinking: details.thinking,
 					answer: details.answer,
-					done: true,
 					controller: new AbortController(),
+					done: true,
+					modelLabel: `${details.provider}/${details.model}`,
+					question: details.question,
+					thinking: details.thinking,
 				});
 			}
 		}
@@ -509,7 +498,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	async function runBtw(ctx: ExtensionCommandContext, question: string, saveRequested: boolean) {
-		const model = ctx.model;
+		const {model} = ctx;
 		if (!model) {
 			notify(ctx, "No active model selected.", "error");
 			return;
@@ -524,15 +513,15 @@ export default function (pi: ExtensionAPI) {
 		const wasBusy = !ctx.isIdle();
 
 		const slot: BtwSlot = {
-			question,
-			modelLabel: `${model.provider}/${model.id}`,
-			thinking: "",
 			answer: "",
-			done: false,
 			controller: new AbortController(),
+			done: false,
+			modelLabel: `${model.provider}/${model.id}`,
+			question,
+			thinking: "",
 		};
 
-		const threadSnapshot = pendingThread.slice();
+		const threadSnapshot = [...pendingThread];
 		slots.push(slot);
 		renderWidget(ctx);
 
@@ -552,11 +541,11 @@ export default function (pi: ExtensionAPI) {
 			renderWidget(ctx);
 
 			const details: BtwDetails = {
+				answer,
+				model: model.id,
+				provider: model.provider,
 				question,
 				thinking,
-				answer,
-				provider: model.provider,
-				model: model.id,
 				thinkingLevel: pi.getThinkingLevel() as SessionThinkingLevel,
 				timestamp: Date.now(),
 				usage: response.usage,
@@ -585,7 +574,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	async function summarizeThread(ctx: ExtensionCommandContext, thread: BtwDetails[]): Promise<string> {
-		const model = ctx.model;
+		const {model} = ctx;
 		if (!model) {
 			throw new Error("No active model selected.");
 		}
@@ -598,8 +587,6 @@ export default function (pi: ExtensionAPI) {
 		const response = await completeSimple(
 			model,
 			{
-				systemPrompt:
-					"Summarize the side conversation concisely. Preserve key decisions, plans, insights, risks, and action items. Output only the summary.",
 				messages: [
 					{
 						role: "user",
@@ -607,6 +594,8 @@ export default function (pi: ExtensionAPI) {
 						timestamp: Date.now(),
 					},
 				],
+				systemPrompt:
+					"Summarize the side conversation concisely. Preserve key decisions, plans, insights, risks, and action items. Output only the summary.",
 			},
 			{ apiKey, reasoning: "low" },
 		);
@@ -653,11 +642,9 @@ export default function (pi: ExtensionAPI) {
 
 	// ── Context filter — keep BTW notes out of the main agent ─────────────────
 
-	pi.on("context", async (event) => {
-		return {
+	pi.on("context", async (event) => ({
 			messages: event.messages.filter((message) => !isVisibleBtwMessage(message)),
-		};
-	});
+		}));
 
 	// ── Session lifecycle — restore / cleanup ─────────────────────────────────
 

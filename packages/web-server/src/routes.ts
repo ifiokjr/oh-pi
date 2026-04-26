@@ -14,9 +14,7 @@ export function createRoutes(options: RoutesOptions): Hono {
 	const app = new Hono();
 
 	// Health check — no auth required
-	app.get("/api/health", (c) => {
-		return c.json({ status: "ok", uptime: Math.floor((Date.now() - options.startTime) / 1000) });
-	});
+	app.get("/api/health", (c) => c.json({ status: "ok", uptime: Math.floor((Date.now() - options.startTime) / 1000) }));
 
 	// Auth middleware for all other /api routes
 	app.use("/api/*", async (c, next) => {
@@ -36,13 +34,11 @@ export function createRoutes(options: RoutesOptions): Hono {
 	});
 
 	// Instance info
-	app.get("/api/instance", (c) => {
-		return c.json({
+	app.get("/api/instance", (c) => c.json({
 			instanceId: options.instanceId,
 			uptime: Math.floor((Date.now() - options.startTime) / 1000),
 			connectedClients: options.getConnectedClients(),
-		});
-	});
+		}));
 
 	// Session state
 	app.get("/api/session/state", (c) => {
@@ -53,11 +49,11 @@ export function createRoutes(options: RoutesOptions): Hono {
 		}
 
 		return c.json({
-			model: session.model,
-			thinkingLevel: session.thinkingLevel,
 			isStreaming: session.isStreaming,
-			sessionId: session.sessionId,
 			messageCount: session.messages.length,
+			model: session.model,
+			sessionId: session.sessionId,
+			thinkingLevel: session.thinkingLevel,
 		});
 	});
 
@@ -81,9 +77,9 @@ export function createRoutes(options: RoutesOptions): Hono {
 		}
 
 		return c.json({
-			sessionId: session.sessionId,
-			messageCount: session.messages.length,
 			isStreaming: session.isStreaming,
+			messageCount: session.messages.length,
+			sessionId: session.sessionId,
 		});
 	});
 

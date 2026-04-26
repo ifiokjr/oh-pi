@@ -51,11 +51,13 @@ export function formatWidgetLines(state: RemoteWidgetState): string[] {
 	return lines;
 }
 
-export function createRemoteWidgetController(options: {
-	key?: string;
-	statusKey?: string;
-	debounceMs?: number;
-} = {}) {
+export function createRemoteWidgetController(
+	options: {
+		key?: string;
+		statusKey?: string;
+		debounceMs?: number;
+	} = {},
+) {
 	const key = options.key ?? REMOTE_WIDGET_KEY;
 	const statusKey = options.statusKey ?? REMOTE_STATUS_KEY;
 	const debounceMs = options.debounceMs ?? DEFAULT_WIDGET_DEBOUNCE_MS;
@@ -109,12 +111,12 @@ export function createRemoteWidgetController(options: {
 			latestCtx = undefined;
 			latestState = undefined;
 		},
+		get enabled() {
+			return enabled;
+		},
 		flush() {
 			clearTimer();
 			renderNow();
-		},
-		get enabled() {
-			return enabled;
 		},
 		schedule(ctx: RemoteUiTarget, state: RemoteWidgetState) {
 			latestCtx = ctx;

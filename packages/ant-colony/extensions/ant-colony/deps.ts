@@ -70,7 +70,7 @@ export function buildImportGraph(files: string[], cwd: string): ImportGraph {
 		}
 		let content: string;
 		try {
-			content = fs.readFileSync(abs, "utf-8");
+			content = fs.readFileSync(abs, "utf8");
 		} catch {
 			continue;
 		}
@@ -98,7 +98,7 @@ export function buildImportGraph(files: string[], cwd: string): ImportGraph {
 		}
 	}
 
-	return { imports, importedBy };
+	return { importedBy, imports };
 }
 
 /**

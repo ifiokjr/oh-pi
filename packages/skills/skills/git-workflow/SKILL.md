@@ -1,7 +1,6 @@
 ---
 name: git-workflow
-description:
-  Git workflow assistant for branching, commits, PRs, and conflict resolution. Use when user asks
+description: Git workflow assistant for branching, commits, PRs, and conflict resolution. Use when user asks
   about git strategy, branch management, or PR workflow.
 ---
 
@@ -25,13 +24,14 @@ Help with Git operations and workflow best practices.
 
 **When you need to clear or reset uncommitted work, never just delete it — stash it with an explanation.**
 
-- Use `git stash push -m "<reason>: <description>"` to preserve work and record *why* it was stashed
+- Use `git stash push -m "<reason>: <description>"` to preserve work and record _why_ it was stashed
 - The stash remains in Git history and can be recovered via `git stash list` or `git reflog`
 - This protects against mistakes, dead ends that turn out to be useful later, or context lost during interruptions
 - If you later decide the stashed work is truly worthless — only then drop it explicitly with `git stash drop <stash>`
 - Explaining the stash in the message also helps future-you (or the next agent) understand what was happening
 
 Example:
+
 ```bash
 # Bad: work is just gone
 rm -rf changed-files/
@@ -57,7 +57,7 @@ git stash push -m "interrupted: switching to urgent bugfix PR #123"
 
 **Never merge or push to `origin` while `wip:` commits remain in the stack, unless the user explicitly says otherwise.**
 
-- WIP commits are for *local* iteration only — they are checkpoints, not publication-ready units
+- WIP commits are for _local_ iteration only — they are checkpoints, not publication-ready units
 - Before pushing or opening a PR, restructure history so every commit is a logical, self-contained unit of work
 - Each commit should tell a clear story: what changed, why it changed, and ideally be independently buildable/testable
 - Squash related `wip:` commits using interactive rebase: `git rebase -i main`
@@ -66,6 +66,7 @@ git stash push -m "interrupted: switching to urgent bugfix PR #123"
 - Only ever push `wip:` commits to `origin` if the user explicitly requests it (e.g. "just push what I have")
 
 Example — cleaning up before a PR:
+
 ```bash
 # Check what's in the stack
 git log --oneline main..HEAD
@@ -127,6 +128,7 @@ For pi-owned worktrees:
 - do **not** clean external/manual worktrees unless the user explicitly asks
 
 When finishing work in a worktree:
+
 1. Push the branch: `git push origin <branch>`
 2. Open a PR from the worktree branch
 3. Remove the worktree after merge: `git worktree remove <path>`
@@ -157,6 +159,7 @@ git commit -am "wip: checkpoint before attempting refactor"
 ```
 
 Clean up before opening a PR:
+
 ```bash
 git rebase -i main  # squash related wip commits
 ```

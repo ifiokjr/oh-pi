@@ -1,4 +1,4 @@
-/* c8 ignore file */
+/* C8 ignore file */
 /**
  * Pi Analytics Database - Main Entry Point
  *

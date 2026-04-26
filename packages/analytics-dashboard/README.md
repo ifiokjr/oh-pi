@@ -24,10 +24,10 @@ pnpm dev:full
 
 The dashboard supports two data modes controlled by `VITE_API_MODE`:
 
-| Mode | Value | Description |
-|------|-------|-------------|
-| **Mock** | `mock` (default) | Uses generated mock data — no database needed |
-| **API** | `api` | Fetches from the Express server which reads from SQLite |
+| Mode     | Value            | Description                                             |
+| -------- | ---------------- | ------------------------------------------------------- |
+| **Mock** | `mock` (default) | Uses generated mock data — no database needed           |
+| **API**  | `api`            | Fetches from the Express server which reads from SQLite |
 
 ### Mock Mode (default)
 
@@ -56,12 +56,12 @@ pnpm dev:full
 
 ## Pages
 
-| Page | Description |
-|------|-------------|
-| **Overview** | Summary metrics, time series chart, cost breakdown, top models/codebases, activity heatmap, usage insights |
-| **Models** | Per-model stats, token usage breakdown, cost distribution, model comparison table |
-| **Codebases** | Per-project stats, cost/tokens charts, codebase cards with highlight |
-| **Insights** | Emotional tone analysis, most common words, most common misspellings, usage insights |
+| Page          | Description                                                                                                |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Overview**  | Summary metrics, time series chart, cost breakdown, top models/codebases, activity heatmap, usage insights |
+| **Models**    | Per-model stats, token usage breakdown, cost distribution, model comparison table                          |
+| **Codebases** | Per-project stats, cost/tokens charts, codebase cards with highlight                                       |
+| **Insights**  | Emotional tone analysis, most common words, most common misspellings, usage insights                       |
 
 ### Insights Page 🧠
 
@@ -140,9 +140,9 @@ pnpm build
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VITE_API_MODE` | `mock` | `mock` for generated data, `api` for real data |
-| `VITE_API_BASE` | `http://localhost:31415` | API server base URL |
-| `PORT` | `31415` | API server port |
-| `ANALYTICS_DB_PATH` | `~/.pi/agent/analytics/analytics.db` | SQLite database path |
+| Variable            | Default                              | Description                                    |
+| ------------------- | ------------------------------------ | ---------------------------------------------- |
+| `VITE_API_MODE`     | `mock`                               | `mock` for generated data, `api` for real data |
+| `VITE_API_BASE`     | `http://localhost:31415`             | API server base URL                            |
+| `PORT`              | `31415`                              | API server port                                |
+| `ANALYTICS_DB_PATH` | `~/.pi/agent/analytics/analytics.db` | SQLite database path                           |

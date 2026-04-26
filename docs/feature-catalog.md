@@ -134,23 +134,23 @@ so build those when you are working on them directly.
 
 ## Runtime feature map
 
-| Package | Installs by default | Primary surfaces | What it gives you |
-| --- | --- | --- | --- |
-| [`@ifi/oh-pi-extensions`](../packages/extensions) | Yes | commands, tools, widgets, footer, tool interception | The core QoL extension pack: git safety, session naming, status UI, scheduling, usage, watchdog, worktrees, side-conversations, and more |
-| [`@ifi/pi-background-tasks`](../packages/background-tasks) | Yes | `bg_task`, `bg_status`, `/bg`, `Ctrl+Shift+B` | Reactive background shell task management with log tails, watches, wakeups, and a richer tracked-task model |
-| [`@ifi/pi-diagnostics`](../packages/diagnostics) | Yes | widget, session messages, `/diagnostics`, `Ctrl+Shift+D` | Prompt start/end timestamps, total duration, and per-turn timing |
-| [`@ifi/oh-pi-ant-colony`](../packages/ant-colony) | Yes | `ant_colony` tool, `/colony*`, `Ctrl+Shift+A` | Multi-agent swarm with scouts/workers/soldiers, isolated worktrees, pheromones, adaptive concurrency, and review passes |
-| [`@ifi/pi-extension-subagents`](../packages/subagents) | Yes | `subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`, `/agents`, `Ctrl+Shift+A` | Rich delegated execution with built-in agents, reusable chains, background runs, and a TUI manager |
-| [`@ifi/pi-plan`](../packages/plan) | Yes | `/plan`, `Alt+P`, plan-mode tools | Branch-aware planning workflow with persistent plan files and delegated research tasks |
-| [`@ifi/pi-spec`](../packages/spec) | Yes | `/spec` and `spec:*` subcommands | Native spec-first workflow with deterministic `.specify/` and `specs/###-feature-name/` artifacts |
-| [`@ifi/pi-web-remote`](../packages/web-remote) | Yes | `/remote` | Share the current pi session through a remote web UI |
-| [`@ifi/pi-extension-adaptive-routing`](../packages/adaptive-routing) | No | `/route*` | Adaptive/shadow routing and delegated startup categories for colonies and subagents |
-| [`@ifi/pi-provider-catalog`](../packages/providers) | No | `/providers*` | Multi-provider catalog and lazy API-key login backed by `models.dev` |
-| [`@ifi/pi-provider-cursor`](../packages/cursor) | No | `/login cursor`, `/cursor*` | Experimental Cursor OAuth provider with model discovery and direct AgentService streaming |
-| [`@ifi/pi-provider-ollama`](../packages/ollama) | No | `/login ollama-cloud`, `/ollama*`, `/model` | Experimental Ollama local + cloud provider integration |
-| [`@ifi/pi-remote-tailscale`](../packages/pi-remote-tailscale) | No | `/remote`, `/remote:widget`, `/remote:stop` | Secure remote session sharing via Tailscale HTTPS with PTY, WebSocket, QR codes, and token auth |
-| [`@ifi/pi-bash-live-view`](../packages/pi-bash-live-view) | No | `/bash-pty`, `bash_live_view` tool with `usePTY` | PTY-backed live terminal viewing with real-time widget and `/xterm/headless` ANSI rendering |
-| [`@ifi/pi-pretty`](../packages/pi-pretty) | No | wrapped `read`, `bash_pretty`, `ls`, `find`, `grep` tools | Syntax highlighting via Shiki, Nerd Font icons, tree-view listings, colored bash summaries, FFF search |
+| Package                                                              | Installs by default | Primary surfaces                                                                        | What it gives you                                                                                                                        |
+| -------------------------------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@ifi/oh-pi-extensions`](../packages/extensions)                    | Yes                 | commands, tools, widgets, footer, tool interception                                     | The core QoL extension pack: git safety, session naming, status UI, scheduling, usage, watchdog, worktrees, side-conversations, and more |
+| [`@ifi/pi-background-tasks`](../packages/background-tasks)           | Yes                 | `bg_task`, `bg_status`, `/bg`, `Ctrl+Shift+B`                                           | Reactive background shell task management with log tails, watches, wakeups, and a richer tracked-task model                              |
+| [`@ifi/pi-diagnostics`](../packages/diagnostics)                     | Yes                 | widget, session messages, `/diagnostics`, `Ctrl+Shift+D`                                | Prompt start/end timestamps, total duration, and per-turn timing                                                                         |
+| [`@ifi/oh-pi-ant-colony`](../packages/ant-colony)                    | Yes                 | `ant_colony` tool, `/colony*`, `Ctrl+Shift+A`                                           | Multi-agent swarm with scouts/workers/soldiers, isolated worktrees, pheromones, adaptive concurrency, and review passes                  |
+| [`@ifi/pi-extension-subagents`](../packages/subagents)               | Yes                 | `subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`, `/agents`, `Ctrl+Shift+A` | Rich delegated execution with built-in agents, reusable chains, background runs, and a TUI manager                                       |
+| [`@ifi/pi-plan`](../packages/plan)                                   | Yes                 | `/plan`, `Alt+P`, plan-mode tools                                                       | Branch-aware planning workflow with persistent plan files and delegated research tasks                                                   |
+| [`@ifi/pi-spec`](../packages/spec)                                   | Yes                 | `/spec` and `spec:*` subcommands                                                        | Native spec-first workflow with deterministic `.specify/` and `specs/###-feature-name/` artifacts                                        |
+| [`@ifi/pi-web-remote`](../packages/web-remote)                       | Yes                 | `/remote`                                                                               | Share the current pi session through a remote web UI                                                                                     |
+| [`@ifi/pi-extension-adaptive-routing`](../packages/adaptive-routing) | No                  | `/route*`                                                                               | Adaptive/shadow routing and delegated startup categories for colonies and subagents                                                      |
+| [`@ifi/pi-provider-catalog`](../packages/providers)                  | No                  | `/providers*`                                                                           | Multi-provider catalog and lazy API-key login backed by `models.dev`                                                                     |
+| [`@ifi/pi-provider-cursor`](../packages/cursor)                      | No                  | `/login cursor`, `/cursor*`                                                             | Experimental Cursor OAuth provider with model discovery and direct AgentService streaming                                                |
+| [`@ifi/pi-provider-ollama`](../packages/ollama)                      | No                  | `/login ollama-cloud`, `/ollama*`, `/model`                                             | Experimental Ollama local + cloud provider integration                                                                                   |
+| [`@ifi/pi-remote-tailscale`](../packages/pi-remote-tailscale)        | No                  | `/remote`, `/remote:widget`, `/remote:stop`                                             | Secure remote session sharing via Tailscale HTTPS with PTY, WebSocket, QR codes, and token auth                                          |
+| [`@ifi/pi-bash-live-view`](../packages/pi-bash-live-view)            | No                  | `/bash-pty`, `bash_live_view` tool with `usePTY`                                        | PTY-backed live terminal viewing with real-time widget and `/xterm/headless` ANSI rendering                                              |
+| [`@ifi/pi-pretty`](../packages/pi-pretty)                            | No                  | wrapped `read`, `bash_pretty`, `ls`, `find`, `grep` tools                               | Syntax highlighting via Shiki, Nerd Font icons, tree-view listings, colored bash summaries, FFF search                                   |
 
 ## `@ifi/oh-pi-extensions`: core extension pack
 
@@ -158,21 +158,21 @@ This package is where most of the day-to-day ergonomics live.
 
 ### Included extensions
 
-| Feature | Primary surfaces | What it does |
-| --- | --- | --- |
-| `git-guard` | automatic stash checkpoints, guarded git invocations | Reduces accidental code loss and blocks interactive git commands that would hang an agent session |
-| `auto-session-name` | automatic session titles, better compaction continuity | Names sessions from user intent, keeps titles fresh as focus changes, and emits clearer resume hints |
-| `custom-footer` | live footer, `/status` overlay | Shows model, thinking level, token usage, cost, context %, cwd, branch, worktree state, and extension statuses |
-| `compact-header` | startup UI | Replaces the default startup banner with a denser one-line header |
-| `tool-metadata` | tool result details | Adds start/end timestamps, duration, approximate I/O sizing, and context snapshots to tool results; also sanitizes huge outputs for UI safety |
-| `auto-update` | startup notification | Checks npm asynchronously and tells you when a newer oh-pi release is available |
-| `external-editor` | `/external-editor`, `Ctrl+Shift+E` | Opens the current draft in `$VISUAL` or `$EDITOR`, then syncs the saved text back into pi |
-| `worktree` | `/worktree`, `/worktree list`, `/worktree create`, `/worktree cleanup` | Gives oh-pi first-class git worktree awareness and managed pi-owned worktrees under shared storage |
-| `bg-process` | `bg_task`, `bg_status`, `/bg`, `Ctrl+Shift+B` | Explicitly manages long-lived background tasks like watchers, servers, and log tails without auto-detaching ordinary bash commands |
-| `scheduler` | `/remind`, `/loop`, `/schedule*`, `schedule_prompt` tool | Schedules one-time reminders and recurring follow-ups for builds, CI, deploys, PRs, and long-running checks |
-| `usage-tracker` | widget, `/usage`, `/usage-toggle`, `/usage-refresh`, `Ctrl+Shift+U`, `usage_report` | Tracks provider quotas, rolling cost history, and per-model/session usage |
-| `btw` / `qq` | `/btw*`, `/qq*` | Runs side conversations in a widget above the editor, then injects the full thread or a summary back into the main agent |
-| `watchdog` / `safe-mode` | `/watchdog*`, `/safe-mode` | Samples runtime health, records alerts, shows startup/blame dashboards, and can reduce UI churn when the session gets too heavy |
+| Feature                  | Primary surfaces                                                                    | What it does                                                                                                                                  |
+| ------------------------ | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `git-guard`              | automatic stash checkpoints, guarded git invocations                                | Reduces accidental code loss and blocks interactive git commands that would hang an agent session                                             |
+| `auto-session-name`      | automatic session titles, better compaction continuity                              | Names sessions from user intent, keeps titles fresh as focus changes, and emits clearer resume hints                                          |
+| `custom-footer`          | live footer, `/status` overlay                                                      | Shows model, thinking level, token usage, cost, context %, cwd, branch, worktree state, and extension statuses                                |
+| `compact-header`         | startup UI                                                                          | Replaces the default startup banner with a denser one-line header                                                                             |
+| `tool-metadata`          | tool result details                                                                 | Adds start/end timestamps, duration, approximate I/O sizing, and context snapshots to tool results; also sanitizes huge outputs for UI safety |
+| `auto-update`            | startup notification                                                                | Checks npm asynchronously and tells you when a newer oh-pi release is available                                                               |
+| `external-editor`        | `/external-editor`, `Ctrl+Shift+E`                                                  | Opens the current draft in `$VISUAL` or `$EDITOR`, then syncs the saved text back into pi                                                     |
+| `worktree`               | `/worktree`, `/worktree list`, `/worktree create`, `/worktree cleanup`              | Gives oh-pi first-class git worktree awareness and managed pi-owned worktrees under shared storage                                            |
+| `bg-process`             | `bg_task`, `bg_status`, `/bg`, `Ctrl+Shift+B`                                       | Explicitly manages long-lived background tasks like watchers, servers, and log tails without auto-detaching ordinary bash commands            |
+| `scheduler`              | `/remind`, `/loop`, `/schedule*`, `schedule_prompt` tool                            | Schedules one-time reminders and recurring follow-ups for builds, CI, deploys, PRs, and long-running checks                                   |
+| `usage-tracker`          | widget, `/usage`, `/usage-toggle`, `/usage-refresh`, `Ctrl+Shift+U`, `usage_report` | Tracks provider quotas, rolling cost history, and per-model/session usage                                                                     |
+| `btw` / `qq`             | `/btw*`, `/qq*`                                                                     | Runs side conversations in a widget above the editor, then injects the full thread or a summary back into the main agent                      |
+| `watchdog` / `safe-mode` | `/watchdog*`, `/safe-mode`                                                          | Samples runtime health, records alerts, shows startup/blame dashboards, and can reduce UI churn when the session gets too heavy               |
 
 ### Scheduler details
 
@@ -489,78 +489,78 @@ Primary commands:
 
 The prompt template pack ships 10 ready-made slash commands.
 
-| Prompt | Purpose |
-| --- | --- |
-| `/review` | Review code for bugs, security issues, missing error handling, performance issues, and readability problems |
-| `/fix` | Fix a bug with minimal changes and explain the root cause |
-| `/explain` | Explain code or a concept from one-line summary through trade-offs and edge cases |
-| `/refactor` | Refactor while preserving behavior |
-| `/test` | Generate tests using the project's existing framework |
-| `/commit` | Generate a Conventional Commit message from staged changes |
-| `/document` | Generate or update technical documentation |
-| `/optimize` | Analyze and improve performance without premature micro-optimization |
-| `/security` | Run an OWASP-style security audit |
-| `/pr` | Draft a pull request description |
+| Prompt      | Purpose                                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------------------------- |
+| `/review`   | Review code for bugs, security issues, missing error handling, performance issues, and readability problems |
+| `/fix`      | Fix a bug with minimal changes and explain the root cause                                                   |
+| `/explain`  | Explain code or a concept from one-line summary through trade-offs and edge cases                           |
+| `/refactor` | Refactor while preserving behavior                                                                          |
+| `/test`     | Generate tests using the project's existing framework                                                       |
+| `/commit`   | Generate a Conventional Commit message from staged changes                                                  |
+| `/document` | Generate or update technical documentation                                                                  |
+| `/optimize` | Analyze and improve performance without premature micro-optimization                                        |
+| `/security` | Run an OWASP-style security audit                                                                           |
+| `/pr`       | Draft a pull request description                                                                            |
 
 ## `@ifi/oh-pi-skills`
 
 The skills pack currently ships 17 skills.
 
-| Skill | What it is for |
-| --- | --- |
-| `btw` | Use the `/btw` or `/qq` side-conversation workflow effectively |
-| `claymorphism` | Build soft, puffy clay-like interfaces |
-| `context7` | Query up-to-date library and framework docs through Context7 |
-| `debug-helper` | Analyze errors, logs, crashes, and performance issues |
-| `flutter-serverpod-mvp` | Scaffold and evolve Flutter + Serverpod MVPs |
-| `git-workflow` | Branching, commits, PRs, and merge/conflict workflow help |
-| `glassmorphism` | Build frosted-glass style interfaces |
-| `grill-me` | Stress-test a plan or design through adversarial questioning |
-| `improve-codebase-architecture` | Find architecture improvements that deepen modules and improve testability |
-| `liquid-glass` | Build Apple Liquid Glass-inspired interfaces |
-| `neubrutalism` | Build bold, thick-bordered, offset-shadow interfaces |
-| `quick-setup` | Detect project type and generate `.pi/` config |
-| `request-refactor-plan` | Interview the user, create a tiny-commit refactor plan, and file it as a GitHub issue |
-| `rust-workspace-bootstrap` | Scaffold a production Rust workspace with knope, devenv, and CI/release workflows |
-| `web-fetch` | Fetch a web page and extract readable content |
-| `web-search` | Search the web via DuckDuckGo |
-| `write-a-skill` | Author new pi-compatible skills correctly |
+| Skill                           | What it is for                                                                        |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| `btw`                           | Use the `/btw` or `/qq` side-conversation workflow effectively                        |
+| `claymorphism`                  | Build soft, puffy clay-like interfaces                                                |
+| `context7`                      | Query up-to-date library and framework docs through Context7                          |
+| `debug-helper`                  | Analyze errors, logs, crashes, and performance issues                                 |
+| `flutter-serverpod-mvp`         | Scaffold and evolve Flutter + Serverpod MVPs                                          |
+| `git-workflow`                  | Branching, commits, PRs, and merge/conflict workflow help                             |
+| `glassmorphism`                 | Build frosted-glass style interfaces                                                  |
+| `grill-me`                      | Stress-test a plan or design through adversarial questioning                          |
+| `improve-codebase-architecture` | Find architecture improvements that deepen modules and improve testability            |
+| `liquid-glass`                  | Build Apple Liquid Glass-inspired interfaces                                          |
+| `neubrutalism`                  | Build bold, thick-bordered, offset-shadow interfaces                                  |
+| `quick-setup`                   | Detect project type and generate `.pi/` config                                        |
+| `request-refactor-plan`         | Interview the user, create a tiny-commit refactor plan, and file it as a GitHub issue |
+| `rust-workspace-bootstrap`      | Scaffold a production Rust workspace with knope, devenv, and CI/release workflows     |
+| `web-fetch`                     | Fetch a web page and extract readable content                                         |
+| `web-search`                    | Search the web via DuckDuckGo                                                         |
+| `write-a-skill`                 | Author new pi-compatible skills correctly                                             |
 
 ## `@ifi/oh-pi-themes`
 
 The theme pack currently ships 6 themes.
 
-| Theme | Style |
-| --- | --- |
-| `oh-p-dark` | First-party cyan/purple dark theme |
-| `cyberpunk` | Neon magenta + electric cyan |
-| `nord` | Arctic blue palette |
-| `catppuccin-mocha` | Pastel-on-dark palette |
-| `tokyo-night` | Blue/purple twilight palette |
-| `gruvbox-dark` | Warm retro dark palette |
+| Theme              | Style                              |
+| ------------------ | ---------------------------------- |
+| `oh-p-dark`        | First-party cyan/purple dark theme |
+| `cyberpunk`        | Neon magenta + electric cyan       |
+| `nord`             | Arctic blue palette                |
+| `catppuccin-mocha` | Pastel-on-dark palette             |
+| `tokyo-night`      | Blue/purple twilight palette       |
+| `gruvbox-dark`     | Warm retro dark palette            |
 
 ## `@ifi/oh-pi-agents`
 
 The AGENTS template pack currently ships 5 templates.
 
-| Template | Focus |
-| --- | --- |
-| `general-developer` | Safe default project guidelines for everyday development |
+| Template              | Focus                                                             |
+| --------------------- | ----------------------------------------------------------------- |
+| `general-developer`   | Safe default project guidelines for everyday development          |
 | `fullstack-developer` | Full-stack application architecture, quality, and git conventions |
-| `security-researcher` | Security testing/reporting workflow and ethics |
-| `data-ai-engineer` | Data pipelines, AI/ML reproducibility, and infra discipline |
-| `colony-operator` | When and how to delegate work to ant-colony |
+| `security-researcher` | Security testing/reporting workflow and ethics                    |
+| `data-ai-engineer`    | Data pipelines, AI/ML reproducibility, and infra discipline       |
+| `colony-operator`     | When and how to delegate work to ant-colony                       |
 
 ## Contributor-facing packages and libraries
 
-| Package | Role |
-| --- | --- |
-| [`@ifi/oh-pi`](../packages/oh-pi) | Meta-installer that registers the default bundle with pi |
-| [`@ifi/oh-pi-cli`](../packages/cli) | Interactive setup/configuration TUI with provider/model/routing/package selection flows |
-| [`@ifi/oh-pi-core`](../packages/core) | Shared registries, icons, i18n helpers, and path helpers for the pi agent directory and shared storage |
-| [`@ifi/pi-shared-qna`](../packages/shared-qna) | Reusable TUI Q&A helpers and shared `pi-tui` loading logic |
-| [`@ifi/pi-web-client`](../packages/web-client) | Platform-agnostic TypeScript client for custom remote session UIs |
-| [`@ifi/pi-web-server`](../packages/web-server) | Embeddable HTTP + WebSocket remote session server |
+| Package                                        | Role                                                                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`@ifi/oh-pi`](../packages/oh-pi)              | Meta-installer that registers the default bundle with pi                                               |
+| [`@ifi/oh-pi-cli`](../packages/cli)            | Interactive setup/configuration TUI with provider/model/routing/package selection flows                |
+| [`@ifi/oh-pi-core`](../packages/core)          | Shared registries, icons, i18n helpers, and path helpers for the pi agent directory and shared storage |
+| [`@ifi/pi-shared-qna`](../packages/shared-qna) | Reusable TUI Q&A helpers and shared `pi-tui` loading logic                                             |
+| [`@ifi/pi-web-client`](../packages/web-client) | Platform-agnostic TypeScript client for custom remote session UIs                                      |
+| [`@ifi/pi-web-server`](../packages/web-server) | Embeddable HTTP + WebSocket remote session server                                                      |
 
 ## Which feature should I reach for?
 

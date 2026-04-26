@@ -1,122 +1,125 @@
 {
-  "private": true,
-  "packageManager": "pnpm@10.33.0",
-  "workspaces": [
-    "packages/*"
-  ],
-  "pi": {
-    "extensions": [
-      "./packages/extensions/extensions/answer.ts",
-      "./packages/extensions/extensions/watchdog.ts",
-      "./packages/extensions/extensions/auto-session-name.ts",
-      "./packages/extensions/extensions/auto-update.ts",
-      "./packages/extensions/extensions/btw.ts",
-      "./packages/extensions/extensions/compact-header.ts",
-      "./packages/extensions/extensions/custom-footer.ts",
-      "./packages/extensions/extensions/external-editor.ts",
-      "./packages/extensions/extensions/git-guard.ts",
-      "./packages/extensions/extensions/scheduler.ts",
-      "./packages/extensions/extensions/tool-metadata.ts",
-      "./packages/extensions/extensions/usage-tracker.ts",
-      "./packages/extensions/extensions/worktree.ts",
-      "./packages/ant-colony/extensions/ant-colony/index.ts",
-      "./packages/background-tasks/index.ts",
-      "./packages/diagnostics/index.ts",
-      "./packages/subagents/index.ts",
-      "./packages/subagents/notify.ts",
-      "./packages/plan/index.ts",
-      "./packages/spec/extension/index.ts",
-      "./packages/web-remote/index.ts",
-      "./packages/cursor/index.ts",
-      "./packages/ollama/index.ts",
-      "./packages/analytics-extension/index.ts"
-    ],
-    "prompts": [
-      "./packages/prompts/prompts"
-    ],
-    "skills": [
-      "./packages/skills/skills"
-    ],
-    "themes": [
-      "./packages/themes/themes"
-    ]
-  },
-  "scripts": {
-    "build": "pnpm --filter @ifi/oh-pi-core build && pnpm -r --filter=!@ifi/oh-pi-core run build",
-    "build:fast": "pnpm --filter @ifi/oh-pi-core run build:fast && pnpm -r --filter=!@ifi/oh-pi-core run build:fast",
-    "typecheck": "pnpm --filter @ifi/oh-pi-core build && pnpm -r --filter @ifi/oh-pi-ant-colony --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli --filter @ifi/pi-spec --filter @ifi/pi-web-client --filter @ifi/pi-web-server run typecheck",
-    "verify:completion": "pnpm exec vitest run packages/ant-colony/tests/commands.test.ts",
-    "security:allowlist": "node ./scripts/security/check-dependency-allowlist.mjs",
-    "security:audit:prod": "node ./scripts/security/run-pnpm-audit.mjs --prod --audit-level=high",
-    "security:audit:dev": "node ./scripts/security/run-pnpm-audit.mjs -D --audit-level=high",
-    "security:check": "pnpm security:allowlist && pnpm security:audit:prod && pnpm security:audit:dev",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:patch-coverage": "pnpm tsx ./scripts/check-patch-coverage.ts --threshold 100 --lcov coverage/lcov.info",
-    "bench": "pnpm bench:startup && pnpm bench:runtime && pnpm bench:extensions-render && pnpm bench:live-runtime",
-    "bench:startup": "OH_PI_RUN_BENCHMARKS=1 pnpm exec vitest run benchmarks/startup/startup-bench.test.ts",
-    "bench:runtime": "OH_PI_RUN_BENCHMARKS=1 pnpm exec vitest run benchmarks/runtime/runtime-bench.test.ts",
-    "bench:extensions-render": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types ./benchmarks/extensions-render-performance.ts",
-    "bench:live-runtime": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types ./benchmarks/live-runtime-behavior.ts",
-    "verify:compiled-tarballs": "node ./scripts/verify-compiled-tarballs.mjs",
-    "verify:published-packages": "node ./scripts/verify-published-packages.mjs",
-    "verify:pi-compat": "node ./scripts/verify-pi-compat.mjs",
-    "pi:switch": "node --experimental-strip-types ./scripts/pi-source-switch.mts",
-    "pi:local": "node --experimental-strip-types ./scripts/pi-source-switch.mts local",
-    "pi:published": "node --experimental-strip-types ./scripts/pi-source-switch.mts remote",
-    "models:refresh-intelligence": "node ./scripts/generate-model-intelligence-snapshot.mjs",
-    "mdt": "mdt",
-    "docs:dev": "pnpm --filter @ifi/oh-pi-docs dev",
-    "docs:build": "pnpm --filter @ifi/oh-pi-docs build",
-    "docs:sync": "pnpm --filter @ifi/oh-pi-docs docs:sync",
-    "docs:list": "pnpm mdt list",
-    "docs:update": "pnpm mdt update",
-    "docs:check": "pnpm mdt check",
-    "lint": "biome check --error-on-warnings .",
-    "lint:fix": "biome check --fix .",
-    "format": "biome format --write .",
-    "check": "biome ci --error-on-warnings ."
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.10",
-    "@ifi/mdt": "^0.7.0",
-    "@mariozechner/pi-agent-core": "0.56.1",
-    "@mariozechner/pi-ai": "0.56.1",
-    "@mariozechner/pi-coding-agent": "0.56.1",
-    "@mariozechner/pi-tui": "0.56.1",
-    "@types/node": "^22.0.0",
-    "@typescript/native-preview": "7.0.0-dev.20260305.1",
-    "@vitest/coverage-v8": "^3.2.4",
-    "typescript": "^5.7.0",
-    "tsx": "^4.20.6",
-    "vitest": "^3.0.0"
-  },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "file-type": "21.3.2",
-      "undici": "7.24.0",
-      "yauzl@<3.2.1": ">=3.2.1",
-      "file-type@>=20.0.0 <=21.3.2": ">=21.3.2",
-      "fast-xml-parser": "5.5.7",
-      "brace-expansion@^2.0.2": "2.0.3",
-      "brace-expansion@^5.0.2": "5.0.5",
-      "yaml": "2.8.3",
-      "picomatch": "4.0.4",
-      "vite": "8.0.9",
-      "hono@<4.12.12": ">=4.12.12",
-      "hono@>=4.0.0 <=4.12.11": ">=4.12.12",
-      "@hono/node-server@<1.19.13": ">=1.19.13",
-      "basic-ftp@<=5.2.2": ">=5.3.0",
-      "protobufjs": "7.5.5",
-      "esbuild@<=0.24.2": ">=0.25.0",
-      "drizzle-orm@<0.45.2": ">=0.45.2",
-      "hono@<4.12.14": ">=4.12.14",
-      "@ifi/pi-analytics-db": "workspace:*",
-      "@ifi/pi-background-tasks": "workspace:*",
-      "@ifi/pi-shared-qna": "workspace:*"
-    }
-  }
+	"private": true,
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"build": "pnpm --filter @ifi/oh-pi-core build && pnpm -r --filter=!@ifi/oh-pi-core run build",
+		"build:fast": "pnpm --filter @ifi/oh-pi-core run build:fast && pnpm -r --filter=!@ifi/oh-pi-core run build:fast",
+		"typecheck": "pnpm --filter @ifi/oh-pi-core build && pnpm -r --filter @ifi/oh-pi-ant-colony --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli --filter @ifi/pi-spec --filter @ifi/pi-web-client --filter @ifi/pi-web-server run typecheck",
+		"verify:completion": "pnpm exec vitest run packages/ant-colony/tests/commands.test.ts",
+		"security:allowlist": "node ./scripts/security/check-dependency-allowlist.mjs",
+		"security:audit:prod": "node ./scripts/security/run-pnpm-audit.mjs --prod --audit-level=high",
+		"security:audit:dev": "node ./scripts/security/run-pnpm-audit.mjs -D --audit-level=high",
+		"security:check": "pnpm security:allowlist && pnpm security:audit:prod && pnpm security:audit:dev",
+		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
+		"test:patch-coverage": "pnpm tsx ./scripts/check-patch-coverage.ts --threshold 100 --lcov coverage/lcov.info",
+		"bench": "pnpm bench:startup && pnpm bench:runtime && pnpm bench:extensions-render && pnpm bench:live-runtime",
+		"bench:startup": "OH_PI_RUN_BENCHMARKS=1 pnpm exec vitest run benchmarks/startup/startup-bench.test.ts",
+		"bench:runtime": "OH_PI_RUN_BENCHMARKS=1 pnpm exec vitest run benchmarks/runtime/runtime-bench.test.ts",
+		"bench:extensions-render": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types ./benchmarks/extensions-render-performance.ts",
+		"bench:live-runtime": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types ./benchmarks/live-runtime-behavior.ts",
+		"verify:compiled-tarballs": "node ./scripts/verify-compiled-tarballs.mjs",
+		"verify:published-packages": "node ./scripts/verify-published-packages.mjs",
+		"verify:pi-compat": "node ./scripts/verify-pi-compat.mjs",
+		"pi:switch": "node --experimental-strip-types ./scripts/pi-source-switch.mts",
+		"pi:local": "node --experimental-strip-types ./scripts/pi-source-switch.mts local",
+		"pi:published": "node --experimental-strip-types ./scripts/pi-source-switch.mts remote",
+		"models:refresh-intelligence": "node ./scripts/generate-model-intelligence-snapshot.mjs",
+		"mdt": "mdt",
+		"docs:dev": "pnpm --filter @ifi/oh-pi-docs dev",
+		"docs:build": "pnpm --filter @ifi/oh-pi-docs build",
+		"docs:sync": "pnpm --filter @ifi/oh-pi-docs docs:sync",
+		"docs:list": "pnpm mdt list",
+		"docs:update": "pnpm mdt update",
+		"docs:check": "pnpm mdt check",
+		"lint": "oxlint --deny-warnings .",
+		"lint:fix": "oxlint --fix .",
+		"format": "oxfmt --write 'benchmarks/**/*.ts' 'packages/**/*.ts' '*.ts' '*.json'",
+		"format:check": "oxfmt --check 'benchmarks/**/*.ts' 'packages/**/*.ts' '*.ts' '*.json'",
+		"check": "pnpm format:check && pnpm lint"
+	},
+	"devDependencies": {
+		"@ifi/mdt": "^0.7.0",
+		"@mariozechner/pi-agent-core": "0.56.1",
+		"@mariozechner/pi-ai": "0.56.1",
+		"@mariozechner/pi-coding-agent": "0.56.1",
+		"@mariozechner/pi-tui": "0.56.1",
+		"@types/node": "^22.0.0",
+		"@typescript/native-preview": "7.0.0-dev.20260305.1",
+		"@vitest/coverage-v8": "^3.2.4",
+		"oxfmt": "^0.46.0",
+		"oxlint": "^1.61.0",
+		"tsdown": "^0.21.10",
+		"tsx": "^4.20.6",
+		"typescript": "^5.7.0",
+		"vitest": "^3.0.0"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"packageManager": "pnpm@10.33.0",
+	"pnpm": {
+		"overrides": {
+			"file-type": "21.3.2",
+			"undici": "7.24.0",
+			"yauzl@<3.2.1": ">=3.2.1",
+			"file-type@>=20.0.0 <=21.3.2": ">=21.3.2",
+			"fast-xml-parser": "5.5.7",
+			"brace-expansion@^2.0.2": "2.0.3",
+			"brace-expansion@^5.0.2": "5.0.5",
+			"yaml": "2.8.3",
+			"picomatch": "4.0.4",
+			"vite": "8.0.9",
+			"hono@<4.12.12": ">=4.12.12",
+			"hono@>=4.0.0 <=4.12.11": ">=4.12.12",
+			"@hono/node-server@<1.19.13": ">=1.19.13",
+			"basic-ftp@<=5.2.2": ">=5.3.0",
+			"protobufjs": "7.5.5",
+			"esbuild@<=0.24.2": ">=0.25.0",
+			"drizzle-orm@<0.45.2": ">=0.45.2",
+			"hono@<4.12.14": ">=4.12.14",
+			"@ifi/pi-analytics-db": "workspace:*",
+			"@ifi/pi-background-tasks": "workspace:*",
+			"@ifi/pi-shared-qna": "workspace:*"
+		}
+	},
+	"pi": {
+		"extensions": [
+			"./packages/extensions/extensions/answer.ts",
+			"./packages/extensions/extensions/watchdog.ts",
+			"./packages/extensions/extensions/auto-session-name.ts",
+			"./packages/extensions/extensions/auto-update.ts",
+			"./packages/extensions/extensions/btw.ts",
+			"./packages/extensions/extensions/compact-header.ts",
+			"./packages/extensions/extensions/custom-footer.ts",
+			"./packages/extensions/extensions/external-editor.ts",
+			"./packages/extensions/extensions/git-guard.ts",
+			"./packages/extensions/extensions/scheduler.ts",
+			"./packages/extensions/extensions/tool-metadata.ts",
+			"./packages/extensions/extensions/usage-tracker.ts",
+			"./packages/extensions/extensions/worktree.ts",
+			"./packages/ant-colony/extensions/ant-colony/index.ts",
+			"./packages/background-tasks/index.ts",
+			"./packages/diagnostics/index.ts",
+			"./packages/subagents/index.ts",
+			"./packages/subagents/notify.ts",
+			"./packages/plan/index.ts",
+			"./packages/spec/extension/index.ts",
+			"./packages/web-remote/index.ts",
+			"./packages/cursor/index.ts",
+			"./packages/ollama/index.ts",
+			"./packages/analytics-extension/index.ts"
+		],
+		"prompts": [
+			"./packages/prompts/prompts"
+		],
+		"skills": [
+			"./packages/skills/skills"
+		],
+		"themes": [
+			"./packages/themes/themes"
+		]
+	}
 }

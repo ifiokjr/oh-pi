@@ -8,13 +8,13 @@ const INSTALL_SYMBOL = Symbol.for("oh-pi.watchdog-runtime-diagnostics.installed"
 type RuntimeChannel = "event" | "tool" | "command";
 type UiActivityKind = "status" | "notify" | "overlay" | "widget" | "footer";
 
-type RuntimeSample = {
+interface RuntimeSample {
 	name: string;
 	durationMs: number;
 	timestamp: number;
-};
+}
 
-type RuntimeProfile = {
+interface RuntimeProfile {
 	extensionId: string;
 	source: string;
 	registrations: {
@@ -28,9 +28,9 @@ type RuntimeProfile = {
 	commandSamples: RuntimeSample[];
 	ui: Record<UiActivityKind, number[]>;
 	metric: RuntimeDiagnosticsMetric;
-};
+}
 
-export type RuntimeDiagnosticsMetric = {
+export interface RuntimeDiagnosticsMetric {
 	extensionId: string;
 	source?: string;
 	pendingTasks?: number;
@@ -39,9 +39,9 @@ export type RuntimeDiagnosticsMetric = {
 	mode?: string;
 	note?: string;
 	timestamp?: number;
-};
+}
 
-export type ExtensionDiagnostic = {
+export interface ExtensionDiagnostic {
 	extensionId: string;
 	source: string;
 	score: number;
@@ -52,16 +52,16 @@ export type ExtensionDiagnostic = {
 	pendingTasks: number;
 	dueTasks: number;
 	reasons: string[];
-};
+}
 
-export type StartupDiagnostic = {
+export interface StartupDiagnostic {
 	extensionId: string;
 	source: string;
 	totalMs: number;
 	lastMs: number;
 	count: number;
 	latestAt: number | null;
-};
+}
 
 export const RUNTIME_DIAGNOSTICS_EVENT = "oh-pi:runtime-diagnostics:metric";
 
@@ -147,25 +147,25 @@ function ensureProfile(extensionId: string, source = extensionId): RuntimeProfil
 	}
 
 	const profile: RuntimeProfile = {
-		extensionId,
-		source,
-		registrations: {
-			events: new Set<string>(),
-			tools: new Set<string>(),
-			commands: new Set<string>(),
-			shortcuts: new Set<string>(),
-		},
-		eventSamples: [],
-		toolSamples: [],
 		commandSamples: [],
+		eventSamples: [],
+		extensionId,
+		metric: { extensionId, source },
+		registrations: {
+			commands: new Set<string>(),
+			events: new Set<string>(),
+			shortcuts: new Set<string>(),
+			tools: new Set<string>(),
+		},
+		source,
+		toolSamples: [],
 		ui: {
-			status: [],
+			footer: [],
 			notify: [],
 			overlay: [],
+			status: [],
 			widget: [],
-			footer: [],
 		},
-		metric: { extensionId, source },
 	};
 	profiles.set(extensionId, profile);
 	return profile;
@@ -209,7 +209,7 @@ export function recordRuntimeSample(
 	timestamp = Date.now(),
 ): void {
 	const profile = ensureProfile(extensionId, source);
-	const sample: RuntimeSample = { name, durationMs: Math.max(0, durationMs), timestamp };
+	const sample: RuntimeSample = { durationMs: Math.max(0, durationMs), name, timestamp };
 
 	if (channel === "event") {
 		pushBounded(profile.eventSamples, sample);
@@ -306,20 +306,20 @@ export function getExtensionDiagnostics(now = Date.now()): ExtensionDiagnostic[]
 		}
 
 		diagnostics.push({
+			dueTasks,
 			extensionId: profile.extensionId,
-			source: profile.source,
-			score,
+			pendingTasks,
+			reasons,
 			recentHandlerMs,
-			recentStatusUpdates,
 			recentNotifications,
 			recentOverlays,
-			pendingTasks,
-			dueTasks,
-			reasons,
+			recentStatusUpdates,
+			score,
+			source: profile.source,
 		});
 	}
 
-	return diagnostics.sort(
+	return diagnostics.toSorted(
 		(left, right) => right.score - left.score || left.extensionId.localeCompare(right.extensionId),
 	);
 }
@@ -340,16 +340,16 @@ export function getStartupDiagnostics(): StartupDiagnostic[] {
 		const totalMs = startupSamples.reduce((total, sample) => total + sample.durationMs, 0);
 		const latestSample = startupSamples.at(-1) ?? null;
 		diagnostics.push({
+			count: startupSamples.length,
 			extensionId: profile.extensionId,
+			lastMs: Math.round((latestSample?.durationMs ?? 0) * 100) / 100,
+			latestAt: latestSample?.timestamp ?? null,
 			source: profile.source,
 			totalMs: Math.round(totalMs * 100) / 100,
-			lastMs: Math.round((latestSample?.durationMs ?? 0) * 100) / 100,
-			count: startupSamples.length,
-			latestAt: latestSample?.timestamp ?? null,
 		});
 	}
 
-	return diagnostics.sort((left, right) => right.lastMs - left.lastMs || right.totalMs - left.totalMs);
+	return diagnostics.toSorted((left, right) => right.lastMs - left.lastMs || right.totalMs - left.totalMs);
 }
 
 export function formatStartupDiagnostic(diagnostic: StartupDiagnostic): string {
@@ -376,30 +376,30 @@ function wrapContext<T>(ctx: T, extensionId: string, source: string): T {
 		return cached as T;
 	}
 
-	const ui = candidate.ui;
+	const {ui} = candidate;
 	const wrapped = {
 		...(ctx as Record<string, unknown>),
 		ui: {
 			...ui,
-			setStatus: (...args: unknown[]) => {
-				recordRuntimeUiActivity(extensionId, "status", source);
-				return ui.setStatus?.(...args);
+			custom: (...args: unknown[]) => {
+				recordRuntimeUiActivity(extensionId, "overlay", source);
+				return ui.custom?.(...args);
 			},
 			notify: (...args: unknown[]) => {
 				recordRuntimeUiActivity(extensionId, "notify", source);
 				return ui.notify?.(...args);
 			},
-			custom: (...args: unknown[]) => {
-				recordRuntimeUiActivity(extensionId, "overlay", source);
-				return ui.custom?.(...args);
+			setFooter: (...args: unknown[]) => {
+				recordRuntimeUiActivity(extensionId, "footer", source);
+				return ui.setFooter?.(...args);
+			},
+			setStatus: (...args: unknown[]) => {
+				recordRuntimeUiActivity(extensionId, "status", source);
+				return ui.setStatus?.(...args);
 			},
 			setWidget: (...args: unknown[]) => {
 				recordRuntimeUiActivity(extensionId, "widget", source);
 				return ui.setWidget?.(...args);
-			},
-			setFooter: (...args: unknown[]) => {
-				recordRuntimeUiActivity(extensionId, "footer", source);
-				return ui.setFooter?.(...args);
 			},
 		},
 	} as T;
@@ -495,7 +495,7 @@ export function installRuntimeDiagnostics(pi: ExtensionAPI): void {
 			return;
 		}
 
-		const extensionId = (payload as RuntimeDiagnosticsMetric).extensionId;
+		const {extensionId} = (payload as RuntimeDiagnosticsMetric);
 		if (typeof extensionId !== "string" || extensionId.length === 0) {
 			return;
 		}

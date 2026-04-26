@@ -5,6 +5,7 @@ Core first-party extensions for pi.
 ## Included extensions
 
 This package includes extensions such as:
+
 - answer / /answer:auto
 - git-guard
 - auto-session-name
@@ -176,15 +177,15 @@ Example:
 
 ```json
 {
-  "enabled": true,
-  "sampleIntervalMs": 5000,
-  "thresholds": {
-    "cpuPercent": 85,
-    "rssMb": 1200,
-    "heapUsedMb": 768,
-    "eventLoopP99Ms": 120,
-    "eventLoopMaxMs": 250
-  }
+	"enabled": true,
+	"sampleIntervalMs": 5000,
+	"thresholds": {
+		"cpuPercent": 85,
+		"rssMb": 1200,
+		"heapUsedMb": 768,
+		"eventLoopP99Ms": 120,
+		"eventLoopMaxMs": 250
+	}
 }
 ```
 

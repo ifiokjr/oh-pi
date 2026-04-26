@@ -20,12 +20,8 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import {
-	type ColonyStorageOptions,
-	getColonyStateParentDir,
-	migrateLegacyProjectColonies,
-	resolveColonyStorageOptions,
-} from "./storage.js";
+import { getColonyStateParentDir, migrateLegacyProjectColonies, resolveColonyStorageOptions } from './storage.js';
+import type { ColonyStorageOptions } from './storage.js';
 import type { Ant, ColonyState, ConcurrencySample, EscalationReason, Pheromone, Task, TaskStatus } from "./types.js";
 
 /** Minimum pheromone strength to keep (below this, entries are garbage-collected). */
@@ -41,7 +37,7 @@ const PHEROMONE_GC_INTERVAL = 10;
 const STALE_LOCK_THRESHOLD_MS = 30_000;
 
 /** Maximum time to wait for a live state lock before surfacing an error. */
-const STATE_LOCK_WAIT_MS = 3_000;
+const STATE_LOCK_WAIT_MS = 3000;
 
 /** Base wait duration while waiting for another process to release the state lock. */
 const STATE_LOCK_SPIN_MS = 5;
@@ -99,16 +95,16 @@ export class Nest {
 	private tasksDir: string;
 	private pheromoneCache: Pheromone[] = [];
 	private pheromoneOffset = 0;
-	private taskCache: Map<string, Task> = new Map();
+	private taskCache = new Map<string, Task>();
 	private stateCache: ColonyState | null = null;
 	private gcCounter = 0;
-	private pheromoneByFile: Map<string, Pheromone[]> = new Map();
+	private pheromoneByFile = new Map<string, Pheromone[]>();
 	private pheromoneIndexDirty = true;
 
 	constructor(
-		// biome-ignore lint/correctness/noUnusedPrivateClassMembers: used as this.cwd throughout
+		// Biome-ignore lint/correctness/noUnusedPrivateClassMembers: used as this.cwd throughout
 		private cwd: string,
-		// biome-ignore lint/correctness/noUnusedPrivateClassMembers: used as this.colonyId throughout
+		// Biome-ignore lint/correctness/noUnusedPrivateClassMembers: used as this.colonyId throughout
 		private colonyId: string,
 		storageOptions?: ColonyStorageOptions,
 	) {
@@ -191,7 +187,7 @@ export class Nest {
 	/** Read all tasks from disk (or cache). Populates the cache on first call. */
 	getAllTasks(): Task[] {
 		if (this.taskCache.size > 0) {
-			return Array.from(this.taskCache.values());
+			return [...this.taskCache.values()];
 		}
 		try {
 			const tasks = fs
@@ -202,8 +198,8 @@ export class Nest {
 				this.taskCache.set(t.id, t);
 			}
 			return tasks;
-		} catch (e) {
-			console.error("[nest] failed to read tasks dir:", e);
+		} catch (error) {
+			console.error("[nest] failed to read tasks dir:", error);
 			return [];
 		}
 	}
@@ -241,7 +237,7 @@ export class Nest {
 			if (tasks.length > 1 && Math.random() < 0.1) {
 				chosen = tasks[Math.floor(Math.random() * tasks.length)];
 			} else {
-				const scored = tasks.map((t) => ({ task: t, score: scoreTask(t, this.pheromoneByFile) }));
+				const scored = tasks.map((t) => ({ score: scoreTask(t, this.pheromoneByFile), task: t }));
 				scored.sort((a, b) => b.score - a.score);
 				chosen = scored[0].task;
 			}
@@ -288,11 +284,11 @@ export class Nest {
 			}
 			const routingTelemetry = [...(this.stateCache.metrics.routingTelemetry ?? [])];
 			routingTelemetry.push({
-				taskId,
 				caste,
-				outcome,
-				latencyMs: Math.max(0, Math.floor(latencyMs)),
 				escalationReasons,
+				latencyMs: Math.max(0, Math.floor(latencyMs)),
+				outcome,
+				taskId,
 				timestamp: Date.now(),
 			});
 			this.stateCache.metrics.routingTelemetry = routingTelemetry.slice(-500);
@@ -341,7 +337,7 @@ export class Nest {
 			const buf = Buffer.alloc(stat.size - this.pheromoneOffset);
 			fs.readSync(fd, buf, 0, buf.length, this.pheromoneOffset);
 			fs.closeSync(fd);
-			const newLines = buf.toString("utf-8").split("\n").filter(Boolean);
+			const newLines = buf.toString("utf8").split("\n").filter(Boolean);
 			for (const line of newLines) {
 				this.pheromoneCache.push(JSON.parse(line) as Pheromone);
 			}
@@ -385,7 +381,7 @@ export class Nest {
 			const tmp = `${this.pheromoneFile}.tmp`;
 			fs.writeFileSync(
 				tmp,
-				this.pheromoneCache.map((p) => JSON.stringify(p)).join("\n") + (this.pheromoneCache.length ? "\n" : ""),
+				this.pheromoneCache.map((p) => JSON.stringify(p)).join("\n") + (this.pheromoneCache.length > 0 ? "\n" : ""),
 			);
 			fs.renameSync(tmp, this.pheromoneFile);
 			this.pheromoneOffset = fs.statSync(this.pheromoneFile).size;
@@ -434,7 +430,7 @@ export class Nest {
 				this.stateCache = this.readJson<ColonyState>(this.stateFile);
 			}
 			const idx = this.stateCache.ants.findIndex((a) => a.id === ant.id);
-			if (idx >= 0) {
+			if (idx !== -1) {
 				this.stateCache.ants[idx] = ant;
 			} else {
 				this.stateCache.ants.push(ant);
@@ -464,7 +460,7 @@ export class Nest {
 	/** Remove this colony's data directory from disk. */
 	destroy(): void {
 		try {
-			fs.rmSync(this.dir, { recursive: true, force: true });
+			fs.rmSync(this.dir, { force: true, recursive: true });
 		} catch {
 			// Already removed or inaccessible — safe to ignore
 		}
@@ -495,26 +491,26 @@ export class Nest {
 		while (true) {
 			try {
 				// Ensure the colony storage directory still exists (it may have
-				// been cleaned up mid-run by worktree teardown or another process).
+				// Been cleaned up mid-run by worktree teardown or another process).
 				fs.mkdirSync(path.dirname(this.lockFile), { recursive: true });
 				fs.writeFileSync(this.lockFile, `${process.pid}:${Date.now()}`, { flag: "wx" });
 				break;
 			} catch (error) {
 				if (!this.isLockContentionError(error)) {
 					// ENOENT can occur if the directory was removed between
-					// mkdirSync and writeFileSync — retry instead of crashing.
+					// MkdirSync and writeFileSync — retry instead of crashing.
 					if (this.isDirectoryMissingError(error) && Date.now() - start < STATE_LOCK_WAIT_MS) {
 						continue;
 					}
 					throw new Error(
-						`[Nest] failed to acquire state lock at ${this.lockFile}: ${error instanceof Error ? error.message : String(error)}`,
+						`[Nest] failed to acquire state lock at ${this.lockFile}: ${error instanceof Error ? error.message : String(error)}`, { cause: error },
 					);
 				}
 				if (this.tryBreakStaleLock()) {
 					continue;
 				}
 				if (Date.now() - start > STATE_LOCK_WAIT_MS) {
-					throw new Error(this.buildStateLockTimeoutMessage());
+					throw new Error(this.buildStateLockTimeoutMessage(), { cause: error });
 				}
 				// Sleep with jitter instead of burning CPU in a tight busy loop.
 				blockingSleep(STATE_LOCK_SPIN_MS + Math.random() * STATE_LOCK_SPIN_MS * 2);
@@ -542,7 +538,7 @@ export class Nest {
 
 	private describeLockHolder(): string {
 		try {
-			const content = fs.readFileSync(this.lockFile, "utf-8").trim();
+			const content = fs.readFileSync(this.lockFile, "utf8").trim();
 			const [pidStr, tsStr] = content.split(":");
 			const holder = Number.parseInt(pidStr, 10);
 			const lockTime = Number.parseInt(tsStr, 10);
@@ -562,7 +558,7 @@ export class Nest {
 	 */
 	private tryBreakStaleLock(): boolean {
 		try {
-			const content = fs.readFileSync(this.lockFile, "utf-8");
+			const content = fs.readFileSync(this.lockFile, "utf8");
 			const [pidStr, tsStr] = content.split(":");
 			const holder = Number.parseInt(pidStr, 10);
 			const lockTime = Number.parseInt(tsStr, 10);
@@ -598,7 +594,7 @@ export class Nest {
 
 	/** Read and parse a JSON file. */
 	private readJson<T>(file: string): T {
-		return JSON.parse(fs.readFileSync(file, "utf-8")) as T;
+		return JSON.parse(fs.readFileSync(file, "utf8")) as T;
 	}
 
 	/**
@@ -621,18 +617,18 @@ export class Nest {
 	static findAllResumable(
 		cwd: string,
 		storageOptions?: ColonyStorageOptions,
-	): Array<{ colonyId: string; state: ColonyState }> {
+	): { colonyId: string; state: ColonyState }[] {
 		const resolvedStorage = resolveColonyStorageOptions(storageOptions);
 		migrateLegacyProjectColonies(cwd, resolvedStorage);
 		const parentDir = getColonyStateParentDir(cwd, resolvedStorage);
-		const results: Array<{ colonyId: string; state: ColonyState }> = [];
+		const results: { colonyId: string; state: ColonyState }[] = [];
 		try {
 			for (const dir of fs.readdirSync(parentDir)) {
 				const stateFile = path.join(parentDir, dir, "state.json");
 				if (!fs.existsSync(stateFile)) {
 					continue;
 				}
-				const state = JSON.parse(fs.readFileSync(stateFile, "utf-8")) as ColonyState;
+				const state = JSON.parse(fs.readFileSync(stateFile, "utf8")) as ColonyState;
 				if (
 					!state.finishedAt &&
 					state.status !== "done" &&

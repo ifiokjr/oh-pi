@@ -1,36 +1,36 @@
-import { describe, expect, it } from "vitest";
-import { buildPrompt, CASTE_PROMPTS } from "../extensions/ant-colony/prompts.js";
+
+import { CASTE_PROMPTS, buildPrompt } from "../extensions/ant-colony/prompts.js";
 import type { Task } from "../extensions/ant-colony/types.js";
 
 const mkTask = (overrides: Partial<Task> = {}): Task => ({
+	caste: "worker",
+	claimedBy: null,
+	createdAt: 0,
+	description: "Do something",
+	error: null,
+	files: [],
+	finishedAt: null,
 	id: "t-1",
 	parentId: null,
-	title: "Test task",
-	description: "Do something",
-	caste: "worker",
-	status: "pending",
 	priority: 3,
-	files: [],
-	claimedBy: null,
 	result: null,
-	error: null,
 	spawnedTasks: [],
-	createdAt: 0,
 	startedAt: null,
-	finishedAt: null,
+	status: "pending",
+	title: "Test task",
 	...overrides,
 });
 
-describe("CASTE_PROMPTS", () => {
+describe(CASTE_PROMPTS, () => {
 	it("has all castes", () => {
 		for (const c of ["scout", "worker", "soldier"] as const) {
-			expect(typeof CASTE_PROMPTS[c]).toBe("string");
+			expectTypeOf(CASTE_PROMPTS[c]).toBeString();
 			expect(CASTE_PROMPTS[c].length).toBeGreaterThan(0);
 		}
 	});
 });
 
-describe("buildPrompt", () => {
+describe(buildPrompt, () => {
 	it("includes task title and description", () => {
 		const r = buildPrompt(mkTask(), "", "System");
 		expect(r).toContain("Test task");

@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+
 import type { GitClient } from "../extension/git.js";
 import {
 	buildWorkflowPaths,
@@ -26,18 +26,18 @@ function createTempDir(prefix: string): string {
 
 function createGitMock(overrides: Partial<GitClient> = {}): GitClient {
 	return {
-		getRepoRoot: () => null,
-		getCurrentBranch: () => null,
-		listBranches: () => [],
-		isDirty: () => false,
 		createAndSwitchBranch: () => undefined,
+		getCurrentBranch: () => null,
+		getRepoRoot: () => null,
+		isDirty: () => false,
+		listBranches: () => [],
 		...overrides,
 	};
 }
 
 afterEach(async () => {
 	const { rm } = await import("node:fs/promises");
-	await Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true })));
+	await Promise.all(tempDirs.map((dir) => rm(dir, { force: true, recursive: true })));
 	tempDirs.length = 0;
 });
 
@@ -55,7 +55,7 @@ describe("workspace helpers", () => {
 		const input = `001-${"very-long-".repeat(40)}`;
 		const result = truncateBranchName(input);
 		expect(result.length).toBeLessThanOrEqual(244);
-		expect(result.startsWith("001-")).toBe(true);
+		expect(result.startsWith("001-")).toBeTruthy();
 	});
 
 	it("lists numbered feature directories and resolves them from the current branch", () => {
@@ -64,7 +64,7 @@ describe("workspace helpers", () => {
 		mkdirSync(path.join(repoRoot, "specs", "002-billing-reports"), { recursive: true });
 		mkdirSync(path.join(repoRoot, "specs", "misc-not-a-feature"), { recursive: true });
 
-		expect(listFeatureDirs(repoRoot)).toEqual(["001-auth-flow", "002-billing-reports"]);
+		expect(listFeatureDirs(repoRoot)).toStrictEqual(["001-auth-flow", "002-billing-reports"]);
 		expect(resolveFeatureFromBranch(repoRoot, "002-any-branch-name")).toBe("002-billing-reports");
 	});
 
@@ -88,7 +88,7 @@ describe("workspace helpers", () => {
 		const gitNested = path.join(gitRoot, "nested");
 		mkdirSync(gitNested, { recursive: true });
 		const result = findRepoRoot(gitNested, createGitMock({ getRepoRoot: () => gitRoot }));
-		expect(result).toEqual({ repoRoot: gitRoot, hasGit: true });
+		expect(result).toStrictEqual({ hasGit: true, repoRoot: gitRoot });
 	});
 
 	it("builds workflow paths for an active feature", () => {

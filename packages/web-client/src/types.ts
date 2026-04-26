@@ -47,7 +47,7 @@ export interface CompactionResult {
 
 export interface PromptOptions {
 	streamingBehavior?: "steer" | "followUp";
-	images?: Array<{ type: "image"; data: string; mimeType: string }>;
+	images?: { type: "image"; data: string; mimeType: string }[];
 }
 
 export interface AuthCommand {
@@ -60,7 +60,7 @@ export interface PromptCommand {
 	id?: string;
 	message: string;
 	streamingBehavior?: "steer" | "followUp";
-	images?: Array<{ type: "image"; data: string; mimeType: string }>;
+	images?: { type: "image"; data: string; mimeType: string }[];
 }
 
 export interface SteerCommand {

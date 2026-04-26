@@ -1,20 +1,13 @@
-/* c8 ignore file */
+/* C8 ignore file */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
-import {
-	mergeDelegatedSelectionPolicies,
-	selectDelegatedModel,
-	type DelegatedAvailableModel,
-	type DelegatedSelectionLatencySnapshot,
-	type DelegatedSelectionPolicy,
-	type DelegatedSelectionResult,
-	type DelegatedSelectionUsageSnapshot,
-} from "@ifi/oh-pi-core";
+import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from '@ifi/oh-pi-core';
+import type { DelegatedAvailableModel, DelegatedSelectionLatencySnapshot, DelegatedSelectionPolicy, DelegatedSelectionResult, DelegatedSelectionUsageSnapshot } from '@ifi/oh-pi-core';
 import { readAdaptiveRoutingConfig } from "./config.js";
 import type { AdaptiveRoutingConfig, DelegatedTaskProfile } from "./types.js";
 
-export type DelegatedAvailableModelRef = {
+export interface DelegatedAvailableModelRef {
 	provider: string;
 	id: string;
 	fullId: string;
@@ -29,22 +22,22 @@ export type DelegatedAvailableModelRef = {
 		cacheRead: number;
 		cacheWrite: number;
 	};
-};
+}
 
-export type DelegatedSelectionPolicyDefaults = {
+export interface DelegatedSelectionPolicyDefaults {
 	taskProfile?: DelegatedTaskProfile;
 	preferFastModels?: boolean;
 	minContextWindow?: number;
 	allowSmallContextForSmallTasks?: boolean;
-};
+}
 
-export type DelegatedSelectionInspection = {
+export interface DelegatedSelectionInspection {
 	config: AdaptiveRoutingConfig;
 	policy?: DelegatedSelectionPolicy;
 	selection?: DelegatedSelectionResult;
 	usage?: Record<string, DelegatedSelectionUsageSnapshot>;
 	latency?: Record<string, DelegatedSelectionLatencySnapshot>;
-};
+}
 
 function getUsageTrackerRateLimitCachePath(): string {
 	return join(getAgentDir(), "usage-tracker-rate-limits.json");
@@ -59,7 +52,9 @@ function fallbackCandidates(config: AdaptiveRoutingConfig, fallbackGroup: string
 		return [];
 	}
 	const group = config.fallbackGroups[fallbackGroup];
-	return (group?.candidates ?? []).filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+	return (group?.candidates ?? []).filter(
+		(entry): entry is string => typeof entry === "string" && entry.trim().length > 0,
+	);
 }
 
 export function readDelegatedSelectionUsageSnapshot(): Record<string, DelegatedSelectionUsageSnapshot> | undefined {
@@ -69,7 +64,7 @@ export function readDelegatedSelectionUsageSnapshot(): Record<string, DelegatedS
 	}
 
 	try {
-		const raw = JSON.parse(readFileSync(cachePath, "utf-8")) as { providers?: Record<string, unknown> };
+		const raw = JSON.parse(readFileSync(cachePath, "utf8")) as { providers?: Record<string, unknown> };
 		if (!raw.providers || typeof raw.providers !== "object") {
 			return undefined;
 		}
@@ -81,7 +76,7 @@ export function readDelegatedSelectionUsageSnapshot(): Record<string, DelegatedS
 			}
 
 			const candidate = value as {
-				windows?: Array<{ percentLeft?: unknown }>;
+				windows?: { percentLeft?: unknown }[];
 				error?: unknown;
 			};
 			const percentages = Array.isArray(candidate.windows)
@@ -91,8 +86,8 @@ export function readDelegatedSelectionUsageSnapshot(): Record<string, DelegatedS
 				: [];
 			const remainingPct = percentages.length > 0 ? Math.min(...percentages) : undefined;
 			usage[provider] = {
-				remainingPct,
 				confidence: candidate.error ? "unknown" : remainingPct == null ? "unknown" : "estimated",
+				remainingPct,
 			};
 		}
 
@@ -109,7 +104,7 @@ export function readDelegatedSelectionLatencySnapshot(): Record<string, Delegate
 	}
 
 	try {
-		const raw = JSON.parse(readFileSync(aggregatesPath, "utf-8")) as {
+		const raw = JSON.parse(readFileSync(aggregatesPath, "utf8")) as {
 			perModelLatencyMs?: Record<string, { avgMs?: unknown; count?: unknown }>;
 		};
 		if (!raw.perModelLatencyMs || typeof raw.perModelLatencyMs !== "object") {
@@ -137,14 +132,14 @@ export function readDelegatedSelectionLatencySnapshot(): Record<string, Delegate
 
 export function toDelegatedAvailableModels(models: DelegatedAvailableModelRef[]): DelegatedAvailableModel[] {
 	return models.map((model) => ({
-		provider: model.provider,
-		id: model.id,
-		name: model.name ?? model.id,
-		reasoning: model.reasoning ?? false,
-		input: model.input ? [...model.input] : ["text"],
 		contextWindow: model.contextWindow ?? 128_000,
-		maxTokens: model.maxTokens ?? 16_384,
 		cost: model.cost ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+		id: model.id,
+		input: model.input ? [...model.input] : ["text"],
+		maxTokens: model.maxTokens ?? 16_384,
+		name: model.name ?? model.id,
+		provider: model.provider,
+		reasoning: model.reasoning ?? false,
 	}));
 }
 
@@ -180,23 +175,31 @@ export function buildDelegatedSelectionBasePolicy(params: {
 		defaults?.allowSmallContextForSmallTasks ??
 		selectionConfig.allowSmallContextForSmallTasks;
 
-	if (!(candidateModels.length > 0 || categoryPolicy || blockedProviders.length > 0 || blockedModels.length > 0 || taskProfile)) {
+	if (
+		!(
+			candidateModels.length > 0 ||
+			categoryPolicy ||
+			blockedProviders.length > 0 ||
+			blockedModels.length > 0 ||
+			taskProfile
+		)
+	) {
 		return undefined;
 	}
 
 	return {
-		candidateModels: candidateModels.length > 0 ? candidateModels : undefined,
-		preferredProviders: categoryPolicy?.preferredProviders,
-		blockedProviders: blockedProviders.length > 0 ? blockedProviders : undefined,
+		allowSmallContextForSmallTasks,
 		blockedModels: blockedModels.length > 0 ? blockedModels : undefined,
-		taskProfile: taskProfile ?? "all",
+		blockedProviders: blockedProviders.length > 0 ? blockedProviders : undefined,
+		candidateModels: candidateModels.length > 0 ? candidateModels : undefined,
+		minContextWindow,
 		preferFastModels,
 		preferLowCost: categoryPolicy?.preferLowCost,
 		preferLowerUsage: selectionConfig.preferLowerUsage,
-		requireReasoning: categoryPolicy?.requireReasoning,
+		preferredProviders: categoryPolicy?.preferredProviders,
 		requireMultimodal: categoryPolicy?.requireMultimodal,
-		minContextWindow,
-		allowSmallContextForSmallTasks,
+		requireReasoning: categoryPolicy?.requireReasoning,
+		taskProfile: taskProfile ?? "all",
 	};
 }
 
@@ -212,8 +215,8 @@ export function buildDelegatedSelectionPolicy(params: {
 	}
 
 	const basePolicy = buildDelegatedSelectionBasePolicy({
-		config,
 		category: params.category,
+		config,
 		defaults: params.defaults,
 	});
 	const override = resolveDelegatedSelectionOverride(config, params.roleKeys ?? []);
@@ -235,19 +238,20 @@ export function inspectDelegatedSelection(params: {
 	latency?: Record<string, DelegatedSelectionLatencySnapshot>;
 }): DelegatedSelectionInspection {
 	const { config, policy } = buildDelegatedSelectionPolicy({
-		config: params.config,
 		category: params.category,
-		roleKeys: params.roleKeys,
+		config: params.config,
 		defaults: params.defaults,
+		roleKeys: params.roleKeys,
 	});
 	const usage = params.usage ?? readDelegatedSelectionUsageSnapshot();
 	const latency = params.latency ?? readDelegatedSelectionLatencySnapshot();
 	if (!policy) {
-		return { config, policy, usage, latency };
+		return { config, latency, policy, usage };
 	}
 
 	return {
 		config,
+		latency,
 		policy,
 		selection: selectDelegatedModel({
 			availableModels: toDelegatedAvailableModels(params.availableModels),
@@ -258,6 +262,5 @@ export function inspectDelegatedSelection(params: {
 			latency,
 		}),
 		usage,
-		latency,
 	};
 }

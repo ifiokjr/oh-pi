@@ -9,10 +9,10 @@ function time(label, fn, iterations) {
 	}
 	const totalMs = performance.now() - start;
 	return {
-		label,
-		iterations,
-		totalMs,
 		avgMs: totalMs / iterations,
+		iterations,
+		label,
+		totalMs,
 	};
 }
 
@@ -21,7 +21,7 @@ function makeCommands(count) {
 	for (let index = 0; index < count; index++) {
 		commands.push({
 			name: `command-${index}`,
-			source: index % 6 === 0 ? "prompt" : index % 5 === 0 ? "skill" : "command",
+			source: index % 6 === 0 ? "prompt" : (index % 5 === 0 ? "skill" : "command"),
 		});
 	}
 	return commands;
@@ -33,14 +33,14 @@ function renderHeaderFromCatalog(catalog) {
 
 function makeJobs(count) {
 	return Array.from({ length: count }, (_, index) => ({
-		id: `job-${index}`,
+		activity: "recent activity",
 		agent: `agent-${index}`,
+		elapsed: `${index + 1}ms`,
+		id: `job-${index}`,
 		status: index % 3 === 0 ? "running" : "complete",
 		stepText: `step ${index % 4}/4`,
-		elapsed: `${index + 1}ms`,
-		tokens: `${(index + 1) * 10}`,
-		activity: "recent activity",
 		tail: ["line a", "line b", "line c"],
+		tokens: `${(index + 1) * 10}`,
 	}));
 }
 
@@ -60,7 +60,7 @@ function renderSubagentWidget(jobs, maxJobs = Number.POSITIVE_INFINITY) {
 function renderRecentSamples(samples) {
 	return samples
 		.slice(-8)
-		.reverse()
+		.toReversed()
 		.map(
 			(sample) =>
 				`${sample.age} · cpu ${sample.cpu}% · rss ${sample.rss}MB · p99 ${sample.p99}ms · max ${sample.max}ms`,
@@ -71,9 +71,9 @@ function makeSamples(count) {
 	return Array.from({ length: count }, (_, index) => ({
 		age: `${index}s ago`,
 		cpu: 20 + (index % 50),
-		rss: 300 + index,
-		p99: 10 + (index % 40),
 		max: 20 + (index % 80),
+		p99: 10 + (index % 40),
+		rss: 300 + index,
 	}));
 }
 
@@ -81,7 +81,7 @@ const iterations = 500;
 
 console.log("Compact-header command catalog rebuild vs cached render data\n");
 console.log("commands\trebuild avg\tcached avg\tspeedup");
-for (const size of [10, 100, 1_000, 10_000]) {
+for (const size of [10, 100, 1000, 10_000]) {
 	const commands = makeCommands(size);
 	const catalog = buildCommandCatalog(commands);
 	const rebuild = time("rebuild", () => buildCommandCatalog(commands), iterations);
@@ -102,7 +102,7 @@ for (const size of [1, 4, 16, 64]) {
 
 console.log("\nWatchdog overlay history rendering with a fixed recent-sample window (8 rows)\n");
 console.log("history\toverlay avg");
-for (const size of [10, 100, 1_000, 10_000]) {
+for (const size of [10, 100, 1000, 10_000]) {
 	const samples = makeSamples(size);
 	const result = time("overlay", () => renderRecentSamples(samples), iterations);
 	console.log(`${size}\t${result.avgMs.toFixed(4)}ms`);

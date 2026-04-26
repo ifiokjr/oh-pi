@@ -61,17 +61,17 @@ const STOP_WORDS = new Set([
 export function findRepoRoot(cwd: string, git: GitClient): { repoRoot: string; hasGit: boolean } {
 	const gitRoot = git.getRepoRoot(cwd);
 	if (gitRoot) {
-		return { repoRoot: gitRoot, hasGit: true };
+		return { hasGit: true, repoRoot: gitRoot };
 	}
 
 	let current = path.resolve(cwd);
 	while (true) {
 		if (existsSync(path.join(current, ".specify"))) {
-			return { repoRoot: current, hasGit: false };
+			return { hasGit: false, repoRoot: current };
 		}
 		const parent = path.dirname(current);
 		if (parent === current) {
-			return { repoRoot: path.resolve(cwd), hasGit: false };
+			return { hasGit: false, repoRoot: path.resolve(cwd) };
 		}
 		current = parent;
 	}
@@ -89,7 +89,7 @@ export function listFeatureDirs(repoRoot: string): string[] {
 			const fullPath = path.join(specsDir, entry);
 			return existsSync(fullPath) && statSync(fullPath).isDirectory();
 		})
-		.sort((a, b) => a.localeCompare(b));
+		.toSorted((a, b) => a.localeCompare(b));
 }
 
 export function getLatestFeatureDir(repoRoot: string): string | undefined {
@@ -123,35 +123,35 @@ export function buildWorkflowPaths(repoRoot: string, featureName?: string): Work
 	const memoryDir = path.join(specifyDir, "memory");
 	const featureDir = featureName ? path.join(repoRoot, "specs", featureName) : undefined;
 	return {
-		repoRoot,
-		specsDir: path.join(repoRoot, "specs"),
-		specifyDir,
-		templatesDir,
-		memoryDir,
-		constitutionFile: path.join(memoryDir, "constitution.md"),
 		agentContextFile: path.join(memoryDir, "pi-agent.md"),
+		checklistsDir: featureDir ? path.join(featureDir, "checklists") : undefined,
+		constitutionFile: path.join(memoryDir, "constitution.md"),
+		contractsDir: featureDir ? path.join(featureDir, "contracts") : undefined,
+		dataModelFile: featureDir ? path.join(featureDir, "data-model.md") : undefined,
 		extensionsConfigFile: path.join(specifyDir, "extensions.yml"),
-		workflowReadmeFile: path.join(specifyDir, "README.md"),
-		featureDir,
 		featureBranch: featureName,
+		featureDir,
 		featureNumber: featureName?.match(/^(\d{3})-/)?.[1],
 		featureSpec: featureDir ? path.join(featureDir, "spec.md") : undefined,
+		memoryDir,
 		planFile: featureDir ? path.join(featureDir, "plan.md") : undefined,
-		tasksFile: featureDir ? path.join(featureDir, "tasks.md") : undefined,
-		researchFile: featureDir ? path.join(featureDir, "research.md") : undefined,
-		dataModelFile: featureDir ? path.join(featureDir, "data-model.md") : undefined,
 		quickstartFile: featureDir ? path.join(featureDir, "quickstart.md") : undefined,
-		contractsDir: featureDir ? path.join(featureDir, "contracts") : undefined,
-		checklistsDir: featureDir ? path.join(featureDir, "checklists") : undefined,
+		repoRoot,
+		researchFile: featureDir ? path.join(featureDir, "research.md") : undefined,
+		specifyDir,
+		specsDir: path.join(repoRoot, "specs"),
+		tasksFile: featureDir ? path.join(featureDir, "tasks.md") : undefined,
+		templatesDir,
+		workflowReadmeFile: path.join(specifyDir, "README.md"),
 	};
 }
 
 export function cleanBranchSegment(value: string): string {
 	return value
 		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/-+/g, "-")
-		.replace(/^-|-$/g, "");
+		.replaceAll(/[^a-z0-9]+/g, "-")
+		.replaceAll(/-+/g, "-")
+		.replaceAll(/^-|-$/g, "");
 }
 
 export function generateBranchShortName(description: string): string {
@@ -184,7 +184,7 @@ export function truncateBranchName(branchName: string): string {
 		return branchName;
 	}
 	const prefix = branchName.slice(0, 4);
-	const suffix = branchName.slice(4, MAX_BRANCH_LENGTH).replace(/-+$/g, "");
+	const suffix = branchName.slice(4, MAX_BRANCH_LENGTH).replaceAll(/-+$/g, "");
 	return `${prefix}${suffix}`;
 }
 
@@ -233,10 +233,10 @@ export function prepareFeatureWorkspace(options: {
 
 	return {
 		branchName,
-		featureNumber,
-		featureDir,
-		specFile,
 		checklistsDir,
 		createdBranch,
+		featureDir,
+		featureNumber,
+		specFile,
 	};
 }

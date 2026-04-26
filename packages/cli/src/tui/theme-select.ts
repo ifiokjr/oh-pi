@@ -8,12 +8,12 @@ import { THEMES, t } from "@ifi/oh-pi-core";
  */
 export async function selectTheme(initialValue?: string): Promise<string> {
 	const theme = await p.select({
+		initialValue,
 		message: t("theme.select"),
 		options: THEMES.map((th) => ({
 			value: th.name,
 			label: `${th.style === "dark" ? "🌙" : "☀️"} ${th.label}`,
 		})),
-		initialValue,
 	});
 	if (p.isCancel(theme)) {
 		p.cancel(t("cancelled"));

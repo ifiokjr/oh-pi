@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
-import gitGuardExtension, { detectInteractiveGitCommand, INTERACTIVE_GIT_WARNING_PREFIX } from "./git-guard.js";
 
-describe("detectInteractiveGitCommand", () => {
+import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
+import gitGuardExtension, { INTERACTIVE_GIT_WARNING_PREFIX, detectInteractiveGitCommand } from "./git-guard.js";
+
+describe(detectInteractiveGitCommand, () => {
 	it("detects git rebase --continue without non-interactive editor overrides", () => {
 		const result = detectInteractiveGitCommand("git rebase --continue");
 		expect(result).not.toBeNull();
@@ -40,7 +40,7 @@ describe("detectInteractiveGitCommand", () => {
 	});
 });
 
-describe("INTERACTIVE_GIT_WARNING_PREFIX", () => {
+describe(INTERACTIVE_GIT_WARNING_PREFIX, () => {
 	it("stays stable for user-facing block messages", () => {
 		expect(INTERACTIVE_GIT_WARNING_PREFIX).toBe("Interactive git command blocked");
 	});
@@ -51,7 +51,7 @@ describe("git-guard extension", () => {
 		vi.useFakeTimers();
 		try {
 			const harness = createExtensionHarness();
-			harness.pi.exec = vi.fn(async () => ({ stdout: " M README.md\n?? notes.txt\n", exitCode: 0 }));
+			harness.pi.exec = vi.fn(async () => ({ exitCode: 0, stdout: " M README.md\n?? notes.txt\n" }));
 
 			gitGuardExtension(harness.pi as never);
 			harness.emit("session_start", {}, harness.ctx);

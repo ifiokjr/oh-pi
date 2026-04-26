@@ -3,24 +3,24 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
-import { vi } from "vitest";
+
 import type { BenchmarkDefinition } from "../shared/benchmark";
 import { createBenchmarkHarness } from "./harness";
 
-type ExtensionModule = {
+interface ExtensionModule {
 	default: (pi: any) => void;
-};
+}
 
-type ManifestExtensionEntry = {
+interface ManifestExtensionEntry {
 	id: string;
 	path: string;
 	module: ExtensionModule;
-};
+}
 
-type StartupBenchmarkSuite = {
+interface StartupBenchmarkSuite {
 	definitions: BenchmarkDefinition[];
 	cleanup: () => Promise<void>;
-};
+}
 
 type SchedulerExports = typeof import("../../packages/extensions/extensions/scheduler.js");
 type WorktreeExports = typeof import("../../packages/extensions/extensions/worktree-shared.js");
@@ -31,16 +31,16 @@ const TEMP_ROOT_CLEANUP_RETRY_DELAYS_MS = [0, 25, 50, 100] as const;
 
 function createAssistantEntry(index: number) {
 	return {
-		type: "message",
 		message: {
-			role: "assistant",
 			content: `assistant message ${index}`,
+			role: "assistant",
 			usage: {
+				cost: { total: 0.01 },
 				input: 1200 + (index % 11),
 				output: 800 + (index % 7),
-				cost: { total: 0.01 },
 			},
 		},
+		type: "message",
 	};
 }
 
@@ -50,29 +50,29 @@ function createAssistantEntries(count: number): any[] {
 
 function buildSchedulerTask(index: number, now: number) {
 	return {
-		id: `task-${index}`,
-		prompt: `Follow up on benchmark task ${index}`,
-		kind: index % 2 === 0 ? "once" : "recurring",
-		scope: "instance",
-		enabled: true,
 		createdAt: now - index * 1_000,
-		nextRunAt: now + index * 60_000,
-		intervalMs: index % 2 === 0 ? undefined : 300_000,
-		jitterMs: 0,
-		runCount: 0,
-		pending: false,
-		ownerInstanceId: `owner-${index}`,
-		ownerSessionId: `session-${index}`,
 		creatorInstanceId: `creator-${index}`,
 		creatorSessionId: `creator-session-${index}`,
+		enabled: true,
+		id: `task-${index}`,
+		intervalMs: index % 2 === 0 ? undefined : 300_000,
+		jitterMs: 0,
+		kind: index % 2 === 0 ? "once" : "recurring",
+		nextRunAt: now + index * 60_000,
+		ownerInstanceId: `owner-${index}`,
+		ownerSessionId: `session-${index}`,
+		pending: false,
+		prompt: `Follow up on benchmark task ${index}`,
+		runCount: 0,
+		scope: "instance",
 	};
 }
 
 function writeSchedulerStore(tasks: unknown[]) {
 	return JSON.stringify(
 		{
-			version: 1,
 			tasks,
+			version: 1,
 		},
 		null,
 		"\t",
@@ -81,7 +81,7 @@ function writeSchedulerStore(tasks: unknown[]) {
 
 function git(cwd: string, args: string[]): string {
 	return execFileSync("git", ["-C", cwd, ...args], {
-		encoding: "utf-8",
+		encoding: "utf8",
 		stdio: ["ignore", "pipe", "pipe"],
 	}).trim();
 }
@@ -90,7 +90,7 @@ async function createTempGitRepo(rootDir: string): Promise<string> {
 	const repoDir = path.join(rootDir, "repo");
 	await fs.mkdir(repoDir, { recursive: true });
 	git(repoDir, ["init", "--initial-branch", "main"]);
-	await fs.writeFile(path.join(repoDir, "README.md"), "# benchmark\n", "utf-8");
+	await fs.writeFile(path.join(repoDir, "README.md"), "# benchmark\n", "utf8");
 	git(repoDir, ["add", "README.md"]);
 	git(repoDir, [
 		"-c",
@@ -105,7 +105,7 @@ async function createTempGitRepo(rootDir: string): Promise<string> {
 }
 
 function extensionIdFromPath(extensionPath: string): string {
-	const normalizedPath = extensionPath.replace(/\\/g, "/");
+	const normalizedPath = extensionPath.replaceAll(/\\/g, "/");
 	const fileName = normalizedPath.split("/").at(-1) ?? normalizedPath;
 	if (fileName === "index.ts") {
 		return normalizedPath.split("/").at(-2) ?? "unknown";
@@ -159,7 +159,7 @@ async function removeDirectoryWithRetry(targetPath: string): Promise<void> {
 		}
 
 		try {
-			await fs.rm(targetPath, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 });
+			await fs.rm(targetPath, { force: true, maxRetries: 3, recursive: true, retryDelay: 25 });
 			return;
 		} catch (error) {
 			lastError = error;
@@ -170,7 +170,7 @@ async function removeDirectoryWithRetry(targetPath: string): Promise<void> {
 }
 
 async function loadManifestExtensionEntries(): Promise<ManifestExtensionEntry[]> {
-	const rawPackage = JSON.parse(await fs.readFile(ROOT_PACKAGE_PATH, "utf-8")) as {
+	const rawPackage = JSON.parse(await fs.readFile(ROOT_PACKAGE_PATH, "utf8")) as {
 		pi?: { extensions?: string[] };
 	};
 	const extensionPaths = rawPackage.pi?.extensions ?? [];
@@ -180,8 +180,8 @@ async function loadManifestExtensionEntries(): Promise<ManifestExtensionEntry[]>
 		const resolvedPath = path.resolve(process.cwd(), extensionPath.replace(/\.ts$/, ".js"));
 		entries.push({
 			id: extensionIdFromPath(extensionPath),
-			path: extensionPath,
 			module: (await import(pathToFileURL(resolvedPath).href)) as ExtensionModule,
+			path: extensionPath,
 		});
 	}
 
@@ -209,9 +209,8 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 
 	const schedulerModule = (await import("../../packages/extensions/extensions/scheduler.js")) as SchedulerExports;
 	const worktreeModule = (await import("../../packages/extensions/extensions/worktree-shared.js")) as WorktreeExports;
-	const customFooterModule = (await import(
-		"../../packages/extensions/extensions/custom-footer.js"
-	)) as CustomFooterExports;
+	const customFooterModule =
+		(await import("../../packages/extensions/extensions/custom-footer.js")) as CustomFooterExports;
 	const usageTrackerModule = (await import("../../packages/extensions/extensions/usage-tracker.js")) as ExtensionModule;
 
 	const now = Date.now();
@@ -220,7 +219,7 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 	await fs.writeFile(
 		schedulerModule.getSchedulerStoragePath(schedulerWorkspace),
 		writeSchedulerStore(schedulerTasks),
-		"utf-8",
+		"utf8",
 	);
 
 	const repoDir = await createTempGitRepo(tempRoot);
@@ -232,13 +231,12 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 
 	const baselineDefinitions: BenchmarkDefinition[] = [
 		{
-			id: "full-stack-register-start-empty",
-			label: "full stack register + session_start (empty history)",
-			group: "startup",
-			iterations: 5,
-			warmupIterations: 1,
-			minSampleTimeMs: 50,
 			budget: { medianMs: 900, p95Ms: 1_400 },
+			group: "startup",
+			id: "full-stack-register-start-empty",
+			iterations: 5,
+			label: "full stack register + session_start (empty history)",
+			minSampleTimeMs: 50,
 			note: "Loads every default oh-pi extension from package.json and fires the first session_start.",
 			async run() {
 				vi.resetModules();
@@ -249,15 +247,15 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
 				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
 			},
+			warmupIterations: 1,
 		},
 		{
-			id: "full-stack-register-start-near-threshold",
-			label: "full stack register + session_start (200-entry history)",
-			group: "startup",
-			iterations: 5,
-			warmupIterations: 1,
-			minSampleTimeMs: 50,
 			budget: { medianMs: 1_200, p95Ms: 1_800 },
+			group: "startup",
+			id: "full-stack-register-start-near-threshold",
+			iterations: 5,
+			label: "full stack register + session_start (200-entry history)",
+			minSampleTimeMs: 50,
 			note: "Exercises eager history scans that still happen below the 250-entry defer thresholds.",
 			async run() {
 				vi.resetModules();
@@ -272,18 +270,18 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
 				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
 			},
+			warmupIterations: 1,
 		},
 	];
 
 	const targetedDefinitions: BenchmarkDefinition[] = [
 		{
-			id: "scheduler-runtime-context-with-store",
-			label: "scheduler persisted store load (50 tasks)",
-			group: "focused hotspot",
-			iterations: 25,
-			warmupIterations: 1,
-			minSampleTimeMs: 20,
 			budget: { medianMs: 40, p95Ms: 80 },
+			group: "focused hotspot",
+			id: "scheduler-runtime-context-with-store",
+			iterations: 25,
+			label: "scheduler persisted store load (50 tasks)",
+			minSampleTimeMs: 20,
 			note: "Measures the synchronous loadTasksFromDisk path behind scheduler session_start wiring.",
 			run() {
 				const runtime = new schedulerModule.SchedulerRuntime({ events: { emit() {} } } as never);
@@ -297,15 +295,15 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 					ui: { setStatus() {} },
 				} as never);
 			},
+			warmupIterations: 1,
 		},
 		{
-			id: "custom-footer-usage-scan-large-history",
-			label: "custom footer usage scan (50k messages)",
-			group: "focused hotspot",
-			iterations: 20,
-			warmupIterations: 1,
-			minSampleTimeMs: 20,
 			budget: { medianMs: 90, p95Ms: 130 },
+			group: "focused hotspot",
+			id: "custom-footer-usage-scan-large-history",
+			iterations: 20,
+			label: "custom footer usage scan (50k messages)",
+			minSampleTimeMs: 20,
 			note: "Tracks the O(n) footer usage aggregation path that can surface during startup and redraws.",
 			run() {
 				customFooterModule.collectFooterUsageTotals({
@@ -314,15 +312,15 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 					},
 				} as never);
 			},
+			warmupIterations: 1,
 		},
 		{
-			id: "usage-tracker-session-start-near-threshold",
-			label: "usage tracker session_start (200-entry history)",
-			group: "focused hotspot",
-			iterations: 20,
-			warmupIterations: 1,
-			minSampleTimeMs: 20,
 			budget: { medianMs: 120, p95Ms: 200 },
+			group: "focused hotspot",
+			id: "usage-tracker-session-start-near-threshold",
+			iterations: 20,
+			label: "usage tracker session_start (200-entry history)",
+			minSampleTimeMs: 20,
 			note: "Covers session hydration plus widget setup before the defer threshold kicks in.",
 			async run() {
 				const harness = createBenchmarkHarness({
@@ -334,39 +332,39 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
 				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
 			},
+			warmupIterations: 1,
 		},
 		{
-			id: "worktree-context-temp-repo",
-			label: "worktree current context (single temp repo)",
-			group: "focused hotspot",
-			iterations: 20,
-			warmupIterations: 2,
 			budget: { medianMs: 120, p95Ms: 200 },
+			group: "focused hotspot",
+			id: "worktree-context-temp-repo",
+			iterations: 20,
+			label: "worktree current context (single temp repo)",
 			note: "Measures the lightweight current-worktree probe used by footer and status refreshes.",
 			run() {
 				worktreeModule.getRepoWorktreeContext(repoDir);
 			},
+			warmupIterations: 2,
 		},
 		{
-			id: "worktree-snapshot-temp-repo",
-			label: "worktree snapshot (single temp repo)",
-			group: "focused hotspot",
-			iterations: 20,
-			warmupIterations: 1,
 			budget: { medianMs: 700 },
+			group: "focused hotspot",
+			id: "worktree-snapshot-temp-repo",
+			iterations: 20,
+			label: "worktree snapshot (single temp repo)",
 			note: "Measures the synchronous full worktree inventory path used by /worktree reporting and explicit status overlays.",
 			run() {
 				worktreeModule.getRepoWorktreeSnapshot(repoDir);
 			},
+			warmupIterations: 1,
 		},
 		{
-			id: "custom-footer-first-render",
-			label: "custom footer first render (200-entry history)",
-			group: "render",
-			iterations: 20,
-			warmupIterations: 1,
-			minSampleTimeMs: 20,
 			budget: { medianMs: 30, p95Ms: 50 },
+			group: "render",
+			id: "custom-footer-first-render",
+			iterations: 20,
+			label: "custom footer first render (200-entry history)",
+			minSampleTimeMs: 20,
 			note: "Simulates the first footer mount after startup so UI formatting regressions show up in CI.",
 			async run() {
 				const harness = createBenchmarkHarness({
@@ -391,6 +389,7 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				component.dispose?.();
 				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
 			},
+			warmupIterations: 1,
 		},
 	].filter((definition) => !focusedBenchmarkFilter || focusedBenchmarkFilter.has(definition.id));
 
@@ -398,13 +397,12 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 
 	for (const entry of filteredManifestEntries) {
 		definitions.push({
-			id: `extension-startup-${entry.id}`,
-			label: `isolated extension startup (${entry.id})`,
-			group: "extension startup",
-			iterations: 10,
-			warmupIterations: 1,
-			minSampleTimeMs: 20,
 			budget: { medianMs: 800, p95Ms: 1_000 },
+			group: "extension startup",
+			id: `extension-startup-${entry.id}`,
+			iterations: 10,
+			label: `isolated extension startup (${entry.id})`,
+			minSampleTimeMs: 20,
 			note: `Loads only ${entry.id} (${entry.path}) and fires session_start/session_shutdown for focused regression tracking.`,
 			async run() {
 				const harness = createBenchmarkHarness({
@@ -417,11 +415,11 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
 				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
 			},
+			warmupIterations: 1,
 		});
 	}
 
 	return {
-		definitions,
 		async cleanup() {
 			if (previousHome === undefined) {
 				process.env.HOME = undefined;
@@ -437,5 +435,6 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 
 			await removeDirectoryWithRetry(tempRoot);
 		},
+		definitions,
 	};
 }

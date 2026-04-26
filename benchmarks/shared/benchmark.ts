@@ -2,12 +2,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { performance } from "node:perf_hooks";
 
-export type BenchmarkBudget = {
+export interface BenchmarkBudget {
 	medianMs?: number;
 	p95Ms?: number;
-};
+}
 
-export type BenchmarkDefinition = {
+export interface BenchmarkDefinition {
 	id: string;
 	label: string;
 	group: string;
@@ -18,9 +18,9 @@ export type BenchmarkDefinition = {
 	minSampleTimeMs?: number;
 	maxSampleLoops?: number;
 	run: () => Promise<void> | void;
-};
+}
 
-export type BenchmarkResult = {
+export interface BenchmarkResult {
 	id: string;
 	label: string;
 	group: string;
@@ -37,9 +37,9 @@ export type BenchmarkResult = {
 	medianMs: number;
 	p95Ms: number;
 	budgetFailures: string[];
-};
+}
 
-export type BenchmarkSuiteReport = {
+export interface BenchmarkSuiteReport {
 	suite: string;
 	generatedAt: string;
 	environment: {
@@ -50,7 +50,7 @@ export type BenchmarkSuiteReport = {
 		sha: string | null;
 	};
 	results: BenchmarkResult[];
-};
+}
 
 function round(value: number): number {
 	return Number(value.toFixed(3));
@@ -97,7 +97,7 @@ function evaluateBudget(result: { medianMs: number; p95Ms: number; budget?: Benc
 
 async function runSample(definition: BenchmarkDefinition): Promise<{ sampleMs: number; loopCount: number }> {
 	const minSampleTimeMs = Math.max(0, definition.minSampleTimeMs ?? 0);
-	const maxSampleLoops = Math.max(1, definition.maxSampleLoops ?? 1_000);
+	const maxSampleLoops = Math.max(1, definition.maxSampleLoops ?? 1000);
 	let loopCount = 0;
 	const startedAt = performance.now();
 
@@ -108,8 +108,8 @@ async function runSample(definition: BenchmarkDefinition): Promise<{ sampleMs: n
 		const elapsedMs = performance.now() - startedAt;
 		if (elapsedMs >= minSampleTimeMs || loopCount >= maxSampleLoops) {
 			return {
-				sampleMs: elapsedMs / loopCount,
 				loopCount,
+				sampleMs: elapsedMs / loopCount,
 			};
 		}
 	}
@@ -135,29 +135,29 @@ export async function runBenchmark(definition: BenchmarkDefinition): Promise<Ben
 	const meanMs = round(mean(samplesMs));
 	const medianMs = round(percentile(samplesMs, 0.5));
 	const p95Ms = round(percentile(samplesMs, 0.95));
-	const budgetFailures = evaluateBudget({ medianMs, p95Ms, budget: definition.budget });
+	const budgetFailures = evaluateBudget({ budget: definition.budget, medianMs, p95Ms });
 
 	for (let i = 0; i < samplesMs.length; i++) {
 		samplesMs[i] = round(samplesMs[i]);
 	}
 
 	return {
-		id: definition.id,
-		label: definition.label,
-		group: definition.group,
-		iterations: definition.iterations,
-		warmupIterations,
-		note: definition.note,
-		budget: definition.budget,
-		minSampleTimeMs: Math.max(0, definition.minSampleTimeMs ?? 0),
 		avgLoopsPerSample: round(mean(sampleLoopCounts)),
-		samplesMs,
-		minMs,
+		budget: definition.budget,
+		budgetFailures,
+		group: definition.group,
+		id: definition.id,
+		iterations: definition.iterations,
+		label: definition.label,
 		maxMs,
 		meanMs,
 		medianMs,
+		minMs,
+		minSampleTimeMs: Math.max(0, definition.minSampleTimeMs ?? 0),
+		note: definition.note,
 		p95Ms,
-		budgetFailures,
+		samplesMs,
+		warmupIterations,
 	};
 }
 
@@ -211,22 +211,22 @@ export async function writeBenchmarkReport(
 	await fs.mkdir(outputDir, { recursive: true });
 	const jsonPath = path.join(outputDir, `${report.suite}.json`);
 	const markdownPath = path.join(outputDir, `${report.suite}.md`);
-	await fs.writeFile(jsonPath, `${JSON.stringify(report, null, "\t")}\n`, "utf-8");
-	await fs.writeFile(markdownPath, toMarkdown(report), "utf-8");
+	await fs.writeFile(jsonPath, `${JSON.stringify(report, null, "\t")}\n`, "utf8");
+	await fs.writeFile(markdownPath, toMarkdown(report), "utf8");
 	return { jsonPath, markdownPath };
 }
 
 export function createSuiteReport(suite: string, results: BenchmarkResult[]): BenchmarkSuiteReport {
 	return {
-		suite,
-		generatedAt: new Date().toISOString(),
 		environment: {
-			node: process.version,
-			platform: process.platform,
 			arch: process.arch,
 			ci: process.env.CI === "true",
+			node: process.version,
+			platform: process.platform,
 			sha: process.env.GITHUB_SHA ?? process.env.VERCEL_GIT_COMMIT_SHA ?? null,
 		},
+		generatedAt: new Date().toISOString(),
 		results,
+		suite,
 	};
 }

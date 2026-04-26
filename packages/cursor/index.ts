@@ -1,7 +1,8 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createCursorOAuthProvider, refreshCursorCredentialModels, refreshCursorToken } from "./auth.js";
 import { CURSOR_API, CURSOR_PROVIDER, getCursorRuntimeConfig } from "./config.js";
-import { getCredentialModels, getFallbackCursorModels, toProviderModels, type CursorCredentials } from "./models.js";
+import { getCredentialModels, getFallbackCursorModels, toProviderModels } from './models.js';
+import type { CursorCredentials } from './models.js';
 import { streamSimpleCursor } from "./provider.js";
 import { clearCursorRuntimeState, getCursorRuntimeStateSummary } from "./runtime.js";
 
@@ -9,9 +10,9 @@ function registerCursorProvider(pi: ExtensionAPI): void {
 	pi.registerProvider(CURSOR_PROVIDER, {
 		api: CURSOR_API,
 		baseUrl: getCursorRuntimeConfig().apiUrl,
+		models: toProviderModels(getFallbackCursorModels()),
 		oauth: createCursorOAuthProvider(),
 		streamSimple: streamSimpleCursor,
-		models: toProviderModels(getFallbackCursorModels()),
 	});
 }
 
@@ -26,7 +27,7 @@ function registerCursorCommand(pi: ExtensionAPI): void {
 				return;
 			}
 
-			const authStorage = ctx.modelRegistry.authStorage;
+			const {authStorage} = ctx.modelRegistry;
 			const credential = authStorage.get(CURSOR_PROVIDER);
 			if (!credential || credential.type !== "oauth") {
 				ctx.ui.notify("Not logged in to Cursor. Run /login cursor first.", "warning");
@@ -34,9 +35,10 @@ function registerCursorCommand(pi: ExtensionAPI): void {
 			}
 
 			if (action === "refresh-models") {
-				const refreshed = credential.expires <= Date.now()
-					? await refreshCursorToken(credential)
-					: await refreshCursorCredentialModels(credential as CursorCredentials);
+				const refreshed =
+					credential.expires <= Date.now()
+						? await refreshCursorToken(credential)
+						: await refreshCursorCredentialModels(credential as CursorCredentials);
 				authStorage.set(CURSOR_PROVIDER, { type: "oauth", ...refreshed });
 				ctx.modelRegistry.refresh();
 				ctx.ui.notify(`Refreshed Cursor models (${getCredentialModels(refreshed).length} available).`, "info");
@@ -61,8 +63,18 @@ function registerCursorCommand(pi: ExtensionAPI): void {
 
 export { streamSimpleCursor } from "./provider.js";
 export { createCursorOAuthProvider, generateCursorAuthParams, getTokenExpiry } from "./auth.js";
-export { discoverCursorModels, getCredentialModels, getFallbackCursorModels, type CursorCredentials } from "./models.js";
-export { clearCursorRuntimeState, deriveBridgeKey, deriveConversationKey, getCursorRuntimeStateSummary } from "./runtime.js";
+export {
+	discoverCursorModels,
+	getCredentialModels,
+	getFallbackCursorModels,
+	type CursorCredentials,
+} from "./models.js";
+export {
+	clearCursorRuntimeState,
+	deriveBridgeKey,
+	deriveConversationKey,
+	getCursorRuntimeStateSummary,
+} from "./runtime.js";
 
 export default function cursorProviderExtension(pi: ExtensionAPI): void {
 	registerCursorProvider(pi);

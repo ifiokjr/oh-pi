@@ -1,11 +1,8 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import type { Component, KeybindingsManager, TUI } from "@mariozechner/pi-tui";
 import { truncateToWidth } from "@mariozechner/pi-tui";
-import {
-	type ExternalEditorLaunchResult,
-	getConfiguredExternalEditor,
-	openTextInExternalEditor,
-} from "./external-editor-shared";
+import { getConfiguredExternalEditor, openTextInExternalEditor } from './external-editor-shared';
+import type { ExternalEditorLaunchResult } from './external-editor-shared';
 
 const SHORTCUT = "ctrl+shift+e";
 const COMMAND = "external-editor";
@@ -24,9 +21,9 @@ class ExternalEditorLauncher implements Component {
 			this.launched = true;
 			queueMicrotask(() => {
 				const result = openTextInExternalEditor(this.initialText, {
-					suspendTui: () => this.tui.stop(),
-					resumeTui: () => this.tui.start(),
 					requestRender: (force) => this.tui.requestRender(force),
+					resumeTui: () => this.tui.start(),
+					suspendTui: () => this.tui.stop(),
 				});
 				this.done(result);
 			});
@@ -36,7 +33,7 @@ class ExternalEditorLauncher implements Component {
 	}
 
 	invalidate(): void {
-		/* stateless */
+		/* Stateless */
 	}
 }
 
@@ -70,9 +67,7 @@ async function launchExternalEditorForDraft(ctx: ExtensionCommandContext): Promi
 	}
 
 	const currentText = typeof ctx.ui.getEditorText === "function" ? ctx.ui.getEditorText() : "";
-	const result = await ctx.ui.custom<ExternalEditorLaunchResult>((tui: TUI, _theme, _kb: KeybindingsManager, done) => {
-		return new ExternalEditorLauncher(tui, currentText, done);
-	});
+	const result = await ctx.ui.custom<ExternalEditorLaunchResult>((tui: TUI, _theme, _kb: KeybindingsManager, done) => new ExternalEditorLauncher(tui, currentText, done));
 
 	if (!result || result.kind === "cancelled") {
 		return;
@@ -93,7 +88,7 @@ export default function externalEditorExtension(pi: ExtensionAPI): void {
 		description: "Open the current draft in $VISUAL/$EDITOR and sync the result back into pi.",
 		getArgumentCompletions(prefix) {
 			const items = [
-				{ value: "status", label: "status", description: "Show the configured editor and available bindings" },
+				{ description: "Show the configured editor and available bindings", label: "status", value: "status" },
 			];
 			const filtered = items.filter((item) => item.value.startsWith(prefix.trim()));
 			return filtered.length > 0 ? filtered : null;

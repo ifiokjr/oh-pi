@@ -1,19 +1,12 @@
-/* c8 ignore file */
+/* C8 ignore file */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
-import {
-	mergeDelegatedSelectionPolicies,
-	selectDelegatedModel,
-	type DelegatedAvailableModel,
-	type DelegatedSelectionLatencySnapshot,
-	type DelegatedSelectionPolicy,
-	type DelegatedSelectionUsageSnapshot,
-	type ModelTaskProfile,
-} from "@ifi/oh-pi-core";
+import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from '@ifi/oh-pi-core';
+import type { DelegatedAvailableModel, DelegatedSelectionLatencySnapshot, DelegatedSelectionPolicy, DelegatedSelectionUsageSnapshot, ModelTaskProfile } from '@ifi/oh-pi-core';
 import type { AgentConfig } from "./agents.js";
 
-export type AvailableModelRef = {
+export interface AvailableModelRef {
 	provider: string;
 	id: string;
 	fullId: string;
@@ -28,15 +21,15 @@ export type AvailableModelRef = {
 		cacheRead: number;
 		cacheWrite: number;
 	};
-};
+}
 
-export type SubagentModelResolution = {
+export interface SubagentModelResolution {
 	model?: string;
 	source: "runtime-override" | "frontmatter-model" | "delegated-category" | "session-default";
 	category?: string;
-};
+}
 
-type DelegatedCategoryPolicy = {
+interface DelegatedCategoryPolicy {
 	candidates?: string[];
 	preferredProviders?: string[];
 	fallbackGroup?: string;
@@ -47,14 +40,14 @@ type DelegatedCategoryPolicy = {
 	requireMultimodal?: boolean;
 	minContextWindow?: number;
 	allowSmallContextForSmallTasks?: boolean;
-};
+}
 
-type DelegatedRoutingConfig = {
+interface DelegatedRoutingConfig {
 	enabled?: boolean;
 	categories?: Record<string, DelegatedCategoryPolicy>;
-};
+}
 
-type DelegatedModelSelectionConfig = {
+interface DelegatedModelSelectionConfig {
 	disabledProviders?: string[];
 	excludedProviders?: string[];
 	disabledModels?: string[];
@@ -62,28 +55,28 @@ type DelegatedModelSelectionConfig = {
 	preferLowerUsage?: boolean;
 	allowSmallContextForSmallTasks?: boolean;
 	roleOverrides?: Record<string, DelegatedSelectionPolicy>;
-};
+}
 
-type AdaptiveRoutingConfig = {
+interface AdaptiveRoutingConfig {
 	fallbackGroups?: Record<string, { candidates?: string[] } | string[]>;
 	delegatedRouting?: DelegatedRoutingConfig;
 	delegatedModelSelection?: DelegatedModelSelectionConfig;
-};
+}
 
 const DEFAULT_CATEGORY_TASK_PROFILES: Record<string, ModelTaskProfile> = {
-	"quick-discovery": "planning",
-	"planning-default": "planning",
 	"implementation-default": "coding",
+	"multimodal-default": "design",
+	"planning-default": "planning",
+	"quick-discovery": "planning",
 	"research-default": "planning",
 	"review-critical": "planning",
 	"visual-engineering": "design",
-	"multimodal-default": "design",
 };
 
 const DEFAULT_CATEGORY_MIN_CONTEXT: Partial<Record<string, number>> = {
+	"multimodal-default": 128_000,
 	"review-critical": 128_000,
 	"visual-engineering": 128_000,
-	"multimodal-default": 128_000,
 };
 
 function getAdaptiveRoutingConfigPath(): string {
@@ -104,7 +97,7 @@ function readAdaptiveRoutingConfig(): AdaptiveRoutingConfig {
 		return {};
 	}
 	try {
-		return JSON.parse(readFileSync(configPath, "utf-8")) as AdaptiveRoutingConfig;
+		return JSON.parse(readFileSync(configPath, "utf8")) as AdaptiveRoutingConfig;
 	} catch {
 		return {};
 	}
@@ -117,7 +110,7 @@ function readProviderUsageSnapshot(): Record<string, DelegatedSelectionUsageSnap
 	}
 
 	try {
-		const raw = JSON.parse(readFileSync(cachePath, "utf-8")) as { providers?: Record<string, unknown> };
+		const raw = JSON.parse(readFileSync(cachePath, "utf8")) as { providers?: Record<string, unknown> };
 		if (!raw.providers || typeof raw.providers !== "object") {
 			return undefined;
 		}
@@ -129,7 +122,7 @@ function readProviderUsageSnapshot(): Record<string, DelegatedSelectionUsageSnap
 			}
 
 			const candidate = value as {
-				windows?: Array<{ percentLeft?: unknown }>;
+				windows?: { percentLeft?: unknown }[];
 				error?: unknown;
 			};
 			const percentages = Array.isArray(candidate.windows)
@@ -139,8 +132,8 @@ function readProviderUsageSnapshot(): Record<string, DelegatedSelectionUsageSnap
 				: [];
 			const remainingPct = percentages.length > 0 ? Math.min(...percentages) : undefined;
 			usage[provider] = {
-				remainingPct,
 				confidence: candidate.error ? "unknown" : remainingPct == null ? "unknown" : "estimated",
+				remainingPct,
 			};
 		}
 
@@ -157,7 +150,7 @@ function readMeasuredLatencySnapshot(): Record<string, DelegatedSelectionLatency
 	}
 
 	try {
-		const raw = JSON.parse(readFileSync(aggregatesPath, "utf-8")) as {
+		const raw = JSON.parse(readFileSync(aggregatesPath, "utf8")) as {
 			perModelLatencyMs?: Record<string, { avgMs?: unknown; count?: unknown }>;
 		};
 		if (!raw.perModelLatencyMs || typeof raw.perModelLatencyMs !== "object") {
@@ -196,7 +189,9 @@ function fallbackCandidates(config: AdaptiveRoutingConfig, fallbackGroup: string
 	if (Array.isArray(group)) {
 		return group.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
 	}
-	return (group?.candidates ?? []).filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+	return (group?.candidates ?? []).filter(
+		(entry): entry is string => typeof entry === "string" && entry.trim().length > 0,
+	);
 }
 
 function inferTaskProfileForAgent(agent: AgentConfig, category: string | undefined): ModelTaskProfile {
@@ -237,30 +232,31 @@ function buildBasePolicy(
 		: [];
 	const taskProfile = categoryPolicy?.taskProfile ?? inferTaskProfileForAgent(agent, category);
 	const preferFastModels = categoryPolicy?.preferFastModels ?? category === "quick-discovery";
-	const minContextWindow = categoryPolicy?.minContextWindow ?? (category ? DEFAULT_CATEGORY_MIN_CONTEXT[category] : undefined);
+	const minContextWindow =
+		categoryPolicy?.minContextWindow ?? (category ? DEFAULT_CATEGORY_MIN_CONTEXT[category] : undefined);
 
 	if (!(candidateModels.length > 0 || categoryPolicy || blockedProviders.length > 0 || blockedModels.length > 0)) {
 		return {
-			taskProfile,
-			preferLowerUsage: selectionConfig?.preferLowerUsage ?? true,
 			allowSmallContextForSmallTasks: selectionConfig?.allowSmallContextForSmallTasks ?? true,
+			preferLowerUsage: selectionConfig?.preferLowerUsage ?? true,
+			taskProfile,
 		};
 	}
 
 	return {
-		candidateModels: candidateModels.length > 0 ? candidateModels : undefined,
-		preferredProviders: categoryPolicy?.preferredProviders,
-		blockedProviders: blockedProviders.length > 0 ? blockedProviders : undefined,
+		allowSmallContextForSmallTasks:
+			categoryPolicy?.allowSmallContextForSmallTasks ?? selectionConfig?.allowSmallContextForSmallTasks ?? true,
 		blockedModels: blockedModels.length > 0 ? blockedModels : undefined,
-		taskProfile,
+		blockedProviders: blockedProviders.length > 0 ? blockedProviders : undefined,
+		candidateModels: candidateModels.length > 0 ? candidateModels : undefined,
+		minContextWindow,
 		preferFastModels,
 		preferLowCost: categoryPolicy?.preferLowCost,
 		preferLowerUsage: selectionConfig?.preferLowerUsage ?? true,
-		requireReasoning: categoryPolicy?.requireReasoning,
+		preferredProviders: categoryPolicy?.preferredProviders,
 		requireMultimodal: categoryPolicy?.requireMultimodal,
-		minContextWindow,
-		allowSmallContextForSmallTasks:
-			categoryPolicy?.allowSmallContextForSmallTasks ?? selectionConfig?.allowSmallContextForSmallTasks ?? true,
+		requireReasoning: categoryPolicy?.requireReasoning,
+		taskProfile,
 	};
 }
 
@@ -288,14 +284,14 @@ function resolveRoleOverride(
 
 function normalizeAvailableModels(models: AvailableModelRef[]): DelegatedAvailableModel[] {
 	return models.map((model) => ({
-		provider: model.provider,
-		id: model.id,
-		name: model.name ?? model.id,
-		reasoning: model.reasoning ?? false,
-		input: model.input ? [...model.input] : ["text"],
 		contextWindow: model.contextWindow ?? 128_000,
-		maxTokens: model.maxTokens ?? 16_384,
 		cost: model.cost ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+		id: model.id,
+		input: model.input ? [...model.input] : ["text"],
+		maxTokens: model.maxTokens ?? 16_384,
+		name: model.name ?? model.id,
+		provider: model.provider,
+		reasoning: model.reasoning ?? false,
 	}));
 }
 
@@ -320,10 +316,10 @@ function resolveDelegatedAgentModel(
 	const selection = selectDelegatedModel({
 		availableModels: normalizeAvailableModels(availableModels),
 		currentModel: options.currentModel,
+		latency: readMeasuredLatencySnapshot(),
 		policy,
 		taskText: options.taskText,
 		usage: readProviderUsageSnapshot(),
-		latency: readMeasuredLatencySnapshot(),
 	});
 	return selection.selectedModel;
 }
@@ -344,7 +340,7 @@ export function findAvailableModel(
 	modelName: string | undefined,
 	availableModels: AvailableModelRef[],
 ): string | undefined {
-	if (!modelName) return undefined;
+	if (!modelName) {return undefined;}
 
 	// Strip thinking suffix for lookup
 	const colonIdx = modelName.lastIndexOf(":");
@@ -376,25 +372,25 @@ export function resolveSubagentModelResolution(
 	if (runtimeOverride) {
 		const validated = findAvailableModel(runtimeOverride, availableModels);
 		if (validated) {
-			return { model: validated, source: "runtime-override", category };
+			return { category, model: validated, source: "runtime-override" };
 		}
 	}
 	if (agent.model) {
 		const validated = findAvailableModel(agent.model, availableModels);
 		if (validated) {
-			return { model: validated, source: "frontmatter-model", category };
+			return { category, model: validated, source: "frontmatter-model" };
 		}
 	}
 
 	const sessionModel = findAvailableModel(options.currentModel, availableModels);
 	if (sessionModel) {
-		return { model: sessionModel, source: "session-default", category };
+		return { category, model: sessionModel, source: "session-default" };
 	}
 
 	const delegatedModel = resolveDelegatedAgentModel(agent, availableModels, options);
 	if (delegatedModel) {
-		return { model: delegatedModel, source: "delegated-category", category };
+		return { category, model: delegatedModel, source: "delegated-category" };
 	}
 
-	return { source: "session-default", category };
+	return { category, source: "session-default" };
 }

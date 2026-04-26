@@ -23,9 +23,9 @@ const AUTH_URLS: Record<string, string> = {
 	groq: "https://console.groq.com/keys",
 	mistral: "https://console.mistral.ai/api-keys/",
 	moonshotai: "https://platform.moonshot.ai/console/api-keys",
+	openai: "https://platform.openai.com/api-keys",
 	opencode: "https://opencode.ai/zen",
 	"opencode-go": "https://opencode.ai/zen/go",
-	openai: "https://platform.openai.com/api-keys",
 	openrouter: "https://openrouter.ai/keys",
 	xai: "https://console.x.ai/team/default/api-keys",
 	zenmux: "https://zenmux.ai",
@@ -36,13 +36,13 @@ export const MODELS_DEV_CACHE_TTL_MS = 5 * 60 * 1000;
 export const STATIC_CREDENTIAL_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 export const SUPPORTED_PROVIDERS: SupportedProviderDefinition[] = SUPPORTED_PROVIDER_DATA.map((provider) => ({
-	id: provider.id,
-	name: provider.name,
-	env: [...provider.env],
-	baseUrl: resolveProviderBaseUrl(provider.id, provider.baseUrl),
-	npm: provider.npm,
 	api: resolveProviderApi(provider.id, provider.npm),
 	authUrl: resolveProviderAuthUrl(provider.id, provider.baseUrl),
+	baseUrl: resolveProviderBaseUrl(provider.id, provider.baseUrl),
+	env: [...provider.env],
+	id: provider.id,
+	name: provider.name,
+	npm: provider.npm,
 }));
 
 export const SUPPORTED_PROVIDERS_BY_ID = new Map(SUPPORTED_PROVIDERS.map((provider) => [provider.id, provider]));

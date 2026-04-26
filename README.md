@@ -101,30 +101,30 @@ Published npm installs remain the better default for stable releases.
 
 This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick individual packages.
 
-| Package | Role | Install |
-| ------- | ---- | ------- |
-| [`@ifi/oh-pi`](./packages/oh-pi) | Meta-installer for the default oh-pi bundle | `npx @ifi/oh-pi` |
-| [`@ifi/oh-pi-cli`](./packages/cli) | Interactive TUI configurator | `npx @ifi/oh-pi-cli` |
-| [`@ifi/oh-pi-core`](./packages/core) | Shared types, registries, icons, i18n, and path helpers | (library, not installed directly) |
-| [`@ifi/oh-pi-extensions`](./packages/extensions) | Core extension pack with 13 session features | `pi install npm:@ifi/oh-pi-extensions` |
-| [`@ifi/pi-background-tasks`](./packages/background-tasks) | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, and `bg_task` | `pi install npm:@ifi/pi-background-tasks` |
-| [`@ifi/pi-diagnostics`](./packages/diagnostics) | Prompt completion timing extension | `pi install npm:@ifi/pi-diagnostics` |
-| [`@ifi/oh-pi-ant-colony`](./packages/ant-colony) | Multi-agent swarm extension | `pi install npm:@ifi/oh-pi-ant-colony` |
-| [`@ifi/pi-extension-subagents`](./packages/subagents) | Full-featured subagent delegation runtime | `pi install npm:@ifi/pi-extension-subagents` |
-| [`@ifi/pi-plan`](./packages/plan) | Branch-aware planning mode extension | `pi install npm:@ifi/pi-plan` |
-| [`@ifi/pi-spec`](./packages/spec) | Native spec-driven workflow with `/spec` | `pi install npm:@ifi/pi-spec` |
-| [`@ifi/pi-web-remote`](./packages/web-remote) | `/remote` session sharing extension | `pi install npm:@ifi/pi-web-remote` |
-| [`@ifi/pi-extension-adaptive-routing`](./packages/adaptive-routing) | Optional adaptive + delegated routing | `pi install npm:@ifi/pi-extension-adaptive-routing` |
-| [`@ifi/pi-provider-catalog`](./packages/providers) | Experimental OpenCode-backed provider catalog | `pi install npm:@ifi/pi-provider-catalog` |
-| [`@ifi/pi-provider-cursor`](./packages/cursor) | Experimental Cursor OAuth provider | `pi install npm:@ifi/pi-provider-cursor` |
-| [`@ifi/pi-provider-ollama`](./packages/ollama) | Experimental Ollama local + cloud provider | `pi install npm:@ifi/pi-provider-ollama` |
-| [`@ifi/oh-pi-themes`](./packages/themes) | 6 color themes | `pi install npm:@ifi/oh-pi-themes` |
-| [`@ifi/oh-pi-prompts`](./packages/prompts) | 10 prompt templates | `pi install npm:@ifi/oh-pi-prompts` |
-| [`@ifi/oh-pi-skills`](./packages/skills) | 17 skill packs | `pi install npm:@ifi/oh-pi-skills` |
-| [`@ifi/oh-pi-agents`](./packages/agents) | 5 AGENTS.md templates | (used by CLI/templates) |
-| [`@ifi/pi-shared-qna`](./packages/shared-qna) | Shared Q&A TUI helpers | (library, not installed directly) |
-| [`@ifi/pi-web-client`](./packages/web-client) | Platform-agnostic remote session client library | `pnpm add @ifi/pi-web-client` |
-| [`@ifi/pi-web-server`](./packages/web-server) | Embeddable remote session server | `pnpm add @ifi/pi-web-server` |
+| Package                                                             | Role                                                                      | Install                                             |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------- |
+| [`@ifi/oh-pi`](./packages/oh-pi)                                    | Meta-installer for the default oh-pi bundle                               | `npx @ifi/oh-pi`                                    |
+| [`@ifi/oh-pi-cli`](./packages/cli)                                  | Interactive TUI configurator                                              | `npx @ifi/oh-pi-cli`                                |
+| [`@ifi/oh-pi-core`](./packages/core)                                | Shared types, registries, icons, i18n, and path helpers                   | (library, not installed directly)                   |
+| [`@ifi/oh-pi-extensions`](./packages/extensions)                    | Core extension pack with 13 session features                              | `pi install npm:@ifi/oh-pi-extensions`              |
+| [`@ifi/pi-background-tasks`](./packages/background-tasks)           | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, and `bg_task` | `pi install npm:@ifi/pi-background-tasks`           |
+| [`@ifi/pi-diagnostics`](./packages/diagnostics)                     | Prompt completion timing extension                                        | `pi install npm:@ifi/pi-diagnostics`                |
+| [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)                    | Multi-agent swarm extension                                               | `pi install npm:@ifi/oh-pi-ant-colony`              |
+| [`@ifi/pi-extension-subagents`](./packages/subagents)               | Full-featured subagent delegation runtime                                 | `pi install npm:@ifi/pi-extension-subagents`        |
+| [`@ifi/pi-plan`](./packages/plan)                                   | Branch-aware planning mode extension                                      | `pi install npm:@ifi/pi-plan`                       |
+| [`@ifi/pi-spec`](./packages/spec)                                   | Native spec-driven workflow with `/spec`                                  | `pi install npm:@ifi/pi-spec`                       |
+| [`@ifi/pi-web-remote`](./packages/web-remote)                       | `/remote` session sharing extension                                       | `pi install npm:@ifi/pi-web-remote`                 |
+| [`@ifi/pi-extension-adaptive-routing`](./packages/adaptive-routing) | Optional adaptive + delegated routing                                     | `pi install npm:@ifi/pi-extension-adaptive-routing` |
+| [`@ifi/pi-provider-catalog`](./packages/providers)                  | Experimental OpenCode-backed provider catalog                             | `pi install npm:@ifi/pi-provider-catalog`           |
+| [`@ifi/pi-provider-cursor`](./packages/cursor)                      | Experimental Cursor OAuth provider                                        | `pi install npm:@ifi/pi-provider-cursor`            |
+| [`@ifi/pi-provider-ollama`](./packages/ollama)                      | Experimental Ollama local + cloud provider                                | `pi install npm:@ifi/pi-provider-ollama`            |
+| [`@ifi/oh-pi-themes`](./packages/themes)                            | 6 color themes                                                            | `pi install npm:@ifi/oh-pi-themes`                  |
+| [`@ifi/oh-pi-prompts`](./packages/prompts)                          | 10 prompt templates                                                       | `pi install npm:@ifi/oh-pi-prompts`                 |
+| [`@ifi/oh-pi-skills`](./packages/skills)                            | 17 skill packs                                                            | `pi install npm:@ifi/oh-pi-skills`                  |
+| [`@ifi/oh-pi-agents`](./packages/agents)                            | 5 AGENTS.md templates                                                     | (used by CLI/templates)                             |
+| [`@ifi/pi-shared-qna`](./packages/shared-qna)                       | Shared Q&A TUI helpers                                                    | (library, not installed directly)                   |
+| [`@ifi/pi-web-client`](./packages/web-client)                       | Platform-agnostic remote session client library                           | `pnpm add @ifi/pi-web-client`                       |
+| [`@ifi/pi-web-server`](./packages/web-server)                       | Embeddable remote session server                                          | `pnpm add @ifi/pi-web-server`                       |
 
 `@ifi/pi-extension-adaptive-routing`, `@ifi/pi-provider-catalog`, `@ifi/pi-provider-cursor`, and
 `@ifi/pi-provider-ollama` stay opt-in for now and are **not** installed by `npx @ifi/oh-pi`.
@@ -248,10 +248,10 @@ echo '  "plainIcons": true' >> .pi/settings.json
 ```jsonc
 // ~/.pi/agent/settings.json
 {
-  "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-4",
-  "plainIcons": true
-  // ...
+	"defaultProvider": "anthropic",
+	"defaultModel": "claude-sonnet-4",
+	"plainIcons": true,
+	// ...
 }
 ```
 
@@ -571,11 +571,11 @@ The LLM automatically deploys the colony when appropriate:
 
 ### Presets
 
-|                | Theme      | Thinking | Includes                                 |
-| -------------- | ---------- | -------- | ---------------------------------------- |
+|                | Theme      | Thinking | Includes                                         |
+| -------------- | ---------- | -------- | ------------------------------------------------ |
 | ⚫ Full Power  | oh-pi Dark | high     | Recommended extensions + bg-process + ant-colony |
-| 🔴 Clean       | Default    | off      | No extensions, just core                 |
-| 🐜 Colony Only | oh-pi Dark | medium   | Ant-colony with minimal setup            |
+| 🔴 Clean       | Default    | off      | No extensions, just core                         |
+| 🐜 Colony Only | oh-pi Dark | medium   | Ant-colony with minimal setup                    |
 
 ### Providers
 
@@ -608,13 +608,13 @@ plus the 5 AGENTS.md templates that ship in this repo, see
 
 ### 🔄 Workflow Skills
 
-| Skill                      | What it does                                        |
-| -------------------------- | --------------------------------------------------- |
-| `quick-setup`              | Detect project type, generate .pi/ config           |
-| `debug-helper`             | Error analysis, log interpretation, profiling       |
-| `git-workflow`             | Branching, commits, PRs, conflict resolution        |
-| `rust-workspace-bootstrap` | Scaffold Rust workspaces with knope, devenv, CI/CD  |
-| `flutter-serverpod-mvp`    | Scaffold full-stack Flutter + Serverpod MVPs        |
+| Skill                      | What it does                                       |
+| -------------------------- | -------------------------------------------------- |
+| `quick-setup`              | Detect project type, generate .pi/ config          |
+| `debug-helper`             | Error analysis, log interpretation, profiling      |
+| `git-workflow`             | Branching, commits, PRs, conflict resolution       |
+| `rust-workspace-bootstrap` | Scaffold Rust workspaces with knope, devenv, CI/CD |
+| `flutter-serverpod-mvp`    | Scaffold full-stack Flutter + Serverpod MVPs       |
 
 ## Themes
 

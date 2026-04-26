@@ -56,9 +56,9 @@ async function main(): Promise<void> {
 	// Build connection URL
 	const connectUrl = tunnelUrl
 		? `${tunnelUrl}?t=${server.token}`
-		: lanIp
+		: (lanIp
 			? `http://${lanIp}:${resolvedPort}?t=${server.token}`
-			: `${result.url}?t=${server.token}`;
+			: `${result.url}?t=${server.token}`);
 
 	console.log("");
 	console.log("  ╭─────────────────────────────────────────╮");
@@ -122,7 +122,7 @@ function printHelp(): void {
 	console.log("  -h, --help            Show this help");
 }
 
-main().catch((err) => {
-	console.error("Fatal:", err.message ?? err);
+main().catch((error) => {
+	console.error("Fatal:", error.message ?? error);
 	process.exit(1);
 });

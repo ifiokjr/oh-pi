@@ -58,7 +58,7 @@ because it can keep previously loaded package modules alive.
 */
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -70,34 +70,34 @@ const IS_WINDOWS = process.platform === "win32";
 type Mode = "local" | "remote" | "status";
 type PackageSetting = string | ({ source: string } & Record<string, unknown>);
 
-type SettingsFile = {
+interface SettingsFile {
 	packages?: PackageSetting[];
 	[key: string]: unknown;
-};
+}
 
-type Options = {
+interface Options {
 	mode: Mode;
 	repoPath: string;
 	version?: string;
 	piLocal: boolean;
 	dryRun: boolean;
-};
+}
 
-type Change = {
+interface Change {
 	packageName: string;
 	currentSource?: string;
 	nextSource: string;
-};
+}
 
 type ManagedPackageManifest = Partial<Record<"extensions" | "prompts" | "skills" | "themes" | "agents", string[]>>;
 
 type PackageSyncAction = "install" | "update";
 
-type PackageSyncOperation = {
+interface PackageSyncOperation {
 	packageName: string;
 	source: string;
 	action: PackageSyncAction;
-};
+}
 
 export function parseNpmPackageName(source: string): string | undefined {
 	if (!source.startsWith("npm:")) {
@@ -270,22 +270,22 @@ export function dedupeManagedPackageEntries(
 
 		const current = choiceByPackage.get(packageName);
 		if (!current) {
-			choiceByPackage.set(packageName, { index, entry });
+			choiceByPackage.set(packageName, { entry, index });
 			continue;
 		}
 
 		if (typeof entry === "object" && typeof current.entry !== "object") {
-			choiceByPackage.set(packageName, { index, entry });
+			choiceByPackage.set(packageName, { entry, index });
 			continue;
 		}
 
 		if (typeof entry === "object" && typeof current.entry === "object") {
-			choiceByPackage.set(packageName, { index, entry });
+			choiceByPackage.set(packageName, { entry, index });
 			continue;
 		}
 
 		if (typeof entry !== "object" && typeof current.entry !== "object") {
-			choiceByPackage.set(packageName, { index, entry });
+			choiceByPackage.set(packageName, { entry, index });
 		}
 	}
 
@@ -313,7 +313,7 @@ export function mergeManagedPackageManifest(
 	}
 
 	const nextEntry: Record<string, unknown> = { ...entry };
-	for (const [key, manifestEntries] of Object.entries(manifest) as Array<[keyof ManagedPackageManifest, string[] | undefined]>) {
+	for (const [key, manifestEntries] of Object.entries(manifest) as [keyof ManagedPackageManifest, string[] | undefined][]) {
 		if (!(manifestEntries && manifestEntries.length > 0)) {
 			continue;
 		}
@@ -394,10 +394,10 @@ function parseArgs(argv: string[]): Options {
 	}
 
 	const options: Options = {
-		mode: modeArg,
-		repoPath: process.cwd(),
-		piLocal: false,
 		dryRun: false,
+		mode: modeArg,
+		piLocal: false,
+		repoPath: process.cwd(),
 	};
 
 	for (let index = 0; index < args.length; index++) {
@@ -515,7 +515,10 @@ export function buildPiExecutableCandidates(options?: {
 	return candidates;
 }
 
-export function resolvePiCommand(candidates: readonly string[], probe: (candidate: string) => boolean): string | undefined {
+export function resolvePiCommand(
+	candidates: readonly string[],
+	probe: (candidate: string) => boolean,
+): string | undefined {
 	for (const candidate of candidates) {
 		if (probe(candidate)) {
 			return candidate;
@@ -525,7 +528,8 @@ export function resolvePiCommand(candidates: readonly string[], probe: (candidat
 }
 
 function printHelp() {
-	console.log(`
+	console.log(
+		`
 oh-pi source switcher — toggle pi between local workspace packages and published npm packages
 
 Usage:
@@ -550,7 +554,8 @@ Examples:
 Notes:
   - local/remote mode also manages the experimental provider packages
   - fully restart pi after switching; /reload can keep old package modules alive
-`.trim());
+`.trim(),
+	);
 }
 
 function findPi(): string {
@@ -560,7 +565,7 @@ function findPi(): string {
 			return false;
 		}
 
-		const result = spawnSync(candidate, ["--version"], { stdio: "ignore", shell: IS_WINDOWS });
+		const result = spawnSync(candidate, ["--version"], { shell: IS_WINDOWS, stdio: "ignore" });
 		if (!result.error) {
 			return true;
 		}
@@ -572,7 +577,9 @@ function findPi(): string {
 		return resolved;
 	}
 
-	throw new Error("'pi' command not found. Install pi-coding-agent first: npm install -g @mariozechner/pi-coding-agent");
+	throw new Error(
+		"'pi' command not found. Install pi-coding-agent first: npm install -g @mariozechner/pi-coding-agent",
+	);
 }
 
 function getSettingsPath(piLocal: boolean): string {
@@ -626,11 +633,14 @@ function buildDesiredSources(options: Options): Map<string, string> {
 	throw new Error(`Unsupported mode: ${options.mode}`);
 }
 
-function describeChanges(currentSources: ReadonlyMap<string, string>, desiredSources: ReadonlyMap<string, string>): Change[] {
+function describeChanges(
+	currentSources: ReadonlyMap<string, string>,
+	desiredSources: ReadonlyMap<string, string>,
+): Change[] {
 	return SWITCHER_PACKAGES.map((packageName) => ({
-		packageName,
 		currentSource: currentSources.get(packageName),
 		nextSource: desiredSources.get(packageName) ?? "",
+		packageName,
 	}));
 }
 
@@ -639,7 +649,13 @@ function writeSettings(settingsPath: string, settings: SettingsFile) {
 	writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
 }
 
-function printChangeSummary(mode: Mode, changes: readonly Change[], settingsPath: string, repoPath: string, piLocal: boolean) {
+function printChangeSummary(
+	mode: Mode,
+	changes: readonly Change[],
+	settingsPath: string,
+	repoPath: string,
+	piLocal: boolean,
+) {
 	const scope = piLocal ? "project" : "user";
 	console.log(`\nSwitching oh-pi packages to ${mode} mode (${scope} settings)`);
 	console.log(`Settings: ${settingsPath}`);
@@ -657,8 +673,12 @@ function printChangeSummary(mode: Mode, changes: readonly Change[], settingsPath
 
 function printLocalInstallHint(repoPath: string) {
 	console.log("");
-	console.log(`Reminder: if you recently pulled, rebased, or switched branches in ${repoPath}, run \`pnpm install --frozen-lockfile\` before restarting pi.`);
-	console.log("Local source mode loads workspace files directly, so stale node_modules can surface missing internal @ifi/* package errors.");
+	console.log(
+		`Reminder: if you recently pulled, rebased, or switched branches in ${repoPath}, run \`pnpm install --frozen-lockfile\` before restarting pi.`,
+	);
+	console.log(
+		"Local source mode loads workspace files directly, so stale node_modules can surface missing internal @ifi/* package errors.",
+	);
 }
 
 function printStatus(currentSources: ReadonlyMap<string, string>, settingsPath: string, piLocal: boolean) {
@@ -683,21 +703,25 @@ export function planPackageSyncOperations(
 			continue;
 		}
 		operations.push({
+			action: currentSources.has(packageName) ? "update" : "install",
 			packageName,
 			source,
-			action: currentSources.has(packageName) ? "update" : "install",
 		});
 	}
 	return operations;
 }
 
-function updatePiSources(pi: string, currentSources: ReadonlyMap<string, string>, desiredSources: ReadonlyMap<string, string>) {
+function updatePiSources(
+	pi: string,
+	currentSources: ReadonlyMap<string, string>,
+	desiredSources: ReadonlyMap<string, string>,
+) {
 	let failures = 0;
 	console.log("\nSyncing packages with pi...\n");
 	for (const operation of planPackageSyncOperations(currentSources, desiredSources)) {
 		process.stdout.write(`  ${operation.packageName} (${operation.action}) ... `);
 		try {
-			execFileSync(pi, [operation.action, operation.source], { stdio: "pipe", timeout: 120_000, shell: IS_WINDOWS });
+			execFileSync(pi, [operation.action, operation.source], { shell: IS_WINDOWS, stdio: "pipe", timeout: 120_000 });
 			console.log("✓");
 		} catch (error) {
 			const stderr = error instanceof Error && "stderr" in error ? String(error.stderr ?? "").trim() : "";
@@ -736,7 +760,8 @@ export function main(argv: string[] = process.argv) {
 	}
 
 	const desiredSources = buildDesiredSources(options);
-	const localManifests = options.mode === "local" ? resolveWorkspacePackageManifests(options.repoPath, SWITCHER_PACKAGES) : undefined;
+	const localManifests =
+		options.mode === "local" ? resolveWorkspacePackageManifests(options.repoPath, SWITCHER_PACKAGES) : undefined;
 	const nextEntries = rewriteManagedPackageSources(currentEntries, desiredSources, resolvePackageName, {
 		manifests: localManifests,
 	});
@@ -763,7 +788,7 @@ export function main(argv: string[] = process.argv) {
 	console.log("⚠️  Avoid /reload after switching sources; it can keep previously loaded package modules alive.");
 }
 
-const currentFilePath = realpathSync(fileURLToPath(import.meta.url));
+const currentFilePath = realpathSync(import.meta.filename);
 const invokedPath = process.argv[1] ? realpathSync(path.resolve(process.argv[1])) : undefined;
 if (invokedPath && invokedPath === currentFilePath) {
 	try {

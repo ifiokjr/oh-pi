@@ -38,9 +38,7 @@ export function getPiTuiFallbackPaths(options: Omit<PiTuiLoaderOptions, "require
 		roots.add(options.bunInstallDir);
 	}
 	roots.add(path.join(homeDir, ".bun"));
-	return [...roots].map((root) =>
-		path.join(root, "install", "global", "node_modules", "@mariozechner", "pi-tui"),
-	);
+	return [...roots].map((root) => path.join(root, "install", "global", "node_modules", "@mariozechner", "pi-tui"));
 }
 
 /**
@@ -58,7 +56,7 @@ export function requirePiTuiModule(options: PiTuiLoaderOptions = {}): unknown {
 	try {
 		return requireFn("@mariozechner/pi-tui");
 	} catch (error) {
-		const code = (error as { code?: string }).code;
+		const {code} = (error as { code?: string });
 		if (code !== "MODULE_NOT_FOUND") {
 			throw error;
 		}

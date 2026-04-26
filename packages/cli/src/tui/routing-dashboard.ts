@@ -9,76 +9,76 @@ import { detectPiPackageInstallScopes } from "../utils/pi-packages.js";
 
 export const ROUTING_CATEGORIES = [
 	{
-		name: "quick-discovery",
+		colony: ["scout"],
 		label: "Quick discovery",
+		name: "quick-discovery",
 		recommended: ["groq", "ollama-cloud", "ollama", "openai"],
 		subagents: ["scout"],
-		colony: ["scout"],
 	},
 	{
-		name: "planning-default",
+		colony: [],
 		label: "Planning",
+		name: "planning-default",
 		recommended: ["openai", "ollama-cloud", "ollama", "groq"],
 		subagents: ["planner", "context-builder"],
-		colony: [],
 	},
 	{
-		name: "implementation-default",
+		colony: ["worker", "drone", "backend"],
 		label: "Implementation",
+		name: "implementation-default",
 		recommended: ["openai", "ollama-cloud", "ollama", "groq"],
 		subagents: ["worker"],
-		colony: ["worker", "drone", "backend"],
 	},
 	{
-		name: "research-default",
+		colony: [],
 		label: "Research",
+		name: "research-default",
 		recommended: ["openai", "groq", "ollama-cloud", "ollama"],
 		subagents: ["researcher"],
-		colony: [],
 	},
 	{
-		name: "review-critical",
+		colony: ["soldier", "review"],
 		label: "Review / critical validation",
+		name: "review-critical",
 		recommended: ["openai", "ollama-cloud", "ollama", "groq"],
 		subagents: ["reviewer"],
-		colony: ["soldier", "review"],
 	},
 	{
-		name: "visual-engineering",
+		colony: ["design"],
 		label: "Visual / design work",
+		name: "visual-engineering",
 		recommended: ["ollama-cloud", "ollama", "openai", "groq"],
 		subagents: ["artist", "frontend-designer"],
-		colony: ["design"],
 	},
 	{
-		name: "multimodal-default",
+		colony: ["multimodal"],
 		label: "Multimodal media work",
+		name: "multimodal-default",
 		recommended: ["ollama-cloud", "ollama", "openai", "groq"],
 		subagents: ["multimodal-summariser"],
-		colony: ["multimodal"],
 	},
 ] as const;
 
 const OPTIONAL_ROUTING_PACKAGES = [
 	{
-		packageName: "@ifi/pi-extension-adaptive-routing",
-		label: "Adaptive routing package",
 		hint: "Optional /route command and per-prompt auto routing",
+		label: "Adaptive routing package",
+		packageName: "@ifi/pi-extension-adaptive-routing",
 	},
 	{
-		packageName: "@ifi/pi-provider-ollama",
-		label: "Ollama provider package",
 		hint: "Ollama local and Ollama Cloud model support",
+		label: "Ollama provider package",
+		packageName: "@ifi/pi-provider-ollama",
 	},
 	{
-		packageName: "@ifi/pi-provider-cursor",
-		label: "Cursor provider package",
 		hint: "cursor-agent provider support",
+		label: "Cursor provider package",
+		packageName: "@ifi/pi-provider-cursor",
 	},
 	{
-		packageName: "@ifi/pi-provider-catalog",
-		label: "Provider catalog package",
 		hint: "Catalog-backed provider and model discovery helpers",
+		label: "Provider catalog package",
+		packageName: "@ifi/pi-provider-catalog",
 	},
 ] as const;
 
@@ -117,8 +117,8 @@ export function detectOptionalRoutingPackages(
 		const selectedScope = selected.get(pkg.packageName);
 		return {
 			...pkg,
-			scope,
 			installed: scope !== "none",
+			scope,
 			selected: selectedScope !== undefined,
 			selectedScope,
 		};
@@ -150,9 +150,9 @@ function mergeProviderConfigs(providers: ProviderConfig[]): ProviderConfig[] {
 		merged.set(name, {
 			...previous,
 			...provider,
-			name,
 			defaultModel: provider.defaultModel ?? previous?.defaultModel,
 			discoveredModels: provider.discoveredModels ?? previous?.discoveredModels,
+			name,
 		});
 	}
 	return [...merged.values()];

@@ -87,6 +87,7 @@ const EMOJI_ICONS: Record<IconName, string> = {
 	cross: "✗",
 	custom: "🎛️",
 	drone: "⚙️",
+	emacs: "🔵",
 	error: "❌",
 	gear: "⚙️",
 	hammer: "⚒️",
@@ -115,7 +116,6 @@ const EMOJI_ICONS: Record<IconName, string> = {
 	unchecked: "⬜",
 	update: "🔄",
 	vim: "🟢",
-	emacs: "🔵",
 	warning: "⚠️",
 	wrench: "🔧",
 };
@@ -134,6 +134,7 @@ const PLAIN_ICONS: Record<IconName, string> = {
 	cross: "[x]",
 	custom: "[=]",
 	drone: "[d]",
+	emacs: "[e]",
 	error: "[ERR]",
 	gear: "[*]",
 	hammer: "[w]",
@@ -162,7 +163,6 @@ const PLAIN_ICONS: Record<IconName, string> = {
 	unchecked: "[ ]",
 	update: "[~]",
 	vim: "[v]",
-	emacs: "[e]",
 	warning: "[!]",
 	wrench: "[#]",
 };

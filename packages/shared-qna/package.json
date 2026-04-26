@@ -1,38 +1,38 @@
 {
-  "name": "@ifi/pi-shared-qna",
-  "version": "0.4.4",
-  "description": "Shared TUI question-and-answer component for pi extensions.",
-  "type": "module",
-  "keywords": [
-    "pi",
-    "pi-coding-agent",
-    "tui",
-    "qna",
-    "components",
-    "extension-library"
-  ],
-  "exports": {
-    ".": "./index.ts",
-    "./pi-tui-loader": "./pi-tui-loader.ts",
-    "./package.json": "./package.json"
-  },
-  "files": [
-    "*.ts",
-    "README.md",
-    "!**/*.test.ts",
-    "!tests/**"
-  ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ifiokjr/oh-pi.git",
-    "directory": "packages/shared-qna"
-  },
-  "homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/shared-qna",
-  "bugs": {
-    "url": "https://github.com/ifiokjr/oh-pi/issues"
-  },
-  "peerDependencies": {
-    "@mariozechner/pi-tui": "*"
-  }
+	"name": "@ifi/pi-shared-qna",
+	"version": "0.4.4",
+	"description": "Shared TUI question-and-answer component for pi extensions.",
+	"keywords": [
+		"components",
+		"extension-library",
+		"pi",
+		"pi-coding-agent",
+		"qna",
+		"tui"
+	],
+	"homepage": "https://github.com/ifiokjr/oh-pi/tree/main/packages/shared-qna",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/oh-pi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/oh-pi.git",
+		"directory": "packages/shared-qna"
+	},
+	"files": [
+		"*.ts",
+		"README.md",
+		"!**/*.test.ts",
+		"!tests/**"
+	],
+	"type": "module",
+	"exports": {
+		".": "./index.ts",
+		"./pi-tui-loader": "./pi-tui-loader.ts",
+		"./package.json": "./package.json"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-tui": "*"
+	}
 }

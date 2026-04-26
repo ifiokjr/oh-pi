@@ -46,11 +46,11 @@ export function loadAntColonyConfig(): AntColonyConfig {
 		if (!fs.existsSync(CONFIG_PATH)) {
 			return {};
 		}
-		const parsed = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8")) as AntColonyConfig;
+		const parsed = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8")) as AntColonyConfig;
 		return {
-			storageMode: parseStorageMode(parsed.storageMode),
 			sharedRoot:
 				typeof parsed.sharedRoot === "string" && parsed.sharedRoot.trim() ? expandTilde(parsed.sharedRoot) : undefined,
+			storageMode: parseStorageMode(parsed.storageMode),
 		};
 	} catch {
 		return {};
@@ -176,8 +176,8 @@ export function migrateLegacyProjectColonies(cwd: string, options?: ColonyStorag
 		}
 		try {
 			fs.mkdirSync(sharedParentDir, { recursive: true });
-			fs.cpSync(sourceDir, targetDir, { recursive: true, errorOnExist: true });
-			fs.rmSync(sourceDir, { recursive: true, force: true });
+			fs.cpSync(sourceDir, targetDir, { errorOnExist: true, recursive: true });
+			fs.rmSync(sourceDir, { force: true, recursive: true });
 		} catch {
 			// Best-effort migration. Existing local state remains resumable via project mode if copy fails.
 		}
@@ -200,7 +200,7 @@ export function cleanupEmptyColonyStorageDirs(cwd: string, options?: ColonyStora
 			try {
 				fs.rmdirSync(projectRoot);
 			} catch {
-				// ignore cleanup failures
+				// Ignore cleanup failures
 			}
 		}
 		return;
@@ -211,7 +211,7 @@ export function cleanupEmptyColonyStorageDirs(cwd: string, options?: ColonyStora
 		try {
 			fs.rmdirSync(stateParent);
 		} catch {
-			// ignore cleanup failures
+			// Ignore cleanup failures
 		}
 	}
 
@@ -220,7 +220,7 @@ export function cleanupEmptyColonyStorageDirs(cwd: string, options?: ColonyStora
 		try {
 			fs.rmdirSync(worktreeParent);
 		} catch {
-			// ignore cleanup failures
+			// Ignore cleanup failures
 		}
 	}
 

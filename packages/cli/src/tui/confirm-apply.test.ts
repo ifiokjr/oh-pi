@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
+
 import { countExisting } from "./confirm-apply.js";
 
 const mkEnv = (files: string[]) => ({ existingFiles: files }) as any;
 
-describe("countExisting", () => {
+describe(countExisting, () => {
 	it("counts files matching prefix", () => {
 		expect(countExisting(mkEnv(["extensions/a", "extensions/b", "prompts/c"]), "extensions")).toBe(2);
 	});

@@ -185,16 +185,16 @@ The routing classifier should emit strict JSON with a schema like:
 
 ```json
 {
-  "intent": "design",
-  "complexity": 4,
-  "risk": "high",
-  "expectedTurns": "few",
-  "toolIntensity": "medium",
-  "contextBreadth": "medium",
-  "recommendedTier": "premium",
-  "recommendedThinking": "high",
-  "confidence": 0.82,
-  "reason": "Design-heavy judgment task with likely iteration."
+	"intent": "design",
+	"complexity": 4,
+	"risk": "high",
+	"expectedTurns": "few",
+	"toolIntensity": "medium",
+	"contextBreadth": "medium",
+	"recommendedTier": "premium",
+	"recommendedThinking": "high",
+	"confidence": 0.82,
+	"reason": "Design-heavy judgment task with likely iteration."
 }
 ```
 
@@ -283,56 +283,37 @@ The UI and explanation payload must expose this confidence level explicitly.
 
 ```json
 {
-  "enabled": false,
-  "mode": "shadow",
-  "routerModels": [
-    "google/gemini-2.5-flash",
-    "openai/gpt-5-mini"
-  ],
-  "stickyTurns": 1,
-  "telemetry": {
-    "mode": "local",
-    "privacy": "minimal"
-  },
-  "providerReserves": {
-    "openai": { "minRemainingPct": 15 },
-    "anthropic": { "minRemainingPct": 15 },
-    "cursor-agent": { "minRemainingPct": 20, "confidence": "estimated" }
-  },
-  "intentOverrides": {
-    "design": [
-      "anthropic/claude-opus-4.6",
-      "openai/gpt-5.4"
-    ],
-    "architecture": [
-      "openai/gpt-5.4",
-      "anthropic/claude-opus-4.6"
-    ]
-  },
-  "taskClasses": {
-    "quick": {
-      "defaultThinking": "minimal",
-      "candidates": [
-        "google/gemini-2.5-flash",
-        "openai/gpt-5-mini"
-      ]
-    },
-    "design-premium": {
-      "defaultThinking": "high",
-      "candidates": [
-        "anthropic/claude-opus-4.6",
-        "openai/gpt-5.4"
-      ]
-    },
-    "peak": {
-      "defaultThinking": "xhigh",
-      "candidates": [
-        "openai/gpt-5.4",
-        "anthropic/claude-opus-4.6",
-        "cursor-agent/<best-available>"
-      ]
-    }
-  }
+	"enabled": false,
+	"mode": "shadow",
+	"routerModels": ["google/gemini-2.5-flash", "openai/gpt-5-mini"],
+	"stickyTurns": 1,
+	"telemetry": {
+		"mode": "local",
+		"privacy": "minimal"
+	},
+	"providerReserves": {
+		"openai": { "minRemainingPct": 15 },
+		"anthropic": { "minRemainingPct": 15 },
+		"cursor-agent": { "minRemainingPct": 20, "confidence": "estimated" }
+	},
+	"intentOverrides": {
+		"design": ["anthropic/claude-opus-4.6", "openai/gpt-5.4"],
+		"architecture": ["openai/gpt-5.4", "anthropic/claude-opus-4.6"]
+	},
+	"taskClasses": {
+		"quick": {
+			"defaultThinking": "minimal",
+			"candidates": ["google/gemini-2.5-flash", "openai/gpt-5-mini"]
+		},
+		"design-premium": {
+			"defaultThinking": "high",
+			"candidates": ["anthropic/claude-opus-4.6", "openai/gpt-5.4"]
+		},
+		"peak": {
+			"defaultThinking": "xhigh",
+			"candidates": ["openai/gpt-5.4", "anthropic/claude-opus-4.6", "cursor-agent/<best-available>"]
+		}
+	}
 }
 ```
 

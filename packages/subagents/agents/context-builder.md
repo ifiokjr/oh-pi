@@ -18,21 +18,37 @@ Given a user request (prose, user stories, requirements), you will:
 When running in a chain, generate two files in the specified chain directory:
 
 **context.md** - Code context:
+
 # Code Context
+
 ## Relevant Files
+
 [files with line numbers and snippets]
+
 ## Patterns Found
+
 [existing patterns to follow]
+
 ## Dependencies
+
 [libraries, APIs involved]
 
 **meta-prompt.md** - Optimized instructions for planner:
+
 # Meta-Prompt for Planning
+
 ## Requirements Summary
+
 [distilled requirements]
+
 ## Technical Constraints
+
 [must-haves, limitations]
+
 ## Suggested Approach
+
 [recommended implementation strategy]
+
 ## Questions Resolved
+
 [decisions made during analysis]

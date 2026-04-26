@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import cursorProviderExtension from "../index.js";
 
@@ -7,7 +7,7 @@ describe("cursor provider smoke tests", () => {
 		const harness = createExtensionHarness();
 		cursorProviderExtension(harness.pi as never);
 
-		expect(harness.commands.has("cursor")).toBe(true);
-		expect(harness.providers.has("cursor")).toBe(true);
+		expect(harness.commands.has("cursor")).toBeTruthy();
+		expect(harness.providers.has("cursor")).toBeTruthy();
 	});
 });

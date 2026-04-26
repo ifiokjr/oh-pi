@@ -2,7 +2,6 @@
 import type { ModelIntelligenceRuntimeSnapshot } from "./model-intelligence.js";
 
 export const MODEL_INTELLIGENCE_RUNTIME_SNAPSHOT: ModelIntelligenceRuntimeSnapshot = {
-	version: 1,
 	generatedAt: "2026-04-16T13:20:15.751Z",
 	models: [
 		{
@@ -6327,4 +6326,5 @@ export const MODEL_INTELLIGENCE_RUNTIME_SNAPSHOT: ModelIntelligenceRuntimeSnapsh
 			structuredOutput: false,
 		},
 	],
+	version: 1,
 };

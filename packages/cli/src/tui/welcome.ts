@@ -9,7 +9,7 @@ import type { EnvInfo } from "../utils/detect.js";
  */
 export function welcome(env: EnvInfo) {
 	// Clear terminal without using console APIs (lint-safe).
-	process.stdout.write("\x1Bc");
+	process.stdout.write("\u001Bc");
 	p.intro(chalk.cyan.bold(" oh-pi ") + chalk.dim(t("welcome.title")));
 
 	if (env.piInstalled) {
@@ -18,7 +18,7 @@ export function welcome(env: EnvInfo) {
 		p.log.warn(t("welcome.piNotFound"));
 	}
 
-	p.log.info(t("welcome.envInfo", { terminal: env.terminal, os: env.os, node: process.version }));
+	p.log.info(t("welcome.envInfo", { node: process.version, os: env.os, terminal: env.terminal }));
 
 	if (env.existingProviders.length > 0) {
 		p.log.info(t("welcome.existingProviders", { providers: env.existingProviders.join(", ") }));

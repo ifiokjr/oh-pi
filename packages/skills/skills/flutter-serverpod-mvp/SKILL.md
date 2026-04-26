@@ -1,7 +1,6 @@
 ---
 name: flutter-serverpod-mvp
-description:
-  Scaffold and evolve full-stack Flutter + Serverpod MVPs using devenv, Riverpod + Hooks,
+description: Scaffold and evolve full-stack Flutter + Serverpod MVPs using devenv, Riverpod + Hooks,
   strict i18n, and GoRouter shell routing patterns inspired by OpenBudget.
 ---
 

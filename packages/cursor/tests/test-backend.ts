@@ -2,34 +2,32 @@ import http from "node:http";
 import http2 from "node:http2";
 import type { AddressInfo } from "node:net";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
-import {
-	AgentClientMessageSchema,
-	AgentServerMessageSchema,
-	GetUsableModelsResponseSchema,
-	ModelDetailsSchema,
-	type AgentClientMessage,
-} from "../proto/agent_pb.js";
+import { AgentClientMessageSchema, AgentServerMessageSchema, GetUsableModelsResponseSchema, ModelDetailsSchema } from '../proto/agent_pb.js';
+import type { AgentClientMessage } from '../proto/agent_pb.js';
 import { createConnectFrameParser, frameConnectMessage } from "../transport.js";
 
 export interface TestRunConnection {
 	requestHeaders: http2.IncomingHttpHeaders;
 	messages: AgentClientMessage[];
 	sendServerMessage(message: ReturnType<typeof create<typeof AgentServerMessageSchema>>): void;
-	waitForClientMessage(predicate: (message: AgentClientMessage) => boolean, timeoutMs?: number): Promise<AgentClientMessage>;
+	waitForClientMessage(
+		predicate: (message: AgentClientMessage) => boolean,
+		timeoutMs?: number,
+	): Promise<AgentClientMessage>;
 	end(): void;
 }
 
 export interface TestCursorBackend {
 	apiUrl: string;
 	refreshUrl: string;
-	setDiscoveredModels(models: Array<{ id: string; name: string; reasoning?: boolean }>): void;
+	setDiscoveredModels(models: { id: string; name: string; reasoning?: boolean }[]): void;
 	setRunHandler(handler: (connection: TestRunConnection) => void | Promise<void>): void;
 	getDiscoveryAuthHeaders(): string[];
 	close(): Promise<void>;
 }
 
 export async function createTestCursorBackend(): Promise<TestCursorBackend> {
-	let discoveredModels: Array<{ id: string; name: string; reasoning?: boolean }> = [];
+	let discoveredModels: { id: string; name: string; reasoning?: boolean }[] = [];
 	let runHandler: (connection: TestRunConnection) => void | Promise<void> = () => {};
 	const discoveryAuthHeaders: string[] = [];
 
@@ -46,7 +44,9 @@ export async function createTestCursorBackend(): Promise<TestCursorBackend> {
 			return;
 		}
 		res.writeHead(200, { "Content-Type": "application/json" });
-		res.end(JSON.stringify({ accessToken: makeJwt(Math.floor(Date.now() / 1000) + 3600), refreshToken: "valid-refresh" }));
+		res.end(
+			JSON.stringify({ accessToken: makeJwt(Math.floor(Date.now() / 1000) + 3600), refreshToken: "valid-refresh" }),
+		);
 	});
 	await new Promise<void>((resolve) => refreshServer.listen(0, "127.0.0.1", resolve));
 	const refreshPort = (refreshServer.address() as AddressInfo).port;
@@ -61,10 +61,10 @@ export async function createTestCursorBackend(): Promise<TestCursorBackend> {
 				create(GetUsableModelsResponseSchema, {
 					models: discoveredModels.map((model) =>
 						create(ModelDetailsSchema, {
-							modelId: model.id,
 							displayModelId: model.id,
 							displayName: model.name,
 							displayNameShort: model.name,
+							modelId: model.id,
 							thinkingDetails: model.reasoning ? {} : undefined,
 						}),
 					),
@@ -82,11 +82,11 @@ export async function createTestCursorBackend(): Promise<TestCursorBackend> {
 
 		stream.respond({ ":status": 200, "content-type": "application/connect+proto" });
 		const messages: AgentClientMessage[] = [];
-		const waiters: Array<{
+		const waiters: {
 			predicate: (message: AgentClientMessage) => boolean;
 			resolve: (message: AgentClientMessage) => void;
 			timeout: ReturnType<typeof setTimeout>;
-		}> = [];
+		}[] = [];
 		const parser = createConnectFrameParser(
 			(payload) => {
 				const message = fromBinary(AgentClientMessageSchema, payload);
@@ -103,8 +103,11 @@ export async function createTestCursorBackend(): Promise<TestCursorBackend> {
 		);
 		stream.on("data", (chunk) => parser(Buffer.from(chunk)));
 		const connection: TestRunConnection = {
-			requestHeaders: headers,
+			end() {
+				stream.end();
+			},
 			messages,
+			requestHeaders: headers,
 			sendServerMessage(message) {
 				stream.write(frameConnectMessage(toBinary(AgentServerMessageSchema, message)));
 			},
@@ -118,9 +121,6 @@ export async function createTestCursorBackend(): Promise<TestCursorBackend> {
 					waiters.push({ predicate, resolve, timeout });
 				});
 			},
-			end() {
-				stream.end();
-			},
 		};
 		void runHandler(connection);
 	});
@@ -129,21 +129,21 @@ export async function createTestCursorBackend(): Promise<TestCursorBackend> {
 
 	return {
 		apiUrl: `http://127.0.0.1:${apiPort}`,
+		async close() {
+			await Promise.all([
+				new Promise<void>((resolve, reject) => refreshServer.close((error) => (error ? reject(error) : resolve()))),
+				new Promise<void>((resolve, reject) => apiServer.close((error) => (error ? reject(error) : resolve()))),
+			]);
+		},
+		getDiscoveryAuthHeaders() {
+			return [...discoveryAuthHeaders];
+		},
 		refreshUrl: `http://127.0.0.1:${refreshPort}/auth/exchange_user_api_key`,
 		setDiscoveredModels(models) {
 			discoveredModels = models;
 		},
 		setRunHandler(handler) {
 			runHandler = handler;
-		},
-		getDiscoveryAuthHeaders() {
-			return [...discoveryAuthHeaders];
-		},
-		async close() {
-			await Promise.all([
-				new Promise<void>((resolve, reject) => refreshServer.close((error) => (error ? reject(error) : resolve()))),
-				new Promise<void>((resolve, reject) => apiServer.close((error) => (error ? reject(error) : resolve()))),
-			]);
 		},
 	};
 }

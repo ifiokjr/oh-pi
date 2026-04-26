@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+
 
 const run = vi.fn();
 const parseArgs = vi.fn();
 
-vi.mock("../index.js", () => ({ run }));
-vi.mock("../utils/args.js", () => ({ parseArgs }));
+vi.mock<typeof import('../index.js')>(import('../index.js'), () => ({ run }));
+vi.mock<typeof import('../utils/args.js')>(import('../utils/args.js'), () => ({ parseArgs }));
 
 describe("oh-pi bin", () => {
 	beforeEach(() => {
@@ -15,7 +15,7 @@ describe("oh-pi bin", () => {
 
 	it("parses args and runs the installer", async () => {
 		parseArgs.mockReturnValue({ yes: true });
-		run.mockResolvedValue(undefined);
+		run.mockResolvedValue();
 
 		const originalArgv = process.argv;
 		process.argv = ["node", "oh-pi", "-y"];

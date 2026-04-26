@@ -1,42 +1,42 @@
-import { describe, expect, it } from "vitest";
+
 import { findModelIntelligence, mergeDelegatedSelectionPolicies, selectDelegatedModel } from "./model-intelligence.js";
 
 const sampleModels = [
 	{
-		provider: "openai",
-		id: "gpt-5.4",
-		name: "GPT-5.4",
 		api: "openai-responses",
 		baseUrl: "https://api.openai.com/v1",
-		reasoning: true,
-		input: ["text", "image"],
-		cost: { input: 2.5, output: 15, cacheRead: 0, cacheWrite: 0 },
 		contextWindow: 400_000,
+		cost: { cacheRead: 0, cacheWrite: 0, input: 2.5, output: 15 },
+		id: "gpt-5.4",
+		input: ["text", "image"],
 		maxTokens: 128_000,
+		name: "GPT-5.4",
+		provider: "openai",
+		reasoning: true,
 	},
 	{
-		provider: "google",
-		id: "gemini-2.5-flash",
-		name: "Gemini 2.5 Flash",
 		api: "google-generative-ai",
 		baseUrl: "https://generativelanguage.googleapis.com",
-		reasoning: true,
-		input: ["text", "image"],
-		cost: { input: 0.1, output: 0.4, cacheRead: 0, cacheWrite: 0 },
 		contextWindow: 1_000_000,
+		cost: { cacheRead: 0, cacheWrite: 0, input: 0.1, output: 0.4 },
+		id: "gemini-2.5-flash",
+		input: ["text", "image"],
 		maxTokens: 64_000,
+		name: "Gemini 2.5 Flash",
+		provider: "google",
+		reasoning: true,
 	},
 	{
-		provider: "groq",
-		id: "llama-3.3-70b-versatile",
-		name: "Llama 3.3 70B Versatile",
 		api: "openai-completions",
 		baseUrl: "https://api.groq.com/openai/v1",
-		reasoning: false,
-		input: ["text"],
-		cost: { input: 0.05, output: 0.08, cacheRead: 0, cacheWrite: 0 },
 		contextWindow: 32_000,
+		cost: { cacheRead: 0, cacheWrite: 0, input: 0.05, output: 0.08 },
+		id: "llama-3.3-70b-versatile",
+		input: ["text"],
 		maxTokens: 8_000,
+		name: "Llama 3.3 70B Versatile",
+		provider: "groq",
+		reasoning: false,
 	},
 ] as const;
 
@@ -50,20 +50,20 @@ describe("model intelligence", () => {
 	it("merges delegated selection policies with override precedence", () => {
 		const merged = mergeDelegatedSelectionPolicies(
 			{
-				preferredProviders: ["openai"],
 				blockedProviders: ["cursor"],
 				preferLowerUsage: false,
+				preferredProviders: ["openai"],
 			},
 			{
-				preferredProviders: ["google"],
 				preferLowerUsage: true,
+				preferredProviders: ["google"],
 			},
 		);
 
-		expect(merged).toEqual({
-			preferredProviders: ["google", "openai"],
+		expect(merged).toStrictEqual({
 			blockedProviders: ["cursor"],
 			preferLowerUsage: true,
+			preferredProviders: ["google", "openai"],
 		});
 	});
 
@@ -71,9 +71,9 @@ describe("model intelligence", () => {
 		const result = selectDelegatedModel({
 			availableModels: [...sampleModels],
 			policy: {
-				taskProfile: "planning",
-				preferFastModels: true,
 				allowSmallContextForSmallTasks: true,
+				preferFastModels: true,
+				taskProfile: "planning",
 			},
 			taskText: "List the likely files involved and summarize next steps.",
 		});
@@ -86,15 +86,15 @@ describe("model intelligence", () => {
 		const result = selectDelegatedModel({
 			availableModels: [...sampleModels],
 			policy: {
-				taskProfile: "all",
-				preferLowerUsage: true,
 				allowSmallContextForSmallTasks: false,
-			},
-			usage: {
-				openai: { remainingPct: 10, confidence: "authoritative" },
-				google: { remainingPct: 80, confidence: "authoritative" },
+				preferLowerUsage: true,
+				taskProfile: "all",
 			},
 			taskText: "Compare available options and recommend a path.",
+			usage: {
+				google: { confidence: "authoritative", remainingPct: 80 },
+				openai: { confidence: "authoritative", remainingPct: 10 },
+			},
 		});
 
 		expect(result.selectedModel).toBe("google/gemini-2.5-flash");
@@ -104,15 +104,15 @@ describe("model intelligence", () => {
 		const result = selectDelegatedModel({
 			availableModels: [...sampleModels],
 			policy: {
-				taskProfile: "coding",
 				blockedProviders: ["google"],
 				minContextWindow: 200_000,
+				taskProfile: "coding",
 			},
 			taskText: "Refactor this large module and preserve all behavior.",
 		});
 
 		expect(result.selectedModel).toBe("openai/gpt-5.4");
-		expect(result.rejected).toEqual(
+		expect(result.rejected).toStrictEqual(
 			expect.arrayContaining([
 				expect.objectContaining({ model: "google/gemini-2.5-flash", reason: "provider-blocked" }),
 				expect.objectContaining({
@@ -126,14 +126,14 @@ describe("model intelligence", () => {
 	it("uses measured latency when fast preference is enabled", () => {
 		const result = selectDelegatedModel({
 			availableModels: [...sampleModels],
-			policy: {
-				taskProfile: "planning",
-				preferFastModels: true,
-				allowSmallContextForSmallTasks: false,
-			},
 			latency: {
 				"google/gemini-2.5-flash": { avgMs: 1500, count: 4 },
 				"openai/gpt-5.4": { avgMs: 9000, count: 2 },
+			},
+			policy: {
+				allowSmallContextForSmallTasks: false,
+				preferFastModels: true,
+				taskProfile: "planning",
 			},
 			taskText: "Quickly compare the likely subsystems involved.",
 		});

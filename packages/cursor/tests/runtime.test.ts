@@ -1,12 +1,12 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import {
 	cleanupCursorRuntimeState,
 	clearCursorRuntimeState,
 	deleteActiveRun,
 	deleteConversationState,
-	deterministicConversationId,
 	deriveBridgeKey,
 	deriveConversationKey,
+	deterministicConversationId,
 	getActiveRun,
 	getConversationState,
 	getCursorRuntimeStateSummary,
@@ -32,14 +32,14 @@ describe("cursor runtime state", () => {
 	it("stores, reads, summarizes, and deletes conversation checkpoints", () => {
 		const checkpoint = new Uint8Array([1, 2, 3]);
 		const first = upsertConversationState("session:one", () => ({
-			conversationId: "conv-1",
-			checkpoint,
 			blobStore: new Map([["blob", new Uint8Array([9])]]),
+			checkpoint,
+			conversationId: "conv-1",
 			lastAccessMs: 0,
 		}));
 		expect(first.conversationId).toBe("conv-1");
-		expect(getConversationState("session:one")?.checkpoint).toEqual(checkpoint);
-		expect(getCursorRuntimeStateSummary()).toEqual({ activeRuns: 0, checkpoints: 1 });
+		expect(getConversationState("session:one")?.checkpoint).toStrictEqual(checkpoint);
+		expect(getCursorRuntimeStateSummary()).toStrictEqual({ activeRuns: 0, checkpoints: 1 });
 
 		deleteConversationState("session:one");
 		expect(getConversationState("session:one")).toBeUndefined();
@@ -57,43 +57,43 @@ describe("cursor runtime state", () => {
 		};
 
 		setActiveRun("alive", {
-			connection: aliveConnection as never,
 			blobStore: new Map(),
+			connection: aliveConnection as never,
+			lastAccessMs: Date.now(),
 			mcpTools: [],
 			pendingExecs: [],
-			lastAccessMs: Date.now(),
 		});
 		setActiveRun("stale", {
-			connection: staleConnection as never,
 			blobStore: new Map(),
+			connection: staleConnection as never,
+			lastAccessMs: Date.now() - 10 * 60 * 1000,
 			mcpTools: [],
 			pendingExecs: [],
-			lastAccessMs: Date.now() - 10 * 60 * 1000,
 		});
 
 		cleanupCursorRuntimeState();
 		expect(getActiveRun("alive")).toBeDefined();
 		expect(getActiveRun("stale")).toBeUndefined();
-		expect(staleConnection.close).toHaveBeenCalledTimes(1);
+		expect(staleConnection.close).toHaveBeenCalledOnce();
 
 		deleteActiveRun("alive");
-		expect(aliveConnection.close).toHaveBeenCalledTimes(1);
+		expect(aliveConnection.close).toHaveBeenCalledOnce();
 		expect(getActiveRun("alive")).toBeUndefined();
 
 		setActiveRun("alive-2", {
-			connection: aliveConnection as never,
 			blobStore: new Map(),
+			connection: aliveConnection as never,
+			lastAccessMs: Date.now(),
 			mcpTools: [],
 			pendingExecs: [],
-			lastAccessMs: Date.now(),
 		});
 		upsertConversationState("session:two", () => ({
-			conversationId: "conv-2",
 			blobStore: new Map(),
+			conversationId: "conv-2",
 			lastAccessMs: 0,
 		}));
 		clearCursorRuntimeState();
 		expect(aliveConnection.close).toHaveBeenCalledTimes(2);
-		expect(getCursorRuntimeStateSummary()).toEqual({ activeRuns: 0, checkpoints: 0 });
+		expect(getCursorRuntimeStateSummary()).toStrictEqual({ activeRuns: 0, checkpoints: 0 });
 	});
 });

@@ -21,8 +21,8 @@ export function resolveActivePlanFilePath(ctx: ExtensionContext, planFilePath: s
 }
 
 export function buildTimestampedPlanFilename(sessionId: string): string {
-	const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
-	const safeSessionId = sessionId.replace(/[^a-zA-Z0-9._-]/g, "-");
+	const timestamp = new Date().toISOString().replaceAll(/[.:]/g, "-");
+	const safeSessionId = sessionId.replaceAll(/[^a-zA-Z0-9._-]/g, "-");
 	return `${timestamp}-${safeSessionId}.plan.md`;
 }
 
@@ -62,7 +62,7 @@ export async function resolvePlanLocationInput(ctx: ExtensionContext, rawLocatio
 			isDirectory = true;
 		}
 	} catch (error) {
-		const code = (error as { code?: string }).code;
+		const {code} = (error as { code?: string });
 		if (code !== "ENOENT") {
 			throw error;
 		}
@@ -92,7 +92,7 @@ export async function movePlanFile(sourcePath: string | undefined, targetPath: s
 		await rename(sourcePath, targetPath);
 		return;
 	} catch (error) {
-		const code = (error as { code?: string }).code;
+		const {code} = (error as { code?: string });
 		if (code === "ENOENT") {
 			await ensurePlanFileExists(targetPath);
 			return;
@@ -143,7 +143,7 @@ export async function pathExists(filePath: string | undefined): Promise<boolean>
 		await stat(filePath);
 		return true;
 	} catch (error) {
-		const code = (error as { code?: string }).code;
+		const {code} = (error as { code?: string });
 		if (code === "ENOENT") {
 			return false;
 		}

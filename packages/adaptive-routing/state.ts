@@ -15,7 +15,7 @@ export function readAdaptiveRoutingState(): AdaptiveRoutingState {
 		if (!existsSync(path)) {
 			return { ...DEFAULT_STATE };
 		}
-		const parsed = JSON.parse(readFileSync(path, "utf-8")) as AdaptiveRoutingState;
+		const parsed = JSON.parse(readFileSync(path, "utf8")) as AdaptiveRoutingState;
 		return parsed && typeof parsed === "object" ? parsed : { ...DEFAULT_STATE };
 	} catch {
 		return { ...DEFAULT_STATE };
@@ -24,7 +24,7 @@ export function readAdaptiveRoutingState(): AdaptiveRoutingState {
 
 let pendingState: AdaptiveRoutingState | undefined;
 let stateSaveTimer: ReturnType<typeof setTimeout> | null = null;
-const STATE_PERSIST_DEBOUNCE_MS = 2_000;
+const STATE_PERSIST_DEBOUNCE_MS = 2000;
 
 function scheduleStateSave(path: string): void {
 	if (stateSaveTimer) {
@@ -37,7 +37,7 @@ function scheduleStateSave(path: string): void {
 			pendingState = undefined;
 			try {
 				mkdirSync(dirname(path), { recursive: true });
-				writeFileSync(path, `${JSON.stringify(stateToWrite, null, 2)}\n`, "utf-8");
+				writeFileSync(path, `${JSON.stringify(stateToWrite, null, 2)}\n`, "utf8");
 			} catch {
 				// Non-critical persistence only.
 			}

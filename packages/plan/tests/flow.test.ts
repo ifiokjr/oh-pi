@@ -1,9 +1,9 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, test, vi } from "vitest";
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+
+vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
 	BorderedLoader: class BorderedLoader {
 		onAbort?: () => void;
 	},
@@ -19,7 +19,7 @@ afterEach(async () => {
 		if (!dir) {
 			continue;
 		}
-		await rm(dir, { recursive: true, force: true });
+		await rm(dir, { force: true, recursive: true });
 	}
 });
 
@@ -35,7 +35,7 @@ function createRegisteredBindings(stateManager: {
 	registerPlanModeCommand(
 		{
 			registerCommand: (_name: string, command: { handler: (args: string, ctx: any) => Promise<void> }) => {
-				handler = command.handler;
+				({ handler } = command);
 			},
 			registerShortcut: (shortcut: string, options: { handler: (ctx: any) => Promise<void> }) => {
 				shortcutKeys.push(shortcut);
@@ -68,26 +68,26 @@ function createRegisteredHandler(stateManager: {
 }
 
 describe("/plan Alt+P shortcut", () => {
-	test("registers alt+p", () => {
+	it("registers alt+p", () => {
 		const { shortcutKeys } = createRegisteredBindings({
-			getState: () => ({ version: 1, active: false }),
+			getState: () => ({ active: false, version: 1 }),
 			setState: () => {},
 			startPlanMode: () => {},
 		});
 
-		expect(shortcutKeys).toEqual(["alt+p"]);
+		expect(shortcutKeys).toStrictEqual(["alt+p"]);
 	});
 
-	test("starts plan mode without sending /plan text", async () => {
+	it("starts plan mode without sending /plan text", async () => {
 		const tmpDir = await mkdtemp(path.join(os.tmpdir(), "plan-md-flow-"));
 		tempDirs.push(tmpDir);
 		const planFilePath = path.join(tmpDir, "session-1.plan.md");
-		const startCalls: Array<{ originLeafId?: string; planFilePath: string }> = [];
+		const startCalls: { originLeafId?: string; planFilePath: string }[] = [];
 		let state = {
-			version: 1,
 			active: false,
-			planFilePath,
 			lastPlanLeafId: undefined,
+			planFilePath,
+			version: 1,
 		};
 
 		const { shortcutHandler } = createRegisteredBindings({
@@ -104,19 +104,19 @@ describe("/plan Alt+P shortcut", () => {
 			cwd: tmpDir,
 			hasUI: false,
 			isIdle: () => true,
+			sessionManager: {
+				getEntries: () => [{ id: "leaf-1", type: "message", message: { role: "user" } }],
+				getLeafId: () => "leaf-1",
+				getSessionDir: () => tmpDir,
+				getSessionFile: () => undefined,
+				getSessionId: () => "session-1",
+			},
 			ui: {
 				notify: () => {},
 			},
-			sessionManager: {
-				getLeafId: () => "leaf-1",
-				getEntries: () => [{ id: "leaf-1", type: "message", message: { role: "user" } }],
-				getSessionFile: () => undefined,
-				getSessionDir: () => tmpDir,
-				getSessionId: () => "session-1",
-			},
 		});
 
-		expect(startCalls).toEqual([
+		expect(startCalls).toStrictEqual([
 			{
 				originLeafId: "leaf-1",
 				planFilePath,
@@ -124,16 +124,16 @@ describe("/plan Alt+P shortcut", () => {
 		]);
 	});
 
-	test("shows start location choices when shortcut enters plan mode from branchable history", async () => {
+	it("shows start location choices when shortcut enters plan mode from branchable history", async () => {
 		const tmpDir = await mkdtemp(path.join(os.tmpdir(), "plan-md-flow-"));
 		tempDirs.push(tmpDir);
 		const planFilePath = path.join(tmpDir, "session-1.plan.md");
-		const startCalls: Array<{ originLeafId?: string; planFilePath: string }> = [];
+		const startCalls: { originLeafId?: string; planFilePath: string }[] = [];
 		let state = {
-			version: 1,
 			active: false,
-			planFilePath,
 			lastPlanLeafId: undefined,
+			planFilePath,
+			version: 1,
 		};
 
 		const { shortcutHandler } = createRegisteredBindings({
@@ -146,37 +146,37 @@ describe("/plan Alt+P shortcut", () => {
 			},
 		});
 
-		const selectCalls: Array<{ prompt: string; choices: string[] }> = [];
+		const selectCalls: { prompt: string; choices: string[] }[] = [];
 		await shortcutHandler({
 			cwd: tmpDir,
 			hasUI: true,
 			isIdle: () => true,
-			ui: {
-				select: (prompt: string, choices: string[]) => {
-					selectCalls.push({ prompt, choices });
-					return "Current branch";
-				},
-				notify: () => {},
-			},
 			sessionManager: {
-				getLeafId: () => "leaf-2",
 				getEntries: () => [
 					{ id: "user-1", type: "message", message: { role: "user" } },
 					{ id: "leaf-2", type: "message", message: { role: "assistant" } },
 				],
-				getSessionFile: () => undefined,
+				getLeafId: () => "leaf-2",
 				getSessionDir: () => tmpDir,
+				getSessionFile: () => undefined,
 				getSessionId: () => "session-1",
+			},
+			ui: {
+				notify: () => {},
+				select: (prompt: string, choices: string[]) => {
+					selectCalls.push({ prompt, choices });
+					return "Current branch";
+				},
 			},
 		});
 
-		expect(selectCalls).toEqual([
+		expect(selectCalls).toStrictEqual([
 			{
-				prompt: "Start planning in:",
 				choices: ["Empty branch", "Current branch"],
+				prompt: "Start planning in:",
 			},
 		]);
-		expect(startCalls).toEqual([
+		expect(startCalls).toStrictEqual([
 			{
 				originLeafId: "leaf-2",
 				planFilePath,
@@ -184,22 +184,22 @@ describe("/plan Alt+P shortcut", () => {
 		]);
 	});
 
-	test("uses the same end flow when shortcut is pressed in active mode", async () => {
+	it("uses the same end flow when shortcut is pressed in active mode", async () => {
 		const tmpDir = await mkdtemp(path.join(os.tmpdir(), "plan-md-flow-"));
 		tempDirs.push(tmpDir);
 		const planFilePath = path.join(tmpDir, "session-1.plan.md");
 		await writeFile(planFilePath, "# Existing plan\n", "utf8");
 		let state = {
-			version: 1,
 			active: true,
+			lastPlanLeafId: undefined,
 			originLeafId: "origin-leaf",
 			planFilePath,
-			lastPlanLeafId: undefined,
+			version: 1,
 		};
 		const setStateCalls: any[] = [];
 		const setEditorTextCalls: string[] = [];
 		const branchCalls: string[] = [];
-		const selectCalls: Array<{ prompt: string; choices: string[] }> = [];
+		const selectCalls: { prompt: string; choices: string[] }[] = [];
 
 		const { shortcutHandler } = createRegisteredBindings({
 			getState: () => state,
@@ -214,19 +214,10 @@ describe("/plan Alt+P shortcut", () => {
 			cwd: tmpDir,
 			hasUI: true,
 			isIdle: () => true,
-			ui: {
-				select: (prompt: string, choices: string[]) => {
-					selectCalls.push({ prompt, choices });
-					return "Exit";
-				},
-				notify: () => {},
-				setEditorText: (text: string) => {
-					setEditorTextCalls.push(text);
-				},
-				getEditorText: () => "",
-			},
 			sessionManager: {
-				getLeafId: () => "planning-leaf",
+				branch: (entryId: string) => {
+					branchCalls.push(entryId);
+				},
 				getEntries: () => [
 					{ id: "origin-leaf", type: "message", message: { role: "assistant" } },
 					{ id: "planning-leaf", type: "message", message: { role: "assistant" } },
@@ -235,47 +226,56 @@ describe("/plan Alt+P shortcut", () => {
 					entryId === "origin-leaf"
 						? { id: "origin-leaf", type: "message", parentId: "user-1", message: { role: "assistant" } }
 						: undefined,
-				branch: (entryId: string) => {
-					branchCalls.push(entryId);
-				},
-				getSessionFile: () => undefined,
+				getLeafId: () => "planning-leaf",
 				getSessionDir: () => tmpDir,
+				getSessionFile: () => undefined,
 				getSessionId: () => "session-1",
+			},
+			ui: {
+				getEditorText: () => "",
+				notify: () => {},
+				select: (prompt: string, choices: string[]) => {
+					selectCalls.push({ prompt, choices });
+					return "Exit";
+				},
+				setEditorText: (text: string) => {
+					setEditorTextCalls.push(text);
+				},
 			},
 		});
 
-		expect(selectCalls).toEqual([
+		expect(selectCalls).toStrictEqual([
 			{
-				prompt: "Plan mode action (Esc stays in Plan mode)",
 				choices: ["Exit", "Exit & summarize branch"],
+				prompt: "Plan mode action (Esc stays in Plan mode)",
 			},
 		]);
-		expect(branchCalls).toEqual(["origin-leaf"]);
-		expect(setStateCalls.at(-1)).toEqual({
-			version: 1,
+		expect(branchCalls).toStrictEqual(["origin-leaf"]);
+		expect(setStateCalls.at(-1)).toStrictEqual({
 			active: false,
-			planFilePath,
 			lastPlanLeafId: "planning-leaf",
+			planFilePath,
+			version: 1,
 		});
-		expect(setEditorTextCalls).toEqual([
+		expect(setEditorTextCalls).toStrictEqual([
 			`Plan file: ${planFilePath}\nImplement the approved plan in this file. Keep changes focused, update tests, and summarize what was implemented.`,
 		]);
 	});
 });
 
 describe("/plan continue planning", () => {
-	test("navigates to saved planning leaf before activating plan mode", async () => {
+	it("navigates to saved planning leaf before activating plan mode", async () => {
 		const tmpDir = await mkdtemp(path.join(os.tmpdir(), "plan-md-flow-"));
 		tempDirs.push(tmpDir);
 		const planFilePath = path.join(tmpDir, "session-1.plan.md");
 		await writeFile(planFilePath, "# Existing plan\n", "utf8");
 
-		const startCalls: Array<{ originLeafId?: string; planFilePath: string }> = [];
+		const startCalls: { originLeafId?: string; planFilePath: string }[] = [];
 		let state = {
-			version: 1,
 			active: false,
-			planFilePath,
 			lastPlanLeafId: "planning-leaf",
+			planFilePath,
+			version: 1,
 		};
 		const handler = createRegisteredHandler({
 			getState: () => state,
@@ -287,40 +287,40 @@ describe("/plan continue planning", () => {
 			},
 		});
 
-		const navigateCalls: Array<{ entryId: string; options: any }> = [];
+		const navigateCalls: { entryId: string; options: any }[] = [];
 		await handler("", {
 			cwd: tmpDir,
 			hasUI: false,
-			waitForIdle: () => undefined,
 			navigateTree: (entryId: string, options: any) => {
 				navigateCalls.push({ entryId, options });
 				return { cancelled: false };
+			},
+			sessionManager: {
+				getEntries: () => [
+					{ id: "user-1", type: "message", message: { role: "user" } },
+					{ id: "planning-leaf", type: "message", message: { role: "assistant" } },
+				],
+				getLeafId: () => "current-leaf",
+				getSessionDir: () => tmpDir,
+				getSessionFile: () => undefined,
+				getSessionId: () => "session-1",
 			},
 			ui: {
 				notify: () => {},
 			},
-			sessionManager: {
-				getLeafId: () => "current-leaf",
-				getEntries: () => [
-					{ id: "user-1", type: "message", message: { role: "user" } },
-					{ id: "planning-leaf", type: "message", message: { role: "assistant" } },
-				],
-				getSessionFile: () => undefined,
-				getSessionDir: () => tmpDir,
-				getSessionId: () => "session-1",
-			},
+			waitForIdle: () => undefined,
 		});
 
-		expect(navigateCalls).toEqual([
+		expect(navigateCalls).toStrictEqual([
 			{
 				entryId: "planning-leaf",
 				options: {
-					summarize: false,
 					label: "plan",
+					summarize: false,
 				},
 			},
 		]);
-		expect(startCalls).toEqual([
+		expect(startCalls).toStrictEqual([
 			{
 				originLeafId: "current-leaf",
 				planFilePath,
@@ -328,18 +328,18 @@ describe("/plan continue planning", () => {
 		]);
 	});
 
-	test("shows an info notification when continue resumes saved planning branch in UI mode", async () => {
+	it("shows an info notification when continue resumes saved planning branch in UI mode", async () => {
 		const tmpDir = await mkdtemp(path.join(os.tmpdir(), "plan-md-flow-"));
 		tempDirs.push(tmpDir);
 		const planFilePath = path.join(tmpDir, "session-1.plan.md");
 		await writeFile(planFilePath, "# Existing plan\n", "utf8");
 
-		const startCalls: Array<{ originLeafId?: string; planFilePath: string }> = [];
+		const startCalls: { originLeafId?: string; planFilePath: string }[] = [];
 		let state = {
-			version: 1,
 			active: false,
-			planFilePath,
 			lastPlanLeafId: "planning-leaf",
+			planFilePath,
+			version: 1,
 		};
 		const handler = createRegisteredHandler({
 			getState: () => state,
@@ -351,48 +351,48 @@ describe("/plan continue planning", () => {
 			},
 		});
 
-		const navigateCalls: Array<{ entryId: string; options: any }> = [];
-		const notifications: Array<{ message: string; level: string }> = [];
+		const navigateCalls: { entryId: string; options: any }[] = [];
+		const notifications: { message: string; level: string }[] = [];
 		await handler("", {
 			cwd: tmpDir,
 			hasUI: true,
-			waitForIdle: () => undefined,
 			navigateTree: (entryId: string, options: any) => {
 				navigateCalls.push({ entryId, options });
 				return { cancelled: false };
 			},
-			ui: {
-				select: () => "Continue planning",
-				notify: (message: string, level: string) => {
-					notifications.push({ message, level });
-				},
-			},
 			sessionManager: {
-				getLeafId: () => "current-leaf",
 				getEntries: () => [
 					{ id: "user-1", type: "message", message: { role: "user" } },
 					{ id: "planning-leaf", type: "message", message: { role: "assistant" } },
 				],
-				getSessionFile: () => undefined,
+				getLeafId: () => "current-leaf",
 				getSessionDir: () => tmpDir,
+				getSessionFile: () => undefined,
 				getSessionId: () => "session-1",
 			},
+			ui: {
+				notify: (message: string, level: string) => {
+					notifications.push({ message, level });
+				},
+				select: () => "Continue planning",
+			},
+			waitForIdle: () => undefined,
 		});
 
-		expect(navigateCalls).toEqual([
+		expect(navigateCalls).toStrictEqual([
 			{
 				entryId: "planning-leaf",
 				options: {
-					summarize: false,
 					label: "plan",
+					summarize: false,
 				},
 			},
 		]);
 		expect(notifications).toContainEqual({
-			message: "Resumed previous planning branch.",
 			level: "info",
+			message: "Resumed previous planning branch.",
 		});
-		expect(startCalls).toEqual([
+		expect(startCalls).toStrictEqual([
 			{
 				originLeafId: "current-leaf",
 				planFilePath,
@@ -400,18 +400,18 @@ describe("/plan continue planning", () => {
 		]);
 	});
 
-	test("falls back to current leaf when saved planning leaf is unavailable", async () => {
+	it("falls back to current leaf when saved planning leaf is unavailable", async () => {
 		const tmpDir = await mkdtemp(path.join(os.tmpdir(), "plan-md-flow-"));
 		tempDirs.push(tmpDir);
 		const planFilePath = path.join(tmpDir, "session-1.plan.md");
 		await writeFile(planFilePath, "# Existing plan\n", "utf8");
 
-		const startCalls: Array<{ originLeafId?: string; planFilePath: string }> = [];
+		const startCalls: { originLeafId?: string; planFilePath: string }[] = [];
 		let state = {
-			version: 1,
 			active: false,
-			planFilePath,
 			lastPlanLeafId: "missing-leaf",
+			planFilePath,
+			version: 1,
 		};
 		const handler = createRegisteredHandler({
 			getState: () => state,
@@ -423,36 +423,36 @@ describe("/plan continue planning", () => {
 			},
 		});
 
-		const navigateCalls: Array<{ entryId: string; options: any }> = [];
-		const notifications: Array<{ message: string; level: string }> = [];
+		const navigateCalls: { entryId: string; options: any }[] = [];
+		const notifications: { message: string; level: string }[] = [];
 		await handler("", {
 			cwd: tmpDir,
 			hasUI: false,
-			waitForIdle: () => undefined,
 			navigateTree: (entryId: string, options: any) => {
 				navigateCalls.push({ entryId, options });
 				return { cancelled: false };
+			},
+			sessionManager: {
+				getEntries: () => [{ id: "user-1", type: "message", message: { role: "user" } }],
+				getLeafId: () => "current-leaf",
+				getSessionDir: () => tmpDir,
+				getSessionFile: () => undefined,
+				getSessionId: () => "session-1",
 			},
 			ui: {
 				notify: (message: string, level: string) => {
 					notifications.push({ message, level });
 				},
 			},
-			sessionManager: {
-				getLeafId: () => "current-leaf",
-				getEntries: () => [{ id: "user-1", type: "message", message: { role: "user" } }],
-				getSessionFile: () => undefined,
-				getSessionDir: () => tmpDir,
-				getSessionId: () => "session-1",
-			},
+			waitForIdle: () => undefined,
 		});
 
-		expect(navigateCalls.length).toBe(0);
+		expect(navigateCalls).toHaveLength(0);
 		expect(notifications).toContainEqual({
-			message: "Saved planning branch is unavailable. Continuing from the current branch tip.",
 			level: "warning",
+			message: "Saved planning branch is unavailable. Continuing from the current branch tip.",
 		});
-		expect(startCalls).toEqual([
+		expect(startCalls).toStrictEqual([
 			{
 				originLeafId: "current-leaf",
 				planFilePath,
@@ -462,17 +462,17 @@ describe("/plan continue planning", () => {
 });
 
 describe("/plan start location prompt", () => {
-	test("skips empty-vs-current selection when there is no prior history", async () => {
+	it("skips empty-vs-current selection when there is no prior history", async () => {
 		const tmpDir = await mkdtemp(path.join(os.tmpdir(), "plan-md-flow-"));
 		tempDirs.push(tmpDir);
 		const planFilePath = path.join(tmpDir, "session-1.plan.md");
 
-		const startCalls: Array<{ originLeafId?: string; planFilePath: string }> = [];
+		const startCalls: { originLeafId?: string; planFilePath: string }[] = [];
 		let state = {
-			version: 1,
 			active: false,
-			planFilePath,
 			lastPlanLeafId: undefined,
+			planFilePath,
+			version: 1,
 		};
 		const handler = createRegisteredHandler({
 			getState: () => state,
@@ -484,29 +484,29 @@ describe("/plan start location prompt", () => {
 			},
 		});
 
-		const selectCalls: Array<{ prompt: string; choices: string[] }> = [];
+		const selectCalls: { prompt: string; choices: string[] }[] = [];
 		await handler("", {
 			cwd: tmpDir,
 			hasUI: true,
-			waitForIdle: () => undefined,
+			sessionManager: {
+				getEntries: () => [{ id: "leaf-1", type: "message", message: { role: "user" } }],
+				getLeafId: () => "leaf-1",
+				getSessionDir: () => tmpDir,
+				getSessionFile: () => undefined,
+				getSessionId: () => "session-1",
+			},
 			ui: {
+				notify: () => {},
 				select: (prompt: string, choices: string[]) => {
 					selectCalls.push({ prompt, choices });
 					return "Current branch";
 				},
-				notify: () => {},
 			},
-			sessionManager: {
-				getLeafId: () => "leaf-1",
-				getEntries: () => [{ id: "leaf-1", type: "message", message: { role: "user" } }],
-				getSessionFile: () => undefined,
-				getSessionDir: () => tmpDir,
-				getSessionId: () => "session-1",
-			},
+			waitForIdle: () => undefined,
 		});
 
-		expect(selectCalls).toEqual([]);
-		expect(startCalls).toEqual([
+		expect(selectCalls).toStrictEqual([]);
+		expect(startCalls).toStrictEqual([
 			{
 				originLeafId: "leaf-1",
 				planFilePath,
@@ -514,18 +514,18 @@ describe("/plan start location prompt", () => {
 		]);
 	});
 
-	test("offers start-fresh without branch chooser when an existing plan is present", async () => {
+	it("offers start-fresh without branch chooser when an existing plan is present", async () => {
 		const tmpDir = await mkdtemp(path.join(os.tmpdir(), "plan-md-flow-"));
 		tempDirs.push(tmpDir);
 		const planFilePath = path.join(tmpDir, "session-1.plan.md");
 		await writeFile(planFilePath, "# Existing plan\n", "utf8");
 
-		const startCalls: Array<{ originLeafId?: string; planFilePath: string }> = [];
+		const startCalls: { originLeafId?: string; planFilePath: string }[] = [];
 		let state = {
-			version: 1,
 			active: false,
-			planFilePath,
 			lastPlanLeafId: undefined,
+			planFilePath,
+			version: 1,
 		};
 		const handler = createRegisteredHandler({
 			getState: () => state,
@@ -537,35 +537,35 @@ describe("/plan start location prompt", () => {
 			},
 		});
 
-		const selectCalls: Array<{ prompt: string; choices: string[] }> = [];
+		const selectCalls: { prompt: string; choices: string[] }[] = [];
 		await handler("", {
 			cwd: tmpDir,
 			hasUI: true,
-			waitForIdle: () => undefined,
+			sessionManager: {
+				getEntries: () => [{ id: "leaf-1", type: "message", message: { role: "user" } }],
+				getLeafId: () => "leaf-1",
+				getSessionDir: () => tmpDir,
+				getSessionFile: () => undefined,
+				getSessionId: () => "session-1",
+			},
 			ui: {
+				notify: () => {},
 				select: (prompt: string, choices: string[]) => {
 					selectCalls.push({ prompt, choices });
 					return "Start fresh";
 				},
-				notify: () => {},
 			},
-			sessionManager: {
-				getLeafId: () => "leaf-1",
-				getEntries: () => [{ id: "leaf-1", type: "message", message: { role: "user" } }],
-				getSessionFile: () => undefined,
-				getSessionDir: () => tmpDir,
-				getSessionId: () => "session-1",
-			},
+			waitForIdle: () => undefined,
 		});
 
-		expect(selectCalls).toEqual([
+		expect(selectCalls).toStrictEqual([
 			{
-				prompt: `Start planning:\nPlan file: ${planFilePath}`,
 				choices: ["Continue planning", "Start fresh"],
+				prompt: `Start planning:\nPlan file: ${planFilePath}`,
 			},
 		]);
 		expect(startCalls).toHaveLength(1);
-		expect(startCalls[0]).toEqual({
+		expect(startCalls[0]).toStrictEqual({
 			originLeafId: "leaf-1",
 			planFilePath: expect.any(String),
 		});

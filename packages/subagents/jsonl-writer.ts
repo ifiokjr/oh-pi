@@ -30,8 +30,8 @@ export function createJsonlWriter(
 ): JsonlWriter {
 	if (!filePath) {
 		return {
-			writeLine() {},
 			async close() {},
+			writeLine() {},
 		};
 	}
 
@@ -42,8 +42,8 @@ export function createJsonlWriter(
 		stream = createWriteStream(filePath);
 	} catch {
 		return {
-			writeLine() {},
 			async close() {},
+			writeLine() {},
 		};
 	}
 
@@ -53,6 +53,13 @@ export function createJsonlWriter(
 	const maxBytes = deps.maxBytes ?? DEFAULT_MAX_JSONL_BYTES;
 
 	return {
+		async close() {
+			if (!stream || closed) return;
+			closed = true;
+			const current = stream;
+			stream = undefined;
+			await new Promise<void>((resolve) => current.end(() => resolve()));
+		},
 		writeLine(line: string) {
 			if (!stream || closed || !line.trim()) return;
 			const chunk = `${line}\n`;
@@ -70,13 +77,6 @@ export function createJsonlWriter(
 					});
 				}
 			} catch {}
-		},
-		async close() {
-			if (!stream || closed) return;
-			closed = true;
-			const current = stream;
-			stream = undefined;
-			await new Promise<void>((resolve) => current.end(() => resolve()));
 		},
 	};
 }

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
 const tempDirs: string[] = [];
@@ -30,7 +30,7 @@ afterEach(() => {
 		process.env.USERPROFILE = previousUserProfile;
 	}
 	for (const dir of tempDirs.splice(0)) {
-		fs.rmSync(dir, { recursive: true, force: true });
+		fs.rmSync(dir, { force: true, recursive: true });
 	}
 });
 
@@ -41,8 +41,8 @@ describe("ant-colony runtime smoke tests", () => {
 		const mod = await import("../extensions/ant-colony/index.js");
 		mod.default(harness.pi as never);
 
-		expect(harness.commands.has("colony")).toBe(true);
-		expect(harness.commands.has("colony-status")).toBe(true);
-		expect(harness.tools.has("ant_colony")).toBe(true);
+		expect(harness.commands.has("colony")).toBeTruthy();
+		expect(harness.commands.has("colony-status")).toBeTruthy();
+		expect(harness.tools.has("ant_colony")).toBeTruthy();
 	});
 });

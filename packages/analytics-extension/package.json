@@ -1,22 +1,22 @@
 {
-  "name": "@ifi/pi-analytics-extension",
-  "version": "0.4.4",
-  "description": "Pi extension for analytics tracking with SQLite persistence",
-  "type": "module",
-  "main": "./index.ts",
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
-  },
-  "dependencies": {
-    "@ifi/pi-analytics-db": "0.4.4"
-  },
-  "peerDependencies": {
-    "@mariozechner/pi-agent-core": ">=0.56.1",
-    "@mariozechner/pi-ai": ">=0.56.1",
-    "@mariozechner/pi-coding-agent": ">=0.56.1",
-    "@mariozechner/pi-tui": ">=0.56.1",
-    "@sinclair/typebox": "*"
-  }
+	"name": "@ifi/pi-analytics-extension",
+	"version": "0.4.4",
+	"description": "Pi extension for analytics tracking with SQLite persistence",
+	"type": "module",
+	"main": "./index.ts",
+	"dependencies": {
+		"@ifi/pi-analytics-db": "0.4.4"
+	},
+	"peerDependencies": {
+		"@mariozechner/pi-agent-core": ">=0.56.1",
+		"@mariozechner/pi-ai": ">=0.56.1",
+		"@mariozechner/pi-coding-agent": ">=0.56.1",
+		"@mariozechner/pi-tui": ">=0.56.1",
+		"@sinclair/typebox": "*"
+	},
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	}
 }

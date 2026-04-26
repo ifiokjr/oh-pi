@@ -1,7 +1,6 @@
 ---
 name: neubrutalism
-description:
-  Neubrutalism design system skill. Use when building bold UI with thick borders, offset solid
+description: Neubrutalism design system skill. Use when building bold UI with thick borders, offset solid
   shadows, high saturation colors, and minimal border radius.
 version: 1.0.0
 tags: [design, css, ui, neubrutalism, brutalism]
@@ -25,10 +24,10 @@ Reference: [references/tokens.css](references/tokens.css)
 @import "references/tokens.css";
 
 .nb-card {
-  background: var(--nb-yellow);
-  border: var(--nb-border-thick);
-  border-radius: var(--nb-radius);
-  box-shadow: var(--nb-shadow);
+	background: var(--nb-yellow);
+	border: var(--nb-border-thick);
+	border-radius: var(--nb-radius);
+	box-shadow: var(--nb-shadow);
 }
 ```
 
@@ -38,11 +37,11 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ```css
 .nb-card {
-  background: var(--nb-white);
-  border: var(--nb-border-thick);
-  border-radius: var(--nb-radius);
-  box-shadow: var(--nb-shadow);
-  padding: 1.5rem;
+	background: var(--nb-white);
+	border: var(--nb-border-thick);
+	border-radius: var(--nb-radius);
+	box-shadow: var(--nb-shadow);
+	padding: 1.5rem;
 }
 ```
 
@@ -50,25 +49,25 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ```css
 .nb-btn {
-  background: var(--nb-yellow);
-  border: var(--nb-border);
-  border-radius: var(--nb-radius);
-  box-shadow: var(--nb-shadow-sm);
-  padding: 0.6rem 1.4rem;
-  font-family: var(--nb-font);
-  font-weight: var(--nb-font-weight);
-  cursor: pointer;
-  transition:
-    transform 0.1s,
-    box-shadow 0.1s;
+	background: var(--nb-yellow);
+	border: var(--nb-border);
+	border-radius: var(--nb-radius);
+	box-shadow: var(--nb-shadow-sm);
+	padding: 0.6rem 1.4rem;
+	font-family: var(--nb-font);
+	font-weight: var(--nb-font-weight);
+	cursor: pointer;
+	transition:
+		transform 0.1s,
+		box-shadow 0.1s;
 }
 .nb-btn:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: var(--nb-shadow);
+	transform: translate(-2px, -2px);
+	box-shadow: var(--nb-shadow);
 }
 .nb-btn:active {
-  transform: translate(3px, 3px);
-  box-shadow: none;
+	transform: translate(3px, 3px);
+	box-shadow: none;
 }
 ```
 
@@ -76,12 +75,12 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ```css
 .nb-nav {
-  background: var(--nb-bg);
-  border-bottom: var(--nb-border-thick);
-  padding: 1rem 2rem;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+	background: var(--nb-bg);
+	border-bottom: var(--nb-border-thick);
+	padding: 1rem 2rem;
+	position: sticky;
+	top: 0;
+	z-index: 100;
 }
 ```
 
@@ -89,17 +88,17 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ```css
 .nb-input {
-  background: var(--nb-white);
-  border: var(--nb-border);
-  border-radius: var(--nb-radius);
-  box-shadow: var(--nb-shadow-sm);
-  padding: 0.6rem 1rem;
-  font-family: var(--nb-font);
-  font-weight: var(--nb-font-weight-body);
+	background: var(--nb-white);
+	border: var(--nb-border);
+	border-radius: var(--nb-radius);
+	box-shadow: var(--nb-shadow-sm);
+	padding: 0.6rem 1rem;
+	font-family: var(--nb-font);
+	font-weight: var(--nb-font-weight-body);
 }
 .nb-input:focus {
-  outline: none;
-  box-shadow: var(--nb-shadow);
+	outline: none;
+	box-shadow: var(--nb-shadow);
 }
 ```
 
@@ -107,13 +106,13 @@ Reference: [references/tokens.css](references/tokens.css)
 
 ```css
 .nb-badge {
-  background: var(--nb-pink);
-  border: var(--nb-border);
-  border-radius: var(--nb-radius);
-  padding: 0.2rem 0.8rem;
-  font-family: var(--nb-font);
-  font-weight: var(--nb-font-weight);
-  font-size: 0.85rem;
+	background: var(--nb-pink);
+	border: var(--nb-border);
+	border-radius: var(--nb-radius);
+	padding: 0.2rem 0.8rem;
+	font-family: var(--nb-font);
+	font-weight: var(--nb-font-weight);
+	font-size: 0.85rem;
 }
 ```
 
@@ -128,13 +127,13 @@ Reference: [references/tokens.css](references/tokens.css)
 h1,
 h2,
 h3 {
-  font-family: var(--nb-font-heading);
-  font-weight: var(--nb-font-weight);
-  letter-spacing: var(--nb-letter-spacing);
+	font-family: var(--nb-font-heading);
+	font-weight: var(--nb-font-weight);
+	letter-spacing: var(--nb-letter-spacing);
 }
 body {
-  font-family: var(--nb-font);
-  font-weight: var(--nb-font-weight-body);
+	font-family: var(--nb-font);
+	font-weight: var(--nb-font-weight-body);
 }
 ```
 
@@ -146,9 +145,9 @@ body {
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  .nb-btn:hover,
-  .nb-btn:active {
-    transform: none;
-  }
+	.nb-btn:hover,
+	.nb-btn:active {
+		transform: none;
+	}
 }
 ```

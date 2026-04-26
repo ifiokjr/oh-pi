@@ -1,13 +1,10 @@
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { createDiscoveryService } from "./src/discovery.js";
 import { createQrRenderer } from "./src/qr.js";
-import {
-	isRemoteSessionEnv,
-	startRemoteSessionServer,
-	type RemoteSessionHandle,
-	type RemoteSessionServerOptions,
-} from "./src/server.js";
-import { createRemoteWidgetController, type RemoteWidgetState } from "./src/widget.js";
+import { isRemoteSessionEnv, startRemoteSessionServer } from './src/server.js';
+import type { RemoteSessionHandle, RemoteSessionServerOptions } from './src/server.js';
+import { createRemoteWidgetController } from './src/widget.js';
+import type { RemoteWidgetState } from './src/widget.js';
 
 const HOSTED_UI_URL = "https://pi-remote.dev";
 const discovery = createDiscoveryService();
@@ -17,9 +14,9 @@ const widgetController = createRemoteWidgetController();
 function looksLikeAgentSession(value: unknown): boolean {
 	return Boolean(
 		value &&
-			typeof value === "object" &&
-			typeof (value as Record<string, unknown>).prompt === "function" &&
-			typeof (value as Record<string, unknown>).subscribe === "function",
+		typeof value === "object" &&
+		typeof (value as Record<string, unknown>).prompt === "function" &&
+		typeof (value as Record<string, unknown>).subscribe === "function",
 	);
 }
 
@@ -129,7 +126,7 @@ export default function remoteTailscaleExtension(pi: ExtensionAPI) {
 
 	const ensureStarted = async (ctx: ExtensionContext): Promise<RemoteSessionHandle> => {
 		activeCtx = ctx;
-		/* v8 ignore next -- public entrypoints short-circuit before re-entering ensureStarted when already running. */
+		/* V8 ignore next -- public entrypoints short-circuit before re-entering ensureStarted when already running. */
 		if (activeHandle?.server.isRunning) {
 			return activeHandle;
 		}
@@ -199,10 +196,7 @@ export default function remoteTailscaleExtension(pi: ExtensionAPI) {
 				await showQrCode(ctx);
 			} catch (caughtError) {
 				widgetController.clear(ctx);
-				ctx.ui.notify(
-					caughtError instanceof Error ? caughtError.message : "Unable to start remote access.",
-					"error",
-				);
+				ctx.ui.notify(caughtError instanceof Error ? caughtError.message : "Unable to start remote access.", "error");
 			}
 		},
 	});
@@ -213,7 +207,13 @@ export default function remoteTailscaleExtension(pi: ExtensionAPI) {
 			activeCtx = ctx;
 			const trimmed = args?.trim().toLowerCase();
 			const nextValue =
-				trimmed === "on" ? true : trimmed === "off" ? false : trimmed === "" || trimmed === undefined ? !widgetEnabled : null;
+				trimmed === "on"
+					? true
+					: trimmed === "off"
+						? false
+						: trimmed === "" || trimmed === undefined
+							? !widgetEnabled
+							: null;
 
 			if (nextValue === null) {
 				ctx.ui.notify("Usage: /remote:widget [on|off]", "warning");

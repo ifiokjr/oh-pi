@@ -1,7 +1,6 @@
 ---
 name: web-search
-description:
-  Web search via DuckDuckGo. Use when the user needs to look up current information online.
+description: Web search via DuckDuckGo. Use when the user needs to look up current information online.
 ---
 
 # web-search

@@ -2,11 +2,7 @@ const DEFAULT_QR_CACHE_SIZE = 8;
 const QR_MODULE_NAME = "qrcode-terminal";
 
 export interface QrTerminalModule {
-	generate: (
-		text: string,
-		options?: { small?: boolean },
-		callback?: (output: string) => void,
-	) => string | void;
+	generate: (text: string, options?: { small?: boolean }, callback?: (output: string) => void) => string | void;
 }
 
 export interface QrRenderOptions {
@@ -21,7 +17,7 @@ export interface QrRenderer {
 }
 
 declare global {
-	// biome-ignore lint/style/noVar: Tests inject loaders through the global object.
+	// Biome-ignore lint/style/noVar: Tests inject loaders through the global object.
 	var __PI_REMOTE_TAILSCALE_QR_LOADER__: (() => Promise<QrTerminalModule>) | undefined;
 }
 

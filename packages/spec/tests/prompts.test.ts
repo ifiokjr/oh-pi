@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+
 import { buildWorkflowPrompt, getStepNotes } from "../extension/prompts.js";
 import { buildWorkflowPaths } from "../extension/workspace.js";
 
@@ -6,12 +6,6 @@ describe("workflow prompt builder", () => {
 	it("embeds native runtime notes, prepared paths, and checklist summaries", () => {
 		const paths = buildWorkflowPaths("/repo", "001-auth-flow");
 		const prompt = buildWorkflowPrompt({
-			step: "implement",
-			input: "Focus on MVP tasks first",
-			paths,
-			currentBranch: "001-auth-flow",
-			workflowTemplatePath: "/repo/.specify/templates/commands/implement.md",
-			stepNotes: getStepNotes("implement"),
 			checklists: [
 				{
 					name: "requirements.md",
@@ -22,6 +16,12 @@ describe("workflow prompt builder", () => {
 					status: "fail",
 				},
 			],
+			currentBranch: "001-auth-flow",
+			input: "Focus on MVP tasks first",
+			paths,
+			step: "implement",
+			stepNotes: getStepNotes("implement"),
+			workflowTemplatePath: "/repo/.specify/templates/commands/implement.md",
 		});
 
 		expect(prompt).toContain("Do NOT run any shell or PowerShell scripts");

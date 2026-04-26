@@ -11,31 +11,59 @@
  *
  * Run: pnpm docs:sync
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../../..");
 const DOCS_DIR = join(REPO_ROOT, "docs");
 const CONTENT_DIR = join(REPO_ROOT, "packages/docs/src/content");
 
 const TITLE_MAP = {
-	"01-overview": { title: "Overview", order: 1, description: "Project purpose, design philosophy, package architecture, install, run modes, providers, and auth." },
-	"02-interactive-mode": { title: "Interactive Mode", order: 2, description: "UI layout, editor features, command system, keybindings, message queue, terminal compatibility." },
-	"03-sessions": { title: "Session Management", order: 3, description: "JSONL tree structure, entry types, branching, context compaction, branch summaries." },
-	"04-extensions": { title: "Extension System", order: 4, description: "Extension API, event lifecycle, custom tools, UI interaction, state management." },
-	"05-skills-prompts-themes-packages": { title: "Skills, Prompts, Themes & Packages", order: 5, description: "Skill packs, prompt templates, theme customization, package management." },
-	"06-settings-sdk-rpc-tui": { title: "Settings, SDK, RPC & TUI", order: 6, description: "All settings, SDK programming interface, RPC protocol, TUI component system." },
-	"07-cli-reference": { title: "CLI Reference", order: 7, description: "Complete CLI options, directory structure, platform support." },
-	"feature-catalog": { title: "Feature Catalog", order: 8, description: "Package-by-package feature inventory." },
+	"01-overview": {
+		description: "Project purpose, design philosophy, package architecture, install, run modes, providers, and auth.",
+		order: 1,
+		title: "Overview",
+	},
+	"02-interactive-mode": {
+		description: "UI layout, editor features, command system, keybindings, message queue, terminal compatibility.",
+		order: 2,
+		title: "Interactive Mode",
+	},
+	"03-sessions": {
+		description: "JSONL tree structure, entry types, branching, context compaction, branch summaries.",
+		order: 3,
+		title: "Session Management",
+	},
+	"04-extensions": {
+		description: "Extension API, event lifecycle, custom tools, UI interaction, state management.",
+		order: 4,
+		title: "Extension System",
+	},
+	"05-skills-prompts-themes-packages": {
+		description: "Skill packs, prompt templates, theme customization, package management.",
+		order: 5,
+		title: "Skills, Prompts, Themes & Packages",
+	},
+	"06-settings-sdk-rpc-tui": {
+		description: "All settings, SDK programming interface, RPC protocol, TUI component system.",
+		order: 6,
+		title: "Settings, SDK, RPC & TUI",
+	},
+	"07-cli-reference": {
+		description: "Complete CLI options, directory structure, platform support.",
+		order: 7,
+		title: "CLI Reference",
+	},
+	"feature-catalog": { description: "Package-by-package feature inventory.", order: 8, title: "Feature Catalog" },
 };
 
 function convertHtmlCommentsToMdx(content) {
 	// Convert <!-- {=tagName} --> to {/* MDT: {=tagName} */}
-	content = content.replace(/<!--\s*\{=([^\}]+)\}\s*-->/g, "{/* MDT: {=$1} */}");
+	content = content.replaceAll(/<!--\s*\{=([^}]+)\}\s*-->/g, "{/* MDT: {=$1} */}");
 	// Convert <!-- {/tagName} --> to {/* MDT: {/tagName} */}
-	content = content.replace(/<!--\s*\{\/([^\}]+)\}\s*-->/g, "{/* MDT: {/$1} */}");
+	content = content.replaceAll(/<!--\s*\{\/([^}]+)\}\s*-->/g, "{/* MDT: {/$1} */}");
 	// Convert <!-- {@tagName} --> (provider definitions) to {/* MDT: {@tagName} */}
-	content = content.replace(/<!--\s*\{@([^\}]+)\}\s*-->/g, "{/* MDT: {@$1} */}");
+	content = content.replaceAll(/<!--\s*\{@([^}]+)\}\s*-->/g, "{/* MDT: {@$1} */}");
 	return content;
 }
 
@@ -58,7 +86,7 @@ function syncDoc(baseName) {
 		return;
 	}
 
-	let source = readFileSync(mdPath, "utf-8");
+	let source = readFileSync(mdPath, "utf8");
 	source = stripFirstH1(source);
 	source = convertHtmlCommentsToMdx(source);
 
@@ -69,13 +97,15 @@ function syncDoc(baseName) {
 		meta.description ? `description: "${meta.description}"` : null,
 		"---",
 		"",
-	].filter(Boolean).join("\n");
+	]
+		.filter(Boolean)
+		.join("\n");
 
 	const output = `${frontmatter}\n${source.trim()}\n`;
 
-	if (!existsSync(mdxPath) || readFileSync(mdxPath, "utf-8") !== output) {
+	if (!existsSync(mdxPath) || readFileSync(mdxPath, "utf8") !== output) {
 		mkdirSync(CONTENT_DIR, { recursive: true });
-		writeFileSync(mdxPath, output, "utf-8");
+		writeFileSync(mdxPath, output, "utf8");
 		console.log(`Synced: ${baseName}.mdx`);
 	} else {
 		console.log(`Unchanged: ${baseName}.mdx`);

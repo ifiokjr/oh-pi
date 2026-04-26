@@ -542,9 +542,11 @@ Each colony gets a short ID (`c1`, `c2`, ...) shown in all status output, signal
 and the details panel.
 
 **New commands:**
+
 - `/colony-count` — shows how many colonies are active with their IDs and goals
 
 **Updated commands:**
+
 - `/colony <goal>` — launches a new colony (no longer blocked by existing ones)
 - `/colony-status [id]` — shows one colony by ID, or all if no ID given (with autocomplete)
 - `/colony-stop [id|all]` — stops a specific colony by ID, or all if no ID / `all` given (with autocomplete)
@@ -552,10 +554,12 @@ and the details panel.
 - `ant_colony` tool — no longer rejects when a colony is already running
 
 **Details panel (Ctrl+Shift+A):**
+
 - Colony selector header when multiple are running
 - Press `n` to cycle between colonies
 
 **Backwards compatible:**
+
 - Existing `.ant-colony/` directories on disk are unmodified — `findResumable` still works
 - Single-colony usage is unchanged (commands auto-resolve when only one colony exists)
 - New `Nest.findAllResumable()` method finds all resumable colonies sorted by creation date
@@ -597,7 +601,7 @@ the line is trimmed inside a styled region.
 ### Features
 
 - rewrite configuration wizard UX
-- monorepo restructure under @ifi/* scope
+- monorepo restructure under @ifi/\* scope
 - detailed changesets, markdown formatting, knope publish workflow
 - usage-aware budget planner for ant colony
 - auto-unbind deleteToLineStart from ctrl+u on extension load
@@ -609,6 +613,7 @@ The ant colony now queries the usage-tracker extension for real-time provider ra
 resources across scout, worker, and soldier castes.
 
 **New module: `budget-planner.ts`**
+
 - Classifies budget severity (comfortable → moderate → tight → critical) from rate limits and cost
 - Allocates per-caste budgets: scouts 10%, workers 70%, soldiers 20%, drones free
 - Caps concurrency based on severity (critical=1, tight=2, moderate=3, comfortable=6)
@@ -616,11 +621,13 @@ resources across scout, worker, and soldier castes.
 - Generates budget-awareness prompt sections injected into ant system prompts
 
 **Usage-tracker event broadcasting**
+
 - `usage:limits` event broadcast after each turn with rate limit windows, session cost, per-model data
 - `usage:query` event listener responds with current data for on-demand queries
 - Other extensions can listen to `usage:limits` for dashboard/alerting
 
 **Integration points**
+
 - Queen refreshes budget plan before each phase (scouting, working, reviewing)
 - Adaptive concurrency controller respects budget-plan caps
 - Ant prompts include budget awareness when severity is moderate or worse
@@ -645,7 +652,7 @@ eliminating the conflict warning without requiring manual user configuration.
 ### Features
 
 - rewrite configuration wizard UX
-- monorepo restructure under @ifi/* scope
+- monorepo restructure under @ifi/\* scope
 - detailed changesets, markdown formatting, knope publish workflow
 
 ### Fixes
@@ -665,7 +672,7 @@ The real problem was token permissions, not the scope name. All packages are bac
 ### Features
 
 - rewrite configuration wizard UX
-- monorepo restructure under @ifi/* scope
+- monorepo restructure under @ifi/\* scope
 - detailed changesets, markdown formatting, knope publish workflow
 
 ### Fixes
@@ -694,7 +701,7 @@ The `@ifi` scope didn't exist as an npm organization. All packages are now publi
 ### Features
 
 - rewrite configuration wizard UX
-- monorepo restructure under @ifi/* scope
+- monorepo restructure under @ifi/\* scope
 - detailed changesets, markdown formatting, knope publish workflow
 
 #### `@ifi/oh-pi-agents` — Initial release

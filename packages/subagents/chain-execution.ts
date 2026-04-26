@@ -7,46 +7,22 @@ import * as path from "node:path";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import type { AgentConfig } from "./agents.js";
-import {
-	ChainClarifyComponent,
-	type ChainClarifyResult,
-	type BehaviorOverride,
-	type ModelInfo,
-} from "./chain-clarify.js";
-import {
-	resolveChainTemplates,
-	createChainDir,
-	removeChainDir,
-	resolveStepBehavior,
-	resolveParallelBehaviors,
-	buildChainInstructions,
-	createParallelDirs,
-	aggregateParallelOutputs,
-	isParallelStep,
-	type StepOverrides,
-	type ChainStep,
-	type SequentialStep,
-	type ParallelTaskResult,
-	type ResolvedTemplates,
-} from "./settings.js";
+import { ChainClarifyComponent } from './chain-clarify.js';
+import type { ChainClarifyResult, BehaviorOverride, ModelInfo } from './chain-clarify.js';
+import { resolveChainTemplates, createChainDir, removeChainDir, resolveStepBehavior, resolveParallelBehaviors, buildChainInstructions, createParallelDirs, aggregateParallelOutputs, isParallelStep } from './settings.js';
+import type { StepOverrides, ChainStep, SequentialStep, ParallelTaskResult, ResolvedTemplates } from './settings.js';
 import { discoverAvailableSkills, normalizeSkillInput } from "./skills.js";
 import { runSync } from "./execution.js";
 import { buildChainSummary } from "./formatters.js";
 import { getFinalOutput, mapConcurrent } from "./utils.js";
 import { recordRun } from "./run-history.js";
 import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
-import {
-	type AgentProgress,
-	type ArtifactConfig,
-	type ArtifactPaths,
-	type Details,
-	type SingleResult,
-	MAX_CONCURRENCY,
-} from "./types.js";
+import { MAX_CONCURRENCY } from './types.js';
+import type { AgentProgress, ArtifactConfig, ArtifactPaths, Details, SingleResult } from './types.js';
 
 /** Resolve a model name to its full provider/model format */
 function resolveModelFullId(modelName: string | undefined, availableModels: ModelInfo[]): string | undefined {
-	if (!modelName) return undefined;
+	if (!modelName) {return undefined;}
 
 	// Handle thinking level suffixes (e.g., "claude-sonnet-4-5:high")
 	// Strip the suffix for lookup, then add it back
@@ -83,7 +59,7 @@ export interface ChainExecutionParams {
 }
 
 export interface ChainExecutionResult {
-	content: Array<{ type: "text"; text: string }>;
+	content: { type: "text"; text: string }[];
 	details: Details;
 	isError?: boolean;
 	/** User requested async execution via TUI - caller should dispatch to executeAsyncChain */
@@ -148,14 +124,14 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 	// Get available models for model resolution (used in TUI and execution)
 	const availableModels: ModelInfo[] = toAvailableModelRefs(
 		ctx.modelRegistry.getAvailable().map((model) => ({
-			provider: model.provider,
-			id: model.id,
-			name: model.name,
-			reasoning: model.reasoning,
-			input: model.input ? [...model.input] : ["text"],
 			contextWindow: model.contextWindow,
-			maxTokens: model.maxTokens,
 			cost: model.cost ? { ...model.cost } : { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			id: model.id,
+			input: model.input ? [...model.input] : ["text"],
+			maxTokens: model.maxTokens,
+			name: model.name,
+			provider: model.provider,
+			reasoning: model.reasoning,
 		})),
 	);
 	const availableSkills = discoverAvailableSkills(ctx.cwd);
@@ -172,8 +148,8 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				removeChainDir(chainDir);
 				return {
 					content: [{ type: "text", text: `Unknown agent: ${step.agent}` }],
-					isError: true,
 					details: { mode: "chain" as const, results: [] },
+					isError: true,
 				};
 			}
 			agentConfigs.push(config);
@@ -181,11 +157,11 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 
 		// Build step overrides
 		const stepOverrides: StepOverrides[] = seqSteps.map((step) => ({
-			output: step.output,
-			reads: step.reads,
-			progress: step.progress,
-			skills: normalizeSkillInput(step.skill),
 			model: step.model,
+			output: step.output,
+			progress: step.progress,
+			reads: step.reads,
+			skills: normalizeSkillInput(step.skill),
 		}));
 
 		// Pre-resolve behaviors for TUI display
@@ -212,14 +188,14 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				),
 			{
 				overlay: true,
-				overlayOptions: { anchor: "center", width: 84, maxHeight: "80%" },
+				overlayOptions: { anchor: "center", maxHeight: "80%", width: 84 },
 			},
 		);
 
 		if (!result || !result.confirmed) {
 			removeChainDir(chainDir);
 			return {
-				content: [{ type: "text", text: "Chain cancelled" }],
+				content: [{ text: "Chain cancelled", type: "text" }],
 				details: { mode: "chain", results: [] },
 			};
 		}
@@ -229,7 +205,7 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 			removeChainDir(chainDir); // Will be recreated by async runner
 			// Apply TUI edits (templates + behavior overrides) to chain steps
 			const updatedChain = chainSteps.map((step, i) => {
-				if (isParallelStep(step)) return step; // Parallel steps unchanged (TUI skipped for parallel chains)
+				if (isParallelStep(step)) {return step;} // Parallel steps unchanged (TUI skipped for parallel chains)
 				const override = result.behaviorOverrides[i];
 				return {
 					...step,
@@ -242,14 +218,14 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				};
 			});
 			return {
-				content: [{ type: "text", text: "Launching in background..." }],
+				content: [{ text: "Launching in background...", type: "text" }],
 				details: { mode: "chain", results: [] },
 				requestedAsync: { chain: updatedChain as ChainStep[], chainSkills },
 			};
 		}
 
 		// Update templates from TUI result
-		templates = result.templates;
+		({ templates } = result);
 		// Store behavior overrides from TUI (used below in sequential step execution)
 		tuiBehaviorOverrides = result.behaviorOverrides;
 	}
@@ -278,7 +254,7 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 			const parallelBehaviors = resolveParallelBehaviors(step.parallel, agents, stepIndex, chainSkills);
 
 			// If any parallel task has progress enabled and progress.md hasn't been created,
-			// create it now to avoid race conditions
+			// Create it now to avoid race conditions
 			const anyNeedsProgress = parallelBehaviors.some((b) => b.progress);
 			if (anyNeedsProgress && !progressCreated) {
 				const progressPath = path.join(chainDir, "progress.md");
@@ -298,11 +274,11 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 					// Return a placeholder for skipped tasks
 					return {
 						agent: task.agent,
-						task: "(skipped)",
+						error: "Skipped due to fail-fast",
 						exitCode: -1,
 						messages: [],
-						usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
-						error: "Skipped due to fail-fast",
+						task: "(skipped)",
+						usage: { cacheRead: 0, cacheWrite: 0, cost: 0, input: 0, output: 0, turns: 0 },
 					} as SingleResult;
 				}
 
@@ -315,15 +291,15 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				const { prefix, suffix } = buildChainInstructions(
 					behavior,
 					chainDir,
-					false, // parallel tasks don't create progress (pre-created above)
+					false, // Parallel tasks don't create progress (pre-created above)
 					templateHasPrevious ? undefined : prev,
 				);
 
 				// Build task string with variable substitution
 				let taskStr = taskTemplate;
-				taskStr = taskStr.replace(/\{task\}/g, originalTask);
-				taskStr = taskStr.replace(/\{previous\}/g, prev);
-				taskStr = taskStr.replace(/\{chain_dir\}/g, chainDir);
+				taskStr = taskStr.replaceAll(/\{task\}/g, originalTask);
+				taskStr = taskStr.replaceAll(/\{previous\}/g, prev);
+				taskStr = taskStr.replaceAll(/\{chain_dir\}/g, chainDir);
 				const cleanTask = taskStr;
 
 				// Assemble final task: prefix (READ/WRITE instructions) + task + suffix
@@ -332,26 +308,24 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				const taskAgentConfig = agents.find((a) => a.name === task.agent);
 				const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
 				const explicitModel = task.model ? resolveModelFullId(task.model, availableModels) : undefined;
-				let modelResolution = taskAgentConfig
+				const modelResolution = taskAgentConfig
 					? resolveSubagentModelResolution(taskAgentConfig, availableModels, explicitModel, {
-						currentModel: inheritedModel,
-						taskText: taskStr,
-					})
-					: { model: explicitModel, source: explicitModel ? ("runtime-override" as const) : ("session-default" as const) };
+							currentModel: inheritedModel,
+							taskText: taskStr,
+						})
+					: {
+							model: explicitModel,
+							source: explicitModel ? ("runtime-override" as const) : ("session-default" as const),
+						};
 
 				const r = await runSync(ctx.cwd, agents, task.agent, taskStr, {
-					cwd: task.cwd ?? cwd,
-					signal,
-					runId,
-					index: globalTaskIndex + taskIndex,
-					sessionDir: sessionDirForIndex(globalTaskIndex + taskIndex),
-					share: shareEnabled,
-					artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
 					artifactConfig,
+					artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
+					cwd: task.cwd ?? cwd,
+					index: globalTaskIndex + taskIndex,
+					modelCategory: modelResolution.category,
 					modelOverride: modelResolution.model,
 					modelSource: modelResolution.source,
-					modelCategory: modelResolution.category,
-					skills: behavior.skills === false ? [] : behavior.skills,
 					onUpdate: onUpdate
 						? (p) => {
 								// Use concat instead of spread for better performance
@@ -370,6 +344,11 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 								});
 							}
 						: undefined,
+					runId,
+					sessionDir: sessionDirForIndex(globalTaskIndex + taskIndex),
+					share: shareEnabled,
+					signal,
+					skills: behavior.skills === false ? [] : behavior.skills,
 				});
 
 				if (r.exitCode !== 0 && failFast) {
@@ -386,8 +365,8 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 			// Collect results and progress
 			for (const r of parallelResults) {
 				results.push(r);
-				if (r.progress) allProgress.push(r.progress);
-				if (r.artifactPaths) allArtifactPaths.push(r.artifactPaths);
+				if (r.progress) {allProgress.push(r.progress);}
+				if (r.artifactPaths) {allArtifactPaths.push(r.artifactPaths);}
 			}
 
 			// Check for failures (track original task index for better error messages)
@@ -400,19 +379,19 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 					.join("\n");
 				const errorMsg = `Parallel step ${stepIndex + 1} failed:\n${failureSummary}`;
 				const summary = buildChainSummary(chainSteps, results, chainDir, "failed", {
-					index: stepIndex,
 					error: errorMsg,
+					index: stepIndex,
 				});
 				return {
-					content: [{ type: "text", text: summary }],
+					content: [{ text: summary, type: "text" }],
 					details: {
-						mode: "chain",
-						results,
-						progress: includeProgress ? allProgress : undefined,
 						artifacts: allArtifactPaths.length ? { dir: artifactsDir, files: allArtifactPaths } : undefined,
 						chainAgents,
-						totalSteps,
 						currentStepIndex: stepIndex,
+						mode: "chain",
+						progress: includeProgress ? allProgress : undefined,
+						results,
+						totalSteps,
 					},
 					isError: true,
 				};
@@ -423,18 +402,18 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				const outputTarget = parallelBehaviors[i]?.output;
 				const outputTargetPath =
 					typeof outputTarget === "string"
-						? path.isAbsolute(outputTarget)
+						? (path.isAbsolute(outputTarget)
 							? outputTarget
-							: path.join(chainDir, outputTarget)
+							: path.join(chainDir, outputTarget))
 						: undefined;
 				return {
 					agent: r.agent,
-					taskIndex: i,
-					output: getFinalOutput(r.messages),
-					exitCode: r.exitCode,
 					error: r.error,
-					outputTargetPath,
+					exitCode: r.exitCode,
+					output: getFinalOutput(r.messages),
 					outputTargetExists: outputTargetPath ? fs.existsSync(outputTargetPath) : undefined,
+					outputTargetPath,
+					taskIndex: i,
 				};
 			});
 			prev = aggregateParallelOutputs(taskResults);
@@ -449,8 +428,8 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				removeChainDir(chainDir);
 				return {
 					content: [{ type: "text", text: `Unknown agent: ${seqStep.agent}` }],
-					isError: true,
 					details: { mode: "chain" as const, results: [] },
+					isError: true,
 				};
 			}
 
@@ -458,8 +437,8 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 			const tuiOverride = tuiBehaviorOverrides?.[stepIndex];
 			const stepOverride: StepOverrides = {
 				output: tuiOverride?.output !== undefined ? tuiOverride.output : seqStep.output,
-				reads: tuiOverride?.reads !== undefined ? tuiOverride.reads : seqStep.reads,
 				progress: tuiOverride?.progress !== undefined ? tuiOverride.progress : seqStep.progress,
+				reads: tuiOverride?.reads !== undefined ? tuiOverride.reads : seqStep.reads,
 				skills: tuiOverride?.skills !== undefined ? tuiOverride.skills : normalizeSkillInput(seqStep.skill),
 			};
 			const behavior = resolveStepBehavior(agentConfig, stepOverride, chainSkills);
@@ -481,35 +460,31 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 
 			// Build task string with variable substitution
 			let stepTask = stepTemplate;
-			stepTask = stepTask.replace(/\{task\}/g, originalTask);
-			stepTask = stepTask.replace(/\{previous\}/g, prev);
-			stepTask = stepTask.replace(/\{chain_dir\}/g, chainDir);
+			stepTask = stepTask.replaceAll(/\{task\}/g, originalTask);
+			stepTask = stepTask.replaceAll(/\{previous\}/g, prev);
+			stepTask = stepTask.replaceAll(/\{chain_dir\}/g, chainDir);
 			const cleanTask = stepTask;
 
 			// Assemble final task: prefix (READ/WRITE instructions) + task + suffix (progress, previous summary)
 			stepTask = prefix + stepTask + suffix;
 
 			const inheritedModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined;
-			const explicitModel = tuiOverride?.model ?? (seqStep.model ? resolveModelFullId(seqStep.model, availableModels) : undefined);
-			let modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, explicitModel, {
+			const explicitModel =
+				tuiOverride?.model ?? (seqStep.model ? resolveModelFullId(seqStep.model, availableModels) : undefined);
+			const modelResolution = resolveSubagentModelResolution(agentConfig, availableModels, explicitModel, {
 				currentModel: inheritedModel,
 				taskText: stepTask,
 			});
 
 			// Run step
 			const r = await runSync(ctx.cwd, agents, seqStep.agent, stepTask, {
-				cwd: seqStep.cwd ?? cwd,
-				signal,
-				runId,
-				index: globalTaskIndex,
-				sessionDir: sessionDirForIndex(globalTaskIndex),
-				share: shareEnabled,
-				artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
 				artifactConfig,
+				artifactsDir: artifactConfig.enabled ? artifactsDir : undefined,
+				cwd: seqStep.cwd ?? cwd,
+				index: globalTaskIndex,
+				modelCategory: modelResolution.category,
 				modelOverride: modelResolution.model,
 				modelSource: modelResolution.source,
-				modelCategory: modelResolution.category,
-				skills: behavior.skills === false ? [] : behavior.skills,
 				onUpdate: onUpdate
 					? (p) => {
 							// Use concat instead of spread for better performance
@@ -528,13 +503,18 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 							});
 						}
 					: undefined,
+				runId,
+				sessionDir: sessionDirForIndex(globalTaskIndex),
+				share: shareEnabled,
+				signal,
+				skills: behavior.skills === false ? [] : behavior.skills,
 			});
 			recordRun(seqStep.agent, cleanTask, r.exitCode, r.progressSummary?.durationMs ?? 0);
 
 			globalTaskIndex++;
 			results.push(r);
-			if (r.progress) allProgress.push(r.progress);
-			if (r.artifactPaths) allArtifactPaths.push(r.artifactPaths);
+			if (r.progress) {allProgress.push(r.progress);}
+			if (r.artifactPaths) {allArtifactPaths.push(r.artifactPaths);}
 
 			// Validate expected output file was created
 			if (behavior.output && r.exitCode === 0) {
@@ -561,19 +541,19 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 			// On failure, leave chain_dir for debugging
 			if (r.exitCode !== 0) {
 				const summary = buildChainSummary(chainSteps, results, chainDir, "failed", {
-					index: stepIndex,
 					error: r.error || "Chain failed",
+					index: stepIndex,
 				});
 				return {
-					content: [{ type: "text", text: summary }],
+					content: [{ text: summary, type: "text" }],
 					details: {
-						mode: "chain",
-						results,
-						progress: includeProgress ? allProgress : undefined,
 						artifacts: allArtifactPaths.length ? { dir: artifactsDir, files: allArtifactPaths } : undefined,
 						chainAgents,
-						totalSteps,
 						currentStepIndex: stepIndex,
+						mode: "chain",
+						progress: includeProgress ? allProgress : undefined,
+						results,
+						totalSteps,
 					},
 					isError: true,
 				};
@@ -588,15 +568,15 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 	const summary = buildChainSummary(chainSteps, results, chainDir, "completed");
 
 	return {
-		content: [{ type: "text", text: summary }],
+		content: [{ text: summary, type: "text" }],
 		details: {
-			mode: "chain",
-			results,
-			progress: includeProgress ? allProgress : undefined,
 			artifacts: allArtifactPaths.length ? { dir: artifactsDir, files: allArtifactPaths } : undefined,
 			chainAgents,
+			mode: "chain",
+			progress: includeProgress ? allProgress : undefined,
+			results,
 			totalSteps,
-			// currentStepIndex omitted for completed chains
+			// CurrentStepIndex omitted for completed chains
 		},
 	};
 }

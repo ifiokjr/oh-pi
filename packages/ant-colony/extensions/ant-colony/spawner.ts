@@ -8,26 +8,12 @@
  */
 
 import { getModel } from "@mariozechner/pi-ai";
-import {
-	type AgentSessionEvent,
-	AuthStorage,
-	createAgentSession,
-	createBashTool,
-	createEditTool,
-	createExtensionRuntime,
-	createFindTool,
-	createGrepTool,
-	createLsTool,
-	createReadTool,
-	createWriteTool,
-	ModelRegistry,
-	type ResourceLoader,
-	SessionManager,
-	SettingsManager,
-} from "@mariozechner/pi-coding-agent";
+import { AuthStorage, createAgentSession, createBashTool, createEditTool, createExtensionRuntime, createFindTool, createGrepTool, createLsTool, createReadTool, createWriteTool, ModelRegistry, SessionManager, SettingsManager } from '@mariozechner/pi-coding-agent';
+import type { AgentSessionEvent, ResourceLoader } from '@mariozechner/pi-coding-agent';
 import type { Nest } from "./nest.js";
-import { extractPheromones, type ParsedSubTask, parseSubTasks } from "./parser.js";
-import { buildPrompt, CASTE_PROMPTS } from "./prompts.js";
+import { extractPheromones, parseSubTasks } from './parser.js';
+import type { ParsedSubTask } from './parser.js';
+import { CASTE_PROMPTS, buildPrompt } from "./prompts.js";
 import type { Ant, AntCaste, AntConfig, AntStreamEvent, AntUsageEvent, DroneCommandPolicy, Task } from "./types.js";
 
 let antCounter = 0;
@@ -147,15 +133,15 @@ export type { ParsedSubTask } from "./parser.js";
 
 /** Create tool instances for the given caste's allowed tool names. */
 function createToolsForCaste(cwd: string, toolNames: string[]) {
-	// biome-ignore lint/suspicious/noExplicitAny: Tool factory return types vary across the SDK
+	// Biome-ignore lint/suspicious/noExplicitAny: Tool factory return types vary across the SDK
 	const toolMap: Record<string, (cwd: string) => any> = {
-		read: createReadTool,
 		bash: createBashTool,
 		edit: createEditTool,
-		write: createWriteTool,
-		grep: createGrepTool,
 		find: createFindTool,
+		grep: createGrepTool,
 		ls: createLsTool,
+		read: createReadTool,
+		write: createWriteTool,
 	};
 	return toolNames.map((name) => toolMap[name]?.(cwd)).filter(Boolean);
 }
@@ -181,11 +167,11 @@ function modelIdentity(modelStr: string): { provider: string; model: string } {
 	const slashIdx = modelStr.indexOf("/");
 	if (slashIdx > 0) {
 		return {
-			provider: modelStr.slice(0, slashIdx),
 			model: modelStr.slice(slashIdx + 1),
+			provider: modelStr.slice(0, slashIdx),
 		};
 	}
-	return { provider: "unknown", model: modelStr };
+	return { model: modelStr, provider: "unknown" };
 }
 
 function toNumber(value: unknown): number {
@@ -195,17 +181,17 @@ function toNumber(value: unknown): number {
 /** Minimal ResourceLoader for ant sessions — ants don't load extensions or skills. */
 function makeMinimalResourceLoader(systemPrompt: string): ResourceLoader {
 	return {
-		getExtensions: () => ({ extensions: [], errors: [], runtime: createExtensionRuntime() }),
-		getSkills: () => ({ skills: [], diagnostics: [] }),
-		getPrompts: () => ({ prompts: [], diagnostics: [] }),
-		getThemes: () => ({ themes: [], diagnostics: [] }),
+		getExtensions: () => ({ errors: [], extensions: [], runtime: createExtensionRuntime() }),
+		getSkills: () => ({ diagnostics: [], skills: [] }),
+		getPrompts: () => ({ diagnostics: [], prompts: [] }),
+		getThemes: () => ({ diagnostics: [], themes: [] }),
 		getAgentsFiles: () => ({ agentsFiles: [] }),
 		getSystemPrompt: () => systemPrompt,
 		getAppendSystemPrompt: () => [],
 		getPathMetadata: () => new Map(),
-		// biome-ignore lint/suspicious/noEmptyBlockStatements: No-op required by ResourceLoader interface
+		// Biome-ignore lint/suspicious/noEmptyBlockStatements: No-op required by ResourceLoader interface
 		extendResources: () => {},
-		// biome-ignore lint/suspicious/noEmptyBlockStatements: No-op required by ResourceLoader interface
+		// Biome-ignore lint/suspicious/noEmptyBlockStatements: No-op required by ResourceLoader interface
 		reload: async () => {},
 	};
 }
@@ -216,15 +202,15 @@ function makeMinimalResourceLoader(systemPrompt: string): ResourceLoader {
 export async function runDrone(cwd: string, nest: Nest, task: Task): Promise<AntResult> {
 	const antId = makeAntId("drone");
 	const ant: Ant = {
-		id: antId,
 		caste: "drone",
+		finishedAt: null,
+		id: antId,
+		model: "none",
+		pid: null,
+		startedAt: Date.now(),
 		status: "working",
 		taskId: task.id,
-		pid: null,
-		model: "none",
-		usage: { input: 0, output: 0, cost: 0, turns: 1 },
-		startedAt: Date.now(),
-		finishedAt: null,
+		usage: { cost: 0, input: 0, output: 0, turns: 1 },
 	};
 	nest.updateAnt(ant);
 	nest.updateTaskStatus(task.id, "active");
@@ -234,32 +220,32 @@ export async function runDrone(cwd: string, nest: Nest, task: Task): Promise<Ant
 		const command = extractDroneCommand(task);
 		const argv = validateDroneCommand(command, DRONE_COMMAND_POLICY);
 		const [file, ...args] = argv;
-		const output = execFileSync(file, args, { cwd, encoding: "utf-8", timeout: 30000, stdio: "pipe" }).trim();
+		const output = execFileSync(file, args, { cwd, encoding: "utf-8", stdio: "pipe", timeout: 30000 }).trim();
 
 		ant.status = "done";
 		ant.finishedAt = Date.now();
 		nest.updateAnt(ant);
 		nest.updateTaskStatus(task.id, "done", `## Completed\n${output || "(no output)"}`);
 		nest.dropPheromone({
-			id: makePheromoneId(),
-			type: "completion",
-			antId,
 			antCaste: "drone",
-			taskId: task.id,
+			antId,
 			content: `Drone executed: ${command.slice(0, 100)}`,
-			files: task.files,
-			strength: 1,
 			createdAt: Date.now(),
+			files: task.files,
+			id: makePheromoneId(),
+			strength: 1,
+			taskId: task.id,
+			type: "completion",
 		});
-		return { ant, output, newTasks: [], pheromones: [], rateLimited: false };
-	} catch (e: unknown) {
-		const err = e as { stderr?: Buffer | string };
-		const errStr = err.stderr?.toString() || String(e);
+		return { ant, newTasks: [], output, pheromones: [], rateLimited: false };
+	} catch (error: unknown) {
+		const err = error as { stderr?: Buffer | string };
+		const errStr = err.stderr?.toString() || String(error);
 		ant.status = "failed";
 		ant.finishedAt = Date.now();
 		nest.updateAnt(ant);
 		nest.updateTaskStatus(task.id, "failed", undefined, errStr.slice(0, 500));
-		return { ant, output: errStr, newTasks: [], pheromones: [], rateLimited: false };
+		return { ant, newTasks: [], output: errStr, pheromones: [], rateLimited: false };
 	}
 }
 
@@ -268,7 +254,7 @@ export async function runDrone(cwd: string, nest: Nest, task: Task): Promise<Ant
  * Handles prompt construction, session lifecycle, token streaming,
  * pheromone extraction, and sub-task parsing from the ant's output.
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Ant lifecycle spans session setup, streaming, error handling, and cleanup
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Ant lifecycle spans session setup, streaming, error handling, and cleanup
 export async function spawnAnt(
 	cwd: string,
 	nest: Nest,
@@ -286,15 +272,15 @@ export async function spawnAnt(
 	}
 	const antId = makeAntId(antConfig.caste);
 	const ant: Ant = {
-		id: antId,
 		caste: antConfig.caste,
+		finishedAt: null,
+		id: antId,
+		model: antConfig.model,
+		pid: null,
+		startedAt: Date.now(),
 		status: "working",
 		taskId: task.id,
-		pid: null,
-		model: antConfig.model,
-		usage: { input: 0, output: 0, cost: 0, turns: 0 },
-		startedAt: Date.now(),
-		finishedAt: null,
+		usage: { cost: 0, input: 0, output: 0, turns: 0 },
 	};
 
 	nest.updateAnt(ant);
@@ -343,33 +329,33 @@ export async function spawnAnt(
 
 	let accumulatedText = "";
 	let rateLimited = false;
-	// biome-ignore lint/suspicious/noExplicitAny: AgentSession type is not exported from the SDK
+	// Biome-ignore lint/suspicious/noExplicitAny: AgentSession type is not exported from the SDK
 	let session: any = null;
 
 	try {
 		const created = await createAgentSession({
+			authStorage: auth,
 			cwd,
 			model,
-			thinkingLevel: "off",
-			authStorage: auth,
 			modelRegistry: registry,
 			resourceLoader,
-			tools,
 			sessionManager: SessionManager.inMemory(),
 			settingsManager,
+			thinkingLevel: "off",
+			tools,
 		});
-		session = created.session;
+		({ session } = created);
 
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Ant stream handling needs streaming, usage, and pheromone updates in one subscription.
+		// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Ant stream handling needs streaming, usage, and pheromone updates in one subscription.
 		session.subscribe((event: AgentSessionEvent) => {
 			if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
-				const delta = event.assistantMessageEvent.delta;
+				const {delta} = event.assistantMessageEvent;
 				accumulatedText += delta;
 				onStream?.({
 					antId,
 					caste: antConfig.caste,
-					taskId: task.id,
 					delta,
+					taskId: task.id,
 					totalText: accumulatedText,
 				});
 			}
@@ -397,7 +383,7 @@ export async function spawnAnt(
 					provider?: string;
 					model?: string;
 				};
-				const usage = message.usage;
+				const {usage} = message;
 				if (usage) {
 					const input = toNumber(usage.input);
 					const output = toNumber(usage.output);
@@ -412,15 +398,15 @@ export async function spawnAnt(
 					onUsage?.({
 						antId,
 						caste: antConfig.caste,
-						taskId: task.id,
-						provider: typeof message.provider === "string" ? message.provider : configuredIdentity.provider,
 						model: typeof message.model === "string" ? message.model : configuredIdentity.model,
+						provider: typeof message.provider === "string" ? message.provider : configuredIdentity.provider,
+						taskId: task.id,
 						usage: {
-							input,
-							output,
 							cacheRead,
 							cacheWrite,
 							costTotal,
+							input,
+							output,
 						},
 					});
 				}
@@ -447,7 +433,7 @@ export async function spawnAnt(
 			}
 		}
 
-		const messages = session.messages;
+		const {messages} = session;
 		let finalOutput = accumulatedText;
 		if (!finalOutput) {
 			for (let i = messages.length - 1; i >= 0; i--) {
@@ -479,9 +465,9 @@ export async function spawnAnt(
 
 		nest.updateTaskStatus(task.id, "done", finalOutput);
 
-		return { ant, output: finalOutput, newTasks, pheromones, rateLimited: false };
-	} catch (e: unknown) {
-		const errStr = String(e);
+		return { ant, newTasks, output: finalOutput, pheromones, rateLimited: false };
+	} catch (error: unknown) {
+		const errStr = String(error);
 		rateLimited = errStr.includes("429") || errStr.includes("rate limit") || errStr.includes("Rate limit");
 
 		if (rateLimited) {
@@ -503,20 +489,20 @@ export async function spawnAnt(
 		}
 
 		// Preserve full error with stack trace for post-mortem debugging
-		const fullError = e instanceof Error ? `${e.message}\n${e.stack || ""}` : errStr;
+		const fullError = error instanceof Error ? `${error.message}\n${error.stack || ""}` : errStr;
 		const errorWithPartialOutput = accumulatedText
 			? `${fullError.slice(0, 1500)}\n\n--- Partial output before failure ---\n${accumulatedText.slice(-500)}`
 			: fullError.slice(0, 2000);
 		nest.updateTaskStatus(task.id, "failed", accumulatedText, errorWithPartialOutput);
 
-		return { ant, output: accumulatedText, newTasks, pheromones, rateLimited: false };
+		return { ant, newTasks, output: accumulatedText, pheromones, rateLimited: false };
 	} finally {
 		try {
 			session?.dispose();
-		} catch (disposeErr) {
+		} catch (error) {
 			// Log dispose errors instead of swallowing them silently.
 			// These can indicate resource leaks (unclosed streams, handles).
-			console.error(`[ant:${antId}] session dispose error: ${String(disposeErr).slice(0, 200)}`);
+			console.error(`[ant:${antId}] session dispose error: ${String(error).slice(0, 200)}`);
 		}
 	}
 }

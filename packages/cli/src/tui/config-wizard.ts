@@ -6,7 +6,8 @@ import type { EnvInfo } from "../utils/detect.js";
 import { selectAgents } from "./agents-select.js";
 import { selectExtensions } from "./extension-select.js";
 import { selectKeybindings } from "./keybinding-select.js";
-import { type ProviderSetupResult, setupProviders } from "./provider-setup.js";
+import { setupProviders } from './provider-setup.js';
+import type { ProviderSetupResult } from './provider-setup.js';
 import { setupAdaptiveRouting, summarizeAdaptiveRouting } from "./routing-setup.js";
 import { selectTheme } from "./theme-select.js";
 
@@ -50,34 +51,34 @@ function summarizeAgents(agents: string): string {
 function buildWizardOptions(state: WizardState) {
 	return [
 		{
-			value: "providers" as const,
-			label: sectionLabel(t("custom.tabProviders"), !!state.providerSetup),
 			hint: summarizeProviders(state.providerSetup),
+			label: sectionLabel(t("custom.tabProviders"), !!state.providerSetup),
+			value: "providers" as const,
 		},
 		{
-			value: "routing" as const,
-			label: sectionLabel("Routing Dashboard", !!state.providerSetup),
 			hint: summarizeRouting(state.adaptiveRouting),
+			label: sectionLabel("Routing Dashboard", !!state.providerSetup),
+			value: "routing" as const,
 		},
 		{
-			value: "appearance" as const,
-			label: sectionLabel(t("custom.tabAppearance"), true),
 			hint: summarizeAppearance(state.theme, state.keybindings),
+			label: sectionLabel(t("custom.tabAppearance"), true),
+			value: "appearance" as const,
 		},
 		{
-			value: "features" as const,
-			label: sectionLabel(t("custom.tabFeatures"), true),
 			hint: summarizeFeatures(state.extensions),
+			label: sectionLabel(t("custom.tabFeatures"), true),
+			value: "features" as const,
 		},
 		{
-			value: "agents" as const,
-			label: sectionLabel(t("custom.tabAgents"), true),
 			hint: summarizeAgents(state.agents),
+			label: sectionLabel(t("custom.tabAgents"), true),
+			value: "agents" as const,
 		},
 		{
-			value: "finish" as const,
-			label: sectionLabel(t("custom.tabFinish"), !!state.providerSetup),
 			hint: state.providerSetup ? t("custom.finishReady") : t("custom.needProviders"),
+			label: sectionLabel(t("custom.tabFinish"), !!state.providerSetup),
+			value: "finish" as const,
 		},
 	];
 }
@@ -85,22 +86,22 @@ function buildWizardOptions(state: WizardState) {
 export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): Promise<OhPConfigWithRouting> {
 	const defaultExtensions = EXTENSIONS.filter((e) => e.default).map((e) => e.name);
 	const state: WizardState = {
-		providerSetup: null,
 		adaptiveRouting: undefined,
-		theme: initial.theme,
-		keybindings: initial.keybindings,
-		extensions: initial.extensions.length > 0 ? [...initial.extensions] : defaultExtensions,
-		prompts: initial.prompts,
 		agents: initial.agents,
+		extensions: initial.extensions.length > 0 ? [...initial.extensions] : defaultExtensions,
+		keybindings: initial.keybindings,
+		prompts: initial.prompts,
+		providerSetup: null,
+		theme: initial.theme,
 		thinking: initial.thinking,
 	};
 
 	let nextStep: WizardStep = "providers";
 	while (true) {
 		const step = await p.select({
+			initialValue: nextStep,
 			message: t("custom.tabPrompt"),
 			options: buildWizardOptions(state),
-			initialValue: nextStep,
 		});
 		if (p.isCancel(step)) {
 			p.cancel(t("cancelled"));
@@ -110,7 +111,7 @@ export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): 
 		if (step === "providers") {
 			state.providerSetup = await setupProviders(env);
 			state.adaptiveRouting = await setupAdaptiveRouting(
-				[...(env.existingProviders ?? []).map((name) => ({ name, apiKey: "none" })), ...state.providerSetup.providers],
+				[...(env.existingProviders ?? []).map((name) => ({ apiKey: "none", name })), ...state.providerSetup.providers],
 				state.adaptiveRouting,
 			);
 			nextStep = "routing";
@@ -124,7 +125,7 @@ export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): 
 				continue;
 			}
 			state.adaptiveRouting = await setupAdaptiveRouting(
-				[...(env.existingProviders ?? []).map((name) => ({ name, apiKey: "none" })), ...state.providerSetup.providers],
+				[...(env.existingProviders ?? []).map((name) => ({ apiKey: "none", name })), ...state.providerSetup.providers],
 				state.adaptiveRouting,
 			);
 			nextStep = "appearance";
@@ -157,15 +158,15 @@ export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): 
 		}
 
 		return {
-			providers: state.providerSetup.providers,
-			providerStrategy: state.providerSetup.providerStrategy,
-			theme: state.theme,
-			keybindings: state.keybindings,
-			extensions: state.extensions,
-			prompts: state.prompts,
-			agents: state.agents,
-			thinking: state.thinking,
 			adaptiveRouting: state.adaptiveRouting,
+			agents: state.agents,
+			extensions: state.extensions,
+			keybindings: state.keybindings,
+			prompts: state.prompts,
+			providerStrategy: state.providerSetup.providerStrategy,
+			providers: state.providerSetup.providers,
+			theme: state.theme,
+			thinking: state.thinking,
 		};
 	}
 }

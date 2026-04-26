@@ -72,7 +72,7 @@ export function getOllamaLocalRuntimeConfig(): OllamaRuntimeConfig {
 	const modelsUrl = stripTrailingSlash(
 		getEnv("PI_OLLAMA_LOCAL_MODELS_URL", "OLLAMA_LOCAL_MODELS_URL") ?? appendPath(apiUrl, DEFAULT_OLLAMA_MODELS_PATH),
 	);
-	return { origin: resolvedOrigin, apiUrl, showUrl, modelsUrl };
+	return { apiUrl, modelsUrl, origin: resolvedOrigin, showUrl };
 }
 
 export function getOllamaCloudRuntimeConfig(): OllamaCloudRuntimeConfig {
@@ -90,7 +90,7 @@ export function getOllamaCloudRuntimeConfig(): OllamaCloudRuntimeConfig {
 	const modelsUrl = stripTrailingSlash(
 		getEnv("PI_OLLAMA_CLOUD_MODELS_URL", "OLLAMA_CLOUD_MODELS_URL") ?? appendPath(apiUrl, DEFAULT_OLLAMA_MODELS_PATH),
 	);
-	return { origin: resolvedOrigin, apiUrl, keysUrl, showUrl, modelsUrl };
+	return { apiUrl, keysUrl, modelsUrl, origin: resolvedOrigin, showUrl };
 }
 
 export const OLLAMA_LOCAL_PROVIDER = "ollama";

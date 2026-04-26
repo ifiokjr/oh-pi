@@ -1,10 +1,10 @@
 import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+
 import { generateInstanceId, generateToken, loadOrCreateToken, validateToken } from "../src/token.js";
 
-describe("generateToken", () => {
+describe(generateToken, () => {
 	it("produces a 64-character hex string", () => {
 		const token = generateToken();
 		expect(token).toHaveLength(64);
@@ -18,7 +18,7 @@ describe("generateToken", () => {
 	});
 });
 
-describe("generateInstanceId", () => {
+describe(generateInstanceId, () => {
 	it("produces adjective-noun-NN format", () => {
 		const id = generateInstanceId("a".repeat(64));
 		expect(id).toMatch(/^[a-z]+-[a-z]+-\d{2}$/);
@@ -38,27 +38,27 @@ describe("generateInstanceId", () => {
 	});
 });
 
-describe("validateToken", () => {
+describe(validateToken, () => {
 	it("returns true for matching tokens", () => {
 		const token = generateToken();
-		expect(validateToken(token, token)).toBe(true);
+		expect(validateToken(token, token)).toBeTruthy();
 	});
 
 	it("returns false for non-matching tokens", () => {
-		expect(validateToken("a".repeat(64), "b".repeat(64))).toBe(false);
+		expect(validateToken("a".repeat(64), "b".repeat(64))).toBeFalsy();
 	});
 
 	it("returns false for different length tokens", () => {
-		expect(validateToken("short", "a".repeat(64))).toBe(false);
+		expect(validateToken("short", "a".repeat(64))).toBeFalsy();
 	});
 });
 
-describe("loadOrCreateToken", () => {
+describe(loadOrCreateToken, () => {
 	let tmpDir: string;
 
 	afterEach(() => {
 		if (tmpDir) {
-			rmSync(tmpDir, { recursive: true, force: true });
+			rmSync(tmpDir, { force: true, recursive: true });
 		}
 	});
 
@@ -67,7 +67,7 @@ describe("loadOrCreateToken", () => {
 		const filePath = join(tmpDir, "token");
 		const info = loadOrCreateToken(filePath);
 
-		expect(info.isNew).toBe(true);
+		expect(info.isNew).toBeTruthy();
 		expect(info.token).toHaveLength(64);
 		expect(info.instanceId).toMatch(/^[a-z]+-[a-z]+-\d{2}$/);
 
@@ -85,14 +85,14 @@ describe("loadOrCreateToken", () => {
 		const first = loadOrCreateToken(filePath);
 		const second = loadOrCreateToken(filePath);
 
-		expect(second.isNew).toBe(false);
+		expect(second.isNew).toBeFalsy();
 		expect(second.token).toBe(first.token);
 		expect(second.instanceId).toBe(first.instanceId);
 	});
 
 	it("generates token without file path", () => {
 		const info = loadOrCreateToken();
-		expect(info.isNew).toBe(true);
+		expect(info.isNew).toBeTruthy();
 		expect(info.token).toHaveLength(64);
 	});
 });

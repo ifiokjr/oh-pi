@@ -1,4 +1,4 @@
-/* c8 ignore file */
+/* C8 ignore file */
 import { execFile, execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import { hostname } from "node:os";
@@ -87,18 +87,18 @@ export interface CreateManagedWorktreeResult {
 const DEFAULT_WORKTREE_ROOT = path.join(resolvePiAgentDir(), "worktrees");
 const MANAGED_WORKTREE_TOUCH_INTERVAL_MS = 5 * 60_000;
 
-type RepoWorktreeCacheEntry<TSnapshot> = {
+interface RepoWorktreeCacheEntry<TSnapshot> {
 	snapshot: TSnapshot | null;
 	inFlight: Promise<TSnapshot | null> | null;
-};
+}
 
-type RepoWorktreeContextProbe = {
+interface RepoWorktreeContextProbe {
 	normalizedCwd: string;
 	currentWorktreeRoot: string;
 	commonDir: string;
 	gitDir: string;
 	currentBranch: string | null;
-};
+}
 
 type RepoWorktreeProbe = RepoWorktreeContextProbe & {
 	worktreeListOutput: string;
@@ -126,14 +126,14 @@ function normalizePath(value: string): string {
 
 function git(cwd: string, args: string[]): string {
 	return execFileSync("git", ["-C", cwd, ...args], {
-		encoding: "utf-8",
+		encoding: "utf8",
 		stdio: ["ignore", "pipe", "pipe"],
 	}).trim();
 }
 
 function gitAsync(cwd: string, args: string[]): Promise<string> {
 	return new Promise((resolve, reject) => {
-		execFile("git", ["-C", cwd, ...args], { encoding: "utf-8" }, (error, stdout) => {
+		execFile("git", ["-C", cwd, ...args], { encoding: "utf8" }, (error, stdout) => {
 			if (error) {
 				reject(error);
 				return;
@@ -173,8 +173,8 @@ function storeRepoWorktreeCacheEntry<TSnapshot>(
 	inFlight: Promise<TSnapshot | null> | null = null,
 ): TSnapshot | null {
 	cache.set(getRepoWorktreeCacheKey(cwd, sharedRoot), {
-		snapshot,
 		inFlight,
+		snapshot,
 	});
 	return snapshot;
 }
@@ -205,7 +205,7 @@ function isWithinWorktree(cwd: string, worktreePath: string): boolean {
 	return cwd === worktreePath || cwd.startsWith(`${worktreePath}${path.sep}`);
 }
 
-function findCurrentWorktreePath(normalizedCwd: string, parsedEntries: Array<{ path: string }>): string | null {
+function findCurrentWorktreePath(normalizedCwd: string, parsedEntries: { path: string }[]): string | null {
 	let match: string | null = null;
 	for (const entry of parsedEntries) {
 		if (!isWithinWorktree(normalizedCwd, entry.path)) {
@@ -225,7 +225,7 @@ function readGitDirectoryInfo(worktreeRoot: string): { commonDir: string; gitDir
 		const gitDir = normalizePath(dotGitPath);
 		return { commonDir: gitDir, gitDir };
 	}
-	const dotGitContents = fs.readFileSync(dotGitPath, "utf-8");
+	const dotGitContents = fs.readFileSync(dotGitPath, "utf8");
 	const gitDirLine = dotGitContents.split(/\r?\n/).find((line) => line.trim().toLowerCase().startsWith("gitdir:"));
 	if (!gitDirLine) {
 		throw new Error(`Failed to resolve gitdir for worktree ${worktreeRoot}.`);
@@ -235,7 +235,7 @@ function readGitDirectoryInfo(worktreeRoot: string): { commonDir: string; gitDir
 	if (!fs.existsSync(commonDirPath)) {
 		return { commonDir: gitDir, gitDir };
 	}
-	const commonDirRelative = fs.readFileSync(commonDirPath, "utf-8").trim();
+	const commonDirRelative = fs.readFileSync(commonDirPath, "utf8").trim();
 	const commonDir = normalizePath(path.resolve(gitDir, commonDirRelative));
 	return { commonDir, gitDir };
 }
@@ -243,8 +243,8 @@ function readGitDirectoryInfo(worktreeRoot: string): { commonDir: string; gitDir
 function sanitizeSegment(value: string): string {
 	const cleaned = value
 		.toLowerCase()
-		.replace(/[^a-z0-9._-]+/g, "-")
-		.replace(/^-+|-+$/g, "");
+		.replaceAll(/[^a-z0-9._-]+/g, "-")
+		.replaceAll(/^-+|-+$/g, "");
 	return cleaned || "worktree";
 }
 
@@ -281,19 +281,19 @@ export function getWorktreeRegistryPath(repoRoot: string, sharedRoot = DEFAULT_W
 
 function emptyRegistry(repoRoot: string): WorktreeRegistry {
 	return {
-		version: 1,
+		managedWorktrees: [],
 		repoRoot: normalizePath(repoRoot),
 		updatedAt: nowIso(),
-		managedWorktrees: [],
+		version: 1,
 	};
 }
 
 function normalizeOwner(value: ManagedWorktreeOwner): ManagedWorktreeOwner {
 	return {
-		instanceId: value.instanceId.trim(),
-		hostname: value.hostname.trim(),
-		pid: value.pid,
 		createdFromCwd: normalizePath(value.createdFromCwd),
+		hostname: value.hostname.trim(),
+		instanceId: value.instanceId.trim(),
+		pid: value.pid,
 		sessionFile: value.sessionFile ? normalizePath(value.sessionFile) : null,
 		sessionId: value.sessionId?.trim() || null,
 		sessionName: value.sessionName?.trim() || null,
@@ -302,16 +302,16 @@ function normalizeOwner(value: ManagedWorktreeOwner): ManagedWorktreeOwner {
 
 function normalizeManagedMetadata(value: ManagedWorktreeMetadata): ManagedWorktreeMetadata {
 	return {
-		id: value.id.trim(),
-		repoRoot: normalizePath(value.repoRoot),
-		worktreePath: normalizePath(value.worktreePath),
 		branch: value.branch.trim(),
-		purpose: value.purpose.trim(),
 		createdAt: value.createdAt,
-		lastSeenAt: value.lastSeenAt,
-		owner: normalizeOwner(value.owner),
 		createdFromBranch: value.createdFromBranch?.trim() || null,
 		createdFromRef: value.createdFromRef.trim(),
+		id: value.id.trim(),
+		lastSeenAt: value.lastSeenAt,
+		owner: normalizeOwner(value.owner),
+		purpose: value.purpose.trim(),
+		repoRoot: normalizePath(value.repoRoot),
+		worktreePath: normalizePath(value.worktreePath),
 	};
 }
 
@@ -323,17 +323,17 @@ export function loadWorktreeRegistry(repoRoot: string, sharedRoot = DEFAULT_WORK
 	}
 
 	try {
-		const parsed = JSON.parse(fs.readFileSync(registryPath, "utf-8")) as Partial<WorktreeRegistry>;
+		const parsed = JSON.parse(fs.readFileSync(registryPath, "utf8")) as Partial<WorktreeRegistry>;
 		const managedWorktrees = Array.isArray(parsed.managedWorktrees)
 			? parsed.managedWorktrees
-					.filter((entry): entry is ManagedWorktreeMetadata => !!entry && typeof entry === "object")
+					.filter((entry): entry is ManagedWorktreeMetadata => Boolean(entry) && typeof entry === "object")
 					.map((entry) => normalizeManagedMetadata(entry))
 			: [];
 		return {
-			version: 1,
+			managedWorktrees,
 			repoRoot: normalizePath(typeof parsed.repoRoot === "string" ? parsed.repoRoot : normalizedRepoRoot),
 			updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : nowIso(),
-			managedWorktrees,
+			version: 1,
 		};
 	} catch {
 		return emptyRegistry(normalizedRepoRoot);
@@ -348,15 +348,15 @@ export function saveWorktreeRegistry(registry: WorktreeRegistry, sharedRoot = DE
 		registryPath,
 		JSON.stringify(
 			{
-				version: 1,
+				managedWorktrees: registry.managedWorktrees.map((entry) => normalizeManagedMetadata(entry)),
 				repoRoot: normalizedRepoRoot,
 				updatedAt: nowIso(),
-				managedWorktrees: registry.managedWorktrees.map((entry) => normalizeManagedMetadata(entry)),
+				version: 1,
 			},
 			null,
 			2,
 		),
-		"utf-8",
+		"utf8",
 	);
 	clearRepoWorktreeSnapshotCache();
 }
@@ -369,7 +369,7 @@ function upsertManagedWorktreeMetadata(
 	const registry = loadWorktreeRegistry(repoRoot, sharedRoot);
 	const normalized = normalizeManagedMetadata(metadata);
 	const existingIndex = registry.managedWorktrees.findIndex((entry) => entry.worktreePath === normalized.worktreePath);
-	if (existingIndex >= 0) {
+	if (existingIndex !== -1) {
 		registry.managedWorktrees[existingIndex] = normalized;
 	} else {
 		registry.managedWorktrees.push(normalized);
@@ -398,8 +398,8 @@ export function touchManagedWorktreeSeen(
 	return true;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Git's porcelain format mixes optional keyed lines that are easiest to parse in one pass.
-function parseWorktreeListPorcelain(output: string): Array<{
+// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Git's porcelain format mixes optional keyed lines that are easiest to parse in one pass.
+function parseWorktreeListPorcelain(output: string): {
 	path: string;
 	branch: string | null;
 	head: string | null;
@@ -407,7 +407,7 @@ function parseWorktreeListPorcelain(output: string): Array<{
 	detached: boolean;
 	lockedReason: string | null;
 	prunableReason: string | null;
-}> {
+}[] {
 	const blocks = output
 		.trim()
 		.split(/\n\s*\n/g)
@@ -419,7 +419,7 @@ function parseWorktreeListPorcelain(output: string): Array<{
 		)
 		.filter((lines) => lines.length > 0);
 
-	const entries: Array<{
+	const entries: {
 		path: string;
 		branch: string | null;
 		head: string | null;
@@ -427,7 +427,7 @@ function parseWorktreeListPorcelain(output: string): Array<{
 		detached: boolean;
 		lockedReason: string | null;
 		prunableReason: string | null;
-	}> = [];
+	}[] = [];
 
 	for (const lines of blocks) {
 		let worktreePath: string | null = null;
@@ -475,12 +475,12 @@ function parseWorktreeListPorcelain(output: string): Array<{
 		}
 
 		entries.push({
-			path: worktreePath,
-			branch,
-			head,
 			bare,
+			branch,
 			detached,
+			head,
 			lockedReason,
+			path: worktreePath,
 			prunableReason,
 		});
 	}
@@ -496,11 +496,11 @@ function buildRepoWorktreeContextProbe(normalizedCwd: string, revParseOutput: st
 	const currentWorktreeRoot = normalizePath(topLevelPath);
 	const { commonDir, gitDir } = readGitDirectoryInfo(currentWorktreeRoot);
 	return {
-		normalizedCwd,
-		currentWorktreeRoot,
 		commonDir,
-		gitDir,
 		currentBranch: branchRef === "HEAD" ? null : branchRef,
+		currentWorktreeRoot,
+		gitDir,
+		normalizedCwd,
 	};
 }
 
@@ -516,11 +516,11 @@ function buildRepoWorktreeProbe(normalizedCwd: string, worktreeListOutput: strin
 	const currentEntry = parsedEntries.find((entry) => entry.path === currentWorktreeRoot) ?? null;
 	const { commonDir, gitDir } = readGitDirectoryInfo(currentWorktreeRoot);
 	return {
-		normalizedCwd,
-		currentWorktreeRoot,
 		commonDir,
-		gitDir,
 		currentBranch: currentEntry?.branch ?? null,
+		currentWorktreeRoot,
+		gitDir,
+		normalizedCwd,
 		worktreeListOutput,
 	};
 }
@@ -538,21 +538,21 @@ function buildRepoWorktreeContext(
 	const metadata =
 		registry.managedWorktrees.find((entry) => normalizePath(entry.worktreePath) === probe.currentWorktreeRoot) ?? null;
 	return {
-		cwd: probe.normalizedCwd,
-		repoRoot,
-		currentWorktreeRoot: probe.currentWorktreeRoot,
-		mainWorktreeRoot: repoRoot,
 		commonDir: probe.commonDir,
-		gitDir: probe.gitDir,
-		currentBranch: probe.currentBranch,
-		isLinkedWorktree: probe.currentWorktreeRoot !== repoRoot,
 		current: {
-			path: probe.currentWorktreeRoot,
 			branch: probe.currentBranch,
 			isMain: probe.currentWorktreeRoot === repoRoot,
 			isManaged: !!metadata,
 			metadata,
+			path: probe.currentWorktreeRoot,
 		},
+		currentBranch: probe.currentBranch,
+		currentWorktreeRoot: probe.currentWorktreeRoot,
+		cwd: probe.normalizedCwd,
+		gitDir: probe.gitDir,
+		isLinkedWorktree: probe.currentWorktreeRoot !== repoRoot,
+		mainWorktreeRoot: repoRoot,
+		repoRoot,
 	};
 }
 
@@ -565,8 +565,8 @@ function buildRepoWorktreeSnapshot(probe: RepoWorktreeProbe, sharedRoot = DEFAUL
 		const metadata = metadataByPath.get(entry.path) ?? null;
 		return {
 			...entry,
-			isMain: entry.path === repoRoot,
 			isCurrent: entry.path === probe.currentWorktreeRoot,
+			isMain: entry.path === repoRoot,
 			isManaged: !!metadata,
 			metadata,
 		};
@@ -578,9 +578,9 @@ function buildRepoWorktreeSnapshot(probe: RepoWorktreeProbe, sharedRoot = DEFAUL
 	return {
 		...baseContext,
 		current,
-		worktrees,
 		registry,
 		staleManagedWorktrees,
+		worktrees,
 	};
 }
 
@@ -730,7 +730,7 @@ export function createManagedWorktree(options: CreateManagedWorktreeOptions): Cr
 		throw new Error("Not inside a git repository.");
 	}
 
-	const repoRoot = snapshot.repoRoot;
+	const {repoRoot} = snapshot;
 	const worktreeParentDir = getManagedWorktreeParentDir(repoRoot, options.sharedRoot);
 	fs.mkdirSync(worktreeParentDir, { recursive: true });
 	const worktreePath = nextAvailableWorktreePath(worktreeParentDir, branch);
@@ -745,25 +745,25 @@ export function createManagedWorktree(options: CreateManagedWorktreeOptions): Cr
 
 	const normalizedWorktreePath = normalizePath(worktreePath);
 	const metadata: ManagedWorktreeMetadata = {
-		id: `${sanitizeSegment(branch)}-${randomSuffix()}`,
-		repoRoot,
-		worktreePath: normalizedWorktreePath,
 		branch,
-		purpose,
 		createdAt: nowIso(),
-		lastSeenAt: null,
-		owner: normalizeOwner(options.owner),
 		createdFromBranch: snapshot.currentBranch,
 		createdFromRef,
+		id: `${sanitizeSegment(branch)}-${randomSuffix()}`,
+		lastSeenAt: null,
+		owner: normalizeOwner(options.owner),
+		purpose,
+		repoRoot,
+		worktreePath: normalizedWorktreePath,
 	};
 	upsertManagedWorktreeMetadata(repoRoot, metadata, options.sharedRoot);
 
 	return {
-		repoRoot,
-		worktreePath: normalizedWorktreePath,
 		branch,
 		createdBranch,
 		metadata,
+		repoRoot,
+		worktreePath: normalizedWorktreePath,
 	};
 }
 
@@ -813,7 +813,7 @@ export function removeManagedWorktree(
 	try {
 		git(repoRoot, ["worktree", "prune"]);
 	} catch {
-		// best-effort cleanup
+		// Best-effort cleanup
 	}
 
 	try {
@@ -822,16 +822,16 @@ export function removeManagedWorktree(
 			fs.rmdirSync(parentDir);
 		}
 	} catch {
-		// ignore best-effort cleanup failures
+		// Ignore best-effort cleanup failures
 	}
 
 	const removedRegistryEntry = pruneRegistryEntry(repoRoot, worktreePath, sharedRoot);
 	return {
 		metadata,
+		note,
 		removed: removedFromGit || removedRegistryEntry,
 		removedFromGit,
 		removedRegistryEntry,
-		note,
 	};
 }
 
@@ -857,10 +857,10 @@ export function createOwnerMetadata(input: {
 	const sessionFile = input.sessionFile ? normalizePath(input.sessionFile) : null;
 	const sessionId = sessionFile ? path.basename(sessionFile).replace(/\.[^.]+$/, "") : null;
 	return {
-		instanceId: input.instanceId,
-		hostname: hostname(),
-		pid: process.pid,
 		createdFromCwd: normalizePath(input.cwd),
+		hostname: hostname(),
+		instanceId: input.instanceId,
+		pid: process.pid,
 		sessionFile,
 		sessionId,
 		sessionName: input.sessionName?.trim() || null,

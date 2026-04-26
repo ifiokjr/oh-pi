@@ -21,10 +21,10 @@ export interface AntConfig {
 }
 
 export const DEFAULT_ANT_CONFIGS: Record<AntCaste, Omit<AntConfig, "systemPrompt">> = {
-	scout: { caste: "scout", model: "", tools: ["read", "bash", "grep", "find", "ls"], maxTurns: 8 },
-	worker: { caste: "worker", model: "", tools: ["read", "bash", "edit", "write", "grep", "find", "ls"], maxTurns: 15 },
-	soldier: { caste: "soldier", model: "", tools: ["read", "bash", "grep", "find", "ls"], maxTurns: 8 },
-	drone: { caste: "drone", model: "", tools: ["bash"], maxTurns: 1 },
+	drone: { caste: "drone", maxTurns: 1, model: "", tools: ["bash"] },
+	scout: { caste: "scout", maxTurns: 8, model: "", tools: ["read", "bash", "grep", "find", "ls"] },
+	soldier: { caste: "soldier", maxTurns: 8, model: "", tools: ["read", "bash", "grep", "find", "ls"] },
+	worker: { caste: "worker", maxTurns: 15, model: "", tools: ["read", "bash", "edit", "write", "grep", "find", "ls"] },
 };
 
 export type WorkerClass = "design" | "multimodal" | "backend" | "review";
@@ -46,8 +46,8 @@ export interface Task {
 	priority: TaskPriority;
 	files: string[]; // Files locked by this task
 	context?: string; // Code snippets pre-loaded by scout
-	workerClass?: WorkerClass; // worker specialization for model routing
-	claimedBy: string | null; // ant id
+	workerClass?: WorkerClass; // Worker specialization for model routing
+	claimedBy: string | null; // Ant id
 	result: string | null;
 	error: string | null;
 	spawnedTasks: string[]; // Child task IDs
@@ -99,8 +99,8 @@ export interface AntStreamEvent {
 	antId: string;
 	caste: AntCaste;
 	taskId: string;
-	delta: string; // text token delta
-	totalText: string; // accumulated text so far
+	delta: string; // Text token delta
+	totalText: string; // Accumulated text so far
 }
 
 export interface AntUsageEvent {
@@ -148,7 +148,7 @@ export interface ColonyState {
 	pheromones: Pheromone[];
 	concurrency: ConcurrencyConfig;
 	metrics: ColonyMetrics;
-	maxCost: number | null; // cost budget in USD, null = unlimited
+	maxCost: number | null; // Cost budget in USD, null = unlimited
 	modelOverrides: ModelOverrides;
 	/** Execution workspace metadata (shared cwd vs isolated worktree). */
 	workspace?: ColonyWorkspace;
@@ -170,7 +170,7 @@ export interface ConcurrencySample {
 	concurrency: number;
 	cpuLoad: number;
 	memFree: number;
-	throughput: number; // tasks completed per minute
+	throughput: number; // Tasks completed per minute
 }
 
 export type EscalationReason = "low_confidence" | "low_coverage" | "risk_flag" | "policy_violation" | "slo_breach";

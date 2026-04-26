@@ -10,13 +10,13 @@ import { t } from "@ifi/oh-pi-core";
  */
 export async function selectKeybindings(initialValue?: string): Promise<string> {
 	const kb = await p.select({
+		initialValue,
 		message: t("kb.select"),
 		options: [
 			{ value: "default", label: t("kb.default"), hint: t("kb.defaultHint") },
 			{ value: "vim", label: t("kb.vim"), hint: t("kb.vimHint") },
 			{ value: "emacs", label: t("kb.emacs"), hint: t("kb.emacsHint") },
 		],
-		initialValue,
 	});
 	if (p.isCancel(kb)) {
 		p.cancel(t("cancelled"));

@@ -23,6 +23,7 @@ The implementation should:
 
 **Language**: TypeScript (strict mode)  
 **Primary packages**:
+
 - `packages/adaptive-routing` — adaptive routing package
 - `packages/extensions` — safety/runtime extensions
 - `packages/subagents` — agent definitions, execution, management UI, schemas
@@ -31,6 +32,7 @@ The implementation should:
 **Testing**: Vitest  
 **Build tool**: pnpm workspace  
 **Existing routing primitives**:
+
 - `packages/adaptive-routing/*`
 - `docs/plans/adaptive-routing-mode.md`
 
@@ -62,15 +64,18 @@ This plan is complete when:
 **Goal**: land low-risk infrastructure first
 
 **Scope**:
+
 - add shared partial-config loading helper for extension configs
 - add focused non-interactive git guard extension behavior
 
 **Likely files**:
+
 - `packages/extensions/extensions/*` (new helper or focused guard extension wiring)
 - `packages/extensions/README.md`
 - related tests under `packages/extensions/extensions/*.test.ts`
 
 **Acceptance**:
+
 - invalid config sections are skipped with clear warnings
 - agent-run git commands receive non-interactive env protection
 
@@ -81,11 +86,13 @@ This plan is complete when:
 **Goal**: teach subagents to carry routing intent
 
 **Scope**:
+
 - parse and serialize optional `category` field for agents
 - expose category in management/detail views
 - document category in subagent README and schemas
 
 **Likely files**:
+
 - `packages/subagents/agents.ts`
 - `packages/subagents/agent-serializer.ts`
 - `packages/subagents/agent-management.ts`
@@ -99,6 +106,7 @@ This plan is complete when:
   - `packages/subagents/tests/session-churn.test.ts` only if event payloads change
 
 **Acceptance**:
+
 - category survives create/update/serialize/load flows
 - category appears in detail output and can be edited through management/TUI paths
 
@@ -109,6 +117,7 @@ This plan is complete when:
 **Goal**: route subagents through policy when no explicit model is set
 
 **Scope**:
+
 - add delegated-routing config surface
 - resolve `category -> fallbackGroup/task class -> selected model`
 - enforce precedence order:
@@ -119,6 +128,7 @@ This plan is complete when:
 - add explain/debug metadata to results where practical
 
 **Likely files**:
+
 - `packages/subagents/execution.ts`
 - `packages/subagents/index.ts`
 - `packages/subagents/types.ts`
@@ -129,6 +139,7 @@ This plan is complete when:
   - `packages/adaptive-routing/*.test.ts`
 
 **Acceptance**:
+
 - subagent with category and no model gets deterministic routed model
 - explicit `model` still bypasses delegated routing
 - route source can be explained in output/logs
@@ -140,12 +151,14 @@ This plan is complete when:
 **Goal**: give colony castes policy-driven routing without hard-coded provider/model identity
 
 **Scope**:
+
 - define default caste -> category mapping
 - let config override those mappings cleanly
 - route caste/class selection through adaptive-routing-compatible policy
 - keep existing `modelOverrides` support as higher-priority explicit override
 
 **Likely files**:
+
 - `packages/ant-colony/extensions/ant-colony/types.ts`
 - caste/model selection code in ant-colony runtime (spawner/queen/budget planner as needed)
 - `packages/ant-colony/README.md`
@@ -155,6 +168,7 @@ This plan is complete when:
   - `packages/ant-colony/tests/budget-planner.test.ts`
 
 **Acceptance**:
+
 - scout/worker/soldier can route by category when no explicit model override exists
 - existing explicit override paths remain intact
 - status output can reveal effective routed model or route source
@@ -166,11 +180,13 @@ This plan is complete when:
 **Goal**: make delegated routing understandable and safe
 
 **Scope**:
+
 - show effective route source in `/agents` detail and relevant colony status output
 - add high-confidence warnings for suspicious agent/caste configuration
 - improve docs for troubleshooting delegated routing
 
 **Likely files**:
+
 - `packages/subagents/agent-manager-detail.ts`
 - `packages/subagents/agent-management.ts`
 - `packages/subagents/render.ts`
@@ -178,6 +194,7 @@ This plan is complete when:
 - docs in `packages/subagents/README.md`, `packages/ant-colony/README.md`, `packages/extensions/README.md`
 
 **Acceptance**:
+
 - users can tell whether route came from runtime override, explicit model, or category policy
 - warnings are specific and low-noise
 

@@ -35,7 +35,7 @@ export default function registerSubagentNotify(pi: ExtensionAPI): void {
 		const result = data as SubagentResult;
 		const now = Date.now();
 		const key = buildCompletionKey(result, "notify");
-		if (markSeenWithTtl(seen, key, now, ttlMs)) return;
+		if (markSeenWithTtl(seen, key, now, ttlMs)) {return;}
 
 		const agent = result.agent ?? "unknown";
 		const status = result.success ? "completed" : "failed";
@@ -58,16 +58,16 @@ export default function registerSubagentNotify(pi: ExtensionAPI): void {
 			`Background task ${status}: **${agent}**${taskInfo}`,
 			"",
 			result.summary,
-			extra.length ? "" : undefined,
-			extra.length ? extra.join("\n") : undefined,
+			extra.length > 0 ? "" : undefined,
+			extra.length > 0 ? extra.join("\n") : undefined,
 		]
 			.filter((line) => line !== undefined)
 			.join("\n");
 
 		pi.sendMessage(
 			{
-				customType: "subagent-notify",
 				content,
+				customType: "subagent-notify",
 				display: true,
 			},
 			{ triggerTurn: true },

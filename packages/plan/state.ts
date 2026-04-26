@@ -74,10 +74,7 @@ export function createPlanModeStateManager(pi: ExtensionAPI) {
 	const syncPlanModeTools = () => {
 		const activeTools = pi.getActiveTools();
 		const nextTools = state.active
-			? [
-				...activeTools,
-				...PLAN_MODE_TOOL_NAMES.filter((toolName) => !activeTools.includes(toolName)),
-			]
+			? [...activeTools, ...PLAN_MODE_TOOL_NAMES.filter((toolName) => !activeTools.includes(toolName))]
 			: activeTools.filter((toolName) => !PLAN_MODE_TOOL_NAME_SET.has(toolName));
 
 		if (areSameToolLists(activeTools, nextTools)) {
@@ -100,6 +97,7 @@ export function createPlanModeStateManager(pi: ExtensionAPI) {
 		ctx.ui.setWidget(
 			BANNER_WIDGET_KEY,
 			(_tui, theme) => ({
+				invalidate: () => {},
 				render: (width: number) => {
 					const { truncateToWidth, wrapTextWithAnsi } = getPiTui();
 					const safeWidth = Math.max(1, width);
@@ -113,7 +111,6 @@ export function createPlanModeStateManager(pi: ExtensionAPI) {
 					];
 					return lines;
 				},
-				invalidate: () => {},
 			}),
 			{ placement: "aboveEditor" },
 		);
@@ -134,11 +131,11 @@ export function createPlanModeStateManager(pi: ExtensionAPI) {
 		},
 	) => {
 		setState(ctx, {
-			version: state.version,
 			active: true,
+			lastPlanLeafId: state.lastPlanLeafId,
 			originLeafId: options.originLeafId,
 			planFilePath: options.planFilePath,
-			lastPlanLeafId: state.lastPlanLeafId,
+			version: state.version,
 		});
 	};
 
@@ -149,11 +146,11 @@ export function createPlanModeStateManager(pi: ExtensionAPI) {
 	};
 
 	return {
+		applyBanner,
 		getState: () => state,
+		refresh,
 		setState,
 		startPlanMode,
-		refresh,
 		syncTools: syncPlanModeTools,
-		applyBanner,
 	};
 }

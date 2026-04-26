@@ -1,17 +1,24 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 
 const { execFileSyncMock } = vi.hoisted(() => ({
 	execFileSyncMock: vi.fn(() => Buffer.from("")),
 }));
 
-vi.mock("node:child_process", () => ({
+vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({
 	execFileSync: execFileSyncMock,
 }));
 
-import { CURRENT_VERSION, MIN_VERSION, SMOKE_TESTS, WORKSPACE_INSTALL_ARGS, main, parseArgs } from "./verify-pi-compat.mjs";
+import {
+	CURRENT_VERSION,
+	MIN_VERSION,
+	SMOKE_TESTS,
+	WORKSPACE_INSTALL_ARGS,
+	main,
+	parseArgs,
+} from "./verify-pi-compat.mjs";
 
 const tempDirs: string[] = [];
 const originalCwd = process.cwd();
@@ -27,7 +34,7 @@ afterEach(() => {
 	execFileSyncMock.mockClear();
 	vi.restoreAllMocks();
 	for (const dir of tempDirs.splice(0)) {
-		rmSync(dir, { recursive: true, force: true });
+		rmSync(dir, { force: true, recursive: true });
 	}
 });
 
@@ -37,15 +44,15 @@ describe("verify pi compatibility script", () => {
 	});
 
 	it("installs with workspace linking enabled", () => {
-		expect(WORKSPACE_INSTALL_ARGS).toEqual(["install", "--no-frozen-lockfile", "--link-workspace-packages"]);
+		expect(WORKSPACE_INSTALL_ARGS).toStrictEqual(["install", "--no-frozen-lockfile", "--link-workspace-packages"]);
 	});
 
 	it("parses explicit versions and restore mode", () => {
-		expect(parseArgs(["--version", CURRENT_VERSION, "--restore"], {})).toEqual({
+		expect(parseArgs(["--version", CURRENT_VERSION, "--restore"], {})).toStrictEqual({
 			restore: true,
 			version: CURRENT_VERSION,
 		});
-		expect(parseArgs([], { PI_COMPAT_VERSION: MIN_VERSION })).toEqual({
+		expect(parseArgs([], { PI_COMPAT_VERSION: MIN_VERSION })).toStrictEqual({
 			restore: false,
 			version: MIN_VERSION,
 		});
@@ -57,7 +64,7 @@ describe("verify pi compatibility script", () => {
 		writeFileSync(path.join(repoDir, "package.json"), JSON.stringify({ name: "test-repo" }));
 		process.chdir(repoDir);
 
-		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const log = vi.spyOn(console, "log").mockReturnValue(undefined);
 		main(["--version", CURRENT_VERSION]);
 
 		expect(execFileSyncMock).toHaveBeenNthCalledWith(

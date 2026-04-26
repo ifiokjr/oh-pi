@@ -93,24 +93,24 @@ Each task family should include:
 
 ```json
 {
-  "id": "typescript/fix-auth-middleware-01",
-  "family": "fix-auth-middleware",
-  "difficulty": "medium",
-  "repoFixture": "fixtures/auth-service-v3",
-  "promptVariants": [
-    { "level": 1, "prompt": "fix auth bug" },
-    { "level": 2, "prompt": "fix auth bug in middleware; tests failing" },
-    {
-      "level": 3,
-      "prompt": "fix the auth middleware so invalid session cookies redirect correctly and the failing tests pass"
-    }
-  ],
-  "environmentProfiles": ["baseline-minimal", "skills-rich"],
-  "scoring": {
-    "type": "tests",
-    "command": "pnpm test auth"
-  },
-  "tags": ["debugging", "typescript", "backend"]
+	"id": "typescript/fix-auth-middleware-01",
+	"family": "fix-auth-middleware",
+	"difficulty": "medium",
+	"repoFixture": "fixtures/auth-service-v3",
+	"promptVariants": [
+		{ "level": 1, "prompt": "fix auth bug" },
+		{ "level": 2, "prompt": "fix auth bug in middleware; tests failing" },
+		{
+			"level": 3,
+			"prompt": "fix the auth middleware so invalid session cookies redirect correctly and the failing tests pass"
+		}
+	],
+	"environmentProfiles": ["baseline-minimal", "skills-rich"],
+	"scoring": {
+		"type": "tests",
+		"command": "pnpm test auth"
+	},
+	"tags": ["debugging", "typescript", "backend"]
 }
 ```
 
@@ -204,12 +204,12 @@ A strategy might include:
 
 ```json
 {
-  "executionMode": "single-agent",
-  "model": "openai/gpt-5-mini",
-  "thinking": "minimal",
-  "toolsProfile": "full",
-  "docsMode": "standard",
-  "skills": []
+	"executionMode": "single-agent",
+	"model": "openai/gpt-5-mini",
+	"thinking": "minimal",
+	"toolsProfile": "full",
+	"docsMode": "standard",
+	"skills": []
 }
 ```
 
@@ -217,13 +217,13 @@ A strategy might include:
 
 ```json
 {
-  "executionMode": "subagents",
-  "plannerModel": "openai/gpt-5.4",
-  "workerModel": "google/gemini-3.1-pro",
-  "thinking": "medium",
-  "toolsProfile": "full",
-  "docsMode": "rich",
-  "skills": ["debug-helper", "coding-style-guide"]
+	"executionMode": "subagents",
+	"plannerModel": "openai/gpt-5.4",
+	"workerModel": "google/gemini-3.1-pro",
+	"thinking": "medium",
+	"toolsProfile": "full",
+	"docsMode": "rich",
+	"skills": ["debug-helper", "coding-style-guide"]
 }
 ```
 
@@ -297,18 +297,18 @@ priority: cost
 secondary: quality
 
 defaults:
-  prefer-fast-feedback: true
-  allow-subagents: true
-  allow-ant-colony: false
+prefer-fast-feedback: true
+allow-subagents: true
+allow-ant-colony: false
 
 for large-repos:
-  prefer: quality
+prefer: quality
 
 for quick-fixes:
-  prefer: speed
+prefer: speed
 
 for ambiguous-prompts:
-  prefer: robustness
+prefer: robustness
 ```
 
 The runtime should compile this into a strict routing config shape rather than parsing freeform prose on every task.

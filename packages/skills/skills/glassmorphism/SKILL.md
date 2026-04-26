@@ -1,7 +1,6 @@
 ---
 name: glassmorphism
-description:
-  Glassmorphism design system skill. Use when building frosted-glass UI components with blur,
+description: Glassmorphism design system skill. Use when building frosted-glass UI components with blur,
   transparency, and layered depth effects.
 version: 1.0.0
 tags: [design, css, ui, glassmorphism]
@@ -26,12 +25,12 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 @import "references/tokens.css";
 
 .glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: var(--glass-border);
-  border-radius: var(--glass-radius);
-  box-shadow: var(--glass-shadow);
+	background: var(--glass-bg);
+	backdrop-filter: var(--glass-blur);
+	-webkit-backdrop-filter: var(--glass-blur);
+	border: var(--glass-border);
+	border-radius: var(--glass-radius);
+	box-shadow: var(--glass-shadow);
 }
 ```
 
@@ -41,13 +40,13 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 
 ```css
 .glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: var(--glass-border);
-  border-radius: var(--glass-radius);
-  box-shadow: var(--glass-shadow);
-  padding: 1.5rem;
+	background: var(--glass-bg);
+	backdrop-filter: var(--glass-blur);
+	-webkit-backdrop-filter: var(--glass-blur);
+	border: var(--glass-border);
+	border-radius: var(--glass-radius);
+	box-shadow: var(--glass-shadow);
+	padding: 1.5rem;
 }
 ```
 
@@ -55,14 +54,14 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 
 ```css
 .glass-nav {
-  background: var(--glass-bg-heavy);
-  backdrop-filter: var(--glass-blur-strong);
-  -webkit-backdrop-filter: var(--glass-blur-strong);
-  border-bottom: var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+	background: var(--glass-bg-heavy);
+	backdrop-filter: var(--glass-blur-strong);
+	-webkit-backdrop-filter: var(--glass-blur-strong);
+	border-bottom: var(--glass-border);
+	box-shadow: var(--glass-shadow);
+	position: sticky;
+	top: 0;
+	z-index: 100;
 }
 ```
 
@@ -70,16 +69,16 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 
 ```css
 .glass-modal-backdrop {
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
+	background: rgba(0, 0, 0, 0.4);
+	backdrop-filter: blur(4px);
 }
 .glass-modal {
-  background: var(--glass-bg-heavy);
-  backdrop-filter: var(--glass-blur-strong);
-  -webkit-backdrop-filter: var(--glass-blur-strong);
-  border: var(--glass-border);
-  border-radius: var(--glass-radius-lg);
-  box-shadow: var(--glass-shadow-elevated);
+	background: var(--glass-bg-heavy);
+	backdrop-filter: var(--glass-blur-strong);
+	-webkit-backdrop-filter: var(--glass-blur-strong);
+	border: var(--glass-border);
+	border-radius: var(--glass-radius-lg);
+	box-shadow: var(--glass-shadow-elevated);
 }
 ```
 
@@ -87,15 +86,15 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 
 ```css
 .glass-btn {
-  background: var(--glass-bg-light);
-  backdrop-filter: var(--glass-blur-light);
-  -webkit-backdrop-filter: var(--glass-blur-light);
-  border: var(--glass-border);
-  border-radius: var(--glass-radius);
-  transition: background 0.2s;
+	background: var(--glass-bg-light);
+	backdrop-filter: var(--glass-blur-light);
+	-webkit-backdrop-filter: var(--glass-blur-light);
+	border: var(--glass-border);
+	border-radius: var(--glass-radius);
+	transition: background 0.2s;
 }
 .glass-btn:hover {
-  background: var(--glass-bg);
+	background: var(--glass-bg);
 }
 ```
 
@@ -112,13 +111,13 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 
 ```css
 .glass-card {
-  background: rgba(255, 255, 255, 0.85); /* fallback */
+	background: rgba(255, 255, 255, 0.85); /* fallback */
 }
 @supports (backdrop-filter: blur(1px)) {
-  .glass-card {
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-  }
+	.glass-card {
+		background: var(--glass-bg);
+		backdrop-filter: var(--glass-blur);
+	}
 }
 ```
 
@@ -133,15 +132,15 @@ Use CSS custom properties from `tokens.css` for consistent theming:
 
 ```css
 @media (prefers-reduced-transparency: reduce) {
-  .glass-card {
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: none;
-  }
+	.glass-card {
+		background: rgba(255, 255, 255, 0.92);
+		backdrop-filter: none;
+	}
 }
 @media (prefers-contrast: more) {
-  .glass-card {
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(0, 0, 0, 0.3);
-  }
+	.glass-card {
+		background: rgba(255, 255, 255, 0.85);
+		border: 1px solid rgba(0, 0, 0, 0.3);
+	}
 }
 ```

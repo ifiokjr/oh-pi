@@ -1,5 +1,5 @@
 /**
- * pi-pretty — Pretty terminal output for pi built-in tools.
+ * Pi-pretty — Pretty terminal output for pi built-in tools.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -37,17 +37,20 @@ export default function piPretty(pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("multi-grep", {
-		description: "OR-search across multiple string patterns (usage: /multi-grep patterns=[\"a\",\"b\"] glob=\"*.ts\")",
+		description: 'OR-search across multiple string patterns (usage: /multi-grep patterns=["a","b"] glob="*.ts")',
 		handler: async (args, ctx) => {
 			// Parse args
 			const patternsMatch = args.match(/patterns\s*=\s*\[([^\]]+)\]/);
 			const globMatch = args.match(/glob\s*=\s*"([^"]+)"/);
 			if (!patternsMatch) {
-				ctx.ui.notify("Usage: /multi-grep patterns=[\"foo\",\"bar\"] glob=\"*.ts\"", "warning");
+				ctx.ui.notify('Usage: /multi-grep patterns=["foo","bar"] glob="*.ts"', "warning");
 				return;
 			}
 			const raw = patternsMatch[1];
-			const patterns = raw.split(",").map((s) => s.trim().replace(/^"/, "").replace(/"$/, "")).filter(Boolean);
+			const patterns = raw
+				.split(",")
+				.map((s) => s.trim().replace(/^"/, "").replace(/"$/, ""))
+				.filter(Boolean);
 			const glob = globMatch?.[1] ?? "*";
 			const { multiGrep } = await import("./src/find-grep.js");
 			const result = await multiGrep(patterns, glob, ".");

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import { main, parseArgs } from "../src/cli.js";
 import { appendTokenQuery, createQrRenderer, renderTokenQr, splitQrOutput } from "../src/qr.js";
@@ -10,23 +10,17 @@ const serverModule = vi.hoisted(() => ({
 	startRemoteSessionServer: vi.fn(),
 }));
 
-vi.mock("../src/server.js", () => serverModule);
+vi.mock<typeof import('../src/server.js')>(import('../src/server.js'), () => serverModule);
 
 function createRemoteHandle(overrides: Partial<Record<string, unknown>> = {}) {
 	const handlers = {
-		client_connect: [] as Array<(clientId: string) => void>,
-		client_disconnect: [] as Array<(clientId: string) => void>,
+		client_connect: [] as ((clientId: string) => void)[],
+		client_disconnect: [] as ((clientId: string) => void)[],
 	};
 	let connectedClients = 0;
 	let running = true;
 
 	const server = {
-		on: vi.fn((event: keyof typeof handlers, handler: (clientId: string) => void) => {
-			handlers[event].push(handler);
-			return vi.fn(() => {
-				handlers[event] = handlers[event].filter((entry) => entry !== handler);
-			});
-		}),
 		get connectedClients() {
 			return connectedClients;
 		},
@@ -36,10 +30,21 @@ function createRemoteHandle(overrides: Partial<Record<string, unknown>> = {}) {
 		get isRunning() {
 			return running;
 		},
+		on: vi.fn((event: keyof typeof handlers, handler: (clientId: string) => void) => {
+			handlers[event].push(handler);
+			return vi.fn(() => {
+				handlers[event] = handlers[event].filter((entry) => entry !== handler);
+			});
+		}),
 	};
 
 	return {
 		connectUrl: "https://pi-remote.dev/?host=https%3A%2F%2Fpi.tailnet.ts.net%2Fpi%2Finstance-42%2F&t=test-token",
+		emit(event: keyof typeof handlers, clientId = "client-1") {
+			for (const handler of handlers[event]) {
+				handler(clientId);
+			}
+		},
 		instanceId: "instance-42",
 		lanUrl: "http://192.168.1.20:3100/?t=test-token",
 		localUrl: "http://localhost:3100/?t=test-token",
@@ -49,11 +54,6 @@ function createRemoteHandle(overrides: Partial<Record<string, unknown>> = {}) {
 		}),
 		token: "test-token",
 		tunnelUrl: "https://pi.tailnet.ts.net/pi/instance-42/",
-		emit(event: keyof typeof handlers, clientId = "client-1") {
-			for (const handler of handlers[event]) {
-				handler(clientId);
-			}
-		},
 		...overrides,
 	};
 }
@@ -65,12 +65,13 @@ async function loadExtension() {
 
 beforeEach(() => {
 	vi.useFakeTimers();
-	(globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_QR_LOADER__?: () => Promise<any> }).__PI_REMOTE_TAILSCALE_QR_LOADER__ =
-		(vi.fn(async () => ({
-			generate: (_url: string, _options?: { small?: boolean }, callback?: (output: string) => void) => {
-				callback?.("██\n██");
-			},
-		})) as unknown) as () => Promise<any>;
+	(
+		globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_QR_LOADER__?: () => Promise<any> }
+	).__PI_REMOTE_TAILSCALE_QR_LOADER__ = vi.fn(async () => ({
+		generate: (_url: string, _options?: { small?: boolean }, callback?: (output: string) => void) => {
+			callback?.("██\n██");
+		},
+	})) as unknown as () => Promise<any>;
 });
 
 afterEach(async () => {
@@ -92,10 +93,12 @@ describe("pi-remote-tailscale extension", () => {
 		};
 
 		let resolvedSession: unknown;
-		serverModule.startRemoteSessionServer.mockImplementationOnce(async (options: { resolveSession?: () => unknown }) => {
-			resolvedSession = options.resolveSession?.();
-			return handle;
-		});
+		serverModule.startRemoteSessionServer.mockImplementationOnce(
+			async (options: { resolveSession?: () => unknown }) => {
+				resolvedSession = options.resolveSession?.();
+				return handle;
+			},
+		);
 
 		const extension = await loadExtension();
 		extension(harness.pi as never);
@@ -103,7 +106,7 @@ describe("pi-remote-tailscale extension", () => {
 		await vi.runAllTimersAsync();
 
 		expect(resolvedSession).toBe((harness.ctx as Record<string, any>).runtime.session);
-		expect(harness.notifications.map((entry) => entry.msg)).toEqual([
+		expect(harness.notifications.map((entry) => entry.msg)).toStrictEqual([
 			"Starting remote access...",
 			"🌐 Remote active · instance-42\nhttps://pi-remote.dev/?host=https%3A%2F%2Fpi.tailnet.ts.net%2Fpi%2Finstance-42%2F&t=test-token",
 			"Scan with a browser:\n██\n██",
@@ -123,7 +126,7 @@ describe("pi-remote-tailscale extension", () => {
 		expect(harness.notifications.at(-1)?.msg).toBe(
 			"🌐 Remote active · instance-42\nhttps://pi-remote.dev/?host=https%3A%2F%2Fpi.tailnet.ts.net%2Fpi%2Finstance-42%2F&t=test-token",
 		);
-		expect(qrLoader).toHaveBeenCalledTimes(1);
+		expect(qrLoader).toHaveBeenCalledOnce();
 	});
 
 	it("toggles the widget, handles invalid widget args, stops the server, and cleans up on shutdown", async () => {
@@ -139,13 +142,13 @@ describe("pi-remote-tailscale extension", () => {
 
 		await harness.commands.get("remote:widget").handler("off", harness.ctx);
 		expect(harness.notifications.at(-1)?.msg).toBe("Remote widget disabled.");
-		expect(harness.statusMap.has("remote")).toBe(false);
+		expect(harness.statusMap.has("remote")).toBeFalsy();
 
 		await harness.commands.get("remote:widget").handler("bogus", harness.ctx);
 		expect(harness.notifications.at(-1)?.msg).toBe("Usage: /remote:widget [on|off]");
 
 		await harness.commands.get("remote").handler("stop", harness.ctx);
-		expect(handle.stop).toHaveBeenCalledTimes(1);
+		expect(handle.stop).toHaveBeenCalledOnce();
 		expect(harness.notifications.at(-1)?.msg).toBe("Remote access stopped.");
 
 		await harness.commands.get("remote").handler("stop", harness.ctx);
@@ -156,7 +159,7 @@ describe("pi-remote-tailscale extension", () => {
 		await harness.commands.get("remote").handler(undefined, harness.ctx);
 		await vi.runAllTimersAsync();
 		await harness.emitAsync("session_shutdown");
-		expect(nextHandle.stop).toHaveBeenCalledTimes(1);
+		expect(nextHandle.stop).toHaveBeenCalledOnce();
 	});
 
 	it("auto-starts during remote mode session startup and tracks client lifecycle notifications", async () => {
@@ -173,7 +176,7 @@ describe("pi-remote-tailscale extension", () => {
 		await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
 		await harness.emitAsync("session_switch", { type: "session_switch" }, harness.ctx);
 
-		expect(serverModule.startRemoteSessionServer).toHaveBeenCalledTimes(1);
+		expect(serverModule.startRemoteSessionServer).toHaveBeenCalledOnce();
 		expect(harness.notifications.at(0)?.msg).toBe(
 			"🌐 Remote active · instance-42\nhttps://pi-remote.dev/?host=https%3A%2F%2Fpi.tailnet.ts.net%2Fpi%2Finstance-42%2F&t=test-token",
 		);
@@ -265,8 +268,8 @@ describe("widget helpers", () => {
 		expect(ctx.ui.setStatus).toHaveBeenCalledWith("remote", "🌐 Remote: 2 clients");
 
 		controller.setEnabled(false, ctx, state);
-		expect(ctx.ui.setWidget).toHaveBeenLastCalledWith("remote-tailscale", undefined);
-		expect(ctx.ui.setStatus).toHaveBeenLastCalledWith("remote", undefined);
+		expect(ctx.ui.setWidget).toHaveBeenLastCalledWith("remote-tailscale");
+		expect(ctx.ui.setStatus).toHaveBeenLastCalledWith("remote");
 		controller.dispose();
 	});
 });
@@ -278,40 +281,38 @@ describe("qr helpers", () => {
 				callback?.("AA\nBB");
 			}),
 		};
-		const loadCallbackModule = (vi.fn(async () => callbackModule) as unknown) as () => Promise<any>;
+		const loadCallbackModule = vi.fn(async () => callbackModule) as unknown as () => Promise<any>;
 		const renderer = createQrRenderer({ loadModule: loadCallbackModule, maxCacheEntries: 2 });
 
 		expect(appendTokenQuery("http://localhost:3100", "secret")).toBe("http://localhost:3100/?t=secret");
-		expect(splitQrOutput("A\nB\n")).toEqual(["A", "B"]);
-		expect(await renderer.render("http://localhost:3100/?t=secret")).toEqual(["AA", "BB"]);
-		expect(await renderer.render("http://localhost:3100/?t=secret")).toEqual(["AA", "BB"]);
-		expect(loadCallbackModule).toHaveBeenCalledTimes(1);
+		expect(splitQrOutput("A\nB\n")).toStrictEqual(["A", "B"]);
+		await expect(renderer.render("http://localhost:3100/?t=secret")).resolves.toStrictEqual(["AA", "BB"]);
+		await expect(renderer.render("http://localhost:3100/?t=secret")).resolves.toStrictEqual(["AA", "BB"]);
+		expect(loadCallbackModule).toHaveBeenCalledOnce();
 
 		const stringModule = {
 			generate: vi.fn(() => "CC\nDD\n"),
 		};
-		expect(
-			await renderTokenQr("http://localhost:4100", "next", {
+		await expect(renderTokenQr("http://localhost:4100", "next", {
 				loadModule: (async () => stringModule) as () => Promise<any>,
-			}),
-		).toEqual(["CC", "DD"]);
+			})).resolves.toStrictEqual(["CC", "DD"]);
 		renderer.clear();
 	});
 });
 
 describe("pty helpers", () => {
 	it("builds remote environments and adapts PTY processes", async () => {
-		const listeners = new Map<string, Array<(...args: any[]) => void>>();
+		const listeners = new Map<string, ((...args: any[]) => void)[]>();
 		const pty = {
 			kill: vi.fn(),
-			on: vi.fn((event: string, handler: (...args: any[]) => void) => {
-				listeners.set(event, [...(listeners.get(event) ?? []), handler]);
-			}),
 			off: vi.fn((event: string, handler: (...args: any[]) => void) => {
 				listeners.set(
 					event,
 					(listeners.get(event) ?? []).filter((entry) => entry !== handler),
 				);
+			}),
+			on: vi.fn((event: string, handler: (...args: any[]) => void) => {
+				listeners.set(event, [...(listeners.get(event) ?? []), handler]);
 			}),
 			pid: 77,
 			resize: vi.fn(),
@@ -326,14 +327,14 @@ describe("pty helpers", () => {
 		expect(buildRemotePtyEnv({ FOO: "bar" }).PI_REMOTE_TAILSCALE_MODE).toBe("remote");
 
 		const handle = await createPtyProcess(
-			{ args: ["--session", "123"], command: "pi", columns: 80, cwd: "/tmp/demo", rows: 24 },
+			{ args: ["--session", "123"], columns: 80, command: "pi", cwd: "/tmp/demo", rows: 24 },
 			{ loadModule },
 		);
 		const offData = handle.onData((data) => {
 			expect(data).toBe("hello");
 		});
 		const offExit = handle.onExit((event) => {
-			expect(event).toEqual({ exitCode: 0, signal: 15 });
+			expect(event).toStrictEqual({ exitCode: 0, signal: 15 });
 		});
 
 		for (const handler of listeners.get("data") ?? []) {
@@ -354,10 +355,11 @@ describe("pty helpers", () => {
 		expect(pty.kill).toHaveBeenCalledWith("SIGTERM");
 		expect(pty.off).toHaveBeenCalledTimes(2);
 
-		(globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_PTY_LOADER__?: () => Promise<any> }).__PI_REMOTE_TAILSCALE_PTY_LOADER__ =
-			async () => ({
-				spawn: vi.fn(() => pty),
-			});
+		(
+			globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_PTY_LOADER__?: () => Promise<any> }
+		).__PI_REMOTE_TAILSCALE_PTY_LOADER__ = async () => ({
+			spawn: vi.fn(() => pty),
+		});
 		await createPtyProcess({ command: "pi" });
 		delete (globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_PTY_LOADER__?: () => Promise<any> })
 			.__PI_REMOTE_TAILSCALE_PTY_LOADER__;
@@ -366,16 +368,22 @@ describe("pty helpers", () => {
 
 describe("cli helpers", () => {
 	it("parses CLI arguments and exercises help, env, success, and error paths", async () => {
-		expect(parseArgs(["node", "cli.js", "--cwd", "/tmp/demo", "--command", "pi-dev", "--", "--session", "123"]))
-			.toEqual({
-				args: ["--", "--session", "123"],
-				command: "pi-dev",
-				cwd: "/tmp/demo",
-				help: false,
-				printEnv: false,
-			});
-		expect(parseArgs(["node", "cli.js", "--command"]))
-			.toEqual({ args: [], command: "pi", cwd: undefined, help: false, printEnv: false });
+		expect(
+			parseArgs(["node", "cli.js", "--cwd", "/tmp/demo", "--command", "pi-dev", "--", "--session", "123"]),
+		).toStrictEqual({
+			args: ["--", "--session", "123"],
+			command: "pi-dev",
+			cwd: "/tmp/demo",
+			help: false,
+			printEnv: false,
+		});
+		expect(parseArgs(["node", "cli.js", "--command"])).toStrictEqual({
+			args: [],
+			command: "pi",
+			cwd: undefined,
+			help: false,
+			printEnv: false,
+		});
 
 		const log = vi.fn();
 		const error = vi.fn();
@@ -384,32 +392,36 @@ describe("cli helpers", () => {
 		const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
 		const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 		try {
-			expect(await main(["node", "cli.js", "--help"])) .toBe(0);
+			await expect(main(["node", "cli.js", "--help"])).resolves.toBe(0);
 			expect(consoleLog).toHaveBeenCalledWith(expect.stringContaining("PTY launcher helper"));
 		} finally {
 			consoleLog.mockRestore();
 			consoleError.mockRestore();
 		}
 
-		expect(await main(["node", "cli.js", "--help"], { error, log, startPty })).toBe(0);
+		await expect(main(["node", "cli.js", "--help"], { error, log, startPty })).resolves.toBe(0);
 		expect(log).toHaveBeenCalledWith(expect.stringContaining("PTY launcher helper"));
 
 		log.mockClear();
-		expect(await main(["node", "cli.js", "--print-env"], { error, log, startPty })).toBe(0);
+		await expect(main(["node", "cli.js", "--print-env"], { error, log, startPty })).resolves.toBe(0);
 		expect(log).toHaveBeenCalledWith(expect.stringContaining("PI_REMOTE_TAILSCALE_MODE"));
 
 		log.mockClear();
-		expect(await main(["node", "cli.js", "--cwd", "/tmp/demo"], { error, log, startPty })).toBe(0);
+		await expect(main(["node", "cli.js", "--cwd", "/tmp/demo"], { error, log, startPty })).resolves.toBe(0);
 		expect(startPty).toHaveBeenCalledWith(
-			expect.objectContaining({ command: "pi", cwd: "/tmp/demo", env: expect.objectContaining({ PI_REMOTE_TAILSCALE_MODE: "remote" }) }),
+			expect.objectContaining({
+				command: "pi",
+				cwd: "/tmp/demo",
+				env: expect.objectContaining({ PI_REMOTE_TAILSCALE_MODE: "remote" }),
+			}),
 		);
 
 		startPty.mockRejectedValueOnce(new Error("spawn failed"));
-		expect(await main(["node", "cli.js"], { error, log, startPty })).toBe(1);
+		await expect(main(["node", "cli.js"], { error, log, startPty })).resolves.toBe(1);
 		expect(error).toHaveBeenCalledWith("spawn failed");
 
 		startPty.mockRejectedValueOnce("string failure");
-		expect(await main(["node", "cli.js"], { error, log, startPty })).toBe(1);
+		await expect(main(["node", "cli.js"], { error, log, startPty })).resolves.toBe(1);
 		expect(error).toHaveBeenCalledWith("string failure");
 	});
 });

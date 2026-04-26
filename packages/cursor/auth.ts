@@ -1,6 +1,7 @@
 import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "@mariozechner/pi-ai";
 import { CURSOR_PROVIDER, getCursorRuntimeConfig } from "./config.js";
-import { enrichCursorCredentials, getCredentialModels, type CursorCredentials } from "./models.js";
+import { enrichCursorCredentials, getCredentialModels } from './models.js';
+import type { CursorCredentials } from './models.js';
 
 const POLL_MAX_ATTEMPTS = 150;
 const POLL_BASE_DELAY_MS = 1000;
@@ -19,31 +20,31 @@ export async function generateCursorAuthParams(): Promise<CursorAuthParams> {
 	const uuid = crypto.randomUUID();
 	const params = new URLSearchParams({
 		challenge,
-		uuid,
 		mode: "login",
 		redirectTarget: "cli",
+		uuid,
 	});
 	return {
-		verifier,
 		challenge,
-		uuid,
 		loginUrl: `${getCursorRuntimeConfig().loginUrl}?${params.toString()}`,
+		uuid,
+		verifier,
 	};
 }
 
 export async function loginCursor(callbacks: OAuthLoginCallbacks): Promise<CursorCredentials> {
 	const { verifier, uuid, loginUrl } = await generateCursorAuthParams();
 	callbacks.onAuth({
-		url: loginUrl,
 		instructions: "Complete the Cursor login in your browser. pi will keep polling until the token exchange completes.",
+		url: loginUrl,
 	});
 	callbacks.onProgress?.("Waiting for Cursor browser authentication...");
 	const tokens = await pollCursorAuth(uuid, verifier, callbacks.signal, callbacks.onProgress);
 	callbacks.onProgress?.("Refreshing Cursor model catalog...");
 	return enrichCursorCredentials({
-		refresh: tokens.refreshToken,
 		access: tokens.accessToken,
 		expires: getTokenExpiry(tokens.accessToken),
+		refresh: tokens.refreshToken,
 	});
 }
 
@@ -52,12 +53,12 @@ export async function refreshCursorToken(
 	options: { preserveModels?: boolean } = {},
 ): Promise<CursorCredentials> {
 	const response = await fetch(getCursorRuntimeConfig().refreshUrl, {
-		method: "POST",
+		body: "{}",
 		headers: {
 			Authorization: `Bearer ${credentials.refresh}`,
 			"Content-Type": "application/json",
 		},
-		body: "{}",
+		method: "POST",
 	});
 
 	if (!response.ok) {
@@ -74,9 +75,9 @@ export async function refreshCursorToken(
 
 	return enrichCursorCredentials(
 		{
-			refresh: data.refreshToken || credentials.refresh,
 			access: data.accessToken,
 			expires: getTokenExpiry(data.accessToken),
+			refresh: data.refreshToken || credentials.refresh,
 		},
 		{ previous: options.preserveModels === false ? undefined : (credentials as CursorCredentials) },
 	);
@@ -97,22 +98,18 @@ export function getTokenExpiry(token: string): number {
 			return decoded.exp * 1000 - 5 * 60 * 1000;
 		}
 	} catch {
-		// fall through to default expiry
+		// Fall through to default expiry
 	}
 	return Date.now() + 3600 * 1000;
 }
 
 export function createCursorOAuthProvider(): Omit<OAuthProviderInterface, "id"> {
 	return {
-		name: "Cursor (experimental)",
-		async login(callbacks) {
-			return loginCursor(callbacks);
-		},
-		async refreshToken(credentials) {
-			return refreshCursorToken(credentials);
-		},
 		getApiKey(credentials) {
 			return credentials.access;
+		},
+		async login(callbacks) {
+			return loginCursor(callbacks);
 		},
 		modifyModels(models, credentials) {
 			const current = getCredentialModels(credentials as CursorCredentials);
@@ -125,6 +122,10 @@ export function createCursorOAuthProvider(): Omit<OAuthProviderInterface, "id"> 
 					baseUrl: getCursorRuntimeConfig().apiUrl,
 				})),
 			];
+		},
+		name: "Cursor (experimental)",
+		async refreshToken(credentials) {
+			return refreshCursorToken(credentials);
 		},
 	};
 }
@@ -162,7 +163,7 @@ async function pollCursorAuth(
 			throw new Error(`Cursor auth polling failed with status ${response.status}.`);
 		} catch (error) {
 			if (signal?.aborted) {
-				throw new Error("Cursor login cancelled");
+				throw new Error("Cursor login cancelled", { cause: error });
 			}
 			consecutiveErrors += 1;
 			if (consecutiveErrors >= 3) {
@@ -179,7 +180,7 @@ async function generatePkcePair(): Promise<{ verifier: string; challenge: string
 	const verifier = Buffer.from(random).toString("base64url");
 	const challengeDigest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
 	const challenge = Buffer.from(challengeDigest).toString("base64url");
-	return { verifier, challenge };
+	return { challenge, verifier };
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {

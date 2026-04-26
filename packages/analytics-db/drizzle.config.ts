@@ -1,4 +1,4 @@
-/* c8 ignore file */
+/* C8 ignore file */
 /**
  * Pi Analytics - Database Package
  *
@@ -10,14 +10,14 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 
 function getDatabasePath(): string {
-  return join(homedir(), ".pi", "agent", "analytics", "analytics.db");
+	return join(homedir(), ".pi", "agent", "analytics", "analytics.db");
 }
 
 export default defineConfig({
-  dialect: "sqlite",
-  dbCredentials: {
-    url: getDatabasePath(),
-  },
-  schema: "./src/schema.ts",
-  out: "./migrations",
+	dbCredentials: {
+		url: getDatabasePath(),
+	},
+	dialect: "sqlite",
+	out: "./migrations",
+	schema: "./src/schema.ts",
 });

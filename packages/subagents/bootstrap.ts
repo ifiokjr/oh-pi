@@ -17,7 +17,7 @@ export function loadSubagentConfig(): ExtensionConfig {
 	const configPath = getSubagentConfigPath();
 	try {
 		if (fs.existsSync(configPath)) {
-			return JSON.parse(fs.readFileSync(configPath, "utf-8")) as ExtensionConfig;
+			return JSON.parse(fs.readFileSync(configPath, "utf8")) as ExtensionConfig;
 		}
 	} catch {}
 	return {};
@@ -33,7 +33,7 @@ export function ensureAccessibleDir(dirPath: string): void {
 		fs.accessSync(dirPath, fs.constants.R_OK | fs.constants.W_OK);
 	} catch {
 		try {
-			fs.rmSync(dirPath, { recursive: true, force: true });
+			fs.rmSync(dirPath, { force: true, recursive: true });
 		} catch {}
 		fs.mkdirSync(dirPath, { recursive: true });
 		fs.accessSync(dirPath, fs.constants.R_OK | fs.constants.W_OK);

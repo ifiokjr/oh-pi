@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+
 import { detectLanguage } from "../src/read.js";
 
-vi.mock("@shikijs/cli", () => ({
+vi.mock<typeof import('@shikijs/cli')>(import('@shikijs/cli'), () => ({
 	codeToANSI: vi.fn().mockResolvedValue("highlighted code"),
 }));
 
-describe("detectLanguage", () => {
+describe(detectLanguage, () => {
 	it("detects TypeScript from .ts", () => {
 		expect(detectLanguage("index.ts")).toBe("typescript");
 	});

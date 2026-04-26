@@ -245,52 +245,52 @@ Example direction:
 
 ```json
 {
-  "delegatedRouting": {
-    "enabled": true,
-    "categories": {
-      "quick-discovery": {
-        "taskProfile": "planning",
-        "preferredProviders": ["groq", "google", "ollama-cloud", "openai"],
-        "maxContextTier": "medium",
-        "preferFastModels": true
-      },
-      "implementation-default": {
-        "taskProfile": "coding",
-        "preferredProviders": ["openai", "google", "ollama-cloud", "ollama"],
-        "minContextWindow": 64000
-      },
-      "visual-engineering": {
-        "taskProfile": "design",
-        "preferredProviders": ["google", "openai", "ollama-cloud", "ollama"],
-        "requireMultimodal": false,
-        "minContextWindow": 128000
-      },
-      "review-critical": {
-        "taskProfile": "planning",
-        "preferredProviders": ["openai", "google", "anthropic", "ollama-cloud"],
-        "preferHighReasoning": true,
-        "minContextWindow": 128000
-      }
-    }
-  },
-  "delegatedModelSelection": {
-    "excludedProviders": ["cursor"],
-    "excludedModels": [],
-    "preferLowerUsage": true,
-    "preferAuthenticatedProviders": true,
-    "allowSmallContextForSmallTasks": true,
-    "speedSignals": {
-      "source": "heuristic"
-    },
-    "roleOverrides": {
-      "subagent:planner": {
-        "preferredModels": ["google/gemini-3.1-pro", "openai/gpt-5.4"]
-      },
-      "colony:scout": {
-        "preferredProviders": ["groq", "google", "ollama-cloud"]
-      }
-    }
-  }
+	"delegatedRouting": {
+		"enabled": true,
+		"categories": {
+			"quick-discovery": {
+				"taskProfile": "planning",
+				"preferredProviders": ["groq", "google", "ollama-cloud", "openai"],
+				"maxContextTier": "medium",
+				"preferFastModels": true
+			},
+			"implementation-default": {
+				"taskProfile": "coding",
+				"preferredProviders": ["openai", "google", "ollama-cloud", "ollama"],
+				"minContextWindow": 64000
+			},
+			"visual-engineering": {
+				"taskProfile": "design",
+				"preferredProviders": ["google", "openai", "ollama-cloud", "ollama"],
+				"requireMultimodal": false,
+				"minContextWindow": 128000
+			},
+			"review-critical": {
+				"taskProfile": "planning",
+				"preferredProviders": ["openai", "google", "anthropic", "ollama-cloud"],
+				"preferHighReasoning": true,
+				"minContextWindow": 128000
+			}
+		}
+	},
+	"delegatedModelSelection": {
+		"excludedProviders": ["cursor"],
+		"excludedModels": [],
+		"preferLowerUsage": true,
+		"preferAuthenticatedProviders": true,
+		"allowSmallContextForSmallTasks": true,
+		"speedSignals": {
+			"source": "heuristic"
+		},
+		"roleOverrides": {
+			"subagent:planner": {
+				"preferredModels": ["google/gemini-3.1-pro", "openai/gpt-5.4"]
+			},
+			"colony:scout": {
+				"preferredProviders": ["groq", "google", "ollama-cloud"]
+			}
+		}
+	}
 }
 ```
 

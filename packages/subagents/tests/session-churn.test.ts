@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 
 const {
 	mockRenderWidget,
@@ -11,127 +11,127 @@ const {
 	mockCleanupOldChainDirs,
 	mockLoadSubagentConfig,
 } = vi.hoisted(() => ({
-	mockRenderWidget: vi.fn(),
-	mockReadStatus: vi.fn(() => null),
-	mockWatcherClose: vi.fn(),
-	mockCoalescerClear: vi.fn(),
-	mockCoalescerSchedule: vi.fn(),
 	mockCleanupAllArtifactDirs: vi.fn(),
 	mockCleanupOldArtifacts: vi.fn(),
 	mockCleanupOldChainDirs: vi.fn(),
+	mockCoalescerClear: vi.fn(),
+	mockCoalescerSchedule: vi.fn(),
 	mockLoadSubagentConfig: vi.fn(() => ({})),
+	mockReadStatus: vi.fn(() => null),
+	mockRenderWidget: vi.fn(),
+	mockWatcherClose: vi.fn(),
 }));
 
-vi.mock("node:fs", () => ({
+vi.mock<typeof import('node:fs')>(import('node:fs'), () => ({
+	accessSync: vi.fn(),
 	constants: { R_OK: 4, W_OK: 2 },
 	existsSync: vi.fn(() => false),
-	readFileSync: vi.fn(() => "{}"),
 	mkdirSync: vi.fn(),
-	accessSync: vi.fn(),
+	readFileSync: vi.fn(() => "{}"),
+	readdirSync: vi.fn(() => []),
 	rmSync: vi.fn(),
+	unlinkSync: vi.fn(),
 	watch: vi.fn(() => ({
 		on: vi.fn(),
 		unref: vi.fn(),
 		close: mockWatcherClose,
 	})),
-	readdirSync: vi.fn(() => []),
-	unlinkSync: vi.fn(),
 }));
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
-	getAgentDir: () => "/tmp/pi-agent",
+vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
 	VERSION: "test",
+	getAgentDir: () => "/tmp/pi-agent",
 }));
-vi.mock("@mariozechner/pi-tui", () => ({
+vi.mock<typeof import('@mariozechner/pi-tui')>(import('@mariozechner/pi-tui'), () => ({
 	Text: class {},
 }));
 
-vi.mock("../agents.js", () => ({
+vi.mock<typeof import('../agents.js')>(import('../agents.js'), () => ({
 	discoverAgents: () => ({ agents: [] }),
 	discoverAgentsAll: () => ({ agents: [] }),
 }));
-vi.mock("../agent-scope.js", () => ({
+vi.mock<typeof import('../agent-scope.js')>(import('../agent-scope.js'), () => ({
 	resolveExecutionAgentScope: () => "both",
 }));
-vi.mock("../settings.js", () => ({
+vi.mock<typeof import('../settings.js')>(import('../settings.js'), () => ({
 	cleanupOldChainDirs: mockCleanupOldChainDirs,
 	getStepAgents: vi.fn(() => []),
 	isParallelStep: vi.fn(() => false),
 	resolveStepBehavior: vi.fn(() => ({})),
 }));
-vi.mock("../chain-clarify.js", () => ({
+vi.mock<typeof import('../chain-clarify.js')>(import('../chain-clarify.js'), () => ({
 	ChainClarifyComponent: class {},
 }));
-vi.mock("../artifacts.js", () => ({
+vi.mock<typeof import('../artifacts.js')>(import('../artifacts.js'), () => ({
 	cleanupAllArtifactDirs: mockCleanupAllArtifactDirs,
 	cleanupOldArtifacts: mockCleanupOldArtifacts,
 	getArtifactsDir: vi.fn(() => "/tmp/artifacts"),
 }));
-vi.mock("../types.js", () => ({
+vi.mock<typeof import('../types.js')>(import('../types.js'), () => ({
 	ASYNC_DIR: "/tmp/pi-async-subagent-runs",
-	RESULTS_DIR: "/tmp/pi-async-subagent-results",
 	DEFAULT_ARTIFACT_CONFIG: { cleanupDays: 7 },
 	DEFAULT_MAX_OUTPUT: { bytes: 200 * 1024, lines: 5000 },
 	MAX_CONCURRENCY: 4,
 	MAX_PARALLEL: 8,
 	POLL_INTERVAL_MS: 250,
+	RESULTS_DIR: "/tmp/pi-async-subagent-results",
 	WIDGET_KEY: "subagent-async",
 	checkSubagentDepth: () => ({ blocked: false, depth: 0, maxDepth: 2 }),
 }));
-vi.mock("../utils.js", () => ({
-	readStatus: mockReadStatus,
+vi.mock<typeof import('../utils.js')>(import('../utils.js'), () => ({
 	findByPrefix: vi.fn(),
 	getFinalOutput: vi.fn(() => ""),
 	mapConcurrent: async <T, R>(items: T[], fn: (item: T) => Promise<R>) => Promise.all(items.map((item) => fn(item))),
+	readStatus: mockReadStatus,
 }));
-vi.mock("../completion-dedupe.js", () => ({
+vi.mock<typeof import('../completion-dedupe.js')>(import('../completion-dedupe.js'), () => ({
 	buildCompletionKey: vi.fn(() => "key"),
 	markSeenWithTtl: vi.fn(() => false),
 }));
-vi.mock("../file-coalescer.js", () => ({
+vi.mock<typeof import('../file-coalescer.js')>(import('../file-coalescer.js'), () => ({
 	createFileCoalescer: vi.fn(() => ({
-		schedule: mockCoalescerSchedule,
 		clear: mockCoalescerClear,
+		schedule: mockCoalescerSchedule,
 	})),
 }));
-vi.mock("../execution.js", () => ({
+vi.mock<typeof import('../execution.js')>(import('../execution.js'), () => ({
 	runSync: vi.fn(),
 }));
-vi.mock("../render.js", () => ({
-	renderWidget: mockRenderWidget,
+vi.mock<typeof import('../render.js')>(import('../render.js'), () => ({
 	renderSubagentResult: vi.fn(),
+	renderWidget: mockRenderWidget,
 }));
-vi.mock("../schemas.js", () => ({
-	SubagentParams: {},
+vi.mock<typeof import('../schemas.js')>(import('../schemas.js'), () => ({
 	StatusParams: {},
+	SubagentParams: {},
 }));
-vi.mock("../chain-execution.js", () => ({
+vi.mock<typeof import('../chain-execution.js')>(import('../chain-execution.js'), () => ({
 	executeChain: vi.fn(),
 }));
-vi.mock("../async-execution.js", () => ({
-	isAsyncAvailable: vi.fn(() => true),
+vi.mock<typeof import('../async-execution.js')>(import('../async-execution.js'), () => ({
 	executeAsyncChain: vi.fn(),
 	executeAsyncSingle: vi.fn(),
+	isAsyncAvailable: vi.fn(() => true),
 }));
-vi.mock("../skills.js", () => ({
+vi.mock<typeof import('../skills.js')>(import('../skills.js'), () => ({
 	discoverAvailableSkills: vi.fn(() => []),
 	normalizeSkillInput: vi.fn((value) => value),
 }));
-vi.mock("../single-output.js", () => ({
+vi.mock<typeof import('../single-output.js')>(import('../single-output.js'), () => ({
 	finalizeSingleOutput: vi.fn(),
 	injectSingleOutputInstruction: vi.fn((value) => value),
 	resolveSingleOutputPath: vi.fn(),
 }));
-vi.mock("../agent-manager.js", () => ({
+vi.mock<typeof import('../agent-manager.js')>(import('../agent-manager.js'), () => ({
 	AgentManagerComponent: class {},
 }));
-vi.mock("../run-history.js", () => ({
+vi.mock<typeof import('../run-history.js')>(import('../run-history.js'), () => ({
 	recordRun: vi.fn(),
 }));
-vi.mock("../agent-management.js", () => ({
+vi.mock<typeof import('../agent-management.js')>(import('../agent-management.js'), () => ({
 	handleManagementAction: vi.fn(),
 }));
-vi.mock("../bootstrap.js", () => ({
+vi.mock<typeof import('../bootstrap.js')>(import('../bootstrap.js'), () => ({
 	ensureAccessibleDir: vi.fn(),
 	expandTildePath: vi.fn((value: string) => value),
 	getSubagentSessionRoot: vi.fn(() => "/tmp/subagent-session-root"),
@@ -146,31 +146,6 @@ function createMockPi() {
 	const tools = new Map<string, any>();
 
 	return {
-		on(event: string, handler: (...args: any[]) => any) {
-			if (!handlers.has(event)) {
-				handlers.set(event, []);
-			}
-			handlers.get(event)?.push(handler);
-		},
-		registerTool: vi.fn((tool: any) => {
-			tools.set(tool.name, tool);
-		}),
-		registerCommand: vi.fn(),
-		registerShortcut: vi.fn(),
-		sendUserMessage: vi.fn(),
-		events: {
-			on(event: string, handler: (data: unknown) => void) {
-				if (!eventHandlers.has(event)) {
-					eventHandlers.set(event, []);
-				}
-				eventHandlers.get(event)?.push(handler);
-			},
-			emit(event: string, data: unknown) {
-				for (const handler of eventHandlers.get(event) ?? []) {
-					handler(data);
-				}
-			},
-		},
 		async _emit(event: string, ...args: any[]) {
 			for (const handler of handlers.get(event) ?? []) {
 				await handler(...args);
@@ -182,6 +157,31 @@ function createMockPi() {
 			}
 		},
 		_tools: tools,
+		events: {
+			emit(event: string, data: unknown) {
+				for (const handler of eventHandlers.get(event) ?? []) {
+					handler(data);
+				}
+			},
+			on(event: string, handler: (data: unknown) => void) {
+				if (!eventHandlers.has(event)) {
+					eventHandlers.set(event, []);
+				}
+				eventHandlers.get(event)?.push(handler);
+			},
+		},
+		on(event: string, handler: (...args: any[]) => any) {
+			if (!handlers.has(event)) {
+				handlers.set(event, []);
+			}
+			handlers.get(event)?.push(handler);
+		},
+		registerCommand: vi.fn(),
+		registerShortcut: vi.fn(),
+		registerTool: vi.fn((tool: any) => {
+			tools.set(tool.name, tool);
+		}),
+		sendUserMessage: vi.fn(),
 	};
 }
 
@@ -193,11 +193,11 @@ function createCtx() {
 			getSessionFile: () => "/tmp/session.jsonl",
 		},
 		ui: {
-			theme: {
-				fg: (_color: string, text: string) => text,
-				bold: (text: string) => text,
-			},
 			setWidget: vi.fn(),
+			theme: {
+				bold: (text: string) => text,
+				fg: (_color: string, text: string) => text,
+			},
 		},
 	};
 }
@@ -243,7 +243,7 @@ describe("subagent session churn", () => {
 		await tool.execute("tool-1", { action: "list" }, undefined, undefined, ctx);
 		await tool.execute("tool-2", { action: "list" }, undefined, undefined, ctx);
 
-		expect(mockLoadSubagentConfig).toHaveBeenCalledTimes(1);
+		expect(mockLoadSubagentConfig).toHaveBeenCalledOnce();
 	});
 
 	it("does not run global cleanup during extension registration", () => {
@@ -266,7 +266,7 @@ describe("subagent session churn", () => {
 		expect(mockCleanupOldArtifacts).not.toHaveBeenCalled();
 
 		await vi.advanceTimersByTimeAsync(250);
-		expect(mockCleanupOldChainDirs).toHaveBeenCalledTimes(1);
+		expect(mockCleanupOldChainDirs).toHaveBeenCalledOnce();
 		expect(mockCleanupAllArtifactDirs).toHaveBeenCalledWith(7);
 		expect(mockCleanupOldArtifacts).toHaveBeenCalledWith("/tmp/artifacts", 7);
 	});
@@ -295,14 +295,14 @@ describe("subagent session churn", () => {
 		await pi._emit("session_start", {}, ctx);
 
 		for (let i = 0; i < 25; i++) {
-			pi._emitEvent("subagent:started", { id: `job-${i}`, asyncDir: `/tmp/job-${i}`, agent: "scout" });
+			pi._emitEvent("subagent:started", { agent: "scout", asyncDir: `/tmp/job-${i}`, id: `job-${i}` });
 		}
 
-		expect(setIntervalSpy).toHaveBeenCalledTimes(1);
+		expect(setIntervalSpy).toHaveBeenCalledOnce();
 
 		await pi._emit("session_shutdown");
-		expect(clearIntervalSpy).toHaveBeenCalledTimes(1);
-		expect(mockWatcherClose).toHaveBeenCalledTimes(1);
+		expect(clearIntervalSpy).toHaveBeenCalledOnce();
+		expect(mockWatcherClose).toHaveBeenCalledOnce();
 	});
 
 	it("clears cleanup timers and pollers across repeated session resets", async () => {
@@ -319,8 +319,8 @@ describe("subagent session churn", () => {
 			await pi._emit("session_start", {}, ctx);
 			for (let i = 0; i < 3; i++) {
 				const id = `cycle-${cycle}-job-${i}`;
-				pi._emitEvent("subagent:started", { id, asyncDir: `/tmp/${id}`, agent: "scout" });
-				pi._emitEvent("subagent:complete", { id, success: true, asyncDir: `/tmp/${id}` });
+				pi._emitEvent("subagent:started", { agent: "scout", asyncDir: `/tmp/${id}`, id });
+				pi._emitEvent("subagent:complete", { asyncDir: `/tmp/${id}`, id, success: true });
 			}
 			await pi._emit("session_switch", {}, ctx);
 			await vi.advanceTimersByTimeAsync(250);

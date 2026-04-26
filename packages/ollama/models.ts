@@ -1,10 +1,11 @@
 import type { Api, Model, OAuthCredentials } from "@mariozechner/pi-ai";
-import { getOllamaCloudRuntimeConfig, getOllamaLocalRuntimeConfig, type OllamaRuntimeConfig } from "./config.js";
+import { getOllamaCloudRuntimeConfig, getOllamaLocalRuntimeConfig } from './config.js';
+import type { OllamaRuntimeConfig } from './config.js';
 
 export type OllamaModelSource = "local" | "cloud";
 export type OllamaLocalAvailability = "installed" | "downloadable";
 
-export type OllamaProviderModel = {
+export interface OllamaProviderModel {
 	id: string;
 	name: string;
 	reasoning: boolean;
@@ -24,7 +25,7 @@ export type OllamaProviderModel = {
 	parameterSize?: string;
 	quantization?: string;
 	capabilities?: string[];
-};
+}
 
 export type OllamaCloudProviderModel = OllamaProviderModel;
 
@@ -33,16 +34,16 @@ export type OllamaCloudCredentials = OAuthCredentials & {
 	lastModelRefresh?: number;
 };
 
-type OllamaListedModel = {
+interface OllamaListedModel {
 	id?: string;
 	object?: string;
-};
+}
 
-type OllamaShowResponse = {
+interface OllamaShowResponse {
 	capabilities?: unknown;
 	model_info?: Record<string, unknown>;
 	details?: Record<string, unknown>;
-};
+}
 
 const DEFAULT_CONTEXT_WINDOW = 128_000;
 const DEFAULT_MAX_TOKENS = 16_384;
@@ -51,16 +52,16 @@ const MAX_DISCOVERY_CONCURRENCY = 6;
 const OLLAMA_CLOUD_ZAI_REASONING_MAX_TOKENS = 131_072;
 
 const OLLAMA_OPENAI_COMPAT: NonNullable<OllamaProviderModel["compat"]> = {
-	supportsDeveloperRole: false,
-	supportsReasoningEffort: true,
+	maxTokensField: "max_tokens",
 	reasoningEffortMap: {
-		minimal: "low",
+		high: "high",
 		low: "low",
 		medium: "medium",
-		high: "high",
+		minimal: "low",
 		xhigh: "high",
 	},
-	maxTokensField: "max_tokens",
+	supportsDeveloperRole: false,
+	supportsReasoningEffort: true,
 };
 
 const OLLAMA_CLOUD_ZAI_COMPAT: Partial<NonNullable<OllamaProviderModel["compat"]>> = {
@@ -70,43 +71,302 @@ const OLLAMA_CLOUD_ZAI_COMPAT: Partial<NonNullable<OllamaProviderModel["compat"]
 };
 
 const FALLBACK_OLLAMA_CLOUD_MODELS: OllamaProviderModel[] = [
-	toOllamaModel({ id: "cogito-2.1:671b", source: "cloud", reasoning: true, input: ["text"], contextWindow: 163_840, maxTokens: 20_480 }),
-	toOllamaModel({ id: "deepseek-v3.1:671b", source: "cloud", reasoning: true, input: ["text"], contextWindow: 163_840, maxTokens: 20_480 }),
-	toOllamaModel({ id: "deepseek-v3.2", source: "cloud", reasoning: true, input: ["text"], contextWindow: 163_840, maxTokens: 20_480 }),
-	toOllamaModel({ id: "devstral-2:123b", source: "cloud", reasoning: false, input: ["text"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "devstral-small-2:24b", source: "cloud", reasoning: false, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "gemini-3-flash-preview", source: "cloud", reasoning: true, input: ["text"], contextWindow: 1_048_576, maxTokens: 65_536 }),
-	toOllamaModel({ id: "gemma3:12b", source: "cloud", reasoning: false, input: ["text", "image"], contextWindow: 131_072, maxTokens: 16_384 }),
-	toOllamaModel({ id: "gemma3:27b", source: "cloud", reasoning: false, input: ["text", "image"], contextWindow: 131_072, maxTokens: 16_384 }),
-	toOllamaModel({ id: "gemma3:4b", source: "cloud", reasoning: false, input: ["text", "image"], contextWindow: 131_072, maxTokens: 16_384 }),
-	toOllamaModel({ id: "gemma4:31b", source: "cloud", reasoning: true, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "glm-4.6", source: "cloud", reasoning: true, input: ["text"], contextWindow: 202_752, maxTokens: 25_344 }),
-	toOllamaModel({ id: "glm-4.7", source: "cloud", reasoning: true, input: ["text"], contextWindow: 202_752, maxTokens: 25_344 }),
-	toOllamaModel({ id: "glm-5", source: "cloud", reasoning: true, input: ["text"], contextWindow: 202_752, maxTokens: 25_344 }),
-	toOllamaModel({ id: "glm-5.1", source: "cloud", reasoning: true, input: ["text"], contextWindow: 202_752, maxTokens: 25_344 }),
-	toOllamaModel({ id: "gpt-oss:120b", source: "cloud", reasoning: true, input: ["text"], contextWindow: 131_072, maxTokens: 16_384 }),
-	toOllamaModel({ id: "gpt-oss:20b", source: "cloud", reasoning: true, input: ["text"], contextWindow: 131_072, maxTokens: 16_384 }),
-	toOllamaModel({ id: "kimi-k2-thinking", source: "cloud", reasoning: true, input: ["text"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "kimi-k2.5", source: "cloud", reasoning: true, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "kimi-k2.6", source: "cloud", reasoning: true, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "kimi-k2:1t", source: "cloud", reasoning: false, input: ["text"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "minimax-m2", source: "cloud", reasoning: false, input: ["text"], contextWindow: 204_800, maxTokens: 25_600 }),
-	toOllamaModel({ id: "minimax-m2.1", source: "cloud", reasoning: true, input: ["text"], contextWindow: 204_800, maxTokens: 25_600 }),
-	toOllamaModel({ id: "minimax-m2.5", source: "cloud", reasoning: true, input: ["text"], contextWindow: 204_800, maxTokens: 25_600 }),
-	toOllamaModel({ id: "minimax-m2.7", source: "cloud", reasoning: true, input: ["text"], contextWindow: 204_800, maxTokens: 25_600 }),
-	toOllamaModel({ id: "ministral-3:14b", source: "cloud", reasoning: false, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "ministral-3:3b", source: "cloud", reasoning: false, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "ministral-3:8b", source: "cloud", reasoning: false, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "mistral-large-3:675b", source: "cloud", reasoning: false, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "nemotron-3-nano:30b", source: "cloud", reasoning: true, input: ["text"], contextWindow: 1_048_576, maxTokens: 65_536 }),
-	toOllamaModel({ id: "nemotron-3-super", source: "cloud", reasoning: true, input: ["text"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "qwen3-coder-next", source: "cloud", reasoning: false, input: ["text"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "qwen3-coder:480b", source: "cloud", reasoning: false, input: ["text"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "qwen3-next:80b", source: "cloud", reasoning: true, input: ["text"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "qwen3-vl:235b", source: "cloud", reasoning: true, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "qwen3-vl:235b-instruct", source: "cloud", reasoning: false, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "qwen3.5:397b", source: "cloud", reasoning: true, input: ["text", "image"], contextWindow: 262_144, maxTokens: 32_768 }),
-	toOllamaModel({ id: "rnj-1:8b", source: "cloud", reasoning: false, input: ["text"], contextWindow: 32_768, maxTokens: 16_384 }),
+	toOllamaModel({
+		contextWindow: 163_840,
+		id: "cogito-2.1:671b",
+		input: ["text"],
+		maxTokens: 20_480,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 163_840,
+		id: "deepseek-v3.1:671b",
+		input: ["text"],
+		maxTokens: 20_480,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 163_840,
+		id: "deepseek-v3.2",
+		input: ["text"],
+		maxTokens: 20_480,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "devstral-2:123b",
+		input: ["text"],
+		maxTokens: 32_768,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "devstral-small-2:24b",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 1_048_576,
+		id: "gemini-3-flash-preview",
+		input: ["text"],
+		maxTokens: 65_536,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 131_072,
+		id: "gemma3:12b",
+		input: ["text", "image"],
+		maxTokens: 16_384,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 131_072,
+		id: "gemma3:27b",
+		input: ["text", "image"],
+		maxTokens: 16_384,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 131_072,
+		id: "gemma3:4b",
+		input: ["text", "image"],
+		maxTokens: 16_384,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "gemma4:31b",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 202_752,
+		id: "glm-4.6",
+		input: ["text"],
+		maxTokens: 25_344,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 202_752,
+		id: "glm-4.7",
+		input: ["text"],
+		maxTokens: 25_344,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 202_752,
+		id: "glm-5",
+		input: ["text"],
+		maxTokens: 25_344,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 202_752,
+		id: "glm-5.1",
+		input: ["text"],
+		maxTokens: 25_344,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 131_072,
+		id: "gpt-oss:120b",
+		input: ["text"],
+		maxTokens: 16_384,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 131_072,
+		id: "gpt-oss:20b",
+		input: ["text"],
+		maxTokens: 16_384,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "kimi-k2-thinking",
+		input: ["text"],
+		maxTokens: 32_768,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "kimi-k2.5",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "kimi-k2.6",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "kimi-k2:1t",
+		input: ["text"],
+		maxTokens: 32_768,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 204_800,
+		id: "minimax-m2",
+		input: ["text"],
+		maxTokens: 25_600,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 204_800,
+		id: "minimax-m2.1",
+		input: ["text"],
+		maxTokens: 25_600,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 204_800,
+		id: "minimax-m2.5",
+		input: ["text"],
+		maxTokens: 25_600,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 204_800,
+		id: "minimax-m2.7",
+		input: ["text"],
+		maxTokens: 25_600,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "ministral-3:14b",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "ministral-3:3b",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "ministral-3:8b",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "mistral-large-3:675b",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 1_048_576,
+		id: "nemotron-3-nano:30b",
+		input: ["text"],
+		maxTokens: 65_536,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "nemotron-3-super",
+		input: ["text"],
+		maxTokens: 32_768,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "qwen3-coder-next",
+		input: ["text"],
+		maxTokens: 32_768,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "qwen3-coder:480b",
+		input: ["text"],
+		maxTokens: 32_768,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "qwen3-next:80b",
+		input: ["text"],
+		maxTokens: 32_768,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "qwen3-vl:235b",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "qwen3-vl:235b-instruct",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: false,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 262_144,
+		id: "qwen3.5:397b",
+		input: ["text", "image"],
+		maxTokens: 32_768,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
+		contextWindow: 32_768,
+		id: "rnj-1:8b",
+		input: ["text"],
+		maxTokens: 16_384,
+		reasoning: false,
+		source: "cloud",
+	}),
 ];
 
 export function getFallbackOllamaCloudModels(): OllamaProviderModel[] {
@@ -122,29 +382,34 @@ export function getCredentialModels(credentials: OllamaCloudCredentials): Ollama
 	return models.length > 0 ? sanitizeStoredModels(models) : getFallbackOllamaCloudModels();
 }
 
-export async function discoverOllamaLocalModels(options: { signal?: AbortSignal } = {}): Promise<OllamaProviderModel[] | null> {
+export async function discoverOllamaLocalModels(
+	options: { signal?: AbortSignal } = {},
+): Promise<OllamaProviderModel[] | null> {
 	return discoverOllamaModels(getOllamaLocalRuntimeConfig(), {
-		source: "local",
 		signal: options.signal,
+		source: "local",
 	});
 }
 
-export async function discoverOllamaCloudModels(apiKey?: string, options: { signal?: AbortSignal } = {}): Promise<OllamaProviderModel[] | null> {
+export async function discoverOllamaCloudModels(
+	apiKey?: string,
+	options: { signal?: AbortSignal } = {},
+): Promise<OllamaProviderModel[] | null> {
 	const config = getOllamaCloudRuntimeConfig();
 	const fallbackModels = getFallbackOllamaCloudModels();
 	const publicModels = await discoverOllamaModels(config, {
-		source: "cloud",
 		fallbackModels,
 		signal: options.signal,
+		source: "cloud",
 	});
 	if (!apiKey) {
 		return publicModels;
 	}
 	const authenticatedModels = await discoverOllamaModels(config, {
-		source: "cloud",
 		apiKey,
 		fallbackModels,
 		signal: options.signal,
+		source: "cloud",
 	}).catch(() => null);
 	return mergeDiscoveredModels(publicModels, authenticatedModels);
 }
@@ -162,8 +427,8 @@ export async function enrichOllamaCloudCredentials(
 	return {
 		...options.previous,
 		...credentials,
-		models: models ?? options.previous?.models ?? getFallbackOllamaCloudModels(),
 		lastModelRefresh: Date.now(),
+		models: models ?? options.previous?.models ?? getFallbackOllamaCloudModels(),
 	};
 }
 
@@ -174,9 +439,9 @@ export function toProviderModels(models: OllamaProviderModel[]): OllamaProviderM
 export function toDownloadableOllamaLocalModel(model: OllamaProviderModel): OllamaProviderModel {
 	return toOllamaModel({
 		...model,
-		source: "local",
 		localAvailability: "downloadable",
 		name: `${stripSourceSuffix(model.name)} (Local download)`,
+		source: "local",
 	});
 }
 
@@ -193,34 +458,36 @@ export function mergeOllamaLocalCatalog(
 			model.id,
 			toOllamaModel({
 				...model,
-				source: "local",
 				localAvailability: "installed",
 				name: `${stripSourceSuffix(model.name)} (Local)`,
+				source: "local",
 			}),
 		);
 	}
-	return [...merged.values()].sort((left, right) => left.id.localeCompare(right.id));
+	return [...merged.values()].toSorted((left, right) => left.id.localeCompare(right.id));
 }
 
-export function toOllamaModel(model: Partial<OllamaProviderModel> & Pick<OllamaProviderModel, "id">): OllamaProviderModel {
+export function toOllamaModel(
+	model: Partial<OllamaProviderModel> & Pick<OllamaProviderModel, "id">,
+): OllamaProviderModel {
 	const contextWindow = normalizePositiveInteger(model.contextWindow, DEFAULT_CONTEXT_WINDOW);
 	const maxTokens = normalizeModelMaxTokens(model, contextWindow);
 	const compatDefaults = getOllamaCompatDefaults(model);
 	return {
-		id: model.id,
-		name: applySourceSuffix(model.name?.trim() || formatDisplayName(model.id), model.source),
-		reasoning: model.reasoning ?? false,
-		input: sanitizeInput(model.input),
-		cost: model.cost ? { ...model.cost } : { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-		contextWindow,
-		maxTokens,
+		capabilities: sanitizeCapabilities(model.capabilities),
 		compat: { ...OLLAMA_OPENAI_COMPAT, ...compatDefaults, ...(model.compat ?? {}) },
-		source: model.source,
-		localAvailability: sanitizeLocalAvailability(model.localAvailability),
+		contextWindow,
+		cost: model.cost ? { ...model.cost } : { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		family: sanitizeOptionalString(model.family),
+		id: model.id,
+		input: sanitizeInput(model.input),
+		localAvailability: sanitizeLocalAvailability(model.localAvailability),
+		maxTokens,
+		name: applySourceSuffix(model.name?.trim() || formatDisplayName(model.id), model.source),
 		parameterSize: sanitizeOptionalString(model.parameterSize),
 		quantization: sanitizeOptionalString(model.quantization),
-		capabilities: sanitizeCapabilities(model.capabilities),
+		reasoning: model.reasoning ?? false,
+		source: model.source,
 	};
 }
 
@@ -243,7 +510,7 @@ async function discoverOllamaModels(
 		? listed.data
 				.map((entry) => (typeof entry?.id === "string" ? entry.id.trim() : ""))
 				.filter(Boolean)
-				.sort((left, right) => left.localeCompare(right))
+				.toSorted((left, right) => left.localeCompare(right))
 		: [];
 	if (modelIds.length === 0) {
 		return null;
@@ -251,9 +518,9 @@ async function discoverOllamaModels(
 
 	const discovered = await mapConcurrent(modelIds, MAX_DISCOVERY_CONCURRENCY, async (id) => {
 		const payload = await fetchJson<OllamaShowResponse>(config.showUrl, {
-			method: "POST",
-			headers: createDiscoveryHeaders(options.apiKey),
 			body: JSON.stringify({ model: id, verbose: true }),
+			headers: createDiscoveryHeaders(options.apiKey),
+			method: "POST",
 			signal: options.signal,
 		}).catch(() => null);
 		return normalizeDiscoveredModel(id, payload, options.source, options.fallbackModels ?? []);
@@ -269,11 +536,11 @@ function sanitizeStoredModels(models: readonly OllamaProviderModel[]): OllamaPro
 function cloneModel(model: OllamaProviderModel): OllamaProviderModel {
 	return {
 		...model,
-		input: [...model.input],
-		cost: { ...model.cost },
-		compat: model.compat ? { ...model.compat } : undefined,
-		localAvailability: model.localAvailability,
 		capabilities: model.capabilities ? [...model.capabilities] : undefined,
+		compat: model.compat ? { ...model.compat } : undefined,
+		cost: { ...model.cost },
+		input: [...model.input],
+		localAvailability: model.localAvailability,
 	};
 }
 
@@ -287,7 +554,7 @@ function normalizeDiscoveredModel(
 	if (!payload) {
 		return fallback
 			? cloneModel(fallback)
-			: toOllamaModel({ id, source, localAvailability: source === "local" ? "installed" : undefined });
+			: toOllamaModel({ id, localAvailability: source === "local" ? "installed" : undefined, source });
 	}
 	const capabilities = Array.isArray(payload.capabilities)
 		? payload.capabilities.filter((capability): capability is string => typeof capability === "string")
@@ -295,17 +562,17 @@ function normalizeDiscoveredModel(
 	const capabilitySet = new Set(capabilities.map((capability) => capability.toLowerCase()));
 	const contextWindow = extractContextWindow(payload.model_info) ?? fallback?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
 	return toOllamaModel({
-		id,
-		source,
-		localAvailability: source === "local" ? "installed" : undefined,
-		reasoning: capabilitySet.has("thinking") || fallback?.reasoning,
-		input: capabilitySet.has("vision") ? ["text", "image"] : (fallback?.input ?? ["text"]),
+		capabilities,
 		contextWindow,
-		maxTokens: fallback?.maxTokens ?? inferMaxTokens(contextWindow),
 		family: extractDetailField(payload.details, "family") ?? fallback?.family,
+		id,
+		input: capabilitySet.has("vision") ? ["text", "image"] : (fallback?.input ?? ["text"]),
+		localAvailability: source === "local" ? "installed" : undefined,
+		maxTokens: fallback?.maxTokens ?? inferMaxTokens(contextWindow),
 		parameterSize: extractDetailField(payload.details, "parameter_size") ?? fallback?.parameterSize,
 		quantization: extractDetailField(payload.details, "quantization_level") ?? fallback?.quantization,
-		capabilities,
+		reasoning: capabilitySet.has("thinking") || fallback?.reasoning,
+		source,
 	});
 }
 
@@ -384,14 +651,14 @@ function normalizePositiveInteger(value: number | undefined, fallback: number): 
 
 function formatDisplayName(id: string): string {
 	return id
-		.replace(/[-_]/g, " ")
-		.replace(/:/g, " ")
-		.replace(/\bglm\b/gi, "GLM")
-		.replace(/\bgpt\b/gi, "GPT")
-		.replace(/\boss\b/gi, "OSS")
-		.replace(/\bvl\b/gi, "VL")
-		.replace(/\brnj\b/gi, "RNJ")
-		.replace(/\b(\d+)b\b/gi, (_, size: string) => `${size.toUpperCase()}B`)
+		.replaceAll(/[-_]/g, " ")
+		.replaceAll(/:/g, " ")
+		.replaceAll(/\bglm\b/gi, "GLM")
+		.replaceAll(/\bgpt\b/gi, "GPT")
+		.replaceAll(/\boss\b/gi, "OSS")
+		.replaceAll(/\bvl\b/gi, "VL")
+		.replaceAll(/\brnj\b/gi, "RNJ")
+		.replaceAll(/\b(\d+)b\b/gi, (_, size: string) => `${size.toUpperCase()}B`)
 		.split(/\s+/)
 		.filter(Boolean)
 		.map((part) => {
@@ -421,7 +688,9 @@ function sanitizeOptionalString(value: string | undefined): string | undefined {
 	return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function sanitizeLocalAvailability(value: OllamaProviderModel["localAvailability"] | undefined): OllamaLocalAvailability | undefined {
+function sanitizeLocalAvailability(
+	value: OllamaProviderModel["localAvailability"] | undefined,
+): OllamaLocalAvailability | undefined {
 	return value === "installed" || value === "downloadable" ? value : undefined;
 }
 
@@ -458,9 +727,9 @@ async function fetchJson<T>(
 	} = {},
 ): Promise<T> {
 	const response = await fetch(url, {
-		method: options.method ?? (options.body ? "POST" : "GET"),
-		headers: options.headers,
 		body: options.body,
+		headers: options.headers,
+		method: options.method ?? (options.body ? "POST" : "GET"),
 		signal: options.signal,
 	});
 	if (!response.ok) {
@@ -483,12 +752,12 @@ function mergeDiscoveredModels(
 		merged.set(model.id, {
 			...cloneModel(existing ?? model),
 			...cloneModel(model),
-			input: [...new Set([...(existing?.input ?? []), ...model.input])] as ("text" | "image")[],
 			capabilities: sanitizeCapabilities([...(existing?.capabilities ?? []), ...(model.capabilities ?? [])]),
+			input: [...new Set([...(existing?.input ?? []), ...model.input])] as ("text" | "image")[],
 		});
 	}
 	if (merged.size > 0) {
-		return [...merged.values()].sort((left, right) => left.id.localeCompare(right.id));
+		return [...merged.values()].toSorted((left, right) => left.id.localeCompare(right.id));
 	}
 	return null;
 }

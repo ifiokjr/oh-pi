@@ -10,7 +10,7 @@ import {
 	wrapText,
 } from "./text-editor.js";
 import type { TextEditorState } from "./text-editor.js";
-import { pad, row, renderHeader, renderFooter, formatScrollInfo } from "./render-helpers.js";
+import { formatScrollInfo, pad, renderFooter, renderHeader, row } from "./render-helpers.js";
 
 export interface ModelInfo {
 	provider: string;
@@ -80,12 +80,12 @@ function parseTools(value: string): { tools?: string[]; mcp?: string[] } {
 	for (const item of items) {
 		if (item.startsWith("mcp:")) {
 			const name = item.slice(4).trim();
-			if (name) mcp.push(name);
+			if (name) {mcp.push(name);}
 		} else {
 			tools.push(item);
 		}
 	}
-	return { tools: tools.length > 0 ? tools : undefined, mcp: mcp.length > 0 ? mcp : undefined };
+	return { mcp: mcp.length > 0 ? mcp : undefined, tools: tools.length > 0 ? tools : undefined };
 }
 function parseCommaList(value: string): string[] | undefined {
 	const items = value
@@ -104,75 +104,90 @@ export function createEditState(
 	return {
 		draft: {
 			...draft,
-			tools: draft.tools ? [...draft.tools] : undefined,
+			defaultReads: draft.defaultReads ? [...draft.defaultReads] : undefined,
+			extensions: draft.extensions ? [...draft.extensions] : draft.extensions,
+			extraFields: draft.extraFields ? { ...draft.extraFields } : undefined,
 			mcpDirectTools: draft.mcpDirectTools ? [...draft.mcpDirectTools] : undefined,
 			skills: draft.skills ? [...draft.skills] : undefined,
-			extensions: draft.extensions ? [...draft.extensions] : draft.extensions,
-			defaultReads: draft.defaultReads ? [...draft.defaultReads] : undefined,
-			extraFields: draft.extraFields ? { ...draft.extraFields } : undefined,
+			tools: draft.tools ? [...draft.tools] : undefined,
 		},
-		isNew,
+		fieldEditor: createEditorState(),
 		fieldIndex: 0,
 		fieldMode: null,
-		fieldEditor: createEditorState(),
-		promptEditor: createEditorState(draft.systemPrompt ?? ""),
-		modelSearchQuery: "",
-		modelCursor: 0,
 		filteredModels: [...models],
-		thinkingCursor: 0,
-		skillSearchQuery: "",
-		skillCursor: 0,
 		filteredSkills: [...skills],
+		isNew,
+		modelCursor: 0,
+		modelSearchQuery: "",
+		promptEditor: createEditorState(draft.systemPrompt ?? ""),
+		skillCursor: 0,
+		skillSearchQuery: "",
 		skillSelected: new Set(draft.skills ?? []),
+		thinkingCursor: 0,
 	};
 }
 
 function renderFieldValue(field: EditField, state: EditState): string {
-	const draft = state.draft;
+	const {draft} = state;
 	switch (field) {
-		case "name":
+		case "name": {
 			return draft.name;
-		case "description":
+		}
+		case "description": {
 			return draft.description;
-		case "model":
+		}
+		case "model": {
 			return draft.model ?? "default";
-		case "thinking":
+		}
+		case "thinking": {
 			return draft.thinking ?? "off";
-		case "tools":
+		}
+		case "tools": {
 			return formatTools(draft);
-		case "extensions":
+		}
+		case "extensions": {
 			return draft.extensions !== undefined
 				? draft.extensions.length > 0
 					? draft.extensions.join(", ")
 					: ""
 				: "(all)";
-		case "skills":
+		}
+		case "skills": {
 			return draft.skills && draft.skills.length > 0 ? draft.skills.join(", ") : "";
-		case "output":
+		}
+		case "output": {
 			return draft.output ?? "";
-		case "reads":
+		}
+		case "reads": {
 			return draft.defaultReads && draft.defaultReads.length > 0 ? draft.defaultReads.join(", ") : "";
-		case "progress":
+		}
+		case "progress": {
 			return draft.defaultProgress ? "on" : "off";
-		case "interactive":
+		}
+		case "interactive": {
 			return draft.interactive ? "on" : "off";
-		default:
+		}
+		default: {
 			return "";
+		}
 	}
 }
 
 function applyFieldValue(field: EditField, state: EditState, value: string): void {
-	const draft = state.draft;
+	const {draft} = state;
 	switch (field) {
-		case "name":
+		case "name": {
 			draft.name = value.trim();
 			break;
-		case "description":
+		}
+		case "description": {
 			draft.description = value.trim();
 			break;
-		case "model":
+		}
+		case "model": {
 			draft.model = value.trim() || undefined;
 			break;
+		}
 		case "tools": {
 			const parsed = parseTools(value);
 			draft.tools = parsed.tools;
@@ -184,21 +199,24 @@ function applyFieldValue(field: EditField, state: EditState, value: string): voi
 			draft.extensions = trimmed === "(all)" ? undefined : (parseCommaList(trimmed) ?? []);
 			break;
 		}
-		case "skills":
+		case "skills": {
 			draft.skills = parseCommaList(value);
 			break;
+		}
 		case "output": {
 			const trimmed = value.trim();
 			draft.output = trimmed.length > 0 ? trimmed : undefined;
 			break;
 		}
-		case "reads":
+		case "reads": {
 			draft.defaultReads = parseCommaList(value);
 			break;
+		}
 		case "progress":
 		case "interactive":
-		case "prompt":
+		case "prompt": {
 			break;
+		}
 	}
 }
 
@@ -208,13 +226,13 @@ function openModelPicker(state: EditState, models: ModelInfo[]): void {
 	state.modelSearchQuery = "";
 	state.filteredModels = [...models];
 	const idx = state.filteredModels.findIndex((m) => m.fullId === state.draft.model || m.id === state.draft.model);
-	state.modelCursor = idx >= 0 ? idx : 0;
+	state.modelCursor = Math.max(idx, 0);
 }
 function openThinkingPicker(state: EditState): void {
 	state.fieldIndex = FIELD_ORDER.indexOf("thinking");
 	state.fieldMode = "thinking";
 	const idx = THINKING_LEVELS.indexOf((state.draft.thinking ?? "off") as ThinkingLevel);
-	state.thinkingCursor = idx >= 0 ? idx : 0;
+	state.thinkingCursor = Math.max(idx, 0);
 }
 function openSkillPicker(state: EditState, skills: SkillInfo[]): void {
 	state.fieldIndex = FIELD_ORDER.indexOf("skills");
@@ -229,7 +247,7 @@ function renderModelPicker(state: EditState, width: number, theme: Theme): strin
 	const lines: string[] = [];
 	lines.push(renderHeader(" Select Model ", width, theme));
 	lines.push(row("", width, theme));
-	const cursor = "\x1b[7m \x1b[27m";
+	const cursor = "\x1B[7m \x1B[27m";
 	lines.push(row(` ${theme.fg("dim", "Search: ")}${state.modelSearchQuery}${cursor}`, width, theme));
 	lines.push(row("", width, theme));
 	const currentModel = state.draft.model ?? "default";
@@ -246,7 +264,7 @@ function renderModelPicker(state: EditState, width: number, theme: Theme): strin
 			startIdx = Math.min(startIdx, list.length - maxVisible);
 		}
 		const endIdx = Math.min(startIdx + maxVisible, list.length);
-		if (startIdx > 0) lines.push(row(` ${theme.fg("dim", `  ↑ ${startIdx} more`)}`, width, theme));
+		if (startIdx > 0) {lines.push(row(` ${theme.fg("dim", `  ↑ ${startIdx} more`)}`, width, theme));}
 		for (let i = startIdx; i < endIdx; i++) {
 			const model = list[i]!;
 			const isSelected = i === state.modelCursor;
@@ -256,9 +274,9 @@ function renderModelPicker(state: EditState, width: number, theme: Theme): strin
 			lines.push(row(` ${prefix}${modelText}${provider}`, width, theme));
 		}
 		const remaining = list.length - endIdx;
-		if (remaining > 0) lines.push(row(` ${theme.fg("dim", `  ↓ ${remaining} more`)}`, width, theme));
+		if (remaining > 0) {lines.push(row(` ${theme.fg("dim", `  ↓ ${remaining} more`)}`, width, theme));}
 	}
-	while (lines.length < 19) lines.push(row("", width, theme));
+	while (lines.length < 19) {lines.push(row("", width, theme));}
 	lines.push(renderFooter(" [enter] select  [esc] cancel  type to search ", width, theme));
 	return lines;
 }
@@ -272,11 +290,11 @@ function renderThinkingPicker(state: EditState, width: number, theme: Theme): st
 	lines.push(row(` ${theme.fg("dim", "Model: ")}${theme.fg("warning", current)}`, width, theme));
 	lines.push(row("", width, theme));
 	const descriptions: Record<ThinkingLevel, string> = {
-		off: "No extended thinking",
-		minimal: "Brief reasoning",
+		high: "Deep reasoning",
 		low: "Light reasoning",
 		medium: "Moderate reasoning",
-		high: "Deep reasoning",
+		minimal: "Brief reasoning",
+		off: "No extended thinking",
 		xhigh: "Maximum reasoning (ultrathink)",
 	};
 	for (let i = 0; i < THINKING_LEVELS.length; i++) {
@@ -287,7 +305,7 @@ function renderThinkingPicker(state: EditState, width: number, theme: Theme): st
 		const desc = theme.fg("dim", ` - ${descriptions[level]}`);
 		lines.push(row(` ${prefix}${levelText}${desc}`, width, theme));
 	}
-	while (lines.length < 19) lines.push(row("", width, theme));
+	while (lines.length < 19) {lines.push(row("", width, theme));}
 	lines.push(renderFooter(" [enter] select  [esc] cancel  [↑↓] navigate ", width, theme));
 	return lines;
 }
@@ -296,7 +314,7 @@ function renderSkillPicker(state: EditState, width: number, theme: Theme): strin
 	const lines: string[] = [];
 	lines.push(renderHeader(" Select Skills ", width, theme));
 	lines.push(row("", width, theme));
-	const cursor = "\x1b[7m \x1b[27m";
+	const cursor = "\x1B[7m \x1B[27m";
 	lines.push(row(` ${theme.fg("dim", "Search: ")}${state.skillSearchQuery}${cursor}`, width, theme));
 	lines.push(row("", width, theme));
 	const selected = [...state.skillSelected].join(", ") || theme.fg("dim", "(none)");
@@ -312,7 +330,7 @@ function renderSkillPicker(state: EditState, width: number, theme: Theme): strin
 			startIdx = Math.min(startIdx, list.length - SKILL_SELECTOR_HEIGHT);
 		}
 		const endIdx = Math.min(startIdx + SKILL_SELECTOR_HEIGHT, list.length);
-		if (startIdx > 0) lines.push(row(` ${theme.fg("dim", `  ↑ ${startIdx} more`)}`, width, theme));
+		if (startIdx > 0) {lines.push(row(` ${theme.fg("dim", `  ↑ ${startIdx} more`)}`, width, theme));}
 		for (let i = startIdx; i < endIdx; i++) {
 			const skill = list[i]!;
 			const isCursor = i === state.skillCursor;
@@ -325,9 +343,9 @@ function renderSkillPicker(state: EditState, width: number, theme: Theme): strin
 			lines.push(row(` ${prefix}${checkbox} ${nameText}${sourceBadge}${desc}`, width, theme));
 		}
 		const remaining = list.length - endIdx;
-		if (remaining > 0) lines.push(row(` ${theme.fg("dim", `  ↓ ${remaining} more`)}`, width, theme));
+		if (remaining > 0) {lines.push(row(` ${theme.fg("dim", `  ↓ ${remaining} more`)}`, width, theme));}
 	}
-	while (lines.length < 19) lines.push(row("", width, theme));
+	while (lines.length < 19) {lines.push(row("", width, theme));}
 	lines.push(renderFooter(" [enter] confirm  [space] toggle  [esc] cancel ", width, theme));
 	return lines;
 }
@@ -345,7 +363,7 @@ function renderPromptEditor(state: EditState, width: number, theme: Theme): stri
 		state.promptEditor.viewportOffset,
 	);
 	const editorLines = renderEditor(state.promptEditor, textWidth, PROMPT_VIEWPORT_HEIGHT);
-	for (const line of editorLines) lines.push(row(` ${line}`, width, theme));
+	for (const line of editorLines) {lines.push(row(` ${line}`, width, theme));}
 	const scrollInfo = formatScrollInfo(
 		state.promptEditor.viewportOffset,
 		Math.max(0, wrapped.lines.length - state.promptEditor.viewportOffset - PROMPT_VIEWPORT_HEIGHT),
@@ -364,8 +382,8 @@ export function handleEditInput(
 	skills: SkillInfo[],
 ): EditInputResult | undefined {
 	if (screen === "edit") {
-		if (matchesKey(data, "ctrl+s")) return { action: "save" };
-		if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) return { action: "discard" };
+		if (matchesKey(data, "ctrl+s")) {return { action: "save" };}
+		if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) {return { action: "discard" };}
 		if (matchesKey(data, "up")) {
 			state.fieldIndex = Math.max(0, state.fieldIndex - 1);
 			return;
@@ -388,8 +406,8 @@ export function handleEditInput(
 			return { nextScreen: "edit-field" };
 		}
 		if (data === " " && (field === "progress" || field === "interactive")) {
-			if (field === "progress") state.draft.defaultProgress = !state.draft.defaultProgress;
-			if (field === "interactive") state.draft.interactive = !state.draft.interactive;
+			if (field === "progress") {state.draft.defaultProgress = !state.draft.defaultProgress;}
+			if (field === "interactive") {state.draft.interactive = !state.draft.interactive;}
 			return;
 		}
 		if (matchesKey(data, "return")) {
@@ -409,7 +427,7 @@ export function handleEditInput(
 				state.promptEditor = createEditorState(state.draft.systemPrompt ?? "");
 				return { nextScreen: "edit-prompt" };
 			}
-			if (field === "progress" || field === "interactive") return;
+			if (field === "progress" || field === "interactive") {return;}
 			state.fieldMode = "text";
 			state.fieldEditor = createEditorState(renderFieldValue(field, state));
 			return { nextScreen: "edit-field" };
@@ -424,23 +442,23 @@ export function handleEditInput(
 			}
 			if (matchesKey(data, "return")) {
 				const selected = state.filteredModels[state.modelCursor];
-				if (selected) state.draft.model = selected.fullId;
+				if (selected) {state.draft.model = selected.fullId;}
 				state.fieldMode = null;
 				return { nextScreen: "edit" };
 			}
 			if (matchesKey(data, "up")) {
 				if (state.filteredModels.length > 0)
-					state.modelCursor = state.modelCursor === 0 ? state.filteredModels.length - 1 : state.modelCursor - 1;
+					{state.modelCursor = state.modelCursor === 0 ? state.filteredModels.length - 1 : state.modelCursor - 1;}
 				return;
 			}
 			if (matchesKey(data, "down")) {
 				if (state.filteredModels.length > 0)
-					state.modelCursor = state.modelCursor === state.filteredModels.length - 1 ? 0 : state.modelCursor + 1;
+					{state.modelCursor = state.modelCursor === state.filteredModels.length - 1 ? 0 : state.modelCursor + 1;}
 				return;
 			}
 			if (matchesKey(data, "backspace")) {
-				if (state.modelSearchQuery.length > 0) state.modelSearchQuery = state.modelSearchQuery.slice(0, -1);
-			} else if (data.length === 1 && data.charCodeAt(0) >= 32) state.modelSearchQuery += data;
+				if (state.modelSearchQuery.length > 0) {state.modelSearchQuery = state.modelSearchQuery.slice(0, -1);}
+			} else if (data.length === 1 && data.codePointAt(0) >= 32) {state.modelSearchQuery += data;}
 			const query = state.modelSearchQuery.toLowerCase();
 			state.filteredModels = query
 				? models.filter(
@@ -488,24 +506,24 @@ export function handleEditInput(
 			if (data === " ") {
 				const skill = state.filteredSkills[state.skillCursor];
 				if (skill) {
-					if (state.skillSelected.has(skill.name)) state.skillSelected.delete(skill.name);
-					else state.skillSelected.add(skill.name);
+					if (state.skillSelected.has(skill.name)) {state.skillSelected.delete(skill.name);}
+					else {state.skillSelected.add(skill.name);}
 				}
 				return;
 			}
 			if (matchesKey(data, "up")) {
 				if (state.filteredSkills.length > 0)
-					state.skillCursor = state.skillCursor === 0 ? state.filteredSkills.length - 1 : state.skillCursor - 1;
+					{state.skillCursor = state.skillCursor === 0 ? state.filteredSkills.length - 1 : state.skillCursor - 1;}
 				return;
 			}
 			if (matchesKey(data, "down")) {
 				if (state.filteredSkills.length > 0)
-					state.skillCursor = state.skillCursor === state.filteredSkills.length - 1 ? 0 : state.skillCursor + 1;
+					{state.skillCursor = state.skillCursor === state.filteredSkills.length - 1 ? 0 : state.skillCursor + 1;}
 				return;
 			}
 			if (matchesKey(data, "backspace")) {
-				if (state.skillSearchQuery.length > 0) state.skillSearchQuery = state.skillSearchQuery.slice(0, -1);
-			} else if (data.length === 1 && data.charCodeAt(0) >= 32) state.skillSearchQuery += data;
+				if (state.skillSearchQuery.length > 0) {state.skillSearchQuery = state.skillSearchQuery.slice(0, -1);}
+			} else if (data.length === 1 && data.codePointAt(0) >= 32) {state.skillSearchQuery += data;}
 			const query = state.skillSearchQuery.toLowerCase();
 			state.filteredSkills = query
 				? skills.filter(
@@ -525,12 +543,12 @@ export function handleEditInput(
 			state.fieldMode = null;
 			return { nextScreen: "edit" };
 		}
-		if (matchesKey(data, "tab")) return;
+		if (matchesKey(data, "tab")) {return;}
 		const innerW = width - 2;
 		const labelWidth = 12;
 		const textWidth = Math.max(10, innerW - labelWidth - 6);
 		const nextState = handleEditorInput(state.fieldEditor, data, textWidth);
-		if (nextState) state.fieldEditor = nextState;
+		if (nextState) {state.fieldEditor = nextState;}
 		return;
 	}
 	if (screen === "edit-prompt") {
@@ -556,17 +574,17 @@ export function handleEditInput(
 			return;
 		}
 		const nextState = handleEditorInput(state.promptEditor, data, textWidth, { multiLine: true });
-		if (nextState) state.promptEditor = nextState;
+		if (nextState) {state.promptEditor = nextState;}
 		return;
 	}
 	return;
 }
 
 export function renderEdit(screen: EditScreen, state: EditState, width: number, theme: Theme): string[] {
-	if (screen === "edit-field" && state.fieldMode === "model") return renderModelPicker(state, width, theme);
-	if (screen === "edit-field" && state.fieldMode === "thinking") return renderThinkingPicker(state, width, theme);
-	if (screen === "edit-field" && state.fieldMode === "skills") return renderSkillPicker(state, width, theme);
-	if (screen === "edit-prompt") return renderPromptEditor(state, width, theme);
+	if (screen === "edit-field" && state.fieldMode === "model") {return renderModelPicker(state, width, theme);}
+	if (screen === "edit-field" && state.fieldMode === "thinking") {return renderThinkingPicker(state, width, theme);}
+	if (screen === "edit-field" && state.fieldMode === "skills") {return renderSkillPicker(state, width, theme);}
+	if (screen === "edit-prompt") {return renderPromptEditor(state, width, theme);}
 	const lines: string[] = [];
 	const scopeBadge = state.draft.source === "user" ? "[user]" : "[proj]";
 	const label = state.isNew ? " [new]" : "";
@@ -577,7 +595,7 @@ export function renderEdit(screen: EditScreen, state: EditState, width: number, 
 	const valueWidth = Math.max(10, innerW - labelWidth - 6);
 	for (let i = 0; i < FIELD_ORDER.length; i++) {
 		const field = FIELD_ORDER[i]!;
-		if (field === "prompt") break;
+		if (field === "prompt") {break;}
 		const isFocused = i === state.fieldIndex;
 		const prefix = isFocused ? theme.fg("accent", "▸ ") : "  ";
 		const labelText = pad(`${field[0]!.toUpperCase()}${field.slice(1)}:`, labelWidth);
@@ -615,10 +633,10 @@ export function renderEdit(screen: EditScreen, state: EditState, width: number, 
 	const previewWidth = innerW - 2;
 	const wrapped = wrapText(state.draft.systemPrompt ?? "", previewWidth);
 	const previewLines = wrapped.lines.slice(0, 4);
-	for (const line of previewLines) lines.push(row(` ${line}`, width, theme));
-	for (let i = previewLines.length; i < 4; i++) lines.push(row("", width, theme));
-	if (state.error) lines.push(row(` ${theme.fg("error", state.error)}`, width, theme));
-	else lines.push(row("", width, theme));
+	for (const line of previewLines) {lines.push(row(` ${line}`, width, theme));}
+	for (let i = previewLines.length; i < 4; i++) {lines.push(row("", width, theme));}
+	if (state.error) {lines.push(row(` ${theme.fg("error", state.error)}`, width, theme));}
+	else {lines.push(row("", width, theme));}
 	lines.push(renderFooter(" [ctrl+s] save  [esc] back ", width, theme));
 	return lines;
 }

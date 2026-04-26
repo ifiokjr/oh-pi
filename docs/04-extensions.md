@@ -247,15 +247,11 @@ Extension state should be stored in tool result `details` to support branching:
 ```typescript
 // Rebuild state from session
 pi.on("session_start", async (_event, ctx) => {
-  for (const entry of ctx.sessionManager.getBranch()) {
-    if (
-      entry.type === "message" &&
-      entry.message.role === "toolResult" &&
-      entry.message.toolName === "my_tool"
-    ) {
-      state = entry.message.details?.state;
-    }
-  }
+	for (const entry of ctx.sessionManager.getBranch()) {
+		if (entry.type === "message" && entry.message.role === "toolResult" && entry.message.toolName === "my_tool") {
+			state = entry.message.details?.state;
+		}
+	}
 });
 ```
 

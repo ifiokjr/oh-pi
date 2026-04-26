@@ -154,21 +154,21 @@ In other words, the source of truth is not some in-memory session object; it is 
 
 Below is the practical contract for each subcommand.
 
-| Command | Purpose | Model handoff | Filesystem side effects |
-| --- | --- | --- | --- |
-| `/spec` or `/spec:status` | Show current workflow state | No | None |
-| `/spec:help` | Show available commands and guidance | No | None |
-| `/spec:init` | Create the base workflow scaffold | No | Creates missing `.specify/` files |
-| `/spec:constitution [principles]` | Create or revise the project constitution | Yes | Ensures base scaffold exists |
-| `/spec:specify <feature description>` | Create the next numbered feature workspace | Yes | Ensures scaffold, creates `specs/###-.../`, may create/switch git branch |
-| `/spec:clarify [focus]` | Ask and resolve high-impact ambiguities in the active spec | Yes | Ensures scaffold exists |
-| `/spec:checklist [domain]` | Generate or refine requirement-quality checklists | Yes | Ensures scaffold exists |
-| `/spec:plan [technical context]` | Build the implementation plan and design artifacts | Yes | Ensures scaffold, creates `plan.md` if missing |
-| `/spec:tasks [context]` | Generate an executable `tasks.md` | Yes | Ensures scaffold exists |
-| `/spec:analyze [focus]` | Run a read-only consistency review | Yes | Ensures scaffold exists |
-| `/spec:implement [focus]` | Execute tasks and update completion state | Yes | Ensures scaffold exists; prompts if checklists are incomplete |
-| `/spec:list` | List known feature directories | No | None |
-| `/spec:next` | Show the next recommended step | No | None |
+| Command                               | Purpose                                                    | Model handoff | Filesystem side effects                                                  |
+| ------------------------------------- | ---------------------------------------------------------- | ------------- | ------------------------------------------------------------------------ |
+| `/spec` or `/spec:status`             | Show current workflow state                                | No            | None                                                                     |
+| `/spec:help`                          | Show available commands and guidance                       | No            | None                                                                     |
+| `/spec:init`                          | Create the base workflow scaffold                          | No            | Creates missing `.specify/` files                                        |
+| `/spec:constitution [principles]`     | Create or revise the project constitution                  | Yes           | Ensures base scaffold exists                                             |
+| `/spec:specify <feature description>` | Create the next numbered feature workspace                 | Yes           | Ensures scaffold, creates `specs/###-.../`, may create/switch git branch |
+| `/spec:clarify [focus]`               | Ask and resolve high-impact ambiguities in the active spec | Yes           | Ensures scaffold exists                                                  |
+| `/spec:checklist [domain]`            | Generate or refine requirement-quality checklists          | Yes           | Ensures scaffold exists                                                  |
+| `/spec:plan [technical context]`      | Build the implementation plan and design artifacts         | Yes           | Ensures scaffold, creates `plan.md` if missing                           |
+| `/spec:tasks [context]`               | Generate an executable `tasks.md`                          | Yes           | Ensures scaffold exists                                                  |
+| `/spec:analyze [focus]`               | Run a read-only consistency review                         | Yes           | Ensures scaffold exists                                                  |
+| `/spec:implement [focus]`             | Execute tasks and update completion state                  | Yes           | Ensures scaffold exists; prompts if checklists are incomplete            |
+| `/spec:list`                          | List known feature directories                             | No            | None                                                                     |
+| `/spec:next`                          | Show the next recommended step                             | No            | None                                                                     |
 
 ### Input rules
 

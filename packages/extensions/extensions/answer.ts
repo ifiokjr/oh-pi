@@ -13,8 +13,10 @@
  * - Uses `completeSimple` for LLM-powered question extraction
  */
 
-import { type QnAQuestion, type QnAResult, type QnATemplate, QnATuiComponent } from "@ifi/pi-shared-qna";
-import { completeSimple, type UserMessage } from "@mariozechner/pi-ai";
+import { QnATuiComponent } from '@ifi/pi-shared-qna';
+import type { QnAQuestion, QnAResult, QnATemplate } from '@ifi/pi-shared-qna';
+import { completeSimple } from '@mariozechner/pi-ai';
+import type { UserMessage } from '@mariozechner/pi-ai';
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader } from "@mariozechner/pi-coding-agent";
 
@@ -41,7 +43,7 @@ const EXTRACTION_SYSTEM_PROMPT = [
 	"",
 	"Example output — question with choices found in a detailed section:",
 	"```json",
-	'[{"question": "What is the most expensive bug this system could ship?", "context": "Rank the options below by impact.", "fullContext": "What is the most expensive bug this system could ship?\\n\\nRank these:\\n\\na. Wrong version bump (e.g. patch instead of major)\\nb. Missing package in release (e.g. dependency not propagated)\\nc. Breaking dependency graph (e.g. circular propagation, non-termination)\\nd. Config parsing silently ignores invalid input\\ne. Adapter produces wrong manifest edits (e.g. corrupts Cargo.toml)", "options": [{"label": "a. Wrong version bump", "description": "e.g. patch instead of major"}, {"label": "b. Missing package in release", "description": "e.g. dependency not propagated"}, {"label": "c. Breaking dependency graph", "description": "e.g. circular propagation"}, {"label": "d. Config parsing silently ignores invalid input"}, {"label": "e. Adapter produces wrong manifest edits", "description": "e.g. corrupts Cargo.toml"}]}]',
+	String.raw`[{"question": "What is the most expensive bug this system could ship?", "context": "Rank the options below by impact.", "fullContext": "What is the most expensive bug this system could ship?\n\nRank these:\n\na. Wrong version bump (e.g. patch instead of major)\nb. Missing package in release (e.g. dependency not propagated)\nc. Breaking dependency graph (e.g. circular propagation, non-termination)\nd. Config parsing silently ignores invalid input\ne. Adapter produces wrong manifest edits (e.g. corrupts Cargo.toml)", "options": [{"label": "a. Wrong version bump", "description": "e.g. patch instead of major"}, {"label": "b. Missing package in release", "description": "e.g. dependency not propagated"}, {"label": "c. Breaking dependency graph", "description": "e.g. circular propagation"}, {"label": "d. Config parsing silently ignores invalid input"}, {"label": "e. Adapter produces wrong manifest edits", "description": "e.g. corrupts Cargo.toml"}]}]`,
 	"```",
 	"",
 	"Example output — single recommendation without explicit choices:",
@@ -77,7 +79,7 @@ interface ExtractedQuestion {
 	question: string;
 	context?: string;
 	fullContext?: string;
-	options?: Array<{ label: string; description: string; recommended?: boolean }>;
+	options?: { label: string; description: string; recommended?: boolean }[];
 }
 
 interface AnswerState {
@@ -91,7 +93,7 @@ function isCustomEntry(
 	customType: string,
 ): entry is { type: "custom"; customType: string; data?: unknown } {
 	return (
-		!!entry &&
+		Boolean(entry) &&
 		typeof entry === "object" &&
 		(entry as { type?: string }).type === "custom" &&
 		(entry as { customType?: string }).customType === customType
@@ -160,8 +162,8 @@ function normalizeExtractedQuestions(raw: unknown): ExtractedQuestion[] {
 							typeof opt === "object" && opt !== null && typeof opt.label === "string",
 					)
 					.map((opt) => ({
-						label: (opt.label as string).trim(),
 						description: typeof opt.description === "string" ? opt.description.trim() : "",
+						label: (opt.label as string).trim(),
 						recommended: opt.recommended === true,
 					}))
 					.filter((opt) => opt.label.length > 0);
@@ -175,8 +177,8 @@ function normalizeExtractedQuestions(raw: unknown): ExtractedQuestion[] {
 			if (!question.options && typeof item.recommendation === "string" && item.recommendation.trim().length > 0) {
 				question.options = [
 					{
-						label: (item.recommendation as string).trim(),
 						description: "",
+						label: (item.recommendation as string).trim(),
 						recommended: true,
 					},
 				];
@@ -188,10 +190,10 @@ function normalizeExtractedQuestions(raw: unknown): ExtractedQuestion[] {
 
 function toQnAQuestions(extracted: ExtractedQuestion[]): QnAQuestion[] {
 	return extracted.map((q) => ({
-		question: q.question,
 		context: q.context,
 		fullContext: q.fullContext,
 		options: q.options,
+		question: q.question,
 	}));
 }
 
@@ -220,14 +222,14 @@ async function extractQuestions(
 	}
 
 	const userMessage: UserMessage = {
-		role: "user",
 		content: [{ type: "text", text }],
+		role: "user",
 		timestamp: Date.now(),
 	};
 
 	const response = await completeSimple(
 		ctx.model,
-		{ systemPrompt: EXTRACTION_SYSTEM_PROMPT, messages: [userMessage] },
+		{ messages: [userMessage], systemPrompt: EXTRACTION_SYSTEM_PROMPT },
 		{ apiKey: auth.apiKey, headers: auth.headers, reasoning: "low" },
 	);
 
@@ -262,7 +264,7 @@ async function extractQuestions(
 // ── Auto-detect question presence ───────────────────────────────────────────
 
 const QUESTION_PATTERNS = [
-	/\?\s*$/m, // line ending with ?
+	/\?\s*$/m, // Line ending with ?
 	/\b(suggest|recommend|prefer|choose|pick|decide|should we|would you|do you want|which)\b/i,
 ];
 
@@ -311,8 +313,7 @@ async function runAnswerFlow(
 	}
 
 	// Show the QnA component
-	const result = await ctx.ui.custom<QnAResult | null>((tui, theme, _kb, done) => {
-		return new QnATuiComponent(toQnAQuestions(questions), tui, done, {
+	const result = await ctx.ui.custom<QnAResult | null>((tui, theme, _kb, done) => new QnATuiComponent(toQnAQuestions(questions), tui, done, {
 			title: "Answer",
 			templates: DEFAULT_TEMPLATES,
 			accentColor: (text) => theme.fg("accent", text),
@@ -321,8 +322,7 @@ async function runAnswerFlow(
 			mutedColor: (text) => theme.fg("muted", text),
 			dimColor: (text) => theme.fg("dim", text),
 			boldText: (text) => theme.bold(text),
-		});
-	});
+		}));
 
 	if (!result) {
 		ctx.ui.notify("Answer cancelled", "info");
@@ -378,7 +378,7 @@ export default function answerExtension(pi: ExtensionAPI) {
 
 	/** Handle auto-detect after agent turn. Exported for direct test coverage. */
 	function handleAutoDetect(
-		event: { messages: Array<{ role: string; stopReason?: string; content: Array<{ type: string; text?: string }> }> },
+		event: { messages: { role: string; stopReason?: string; content: Array<{ type: string; text?: string }> }[] },
 		ctx: ExtensionContext | ExtensionCommandContext,
 	) {
 		if (!autoDetectEnabled || inProgressRef.value) {
@@ -409,7 +409,7 @@ export default function answerExtension(pi: ExtensionAPI) {
 		}
 
 		runAutoDetectFlow(ctx, pi, lastAssistantText, inProgressRef).catch(() => {
-			// patch-coverage-ignore
+			// Patch-coverage-ignore
 			// Error already handled inside runAnswerFlow
 		});
 	}

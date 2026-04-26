@@ -36,7 +36,7 @@ export function flattenSteps(steps: RunnerStep[]): RunnerSubagentStep[] {
 	const flat: RunnerSubagentStep[] = [];
 	for (const step of steps) {
 		if (isParallelGroup(step)) {
-			for (const task of step.parallel) flat.push(task);
+			for (const task of step.parallel) {flat.push(task);}
 		} else {
 			flat.push(step);
 		}
@@ -74,7 +74,7 @@ export async function mapConcurrent<T, R>(
 
 /** Aggregate outputs from parallel tasks into a single string for {previous} */
 export function aggregateParallelOutputs(
-	results: Array<{ agent: string; output: string; exitCode: number | null; error?: string }>,
+	results: { agent: string; output: string; exitCode: number | null; error?: string }[],
 ): string {
 	return results
 		.map((r, i) => {
