@@ -1,6 +1,7 @@
 import { EXTENSIONS, getLocale, selectLanguage } from "@ifi/oh-pi-core";
 import { runConfigWizard, type WizardBaseConfig } from "./tui/config-wizard.js";
 import { confirmApply } from "./tui/confirm-apply.js";
+import { runInstaller } from "./tui/installer.js";
 import { selectMode } from "./tui/mode-select.js";
 import { selectPreset } from "./tui/preset-select.js";
 import { setupProviders } from "./tui/provider-setup.js";
@@ -9,11 +10,21 @@ import { welcome } from "./tui/welcome.js";
 import type { OhPConfigWithRouting } from "./types.js";
 import { detectEnv, type EnvInfo } from "./utils/detect.js";
 
+export interface RunOptions {
+	yes?: boolean;
+}
+
 /**
  * Main entry point — orchestrates the full oh-pi setup flow:
  * detect environment → select language → welcome → choose mode → configure → apply.
  */
-export async function run() {
+export async function run(options: RunOptions = {}) {
+	if (!options.yes && process.stdin.isTTY) {
+		// New interactive installer (default in TTY environments — breaking change)
+		await runInstaller();
+		return;
+	}
+	// Non-interactive legacy wizard path (used with --yes or in CI/tests)
 	const env = await detectEnv();
 	await selectLanguage();
 	welcome(env);
