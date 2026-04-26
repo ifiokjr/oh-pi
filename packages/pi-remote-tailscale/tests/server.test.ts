@@ -64,7 +64,7 @@ function createMockServer(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 afterEach(() => {
-	vi.restoreAllMocks();
+	vi.clearAllMocks();
 	delete process.env.PI_REMOTE_TAILSCALE_MODE;
 });
 

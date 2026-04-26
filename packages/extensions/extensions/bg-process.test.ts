@@ -32,7 +32,7 @@ vi.mock("@mariozechner/pi-ai", () => ({
 	}),
 }));
 
-vi.mock("@ifi/pi-background-tasks", async () => await import("../../background-tasks/index.ts"));
+vi.mock("@ifi/pi-background-tasks", async (importOriginal) => await importOriginal());
 
 vi.mock("@sinclair/typebox", () => ({
 	Type: {

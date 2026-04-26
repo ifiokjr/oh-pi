@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { ExternalLink, Github, Menu, Search, X } from "lucide-react";
+import { Code, ExternalLink, Menu, Search, X } from "lucide-react";
 import type { MdxPageData } from "@/hooks/useMdxPages";
 import { SearchDialog } from "@/components/SearchDialog";
 
@@ -124,7 +124,7 @@ export function Layout({ children, pages }: LayoutProps) {
 						rel="noopener noreferrer"
 						className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
 					>
-						<Github className="h-4 w-4" />
+						<Code className="h-4 w-4" />
 						GitHub
 						<ExternalLink className="h-3 w-3" />
 					</a>
@@ -165,7 +165,7 @@ export function Layout({ children, pages }: LayoutProps) {
 						rel="noopener noreferrer"
 						className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors ml-3"
 					>
-						<Github className="h-3.5 w-3.5" />
+						<Code className="h-3.5 w-3.5" />
 						ifiokjr/oh-pi
 					</a>
 				</header>

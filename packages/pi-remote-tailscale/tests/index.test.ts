@@ -77,7 +77,7 @@ beforeEach(() => {
 afterEach(async () => {
 	delete (globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_QR_LOADER__?: () => Promise<any> })
 		.__PI_REMOTE_TAILSCALE_QR_LOADER__;
-	vi.restoreAllMocks();
+	vi.clearAllMocks();
 	vi.useRealTimers();
 	vi.resetModules();
 });

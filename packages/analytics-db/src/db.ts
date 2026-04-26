@@ -76,7 +76,7 @@ export function closeDatabase(): void {
 export function createSession(data: schema.NewSession): schema.Session {
 	const db = getDatabase();
 	const result = db.insert(schema.sessions).values(data).returning();
-	return result[0];
+	return result.get();
 }
 
 export function endSession(sessionId: string): void {
@@ -86,27 +86,33 @@ export function endSession(sessionId: string): void {
 
 export function getSessionById(id: string): schema.Session | null {
 	const db = getDatabase();
-	const result = db.query.sessions.findFirst({
-		where: eq(schema.sessions.id, id),
-	});
+	const result = db.query.sessions
+		.findFirst({
+			where: eq(schema.sessions.id, id),
+		})
+		.sync();
 	return result ?? null;
 }
 
 export function getRecentSessions(limit: number = 50): schema.Session[] {
 	const db = getDatabase();
-	return db.query.sessions.findMany({
-		limit,
-		orderBy: desc(schema.sessions.startedAt),
-	});
+	return db.query.sessions
+		.findMany({
+			limit,
+			orderBy: desc(schema.sessions.startedAt),
+		})
+		.sync();
 }
 
 // ─── Codebase Operations ─────────────────────────────────────────────────────
 
 export function upsertCodebase(data: schema.NewCodebase): schema.Codebase {
 	const db = getDatabase();
-	const existing = db.query.codebases.findFirst({
-		where: eq(schema.codebases.id, data.id),
-	});
+	const existing = db.query.codebases
+		.findFirst({
+			where: eq(schema.codebases.id, data.id),
+		})
+		.sync();
 
 	if (existing) {
 		const result = db
@@ -121,36 +127,42 @@ export function upsertCodebase(data: schema.NewCodebase): schema.Codebase {
 			})
 			.where(eq(schema.codebases.id, data.id))
 			.returning();
-		return result[0];
+		return result.get();
 	}
 
 	const result = db.insert(schema.codebases).values(data).returning();
-	return result[0];
+	return result.get();
 }
 
 export function getCodebaseByPath(absolutePath: string): schema.Codebase | null {
 	const db = getDatabase();
-	const result = db.query.codebases.findFirst({
-		where: eq(schema.codebases.absolutePath, absolutePath),
-	});
+	const result = db.query.codebases
+		.findFirst({
+			where: eq(schema.codebases.absolutePath, absolutePath),
+		})
+		.sync();
 	return result ?? null;
 }
 
 export function getTopCodebasesByCost(limit: number = 20): schema.Codebase[] {
 	const db = getDatabase();
-	return db.query.codebases.findMany({
-		limit,
-		orderBy: desc(schema.codebases.totalCost),
-	});
+	return db.query.codebases
+		.findMany({
+			limit,
+			orderBy: desc(schema.codebases.totalCost),
+		})
+		.sync();
 }
 
 // ─── Provider Operations ─────────────────────────────────────────────────────
 
 export function upsertProvider(data: schema.NewProvider): schema.Provider {
 	const db = getDatabase();
-	const existing = db.query.providers.findFirst({
-		where: eq(schema.providers.id, data.id),
-	});
+	const existing = db.query.providers
+		.findFirst({
+			where: eq(schema.providers.id, data.id),
+		})
+		.sync();
 
 	if (existing) {
 		const result = db
@@ -164,27 +176,31 @@ export function upsertProvider(data: schema.NewProvider): schema.Provider {
 			})
 			.where(eq(schema.providers.id, data.id))
 			.returning();
-		return result[0];
+		return result.get();
 	}
 
 	const result = db.insert(schema.providers).values(data).returning();
-	return result[0];
+	return result.get();
 }
 
 export function getAllProviders(): schema.Provider[] {
 	const db = getDatabase();
-	return db.query.providers.findMany({
-		orderBy: desc(schema.providers.lastUsedAt),
-	});
+	return db.query.providers
+		.findMany({
+			orderBy: desc(schema.providers.lastUsedAt),
+		})
+		.sync();
 }
 
 // ─── Model Operations ───────────────────────────────────────────────────────
 
 export function upsertModel(data: schema.NewModel): schema.Model {
 	const db = getDatabase();
-	const existing = db.query.models.findFirst({
-		where: eq(schema.models.id, data.id),
-	});
+	const existing = db.query.models
+		.findFirst({
+			where: eq(schema.models.id, data.id),
+		})
+		.sync();
 
 	if (existing) {
 		const newTurns = data.totalTurns ?? 1;
@@ -213,28 +229,32 @@ export function upsertModel(data: schema.NewModel): schema.Model {
 			})
 			.where(eq(schema.models.id, data.id))
 			.returning();
-		return result[0];
+		return result.get();
 	}
 
 	const result = db.insert(schema.models).values(data).returning();
-	return result[0];
+	return result.get();
 }
 
 export function getAllModels(): schema.Model[] {
 	const db = getDatabase();
-	return db.query.models.findMany({
-		orderBy: desc(schema.models.lastUsedAt),
-		with: { provider: true },
-	});
+	return db.query.models
+		.findMany({
+			orderBy: desc(schema.models.lastUsedAt),
+			with: { provider: true },
+		})
+		.sync();
 }
 
 export function getTopModelsByCost(limit: number = 20): schema.Model[] {
 	const db = getDatabase();
-	return db.query.models.findMany({
-		limit,
-		orderBy: desc(schema.models.totalCost),
-		with: { provider: true },
-	});
+	return db.query.models
+		.findMany({
+			limit,
+			orderBy: desc(schema.models.totalCost),
+			with: { provider: true },
+		})
+		.sync();
 }
 
 // ─── Turn Operations ─────────────────────────────────────────────────────────
@@ -246,7 +266,7 @@ export function recordTurn(data: schema.NewTurn): schema.Turn {
 	// Update parent aggregations synchronously
 	updateAggregationsFromTurn(data);
 
-	return result[0];
+	return result.get();
 }
 
 function updateAggregationsFromTurn(turn: schema.NewTurn): void {
@@ -287,24 +307,28 @@ function updateAggregationsFromTurn(turn: schema.NewTurn): void {
 export function recordRateLimitSnapshot(data: schema.NewRateLimitSnapshot): schema.RateLimitSnapshot {
 	const db = getDatabase();
 	const result = db.insert(schema.rateLimitSnapshots).values(data).returning();
-	return result[0];
+	return result.get();
 }
 
 export function getLatestRateLimitSnapshots(providerId?: string): schema.RateLimitSnapshot[] {
 	const db = getDatabase();
 
 	if (providerId) {
-		return db.query.rateLimitSnapshots.findMany({
-			limit: 10,
-			orderBy: desc(schema.rateLimitSnapshots.recordedAt),
-			where: eq(schema.rateLimitSnapshots.providerId, providerId),
-		});
+		return db.query.rateLimitSnapshots
+			.findMany({
+				limit: 10,
+				orderBy: desc(schema.rateLimitSnapshots.recordedAt),
+				where: eq(schema.rateLimitSnapshots.providerId, providerId),
+			})
+			.sync();
 	}
 
-	return db.query.rateLimitSnapshots.findMany({
-		limit: 40,
-		orderBy: desc(schema.rateLimitSnapshots.recordedAt),
-	});
+	return db.query.rateLimitSnapshots
+		.findMany({
+			limit: 40,
+			orderBy: desc(schema.rateLimitSnapshots.recordedAt),
+		})
+		.sync();
 }
 
 // ─── Daily Stats Aggregation ─────────────────────────────────────────────────
@@ -323,9 +347,11 @@ function upsertDailyStat(
 	const weekBucket = getWeekBucket(dayBucket);
 	const monthBucket = getMonthBucket(dayBucket);
 
-	const existing = db.query.dailyStats.findFirst({
-		where: eq(schema.dailyStats.dayBucket, dayBucket),
-	});
+	const existing = db.query.dailyStats
+		.findFirst({
+			where: eq(schema.dailyStats.dayBucket, dayBucket),
+		})
+		.sync();
 
 	if (existing) {
 		db.update(schema.dailyStats)
@@ -375,9 +401,11 @@ function upsertModelDailyStat(
 	const weekBucket = getWeekBucket(dayBucket);
 	const monthBucket = getMonthBucket(dayBucket);
 
-	const existing = db.query.modelDailyStats.findFirst({
-		where: eq(schema.modelDailyStats.id, id),
-	});
+	const existing = db.query.modelDailyStats
+		.findFirst({
+			where: eq(schema.modelDailyStats.id, id),
+		})
+		.sync();
 
 	if (existing) {
 		const newTurns = existing.totalTurns + increment.totalTurns;
@@ -439,9 +467,11 @@ function upsertCodebaseDailyStat(
 	const weekBucket = getWeekBucket(dayBucket);
 	const monthBucket = getMonthBucket(dayBucket);
 
-	const existing = db.query.codebaseDailyStats.findFirst({
-		where: eq(schema.codebaseDailyStats.id, id),
-	});
+	const existing = db.query.codebaseDailyStats
+		.findFirst({
+			where: eq(schema.codebaseDailyStats.id, id),
+		})
+		.sync();
 
 	if (existing) {
 		db.update(schema.codebaseDailyStats)
@@ -477,10 +507,12 @@ function upsertCodebaseDailyStat(
 
 export function getDailyStatsRange(startDate: string, endDate: string): schema.DailyStat[] {
 	const db = getDatabase();
-	return db.query.dailyStats.findMany({
-		orderBy: schema.dailyStats.dayBucket,
-		where: and(gte(schema.dailyStats.dayBucket, startDate), lte(schema.dailyStats.dayBucket, endDate)),
-	});
+	return db.query.dailyStats
+		.findMany({
+			orderBy: schema.dailyStats.dayBucket,
+			where: and(gte(schema.dailyStats.dayBucket, startDate), lte(schema.dailyStats.dayBucket, endDate)),
+		})
+		.sync();
 }
 
 export function getModelUsageOverTime(modelId: string, days: number = 30): schema.ModelDailyStat[] {
@@ -489,10 +521,12 @@ export function getModelUsageOverTime(modelId: string, days: number = 30): schem
 	cutoff.setDate(cutoff.getDate() - days);
 	const cutoffStr = formatDate(cutoff);
 
-	return db.query.modelDailyStats.findMany({
-		orderBy: schema.modelDailyStats.dayBucket,
-		where: and(eq(schema.modelDailyStats.modelId, modelId), gte(schema.modelDailyStats.dayBucket, cutoffStr)),
-	});
+	return db.query.modelDailyStats
+		.findMany({
+			orderBy: schema.modelDailyStats.dayBucket,
+			where: and(eq(schema.modelDailyStats.modelId, modelId), gte(schema.modelDailyStats.dayBucket, cutoffStr)),
+		})
+		.sync();
 }
 
 export function getCodebaseUsageOverTime(codebaseId: string, days: number = 30): schema.CodebaseDailyStat[] {
@@ -501,13 +535,15 @@ export function getCodebaseUsageOverTime(codebaseId: string, days: number = 30):
 	cutoff.setDate(cutoff.getDate() - days);
 	const cutoffStr = formatDate(cutoff);
 
-	return db.query.codebaseDailyStats.findMany({
-		orderBy: schema.codebaseDailyStats.dayBucket,
-		where: and(
-			eq(schema.codebaseDailyStats.codebaseId, codebaseId),
-			gte(schema.codebaseDailyStats.dayBucket, cutoffStr),
-		),
-	});
+	return db.query.codebaseDailyStats
+		.findMany({
+			orderBy: schema.codebaseDailyStats.dayBucket,
+			where: and(
+				eq(schema.codebaseDailyStats.codebaseId, codebaseId),
+				gte(schema.codebaseDailyStats.dayBucket, cutoffStr),
+			),
+		})
+		.sync();
 }
 
 export function getSummaryStats(): {
@@ -519,15 +555,30 @@ export function getSummaryStats(): {
 } {
 	const db = getDatabase();
 
-	const [turnResult] = db.select({ count: sql<number>`count(*)`.as("count") }).from(schema.turns);
+	const turnResult = db
+		.select({ count: sql<number>`count(*)`.as("count") })
+		.from(schema.turns)
+		.get();
 
-	const [costResult] = db.select({ sum: sql<number>`sum(cost_total)`.as("sum") }).from(schema.turns);
+	const costResult = db
+		.select({ sum: sql<number>`sum(cost_total)`.as("sum") })
+		.from(schema.turns)
+		.get();
 
-	const [sessionResult] = db.select({ count: sql<number>`count(*)`.as("count") }).from(schema.sessions);
+	const sessionResult = db
+		.select({ count: sql<number>`count(*)`.as("count") })
+		.from(schema.sessions)
+		.get();
 
-	const [modelResult] = db.select({ count: sql<number>`count(*)`.as("count") }).from(schema.models);
+	const modelResult = db
+		.select({ count: sql<number>`count(*)`.as("count") })
+		.from(schema.models)
+		.get();
 
-	const [codebaseResult] = db.select({ count: sql<number>`count(*)`.as("count") }).from(schema.codebases);
+	const codebaseResult = db
+		.select({ count: sql<number>`count(*)`.as("count") })
+		.from(schema.codebases)
+		.get();
 
 	return {
 		totalCost: costResult?.sum ?? 0,
@@ -581,9 +632,11 @@ export function recordWordFrequency(modelId: string, dayBucket: string, word: st
 	const db = getDatabase();
 	const id = `${modelId}:${dayBucket}:${word}`;
 
-	const existing = db.query.wordFrequencies.findFirst({
-		where: eq(schema.wordFrequencies.id, id),
-	});
+	const existing = db.query.wordFrequencies
+		.findFirst({
+			where: eq(schema.wordFrequencies.id, id),
+		})
+		.sync();
 
 	if (existing) {
 		db.update(schema.wordFrequencies)
@@ -609,11 +662,13 @@ export function getTopWords(modelId: string, days: number = 30, limit: number = 
 	cutoff.setDate(cutoff.getDate() - days);
 	const cutoffStr = formatDate(cutoff);
 
-	return db.query.wordFrequencies.findMany({
-		limit,
-		orderBy: desc(schema.wordFrequencies.count),
-		where: and(eq(schema.wordFrequencies.modelId, modelId), gte(schema.wordFrequencies.dayBucket, cutoffStr)),
-	});
+	return db.query.wordFrequencies
+		.findMany({
+			limit,
+			orderBy: desc(schema.wordFrequencies.count),
+			where: and(eq(schema.wordFrequencies.modelId, modelId), gte(schema.wordFrequencies.dayBucket, cutoffStr)),
+		})
+		.sync();
 }
 
 export function getGlobalTopWords(days: number = 30, limit: number = 100): schema.WordFrequency[] {
@@ -623,11 +678,13 @@ export function getGlobalTopWords(days: number = 30, limit: number = 100): schem
 	const cutoffStr = formatDate(cutoff);
 
 	// Get top words across all models
-	return db.query.wordFrequencies.findMany({
-		limit,
-		orderBy: desc(schema.wordFrequencies.count),
-		where: gte(schema.wordFrequencies.dayBucket, cutoffStr),
-	});
+	return db.query.wordFrequencies
+		.findMany({
+			limit,
+			orderBy: desc(schema.wordFrequencies.count),
+			where: gte(schema.wordFrequencies.dayBucket, cutoffStr),
+		})
+		.sync();
 }
 
 // ─── Misspelling Operations ────────────────────────────────────────────────────
@@ -642,9 +699,11 @@ export function recordMisspelling(
 	const db = getDatabase();
 	const id = `${modelId}:${dayBucket}:${misspelledWord}:${correctedWord}`;
 
-	const existing = db.query.misspellings.findFirst({
-		where: eq(schema.misspellings.id, id),
-	});
+	const existing = db.query.misspellings
+		.findFirst({
+			where: eq(schema.misspellings.id, id),
+		})
+		.sync();
 
 	if (existing) {
 		db.update(schema.misspellings)
@@ -671,11 +730,13 @@ export function getTopMisspellings(modelId: string, days: number = 30, limit: nu
 	cutoff.setDate(cutoff.getDate() - days);
 	const cutoffStr = formatDate(cutoff);
 
-	return db.query.misspellings.findMany({
-		limit,
-		orderBy: desc(schema.misspellings.occurrenceCount),
-		where: and(eq(schema.misspellings.modelId, modelId), gte(schema.misspellings.dayBucket, cutoffStr)),
-	});
+	return db.query.misspellings
+		.findMany({
+			limit,
+			orderBy: desc(schema.misspellings.occurrenceCount),
+			where: and(eq(schema.misspellings.modelId, modelId), gte(schema.misspellings.dayBucket, cutoffStr)),
+		})
+		.sync();
 }
 
 // ─── Session Event Operations (real-time activity stream) ─────────────────────
@@ -683,7 +744,7 @@ export function getTopMisspellings(modelId: string, days: number = 30, limit: nu
 export function createSessionEvent(data: schema.NewSessionEvent): schema.SessionEvent {
 	const db = getDatabase();
 	const result = db.insert(schema.sessionEvents).values(data).returning();
-	return result[0];
+	return result.get();
 }
 
 export function completeSessionEvent(
@@ -710,17 +771,21 @@ export function completeSessionEvent(
 
 export function getActiveEvents(): schema.SessionEvent[] {
 	const db = getDatabase();
-	return db.query.sessionEvents.findMany({
-		limit: 50,
-		orderBy: desc(schema.sessionEvents.startedAt),
-		where: eq(schema.sessionEvents.isStreaming, true),
-	});
+	return db.query.sessionEvents
+		.findMany({
+			limit: 50,
+			orderBy: desc(schema.sessionEvents.startedAt),
+			where: eq(schema.sessionEvents.isStreaming, true),
+		})
+		.sync();
 }
 
 export function getRecentEvents(limit: number = 50): schema.SessionEvent[] {
 	const db = getDatabase();
-	return db.query.sessionEvents.findMany({
-		limit,
-		orderBy: desc(schema.sessionEvents.startedAt),
-	});
+	return db.query.sessionEvents
+		.findMany({
+			limit,
+			orderBy: desc(schema.sessionEvents.startedAt),
+		})
+		.sync();
 }

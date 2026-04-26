@@ -47,16 +47,15 @@
 		"@mariozechner/pi-ai": "0.56.1",
 		"@mariozechner/pi-coding-agent": "0.56.1",
 		"@mariozechner/pi-tui": "0.56.1",
-		"@types/node": "^22.0.0",
-		"@typescript/native-preview": "7.0.0-dev.20260305.1",
-		"@vitest/coverage-v8": "^3.2.4",
+		"@types/node": "^22.15.0",
+		"@typescript/native-preview": "7.0.0-dev.20260426.1",
+		"@vitest/coverage-v8": "^4.1.5",
 		"oxfmt": "^0.46.0",
 		"oxlint": "^1.61.0",
 		"oxlint-tsgolint": "^0.22.0",
 		"tsdown": "^0.21.10",
 		"tsx": "^4.20.6",
-		"typescript": "^5.7.0",
-		"vitest": "^3.0.0"
+		"vitest": "^4.1.5"
 	},
 	"engines": {
 		"node": ">=20.0.0"
@@ -84,7 +83,11 @@
 			"hono@<4.12.14": ">=4.12.14",
 			"@ifi/pi-analytics-db": "workspace:*",
 			"@ifi/pi-background-tasks": "workspace:*",
-			"@ifi/pi-shared-qna": "workspace:*"
+			"@ifi/pi-shared-qna": "workspace:*",
+			"@mariozechner/pi-agent-core": "0.56.1",
+			"@mariozechner/pi-ai": "0.56.1",
+			"@mariozechner/pi-coding-agent": "0.56.1",
+			"@mariozechner/pi-tui": "0.56.1"
 		}
 	},
 	"pi": {

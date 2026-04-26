@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"target": "ES2022",
-		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"lib": ["ES2022", "DOM", "DOM.Iterable", "ES2023"],
 		"module": "ESNext",
 		"skipLibCheck": true,
 		"moduleResolution": "bundler",
@@ -17,11 +17,14 @@
 		"noUncheckedSideEffectImports": true,
 		"esModuleInterop": true,
 		"resolveJsonModule": true,
-		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"]
 		}
 	},
 	"include": ["src", "vite-env.d.ts"],
-	"references": [{ "path": "./tsconfig.node.json" }]
+	"references": [
+		{
+			"path": "./tsconfig.node.json"
+		}
+	]
 }

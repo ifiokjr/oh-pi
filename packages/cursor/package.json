@@ -35,7 +35,7 @@
 		"test:worktree": "vitest run --config ./vitest.worktree.config.ts"
 	},
 	"dependencies": {
-		"@bufbuild/protobuf": "^2.10.2"
+		"@bufbuild/protobuf": "^2.12.0"
 	},
 	"peerDependencies": {
 		"@mariozechner/pi-agent-core": ">=0.56.1",
