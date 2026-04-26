@@ -8,9 +8,16 @@ import { normalizeRouteCandidates } from "./normalize.js";
 type CorpusEntry = {
 	name: string;
 	prompt: string;
-	intent: string;
-	expectedModel: string;
+	expectedIntent: string;
+	expectedComplexity: number;
+	expectedRisk: string;
+	expectedTurns: string;
+	expectedToolIntensity: string;
+	expectedContextBreadth: string;
+	expectedTier: string;
 	expectedThinking: string;
+	expectedModel: string;
+	acceptableFallbacks: string[];
 };
 
 const candidates = normalizeRouteCandidates([
@@ -133,7 +140,7 @@ describe("adaptive routing engine", () => {
 				},
 			});
 
-			expect(classification.intent, fixture.name).toBe(fixture.intent);
+			expect(classification.intent, fixture.name).toBe(fixture.expectedIntent);
 			expect(decision?.selectedModel, fixture.name).toBe(fixture.expectedModel);
 			expect(decision?.selectedThinking, fixture.name).toBe(fixture.expectedThinking);
 		}
