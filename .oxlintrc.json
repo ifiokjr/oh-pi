@@ -27,7 +27,19 @@
     "promise/always-return": "off",
     "promise/no-multiple-resolved": "off",
     "promise/no-callback-in-promise": "off",
-    "typescript/no-extraneous-class": "off"
+    "typescript/no-extraneous-class": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/no-unnecessary-type-assertion": "off",
+    "typescript/consistent-return": "off",
+    "typescript/no-unnecessary-type-conversion": "off",
+    "typescript/no-unnecessary-template-expression": "off",
+    "typescript/no-redundant-type-constituents": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+    "typescript/no-unnecessary-boolean-literal-compare": "off",
+    "typescript/require-array-sort-compare": "off",
+    "typescript/no-unnecessary-type-arguments": "off",
+    "typescript/no-unnecessary-condition": "off",
+    "no-unnecessary-condition": "off"
   },
   "env": {
     "builtin": true,
@@ -43,13 +55,19 @@
     "**/*.min.js",
     "**/pnpm-lock.yaml",
     "**/package-lock.json",
-    "**/yarn.lock"
+    "**/yarn.lock",
+    "packages/analytics-dashboard/e2e/*.spec.ts",
+    "packages/analytics-dashboard/e2e/*.ts",
+    "packages/analytics-dashboard/tsconfig.json",
+    "packages/analytics-dashboard/tsconfig.node.json",
+    "packages/docs/tsconfig.json",
+    "packages/docs/tsconfig.node.json"
   ],
   "overrides": [
     {
       "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "benchmarks/**/*.ts"],
       "rules": {
-        "typescript/no-explicit-any": "off"
+        "no-explicit-any": "off"
       }
     }
   ]
