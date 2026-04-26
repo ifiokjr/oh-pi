@@ -17,7 +17,9 @@
     "build": "pnpm clean && tsc -b",
     "build:fast": "pnpm clean && tsgo --project tsconfig.json",
     "typecheck": "tsgo --project tsconfig.json --noEmit",
-    "start": "node dist/bin/oh-pi.js"
+    "test": "vitest run",
+    "start": "node dist/bin/oh-pi.js",
+    "test": "vitest run"
   },
   "license": "MIT",
   "dependencies": {
