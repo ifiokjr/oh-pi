@@ -1,6 +1,5 @@
-default: patch
 ---
-"pi-extension-adaptive-routing": patch
+default: patch
 ---
 
 Add a routing corpus and evaluation harness.
