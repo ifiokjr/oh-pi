@@ -71,6 +71,7 @@ oh-pi repo
 │   ├── provider-catalog
 │   ├── provider-cursor
 │   ├── provider-ollama
+│   ├── analytics-extension
 │   ├── pi-remote-tailscale
 │   ├── pi-bash-live-view
 │   └── pi-pretty
@@ -79,7 +80,10 @@ oh-pi repo
     ├── cli
     ├── shared-qna
     ├── web-client
-    └── web-server
+    ├── web-server
+    ├── analytics-db
+    ├── analytics-dashboard
+    └── docs
 ```
 
 <!-- {/repoArchitectureAtAGlanceDocs} -->
@@ -125,9 +129,14 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 | [`@ifi/pi-shared-qna`](./packages/shared-qna)                       | Shared Q&A TUI helpers                                                    | (library, not installed directly)                   |
 | [`@ifi/pi-web-client`](./packages/web-client)                       | Platform-agnostic remote session client library                           | `pnpm add @ifi/pi-web-client`                       |
 | [`@ifi/pi-web-server`](./packages/web-server)                       | Embeddable remote session server                                          | `pnpm add @ifi/pi-web-server`                       |
+| [`@ifi/pi-analytics-extension`](./packages/analytics-extension)   | Analytics tracking extension with SQLite persistence and browser dashboard | `pi install npm:@ifi/pi-analytics-extension`          |
+| [`@ifi/pi-analytics-db`](./packages/analytics-db)                  | SQLite schema and Drizzle ORM client for analytics data                     | (library, not installed directly)                   |
+| [`@ifi/pi-analytics-dashboard`](./packages/analytics-dashboard)     | React dashboard for visualizing AI usage (private package)                | (private, run `pnpm dev` in package)                |
+| [`@ifi/oh-pi-docs`](./packages/docs)                              | Documentation site for oh-pi (private package)                            | (private, run `pnpm dev` in package)                |
 
-`@ifi/pi-extension-adaptive-routing`, `@ifi/pi-provider-catalog`, `@ifi/pi-provider-cursor`, and
-`@ifi/pi-provider-ollama` stay opt-in for now and are **not** installed by `npx @ifi/oh-pi`.
+`@ifi/pi-extension-adaptive-routing`, `@ifi/pi-provider-catalog`, `@ifi/pi-provider-cursor`,
+`@ifi/pi-provider-ollama`, and `@ifi/pi-analytics-extension` stay opt-in for now and are **not**
+installed by `npx @ifi/oh-pi`.
 They are intentionally shipped as separate optional packages.
 
 ### Full Feature Catalog
@@ -758,6 +767,7 @@ Managed local switching covers these packages:
 - `@ifi/pi-provider-catalog`
 - `@ifi/pi-provider-cursor`
 - `@ifi/pi-provider-ollama`
+- `@ifi/pi-analytics-extension`
 
 <!-- {/repoPiLocalManagedPackagesDocs} -->
 
@@ -869,6 +879,10 @@ oh-pi/
 │   ├── web-client/             Remote session client library (compiled)
 │   ├── web-server/             Remote session server library (compiled)
 │   ├── shared-qna/             Shared Q&A TUI helper library (raw .ts)
+│   ├── analytics-db/             SQLite schema and Drizzle ORM client for analytics data
+│   ├── analytics-dashboard/      React dashboard for visualizing AI usage (private app)
+│   ├── analytics-extension/      Analytics tracking extension for pi (raw .ts)
+│   ├── docs/                     Documentation site for oh-pi (private app)
 │   ├── themes/                 6 JSON theme files
 │   ├── prompts/                10 markdown prompt templates
 │   ├── skills/                 17 skill directories
