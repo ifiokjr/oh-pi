@@ -38,7 +38,7 @@
 	},
 	"scripts": {
 		"clean": "node -e \"import('node:fs').then(fs => fs.rmSync('dist',{ recursive: true, force: true }))\"",
-		"build": "pnpm clean && tsc --project tsconfig.json",
+		"build": "tsdown --config tsdown.config.ts",
 		"build:fast": "pnpm clean && tsgo --project tsconfig.json",
 		"typecheck": "tsgo --project tsconfig.json --noEmit",
 		"test": "vitest run --config ./vitest.config.ts",

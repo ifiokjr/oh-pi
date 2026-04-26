@@ -2,6 +2,13 @@ import { mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
+interface FffModule {
+	CursorStore?: new () => {
+		rescan?: (cwd: string) => Promise<void>;
+		stats?: () => { fileCount?: number };
+	};
+}
+
 const FFF_DIR = join(homedir(), ".pi", "agent", "pi-pretty", "fff");
 
 function ensureFffDir(): void {
@@ -21,9 +28,8 @@ export async function checkHealth(): Promise<FffStatus> {
 	try {
 		ensureFffDir();
 		// Attempt to load FFF module; if unavailable, return degraded status
-		const fff = await import("@ff-labs/fff-node");
-		// Safe access to any API surface
-		const cursor = (fff as any).CursorStore ? new (fff as any).CursorStore() : null;
+		const fff = (await import("@ff-labs/fff-node")) as FffModule;
+		const cursor = fff.CursorStore ? new fff.CursorStore() : null;
 		const stats = cursor?.stats?.() ?? {};
 		return {
 			ok: true,
@@ -43,8 +49,8 @@ export async function checkHealth(): Promise<FffStatus> {
 export async function rescan(): Promise<FffStatus> {
 	try {
 		ensureFffDir();
-		const fff = await import("@ff-labs/fff-node");
-		const cursor = (fff as any).CursorStore ? new (fff as any).CursorStore() : null;
+		const fff = (await import("@ff-labs/fff-node")) as FffModule;
+		const cursor = fff.CursorStore ? new fff.CursorStore() : null;
 		if (cursor?.rescan) {
 			await cursor.rescan(process.cwd());
 			return {

@@ -35,6 +35,7 @@ import {
 	WriteResultSchema,
 	WriteShellStdinErrorSchema,
 	WriteShellStdinResultSchema,
+	type ExecServerMessage,
 } from "./proto/agent_pb.js";
 import {
 	buildCursorRequestPayload,
@@ -377,7 +378,7 @@ function handleServerMessage(options: {
 
 // oxlint-disable-next-line @typescript-eslint/no-explicit-any
 function handleExecServerMessage(
-	execMessage: any,
+	execMessage: ExecServerMessage,
 	run: ActiveCursorRun,
 	onToolExec: (pendingExec: PendingExec) => void,
 ): void {
@@ -390,8 +391,8 @@ function handleExecServerMessage(
 		const mcpArgs = execMessage.message.value;
 		onToolExec({
 			execId: execMessage.execId,
-			execMsgId: execMessage.id,
-			toolCallId: mcpArgs.toolCallId || randomUUID(),
+			execMsgId: String(execMessage.id),
+			toolCallId: String(mcpArgs.toolCallId || randomUUID()),
 			toolName: mcpArgs.toolName || mcpArgs.name,
 			decodedArgs: JSON.stringify(decodeMcpArgsMap(mcpArgs.args ?? {})),
 		});
