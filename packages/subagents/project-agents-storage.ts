@@ -171,17 +171,26 @@ semantics in both shared and project storage modes.
 
 <!-- {/subagentsFindNearestProjectAgentsDirDocs} -->
 */
-export function findNearestProjectAgentsDir(cwd: string, options?: ProjectAgentStorageOptions): string {
+function getProjectAgentsCandidateDir(cwd: string, options: Required<ProjectAgentStorageOptions>): string {
+	return options.mode === "project" ? getLegacyProjectAgentsDir(cwd) : getSharedProjectAgentsDir(cwd, options);
+}
+
+export function findProjectAgentsDirs(cwd: string, options?: ProjectAgentStorageOptions): string[] {
 	const resolved = resolveProjectAgentStorageOptions(options);
 	migrateLegacyProjectAgents(cwd, resolved);
 
+	const dirs: string[] = [];
 	for (const dir of parentDirs(cwd)) {
-		const candidate =
-			resolved.mode === "project" ? getLegacyProjectAgentsDir(dir) : getSharedProjectAgentsDir(dir, resolved);
+		const candidate = getProjectAgentsCandidateDir(dir, resolved);
 		if (isDirectory(candidate)) {
-			return candidate;
+			dirs.push(candidate);
 		}
 	}
+	return dirs;
+}
 
-	return resolved.mode === "project" ? getLegacyProjectAgentsDir(cwd) : getSharedProjectAgentsDir(cwd, resolved);
+export function findNearestProjectAgentsDir(cwd: string, options?: ProjectAgentStorageOptions): string {
+	const resolved = resolveProjectAgentStorageOptions(options);
+	const [nearestDir] = findProjectAgentsDirs(cwd, resolved);
+	return nearestDir ?? getProjectAgentsCandidateDir(cwd, resolved);
 }

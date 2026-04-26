@@ -10,7 +10,7 @@ import { KNOWN_FIELDS } from "./agent-serializer.js";
 import { mergeAgentsForScope } from "./agent-selection.js";
 import { parseChain } from "./chain-serializer.js";
 import { getUserAgentsDir } from "./paths.js";
-import { findNearestProjectAgentsDir } from "./project-agents-storage.js";
+import { findNearestProjectAgentsDir, findProjectAgentsDirs } from "./project-agents-storage.js";
 
 export type AgentScope = "user" | "project" | "both";
 
@@ -231,13 +231,42 @@ function loadChainsFromDir(dir: string, source: AgentSource): ChainConfig[] {
 
 const BUILTIN_AGENTS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "agents");
 
+function mergeNamedConfigs<T extends { name: string }>(groups: T[][]): T[] {
+	const merged = new Map<string, T>();
+	for (const group of groups) {
+		for (const item of group) {
+			if (!merged.has(item.name)) {
+				merged.set(item.name, item);
+			}
+		}
+	}
+	return Array.from(merged.values());
+}
+
+function loadAgentsFromDirs(dirs: string[], source: AgentSource): AgentConfig[] {
+	const groups: AgentConfig[][] = [];
+	for (const dir of dirs) {
+		groups.push(loadAgentsFromDir(dir, source));
+	}
+	return mergeNamedConfigs(groups);
+}
+
+function loadChainsFromDirs(dirs: string[], source: AgentSource): ChainConfig[] {
+	const groups: ChainConfig[][] = [];
+	for (const dir of dirs) {
+		groups.push(loadChainsFromDir(dir, source));
+	}
+	return mergeNamedConfigs(groups);
+}
+
 export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryResult {
 	const userDir = getUserAgentsDir();
 	const projectAgentsDir = findNearestProjectAgentsDir(cwd);
+	const projectAgentDirs = findProjectAgentsDirs(cwd);
 
 	const builtinAgents = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
 	const userAgents = scope === "project" ? [] : loadAgentsFromDir(userDir, "user");
-	const projectAgents = scope === "user" || !projectAgentsDir ? [] : loadAgentsFromDir(projectAgentsDir, "project");
+	const projectAgents = scope === "user" ? [] : loadAgentsFromDirs(projectAgentDirs, "project");
 	const agents = mergeAgentsForScope(scope, userAgents, projectAgents, builtinAgents);
 
 	return { agents, projectAgentsDir };
@@ -253,14 +282,15 @@ export function discoverAgentsAll(cwd: string): {
 } {
 	const userDir = getUserAgentsDir();
 	const projectDir = findNearestProjectAgentsDir(cwd);
+	const projectDirs = findProjectAgentsDirs(cwd);
 
 	const builtin = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
 	const user = loadAgentsFromDir(userDir, "user");
-	const project = projectDir ? loadAgentsFromDir(projectDir, "project") : [];
-	const chains = [
-		...loadChainsFromDir(userDir, "user"),
-		...(projectDir ? loadChainsFromDir(projectDir, "project") : []),
-	];
+	const project = loadAgentsFromDirs(projectDirs, "project");
+	const chains = mergeNamedConfigs([
+		loadChainsFromDir(userDir, "user"),
+		loadChainsFromDirs(projectDirs, "project"),
+	]);
 
 	return { builtin, user, project, chains, userDir, projectDir };
 }

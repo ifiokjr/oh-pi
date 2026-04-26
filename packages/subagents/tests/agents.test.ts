@@ -127,6 +127,45 @@ describe("discoverAgents", () => {
 		expect(result.projectAgentsDir).toBe(getSharedProjectAgentsDir(projectDir));
 	});
 
+	it("cascades shared project agents from parent directories with nearest overrides", () => {
+		const homeDir = createTempDir("subagents-cascade-home-");
+		const projectDir = createTempDir("subagents-cascade-project-");
+		const nestedProjectDir = path.join(projectDir, "packages", "feature");
+		const deepDir = path.join(nestedProjectDir, "src");
+		process.env.HOME = homeDir;
+		process.env.USERPROFILE = homeDir;
+		process.env.PI_SUBAGENT_PROJECT_AGENTS_MODE = "shared";
+		fs.mkdirSync(deepDir, { recursive: true });
+
+		writeAgentFile(
+			getSharedProjectAgentsDir(projectDir),
+			"scout.md",
+			"---\nname: scout\ndescription: Parent scout\n---\n\nParent prompt\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(projectDir),
+			"reviewer.md",
+			"---\nname: reviewer\ndescription: Parent reviewer\n---\n\nReviewer prompt\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(nestedProjectDir),
+			"scout.md",
+			"---\nname: scout\ndescription: Nested scout\n---\n\nNested prompt\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(nestedProjectDir),
+			"worker.md",
+			"---\nname: worker\ndescription: Nested worker\n---\n\nWorker prompt\n",
+		);
+
+		const result = discoverAgents(deepDir, "project");
+		const byName = new Map(result.agents.map((agent) => [agent.name, agent]));
+		expect(byName.get("scout")?.description).toBe("Nested scout");
+		expect(byName.get("worker")?.description).toBe("Nested worker");
+		expect(byName.get("reviewer")?.description).toBe("Parent reviewer");
+		expect(result.projectAgentsDir).toBe(getSharedProjectAgentsDir(nestedProjectDir));
+	});
+
 	it("migrates legacy .pi/agents into the shared store when shared mode is enabled", () => {
 		const homeDir = createTempDir("subagents-migrate-home-");
 		const projectDir = createTempDir("subagents-migrate-project-");
@@ -198,5 +237,62 @@ describe("discoverAgentsAll", () => {
 		const result = discoverAgentsAll(projectDir);
 		expect(result.project.map((agent) => agent.name)).toContain("custom-project");
 		expect(result.projectDir).toBe(path.join(projectDir, ".pi", "agents"));
+	});
+
+	it("cascades project agents and chains from parent directories with nearest overrides", () => {
+		const homeDir = createTempDir("subagents-all-cascade-home-");
+		const projectDir = createTempDir("subagents-all-cascade-project-");
+		const nestedProjectDir = path.join(projectDir, "apps", "desktop");
+		const deepDir = path.join(nestedProjectDir, "src");
+		process.env.HOME = homeDir;
+		process.env.USERPROFILE = homeDir;
+		process.env.PI_SUBAGENT_PROJECT_AGENTS_MODE = "shared";
+		fs.mkdirSync(deepDir, { recursive: true });
+
+		writeAgentFile(
+			getSharedProjectAgentsDir(projectDir),
+			"scout.md",
+			"---\nname: scout\ndescription: Parent scout\n---\n\nParent prompt\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(projectDir),
+			"reviewer.md",
+			"---\nname: reviewer\ndescription: Parent reviewer\n---\n\nReviewer prompt\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(projectDir),
+			"review-pipeline.chain.md",
+			"---\nname: review-pipeline\ndescription: Parent chain\n---\n\n## scout\n\nParent chain\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(nestedProjectDir),
+			"scout.md",
+			"---\nname: scout\ndescription: Nested scout\n---\n\nNested prompt\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(nestedProjectDir),
+			"worker.md",
+			"---\nname: worker\ndescription: Nested worker\n---\n\nWorker prompt\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(nestedProjectDir),
+			"review-pipeline.chain.md",
+			"---\nname: review-pipeline\ndescription: Nested chain\n---\n\n## worker\n\nNested chain\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(nestedProjectDir),
+			"ship.chain.md",
+			"---\nname: ship\ndescription: Ship chain\n---\n\n## reviewer\n\nShip it\n",
+		);
+
+		const result = discoverAgentsAll(deepDir);
+		const projectByName = new Map(result.project.map((agent) => [agent.name, agent]));
+		const chainsByName = new Map(result.chains.map((chain) => [chain.name, chain]));
+		expect(projectByName.get("scout")?.description).toBe("Nested scout");
+		expect(projectByName.get("worker")?.description).toBe("Nested worker");
+		expect(projectByName.get("reviewer")?.description).toBe("Parent reviewer");
+		expect(chainsByName.get("review-pipeline")?.description).toBe("Nested chain");
+		expect(chainsByName.get("ship")?.description).toBe("Ship chain");
+		expect(result.projectDir).toBe(getSharedProjectAgentsDir(nestedProjectDir));
 	});
 });
