@@ -4,7 +4,16 @@
 
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import { getMarkdownTheme, type ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Container, Markdown, Spacer, Text, truncateToWidth, visibleWidth, type Widget } from "@mariozechner/pi-tui";
+import {
+	Container,
+	Markdown,
+	Spacer,
+	Text,
+	truncateToWidth,
+	visibleWidth,
+	wrapTextWithAnsi,
+	type Widget,
+} from "@mariozechner/pi-tui";
 import { type AsyncJobState, type Details, MAX_WIDGET_JOBS, WIDGET_KEY } from "./types.js";
 import { formatTokens, formatUsage, formatDuration, formatToolCall, shortenPath } from "./formatters.js";
 import { getFinalOutput, getDisplayItems, getOutputTail, getLastActivity } from "./utils.js";
@@ -165,7 +174,8 @@ export function renderWidget(ctx: ExtensionContext, jobs: AsyncJobState[], optio
 		if (job.status === "running" && job.outputFile) {
 			const tail = getOutputTail(job.outputFile, 3);
 			for (const line of tail) {
-				lines.push(truncLine(theme.fg("dim", `  > ${line}`), w));
+				const wrapped = wrapTextWithAnsi(theme.fg("dim", `  > ${line}`), w);
+				lines.push(...wrapped);
 			}
 		}
 	}

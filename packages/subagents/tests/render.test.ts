@@ -38,6 +38,16 @@ vi.mock("@mariozechner/pi-tui", () => ({
 	},
 	truncateToWidth: (text: string, width: number) => (text.length <= width ? text : `${text.slice(0, width - 1)}…`),
 	visibleWidth: (text: string) => text.replaceAll("\u001b[0m", "").length,
+	wrapTextWithAnsi: (text: string, width: number) => {
+		if (text.length <= width) {
+			return [text];
+		}
+		const lines: string[] = [];
+		for (let start = 0; start < text.length; start += width) {
+			lines.push(text.slice(start, start + width));
+		}
+		return lines;
+	},
 }));
 
 vi.mock("../formatters.js", () => ({
@@ -155,6 +165,38 @@ describe("subagent async widget rendering", () => {
 		renderWidget(ctx as never, [completedJob]);
 		renderWidget(ctx as never, [completedJob]);
 		expect(ctx._setWidget.mock.calls.length).toBe(callsBefore + 1);
+	});
+
+	it("wraps running debug tail lines while keeping the status header truncated", () => {
+		const originalColumns = process.stdout.columns;
+		process.stdout.columns = 30;
+		renderMocks.getOutputTail.mockReturnValue(["MODEL -> session-default: openai/gpt-5-mini with a long suffix"]);
+
+		try {
+			const ctx = createCtx();
+			renderWidget(ctx as never, [
+				{
+					asyncId: "abcdef123456",
+					asyncDir: "/tmp/run",
+					status: "running",
+					mode: "single",
+					agents: ["very-long-agent-name"],
+					updatedAt: Date.now(),
+					startedAt: Date.now() - 1000,
+					outputFile: "/tmp/out.log",
+					totalTokens: { input: 10, output: 5, total: 15 },
+				},
+			]);
+
+			const lines = ctx._widgets.get(WIDGET_KEY) as string[];
+			expect(lines[1]).toContain("…");
+			expect(lines.slice(2)).toHaveLength(3);
+			expect(lines[2]?.trimEnd()).toBe("  > MODEL -> session-default:");
+			expect(lines.slice(2).join("")).toBe("  > MODEL -> session-default: openai/gpt-5-mini with a long suffix");
+			expect(lines.slice(2).join("\n")).not.toContain("…");
+		} finally {
+			process.stdout.columns = originalColumns;
+		}
 	});
 });
 
