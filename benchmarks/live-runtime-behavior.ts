@@ -21,7 +21,7 @@ function makeCommands(count) {
 	for (let index = 0; index < count; index++) {
 		commands.push({
 			name: `command-${index}`,
-			source: index % 6 === 0 ? "prompt" : (index % 5 === 0 ? "skill" : "command"),
+			source: index % 6 === 0 ? "prompt" : index % 5 === 0 ? "skill" : "command",
 		});
 	}
 	return commands;

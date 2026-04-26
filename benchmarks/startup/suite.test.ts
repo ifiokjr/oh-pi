@@ -1,4 +1,3 @@
-
 import { parseBenchmarkEnvList } from "./suite";
 
 describe("startup benchmark env parsing", () => {

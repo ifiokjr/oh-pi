@@ -27,9 +27,15 @@ function renderFieldLine(label: string, value: string, width: number, theme: The
 
 function formatRelativeTime(ts: number): string {
 	const diff = Math.max(0, Math.floor(Date.now() / 1000) - ts);
-	if (diff < 60) {return `${diff}s ago`;}
-	if (diff < 3600) {return `${Math.floor(diff / 60)}m ago`;}
-	if (diff < 86_400) {return `${Math.floor(diff / 3600)}h ago`;}
+	if (diff < 60) {
+		return `${diff}s ago`;
+	}
+	if (diff < 3600) {
+		return `${Math.floor(diff / 60)}m ago`;
+	}
+	if (diff < 86_400) {
+		return `${Math.floor(diff / 3600)}h ago`;
+	}
 	return `${Math.floor(diff / 86_400)}d ago`;
 }
 
@@ -80,7 +86,9 @@ function buildDetailLines(
 	if (resolved) {
 		const { resolved: resolvedSkills } = resolveSkills(agent.skills ?? [], cwd);
 		const injection = buildSkillInjection(resolvedSkills);
-		if (injection) {prompt = `${prompt}\n\n${injection}`;}
+		if (injection) {
+			prompt = `${prompt}\n\n${injection}`;
+		}
 	}
 
 	const wrapped = wrapText(prompt, contentWidth);
@@ -104,9 +112,15 @@ function buildDetailLines(
 }
 
 export function handleDetailInput(state: DetailState, data: string): DetailAction | undefined {
-	if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) {return { type: "back" };}
-	if (data === "e") {return { type: "edit" };}
-	if (data === "l") {return { type: "launch" };}
+	if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) {
+		return { type: "back" };
+	}
+	if (data === "e") {
+		return { type: "edit" };
+	}
+	if (data === "l") {
+		return { type: "launch" };
+	}
 	if (data === "v") {
 		state.resolved = !state.resolved;
 		state.scrollOffset = 0;
@@ -139,7 +153,7 @@ export function renderDetail(
 	theme: Theme,
 ): string[] {
 	const lines: string[] = [];
-	const scopeBadge = agent.source === "builtin" ? "[builtin]" : (agent.source === "project" ? "[proj]" : "[user]");
+	const scopeBadge = agent.source === "builtin" ? "[builtin]" : agent.source === "project" ? "[proj]" : "[user]";
 	const headerText = ` ${agent.name} ${scopeBadge} ${formatPath(agent.filePath)} `;
 	lines.push(renderHeader(headerText, width, theme));
 	lines.push(row("", width, theme));

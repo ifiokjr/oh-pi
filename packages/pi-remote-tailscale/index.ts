@@ -1,10 +1,10 @@
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { createDiscoveryService } from "./src/discovery.js";
 import { createQrRenderer } from "./src/qr.js";
-import { isRemoteSessionEnv, startRemoteSessionServer } from './src/server.js';
-import type { RemoteSessionHandle, RemoteSessionServerOptions } from './src/server.js';
-import { createRemoteWidgetController } from './src/widget.js';
-import type { RemoteWidgetState } from './src/widget.js';
+import { isRemoteSessionEnv, startRemoteSessionServer } from "./src/server.js";
+import type { RemoteSessionHandle, RemoteSessionServerOptions } from "./src/server.js";
+import { createRemoteWidgetController } from "./src/widget.js";
+import type { RemoteWidgetState } from "./src/widget.js";
 
 const HOSTED_UI_URL = "https://pi-remote.dev";
 const discovery = createDiscoveryService();
@@ -20,7 +20,7 @@ function looksLikeAgentSession(value: unknown): boolean {
 	);
 }
 
-function resolveAttachedSession(ctx: ExtensionContext, pi: ExtensionAPI): any {
+function resolveAttachedSession(ctx: ExtensionContext, pi: ExtensionAPI): unknown {
 	const ctxRecord = ctx as unknown as Record<string, unknown>;
 	const piRecord = pi as unknown as Record<string, unknown>;
 	const candidates = [

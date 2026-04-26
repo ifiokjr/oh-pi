@@ -1,4 +1,3 @@
-
 import { categorize } from "./welcome.js";
 
 describe(categorize, () => {

@@ -35,7 +35,9 @@ export default function registerSubagentNotify(pi: ExtensionAPI): void {
 		const result = data as SubagentResult;
 		const now = Date.now();
 		const key = buildCompletionKey(result, "notify");
-		if (markSeenWithTtl(seen, key, now, ttlMs)) {return;}
+		if (markSeenWithTtl(seen, key, now, ttlMs)) {
+			return;
+		}
 
 		const agent = result.agent ?? "unknown";
 		const status = result.success ? "completed" : "failed";

@@ -36,7 +36,9 @@ export function flattenSteps(steps: RunnerStep[]): RunnerSubagentStep[] {
 	const flat: RunnerSubagentStep[] = [];
 	for (const step of steps) {
 		if (isParallelGroup(step)) {
-			for (const task of step.parallel) {flat.push(task);}
+			for (const task of step.parallel) {
+				flat.push(task);
+			}
 		} else {
 			flat.push(step);
 		}

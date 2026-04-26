@@ -1,5 +1,5 @@
-import { PACE_MIN_EXPECTED_USED_PCT } from './usage-tracker-shared.js';
-import type { RateWindow, WindowPace } from './usage-tracker-shared.js';
+import { PACE_MIN_EXPECTED_USED_PCT } from "./usage-tracker-shared.js";
+import type { RateWindow, WindowPace } from "./usage-tracker-shared.js";
 
 export function fmtTokens(n: number): string {
 	if (n >= 1_000_000) {

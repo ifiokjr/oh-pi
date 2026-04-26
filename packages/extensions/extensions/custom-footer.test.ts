@@ -1,10 +1,8 @@
-
-
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	getAgentDir: () => "/mock-home/.pi/agent",
 }));
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({}));
-vi.mock<typeof import('@mariozechner/pi-tui')>(import('@mariozechner/pi-tui'), () => ({
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({}));
+vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), () => ({
 	truncateToWidth: (text: string, width: number) => text.slice(0, width),
 }));
 

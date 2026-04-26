@@ -1,6 +1,11 @@
-
-import { aggregateParallelOutputs, flattenSteps, isParallelGroup, MAX_PARALLEL_CONCURRENCY, mapConcurrent } from '../parallel-utils.js';
-import type { ParallelStepGroup, RunnerStep, RunnerSubagentStep } from '../parallel-utils.js';
+import {
+	aggregateParallelOutputs,
+	flattenSteps,
+	isParallelGroup,
+	MAX_PARALLEL_CONCURRENCY,
+	mapConcurrent,
+} from "../parallel-utils.js";
+import type { ParallelStepGroup, RunnerStep, RunnerSubagentStep } from "../parallel-utils.js";
 
 describe(isParallelGroup, () => {
 	it("returns true for a parallel step group", () => {

@@ -2,7 +2,6 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-
 interface PiManifest {
 	extensions?: string[];
 	prompts?: string[];
@@ -60,7 +59,7 @@ describe("git-install package manifest", () => {
 
 		for (const extensionEntry of rootManifest.pi?.extensions ?? []) {
 			expect(extensionEntry.endsWith(".ts")).toBeTruthy();
-			expect(extensionEntry).not.toContain('node_modules');
+			expect(extensionEntry).not.toContain("node_modules");
 		}
 	});
 

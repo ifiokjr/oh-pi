@@ -56,9 +56,9 @@ async function main(): Promise<void> {
 	// Build connection URL
 	const connectUrl = tunnelUrl
 		? `${tunnelUrl}?t=${server.token}`
-		: (lanIp
+		: lanIp
 			? `http://${lanIp}:${resolvedPort}?t=${server.token}`
-			: `${result.url}?t=${server.token}`);
+			: `${result.url}?t=${server.token}`;
 
 	console.log("");
 	console.log("  ╭─────────────────────────────────────────╮");

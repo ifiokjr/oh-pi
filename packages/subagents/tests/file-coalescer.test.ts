@@ -1,7 +1,10 @@
-
 import { createFileCoalescer } from "../file-coalescer.js";
 
-interface TimerTask { id: number; cb: () => void; delay: number }
+interface TimerTask {
+	id: number;
+	cb: () => void;
+	delay: number;
+}
 
 function createFakeTimers() {
 	let nextId = 1;

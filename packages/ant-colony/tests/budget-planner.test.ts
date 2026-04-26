@@ -11,10 +11,21 @@
  * - Edge cases: no data, empty providers, infinite budget, zero remaining
  */
 
-
-
-import { applyConcurrencyCap, buildBudgetPromptSection, buildBudgetSummary, buildRoutingTelemetrySnapshot, classifySeverity, getLowestRateLimitPct, planBudget } from '../extensions/ant-colony/budget-planner.js';
-import type { BudgetPlan, CasteBudget, ProviderRateLimits, UsageLimitsEvent } from '../extensions/ant-colony/budget-planner.js';
+import {
+	applyConcurrencyCap,
+	buildBudgetPromptSection,
+	buildBudgetSummary,
+	buildRoutingTelemetrySnapshot,
+	classifySeverity,
+	getLowestRateLimitPct,
+	planBudget,
+} from "../extensions/ant-colony/budget-planner.js";
+import type {
+	BudgetPlan,
+	CasteBudget,
+	ProviderRateLimits,
+	UsageLimitsEvent,
+} from "../extensions/ant-colony/budget-planner.js";
 import type { ColonyMetrics, ConcurrencyConfig } from "../extensions/ant-colony/types.js";
 
 // ─── Test helpers ────────────────────────────────────────────────────────────

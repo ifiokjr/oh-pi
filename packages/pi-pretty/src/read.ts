@@ -61,9 +61,15 @@ const EXT_LANG: Record<string, BundledLanguage> = {
 
 export function detectLanguage(fp: string): BundledLanguage | undefined {
 	const base = basename(fp).toLowerCase();
-	if (base === "dockerfile") {return "dockerfile";}
-	if (base === "makefile" || base === "gnumakefile") {return "make";}
-	if (base === ".envrc" || base === ".env") {return "bash";}
+	if (base === "dockerfile") {
+		return "dockerfile";
+	}
+	if (base === "makefile" || base === "gnumakefile") {
+		return "make";
+	}
+	if (base === ".envrc" || base === ".env") {
+		return "bash";
+	}
 	return EXT_LANG[extname(fp).slice(1).toLowerCase()];
 }
 
@@ -81,10 +87,14 @@ function getCacheKey(text: string, lang: string, theme: string): string {
 async function highlightWithCache(text: string, lang: string, theme: string): Promise<string> {
 	const key = getCacheKey(text, lang, theme);
 	const cached = highlightCache.get(key);
-	if (cached) {return cached.ansi;}
+	if (cached) {
+		return cached.ansi;
+	}
 	if (highlightCache.size >= CACHE_LIMIT) {
 		const firstKey = highlightCache.keys().next().value;
-		if (firstKey !== undefined) {highlightCache.delete(firstKey);}
+		if (firstKey !== undefined) {
+			highlightCache.delete(firstKey);
+		}
 	}
 	const result = await codeToANSI(text, lang as import("shiki").BundledLanguage, theme as import("shiki").BundledTheme);
 	highlightCache.set(key, { ansi: result, text });
@@ -97,7 +107,7 @@ export function enhanceReadTool(pi: ExtensionAPI): void {
 	pi.registerTool({
 		...original,
 		async execute(toolCallId, params, signal, onUpdate): Promise<AgentToolResult<unknown>> {
-			const result = await original.execute(toolCallId, params as any, signal, onUpdate);
+			const result = await original.execute(toolCallId, params as unknown, signal, onUpdate);
 			const path =
 				typeof params === "object" && params !== null && "path" in params ? (params as { path: string }).path : "";
 

@@ -1,6 +1,6 @@
 import type { Api, Model, OAuthCredentials } from "@mariozechner/pi-ai";
-import { getOllamaCloudRuntimeConfig, getOllamaLocalRuntimeConfig } from './config.js';
-import type { OllamaRuntimeConfig } from './config.js';
+import { getOllamaCloudRuntimeConfig, getOllamaLocalRuntimeConfig } from "./config.js";
+import type { OllamaRuntimeConfig } from "./config.js";
 
 export type OllamaModelSource = "local" | "cloud";
 export type OllamaLocalAvailability = "installed" | "downloadable";

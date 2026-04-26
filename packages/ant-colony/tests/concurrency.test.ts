@@ -1,4 +1,3 @@
-
 import { adapt, defaultConcurrency } from "../extensions/ant-colony/concurrency.js";
 import type { ConcurrencyConfig, ConcurrencySample } from "../extensions/ant-colony/types.js";
 

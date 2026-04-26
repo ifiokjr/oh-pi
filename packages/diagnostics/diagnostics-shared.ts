@@ -42,7 +42,7 @@ export function extractTextContent(content: unknown): string {
 	return content
 		.filter((item) => item && typeof item === "object" && (item as { type?: unknown }).type === "text")
 		.map((item) => {
-			const {text} = (item as { text?: unknown });
+			const { text } = item as { text?: unknown };
 			return typeof text === "string" ? text : "";
 		})
 		.join(" ")

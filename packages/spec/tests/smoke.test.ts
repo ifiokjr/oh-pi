@@ -1,4 +1,3 @@
-
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import specExtension from "../extension/index.js";
 

@@ -18,8 +18,13 @@ import type { ExtensionAPI, ExtensionContext, ReadonlyFooterDataProvider } from 
 import { truncateToWidth } from "@mariozechner/pi-tui";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode";
 import { recordRuntimeSample } from "./watchdog-runtime-diagnostics";
-import { formatOwnerLabel, getCachedRepoWorktreeContext, getRepoWorktreeSnapshot, refreshRepoWorktreeContext } from './worktree-shared';
-import type { RepoWorktreeContext, RepoWorktreeSnapshot } from './worktree-shared';
+import {
+	formatOwnerLabel,
+	getCachedRepoWorktreeContext,
+	getRepoWorktreeSnapshot,
+	refreshRepoWorktreeContext,
+} from "./worktree-shared";
+import type { RepoWorktreeContext, RepoWorktreeSnapshot } from "./worktree-shared";
 
 /** OSC 8 hyperlink: renders `text` as a clickable terminal link to `url`. */
 export function hyperlink(url: string, text: string): string {
@@ -295,7 +300,7 @@ export default function (pi: ExtensionAPI) {
 					const usage = ctx.getContextUsage();
 					const pct = usage?.percent ?? 0;
 
-					const pctColor = pct > 75 ? "error" : (pct > 50 ? "warning" : "success");
+					const pctColor = pct > 75 ? "error" : pct > 50 ? "warning" : "success";
 
 					const tokenStats = [
 						theme.fg("accent", `${fmt(usageTotals.input)}/${fmt(usageTotals.output)}`),
@@ -429,7 +434,7 @@ export default function (pi: ExtensionAPI) {
 		const usage = activeCtx?.getContextUsage?.();
 		if (usage) {
 			const pct = usage.percent ?? 0;
-			const pctColor = pct > 75 ? "error" : (pct > 50 ? "warning" : "success");
+			const pctColor = pct > 75 ? "error" : pct > 50 ? "warning" : "success";
 			const tokens = usage.tokens == null ? "?" : fmt(usage.tokens);
 			lines.push(
 				`  ${theme.fg("accent", "Context")}${sep}${theme.fg(pctColor, `${pct.toFixed(0)}% used`)}${sep}${tokens} / ${fmt(usage.contextWindow)} tokens`,

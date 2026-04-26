@@ -4,8 +4,8 @@
  * Common utilities for formatting, styling, and data manipulation.
  */
 
-import { clsx } from 'clsx';
-import type { ClassValue } from 'clsx';
+import { clsx } from "clsx";
+import type { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 /**
@@ -19,8 +19,12 @@ export function cn(...inputs: ClassValue[]): string {
  * Format number with locale separators
  */
 export function formatNumber(num: number, decimals = 0): string {
-	if (num === 0) {return "0";}
-	if (Number.isNaN(num)) {return "—";}
+	if (num === 0) {
+		return "0";
+	}
+	if (Number.isNaN(num)) {
+		return "—";
+	}
 
 	const absNum = Math.abs(num);
 
@@ -42,7 +46,9 @@ export function formatNumber(num: number, decimals = 0): string {
  * Format currency (USD by default)
  */
 export function formatCurrency(amount: number, currency = "USD", compact = false): string {
-	if (Number.isNaN(amount)) {return "—";}
+	if (Number.isNaN(amount)) {
+		return "—";
+	}
 
 	const absAmount = Math.abs(amount);
 	const sign = amount < 0 ? "-" : "";
@@ -69,8 +75,12 @@ export function formatCurrency(amount: number, currency = "USD", compact = false
  * Format tokens with appropriate units
  */
 export function formatTokens(tokens: number): string {
-	if (tokens === 0) {return "0";}
-	if (Number.isNaN(tokens)) {return "—";}
+	if (tokens === 0) {
+		return "0";
+	}
+	if (Number.isNaN(tokens)) {
+		return "—";
+	}
 
 	const abs = Math.abs(tokens);
 	if (abs >= 1_000_000) {
@@ -86,9 +96,15 @@ export function formatTokens(tokens: number): string {
  * Format duration in milliseconds to human readable
  */
 export function formatDuration(ms: number): string {
-	if (ms < 1000) {return `${ms.toFixed(0)}ms`;}
-	if (ms < 60_000) {return `${(ms / 1000).toFixed(1)}s`;}
-	if (ms < 3_600_000) {return `${(ms / 60000).toFixed(1)}m`;}
+	if (ms < 1000) {
+		return `${ms.toFixed(0)}ms`;
+	}
+	if (ms < 60_000) {
+		return `${(ms / 1000).toFixed(1)}s`;
+	}
+	if (ms < 3_600_000) {
+		return `${(ms / 60000).toFixed(1)}m`;
+	}
 	return `${(ms / 3_600_000).toFixed(1)}h`;
 }
 
@@ -102,9 +118,15 @@ export function formatDate(date: Date | string | number, format: "short" | "medi
 	const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
 	// Relative dates for recent
-	if (diffDays < 1 && d.getDate() === now.getDate()) {return "Today";}
-	if (diffDays < 2) {return "Yesterday";}
-	if (diffDays < 7) {return `${diffDays} days ago`;}
+	if (diffDays < 1 && d.getDate() === now.getDate()) {
+		return "Today";
+	}
+	if (diffDays < 2) {
+		return "Yesterday";
+	}
+	if (diffDays < 7) {
+		return `${diffDays} days ago`;
+	}
 
 	const options: Intl.DateTimeFormatOptions = {
 		short: { day: "numeric", month: "short" },
@@ -197,8 +219,10 @@ export function getChartColors(count: number): string[] {
  * Truncate text with ellipsis
  */
 export function truncate(str: string, maxLength: number): string {
-	if (str.length <= maxLength) {return str;}
-	return `${str.slice(0, maxLength - 3)  }...`;
+	if (str.length <= maxLength) {
+		return str;
+	}
+	return `${str.slice(0, maxLength - 3)}...`;
 }
 
 /**
@@ -231,7 +255,9 @@ export function getModelShortName(modelId: string): string {
  * Calculate percentage
  */
 export function calculatePercentage(value: number, total: number): number {
-	if (total === 0) {return 0;}
+	if (total === 0) {
+		return 0;
+	}
 	return Math.round((value / total) * 100);
 }
 
@@ -260,7 +286,9 @@ export function isEqual(a: unknown, b: unknown): boolean {
  * Parse JSON safely
  */
 export function safeJsonParse<T>(json: string | null, fallback: T): T {
-	if (!json) {return fallback;}
+	if (!json) {
+		return fallback;
+	}
 	try {
 		return JSON.parse(json) as T;
 	} catch {

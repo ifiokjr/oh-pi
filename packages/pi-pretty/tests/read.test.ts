@@ -1,7 +1,6 @@
-
 import { detectLanguage } from "../src/read.js";
 
-vi.mock<typeof import('@shikijs/cli')>(import('@shikijs/cli'), () => ({
+vi.mock<typeof import("@shikijs/cli")>(import("@shikijs/cli"), () => ({
 	codeToANSI: vi.fn().mockResolvedValue("highlighted code"),
 }));
 

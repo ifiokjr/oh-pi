@@ -3,7 +3,6 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-
 const tempDirs: string[] = [];
 const scriptPath = path.resolve(import.meta.dirname, "run-pnpm-audit.mjs");
 

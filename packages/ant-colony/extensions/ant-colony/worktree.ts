@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { getColonyWorktreeParentDir, resolveColonyStorageOptions } from './storage.js';
-import type { ColonyStorageOptions } from './storage.js';
+import { getColonyWorktreeParentDir, resolveColonyStorageOptions } from "./storage.js";
+import type { ColonyStorageOptions } from "./storage.js";
 import type { ColonyWorkspace } from "./types.js";
 import {
 	buildPaiInstanceId,

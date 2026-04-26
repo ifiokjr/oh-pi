@@ -95,7 +95,9 @@ function classifyStopReason(stopReason: string | null | undefined): {
 }
 
 function isPromptCompletionDiagnostics(value: unknown): value is PromptCompletionDiagnostics {
-	return Boolean(value) && typeof value === "object" && typeof (value as { completedAt?: unknown }).completedAt === "number";
+	return (
+		Boolean(value) && typeof value === "object" && typeof (value as { completedAt?: unknown }).completedAt === "number"
+	);
 }
 
 function isDiagnosticsStateEntry(value: unknown): value is DiagnosticsStateEntry {

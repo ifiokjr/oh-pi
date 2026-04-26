@@ -138,7 +138,7 @@ async function dispatchCommand(
 	agentSession: AgentSessionLike,
 	send: (data: unknown) => void,
 ): Promise<void> {
-	const {id} = msg;
+	const { id } = msg;
 	const respond = (data: Record<string, unknown>) => send({ type: "response", ...data, id });
 
 	switch (msg.type) {

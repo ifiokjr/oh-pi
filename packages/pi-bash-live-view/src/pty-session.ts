@@ -86,7 +86,8 @@ export interface PtySessionManagerOptions {
 	ensureSpawnHelper?: () => Promise<string | null>;
 }
 
-const DEFAULT_NODE_PTY_MODULE_LOADER = async (): Promise<NodePtyModuleLike> => (await import("node-pty")) as NodePtyModuleLike;
+const DEFAULT_NODE_PTY_MODULE_LOADER = async (): Promise<NodePtyModuleLike> =>
+	(await import("node-pty")) as NodePtyModuleLike;
 
 let nodePtyModuleLoader: () => Promise<NodePtyModuleLike> = DEFAULT_NODE_PTY_MODULE_LOADER;
 

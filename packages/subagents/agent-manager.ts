@@ -5,19 +5,24 @@ import type { Component, TUI } from "@mariozechner/pi-tui";
 import { matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import type { AgentConfig, ChainConfig } from "./agents.js";
 import { serializeAgent } from "./agent-serializer.js";
-import { TEMPLATE_ITEMS } from './agent-templates.js';
-import type { AgentTemplate, TemplateItem } from './agent-templates.js';
+import { TEMPLATE_ITEMS } from "./agent-templates.js";
+import type { AgentTemplate, TemplateItem } from "./agent-templates.js";
 import { parseChain, serializeChain } from "./chain-serializer.js";
-import { renderList, handleListInput } from './agent-manager-list.js';
-import type { ListAgent, ListState, ListAction } from './agent-manager-list.js';
-import { createParallelState, handleParallelInput, renderParallel, formatParallelTitle } from './agent-manager-parallel.js';
-import type { ParallelState, AgentOption } from './agent-manager-parallel.js';
-import { renderDetail, handleDetailInput, renderTaskInput } from './agent-manager-detail.js';
-import type { DetailState, DetailAction } from './agent-manager-detail.js';
-import { renderChainDetail, handleChainDetailInput } from './agent-manager-chain-detail.js';
-import type { ChainDetailAction, ChainDetailState } from './agent-manager-chain-detail.js';
-import { createEditState, handleEditInput, renderEdit } from './agent-manager-edit.js';
-import type { EditScreen, EditState, ModelInfo, SkillInfo } from './agent-manager-edit.js';
+import { renderList, handleListInput } from "./agent-manager-list.js";
+import type { ListAgent, ListState, ListAction } from "./agent-manager-list.js";
+import {
+	createParallelState,
+	handleParallelInput,
+	renderParallel,
+	formatParallelTitle,
+} from "./agent-manager-parallel.js";
+import type { ParallelState, AgentOption } from "./agent-manager-parallel.js";
+import { renderDetail, handleDetailInput, renderTaskInput } from "./agent-manager-detail.js";
+import type { DetailState, DetailAction } from "./agent-manager-detail.js";
+import { renderChainDetail, handleChainDetailInput } from "./agent-manager-chain-detail.js";
+import type { ChainDetailAction, ChainDetailState } from "./agent-manager-chain-detail.js";
+import { createEditState, handleEditInput, renderEdit } from "./agent-manager-edit.js";
+import type { EditScreen, EditState, ModelInfo, SkillInfo } from "./agent-manager-edit.js";
 import {
 	createEditorState,
 	ensureCursorVisible,
@@ -113,8 +118,12 @@ function slugTemplateName(name: string): string {
 }
 function nextSelectableIndex(items: TemplateItem[], current: number, direction: 1 | -1): number {
 	let next = current + direction;
-	while (next >= 0 && next < items.length && items[next]!.type === "separator") {next += direction;}
-	if (next < 0 || next >= items.length) {return current;}
+	while (next >= 0 && next < items.length && items[next]!.type === "separator") {
+		next += direction;
+	}
+	if (next < 0 || next >= items.length) {
+		return current;
+	}
 	return next;
 }
 const CHAIN_EDIT_VIEWPORT = 10;
@@ -159,26 +168,34 @@ export class AgentManagerComponent implements Component {
 		const overridden = new Set([...this.agentData.user, ...this.agentData.project].map((c) => c.name));
 		const agents: AgentEntry[] = [];
 		for (const config of this.agentData.builtin) {
-			if (!overridden.has(config.name))
-				{agents.push({ id: `a${this.nextId++}`, kind: "agent", config: cloneConfig(config), isNew: false });}
+			if (!overridden.has(config.name)) {
+				agents.push({ id: `a${this.nextId++}`, kind: "agent", config: cloneConfig(config), isNew: false });
+			}
 		}
-		for (const config of this.agentData.user)
-			{agents.push({ id: `a${this.nextId++}`, kind: "agent", config: cloneConfig(config), isNew: false });}
-		for (const config of this.agentData.project)
-			{agents.push({ id: `a${this.nextId++}`, kind: "agent", config: cloneConfig(config), isNew: false });}
+		for (const config of this.agentData.user) {
+			agents.push({ id: `a${this.nextId++}`, kind: "agent", config: cloneConfig(config), isNew: false });
+		}
+		for (const config of this.agentData.project) {
+			agents.push({ id: `a${this.nextId++}`, kind: "agent", config: cloneConfig(config), isNew: false });
+		}
 		this.agents = agents;
 		const chains: ChainEntry[] = [];
-		for (const config of this.agentData.chains)
-			{chains.push({ id: `c${this.nextId++}`, kind: "chain", config: cloneChainConfig(config) });}
+		for (const config of this.agentData.chains) {
+			chains.push({ id: `c${this.nextId++}`, kind: "chain", config: cloneChainConfig(config) });
+		}
 		this.chains = chains;
 	}
 
 	private getAgentEntry(id: string | null): AgentEntry | undefined {
-		if (!id) {return undefined;}
+		if (!id) {
+			return undefined;
+		}
 		return this.agents.find((entry) => entry.id === id);
 	}
 	private getChainEntry(id: string | null): ChainEntry | undefined {
-		if (!id) {return undefined;}
+		if (!id) {
+			return undefined;
+		}
 		return this.chains.find((entry) => entry.id === id);
 	}
 	private listAgents(): ListAgent[] {
@@ -229,7 +246,9 @@ export class AgentManagerComponent implements Component {
 	}
 	private enterParallelBuilder(ids: string[]): void {
 		const names = ids.map((id) => this.getAgentEntry(id)?.config.name).filter((n): n is string => Boolean(n));
-		if (names.length === 0) {return;}
+		if (names.length === 0) {
+			return;
+		}
 		this.parallelState = createParallelState(names);
 		this.screen = "parallel-builder";
 	}
@@ -261,7 +280,9 @@ export class AgentManagerComponent implements Component {
 	}
 	private enterTemplateSelect(): void {
 		this.templateCursor = TEMPLATE_ITEMS.findIndex((item) => item.type !== "separator");
-		if (this.templateCursor < 0) {this.templateCursor = 0;}
+		if (this.templateCursor < 0) {
+			this.templateCursor = 0;
+		}
 		this.screen = "template-select";
 	}
 
@@ -272,7 +293,10 @@ export class AgentManagerComponent implements Component {
 			this.chainEditState = { editor: createEditorState(content) };
 			this.screen = "chain-edit";
 		} catch (error) {
-			this.statusMessage = { text: error instanceof Error ? error.message : "Failed to load chain file.", type: "error" };
+			this.statusMessage = {
+				text: error instanceof Error ? error.message : "Failed to load chain file.",
+				type: "error",
+			};
 			this.screen = "list";
 		}
 	}
@@ -295,21 +319,27 @@ export class AgentManagerComponent implements Component {
 				scope = entry.config.source === "project" ? "project" : "user";
 			}
 		}
-		if (mode === "new-agent" && template && template.name !== "Blank") {initial = slugTemplateName(template.name);}
+		if (mode === "new-agent" && template && template.name !== "Blank") {
+			initial = slugTemplateName(template.name);
+		}
 		this.nameInputState = { allowProject, editor: createEditorState(initial), mode, scope, sourceId, template };
 		this.screen = "name-input";
 	}
 
 	private saveEdit(): boolean {
 		const edit = this.editState;
-		if (!edit) {return false;}
+		if (!edit) {
+			return false;
+		}
 		const entry = this.getAgentEntry(this.currentAgentId);
-		if (!entry) {return false;}
+		if (!entry) {
+			return false;
+		}
 		if (!edit.draft.name || !edit.draft.description) {
 			edit.error = "Name and description are required.";
 			return false;
 		}
-		let {filePath} = entry.config;
+		let { filePath } = entry.config;
 		if (entry.isNew) {
 			const dir = edit.draft.source === "project" ? this.agentData.projectDir : this.agentData.userDir;
 			if (!dir) {
@@ -339,7 +369,9 @@ export class AgentManagerComponent implements Component {
 	private saveChainEdit(): boolean {
 		const state = this.chainEditState;
 		const entry = this.getChainEntry(this.currentChainId);
-		if (!state || !entry) {return false;}
+		if (!state || !entry) {
+			return false;
+		}
 		try {
 			const parsed = parseChain(state.editor.buffer, entry.config.source, entry.config.filePath);
 			fs.writeFileSync(entry.config.filePath, serializeChain(parsed), "utf8");
@@ -370,16 +402,23 @@ export class AgentManagerComponent implements Component {
 		}
 		if (matchesKey(data, "return")) {
 			const item = TEMPLATE_ITEMS[this.templateCursor];
-			if (!item || item.type === "separator") {return;}
-			if (item.type === "agent") {this.enterNameInput("new-agent", undefined, { name: item.name, config: item.config });}
-			else if (item.type === "chain") {this.enterNameInput("new-chain");}
+			if (!item || item.type === "separator") {
+				return;
+			}
+			if (item.type === "agent") {
+				this.enterNameInput("new-agent", undefined, { name: item.name, config: item.config });
+			} else if (item.type === "chain") {
+				this.enterNameInput("new-chain");
+			}
 			this.tui.requestRender();
 		}
 	}
 
 	private handleNameInput(data: string): void {
 		const state = this.nameInputState;
-		if (!state) {return;}
+		if (!state) {
+			return;
+		}
 		state.error = undefined;
 		const canToggleScope = state.allowProject;
 		if (matchesKey(data, "tab")) {
@@ -403,7 +442,9 @@ export class AgentManagerComponent implements Component {
 			this.tui.requestRender();
 			return;
 		}
-		if (!matchesKey(data, "return")) {return;}
+		if (!matchesKey(data, "return")) {
+			return;
+		}
 		const name = state.editor.buffer.trim();
 		if (!name) {
 			state.error = "Name is required.";
@@ -517,7 +558,9 @@ export class AgentManagerComponent implements Component {
 
 	private renderNameInput(w: number): string[] {
 		const state = this.nameInputState;
-		if (!state) {return [];}
+		if (!state) {
+			return [];
+		}
 		const lines: string[] = [];
 		const title =
 			state.mode === "new-agent"
@@ -542,19 +585,26 @@ export class AgentManagerComponent implements Component {
 		const editorLine = renderEditor(editorState, boxInnerWidth, 1)[0] ?? "";
 		lines.push(row(` │${pad(editorLine, boxInnerWidth)}│`, w, this.theme));
 		lines.push(row(` ${bottom}`, w, this.theme));
-		if (state.mode === "new-agent" && state.template)
-			{lines.push(row(` ${this.theme.fg("dim", "Template:")} ${state.template.name}`, w, this.theme));}
-		else if (state.mode === "new-chain")
-			{lines.push(row(` ${this.theme.fg("dim", "Creates a .chain.md configuration file")}`, w, this.theme));}
-		else {lines.push(row("", w, this.theme));}
+		if (state.mode === "new-agent" && state.template) {
+			lines.push(row(` ${this.theme.fg("dim", "Template:")} ${state.template.name}`, w, this.theme));
+		} else if (state.mode === "new-chain") {
+			lines.push(row(` ${this.theme.fg("dim", "Creates a .chain.md configuration file")}`, w, this.theme));
+		} else {
+			lines.push(row("", w, this.theme));
+		}
 		if (state.allowProject) {
 			const scopeLabel = state.scope === "user" ? "[user]" : "[proj]";
 			lines.push(
 				row(` ${this.theme.fg("dim", "Scope:")} ${scopeLabel}  ${this.theme.fg("dim", "[tab] toggle")}`, w, this.theme),
 			);
-		} else {lines.push(row("", w, this.theme));}
-		if (state.error) {lines.push(row(` ${this.theme.fg("error", state.error)}`, w, this.theme));}
-		else {lines.push(row("", w, this.theme));}
+		} else {
+			lines.push(row("", w, this.theme));
+		}
+		if (state.error) {
+			lines.push(row(` ${this.theme.fg("error", state.error)}`, w, this.theme));
+		} else {
+			lines.push(row("", w, this.theme));
+		}
 		lines.push(renderFooter(" [enter] continue  [esc] cancel ", w, this.theme));
 		return lines;
 	}
@@ -596,7 +646,9 @@ export class AgentManagerComponent implements Component {
 				);
 			}
 		}
-		for (let i = visible.length; i < viewport; i++) {lines.push(row("", w, this.theme));}
+		for (let i = visible.length; i < viewport; i++) {
+			lines.push(row("", w, this.theme));
+		}
 		const selected = TEMPLATE_ITEMS[this.templateCursor];
 		const info = selected ? (selected.type === "separator" ? selected.label : selected.name) : "";
 		lines.push(row(` ${this.theme.fg("dim", info)}`, w, this.theme));
@@ -626,7 +678,9 @@ export class AgentManagerComponent implements Component {
 	private renderChainEdit(w: number): string[] {
 		const state = this.chainEditState;
 		const entry = this.getChainEntry(this.currentChainId);
-		if (!state || !entry) {return [];}
+		if (!state || !entry) {
+			return [];
+		}
 		const lines: string[] = [];
 		lines.push(renderHeader(` Edit Chain: ${entry.config.name} `, w, this.theme));
 		lines.push(row("", w, this.theme));
@@ -640,21 +694,32 @@ export class AgentManagerComponent implements Component {
 		const cursorPos = getCursorDisplayPos(editorState.cursor, wrapped.starts);
 		editorState.viewportOffset = ensureCursorVisible(cursorPos.line, CHAIN_EDIT_VIEWPORT, editorState.viewportOffset);
 		const editorLines = renderEditor(editorState, boxInnerWidth, CHAIN_EDIT_VIEWPORT);
-		for (const line of editorLines) {lines.push(row(` │${pad(line, boxInnerWidth)}│`, w, this.theme));}
+		for (const line of editorLines) {
+			lines.push(row(` │${pad(line, boxInnerWidth)}│`, w, this.theme));
+		}
 		lines.push(row(` ${bottom}`, w, this.theme));
-		if (state.error) {lines.push(row(` ${this.theme.fg("error", state.error)}`, w, this.theme));}
-		else {lines.push(row("", w, this.theme));}
+		if (state.error) {
+			lines.push(row(` ${this.theme.fg("error", state.error)}`, w, this.theme));
+		} else {
+			lines.push(row("", w, this.theme));
+		}
 		lines.push(renderFooter(" [ctrl+s] save  [esc] back ", w, this.theme));
 		return lines;
 	}
 
 	handleInput(data: string): void {
-		if (this.screen === "list" && this.statusMessage) {this.clearStatus();}
-		if (this.screen.startsWith("edit") && this.editState?.error) {this.editState.error = undefined;}
+		if (this.screen === "list" && this.statusMessage) {
+			this.clearStatus();
+		}
+		if (this.screen.startsWith("edit") && this.editState?.error) {
+			this.editState.error = undefined;
+		}
 		switch (this.screen) {
 			case "list": {
 				const action = handleListInput(this.listState, this.listAgents(), data);
-				if (action) {this.handleListAction(action);}
+				if (action) {
+					this.handleListAction(action);
+				}
 				this.tui.requestRender();
 				return;
 			}
@@ -670,7 +735,9 @@ export class AgentManagerComponent implements Component {
 					return;
 				}
 				const action = handleDetailInput(this.detailState, data);
-				if (action) {this.handleDetailAction(action, entry);}
+				if (action) {
+					this.handleDetailAction(action, entry);
+				}
 				this.tui.requestRender();
 				return;
 			}
@@ -682,7 +749,9 @@ export class AgentManagerComponent implements Component {
 					return;
 				}
 				const action = handleChainDetailInput(this.chainDetailState, data);
-				if (action) {this.handleChainDetailAction(action, entry);}
+				if (action) {
+					this.handleChainDetailAction(action, entry);
+				}
 				this.tui.requestRender();
 				return;
 			}
@@ -790,7 +859,10 @@ export class AgentManagerComponent implements Component {
 						this.tui.requestRender();
 						return;
 					} catch (error) {
-						this.statusMessage = { text: error instanceof Error ? error.message : "Failed to delete item.", type: "error" };
+						this.statusMessage = {
+							text: error instanceof Error ? error.message : "Failed to delete item.",
+							type: "error",
+						};
 						this.confirmDeleteId = null;
 						this.screen = "list";
 						this.tui.requestRender();
@@ -875,12 +947,16 @@ export class AgentManagerComponent implements Component {
 					const ok = this.saveEdit();
 					if (ok) {
 						const entry = this.getAgentEntry(this.currentAgentId);
-						if (entry) {this.enterDetail(entry);}
+						if (entry) {
+							this.enterDetail(entry);
+						}
 					}
 					this.tui.requestRender();
 					return;
 				}
-				if (result?.nextScreen) {this.screen = result.nextScreen;}
+				if (result?.nextScreen) {
+					this.screen = result.nextScreen;
+				}
 				this.tui.requestRender();
 				return;
 			}
@@ -921,7 +997,9 @@ export class AgentManagerComponent implements Component {
 					return;
 				}
 				const chain = this.getChainEntry(action.id);
-				if (chain) {this.enterChainDetail(chain);}
+				if (chain) {
+					this.enterChainDetail(chain);
+				}
 				return;
 			}
 			case "clone": {
@@ -992,7 +1070,9 @@ export class AgentManagerComponent implements Component {
 			this.enterSavedChainLaunch(entry);
 			return;
 		}
-		if (action.type === "edit") {this.enterChainEdit(entry);}
+		if (action.type === "edit") {
+			this.enterChainEdit(entry);
+		}
 	}
 
 	render(width: number): string[] {
@@ -1007,12 +1087,16 @@ export class AgentManagerComponent implements Component {
 			}
 			case "detail": {
 				const entry = this.getAgentEntry(this.currentAgentId);
-				if (!entry) {return renderList(this.listState, this.listAgents(), w, this.theme, this.statusMessage);}
+				if (!entry) {
+					return renderList(this.listState, this.listAgents(), w, this.theme, this.statusMessage);
+				}
 				return renderDetail(this.detailState, entry.config, this.agentData.cwd, w, this.theme);
 			}
 			case "chain-detail": {
 				const entry = this.getChainEntry(this.currentChainId);
-				if (!entry) {return renderList(this.listState, this.listAgents(), w, this.theme, this.statusMessage);}
+				if (!entry) {
+					return renderList(this.listState, this.listAgents(), w, this.theme, this.statusMessage);
+				}
 				return renderChainDetail(this.chainDetailState, entry.config, w, this.theme);
 			}
 			case "edit":
@@ -1021,8 +1105,9 @@ export class AgentManagerComponent implements Component {
 				return this.editState ? renderEdit(this.screen as EditScreen, this.editState, w, this.theme) : [];
 			}
 			case "parallel-builder": {
-				if (!this.parallelState)
-					{return renderList(this.listState, this.listAgents(), w, this.theme, this.statusMessage);}
+				if (!this.parallelState) {
+					return renderList(this.listState, this.listAgents(), w, this.theme, this.statusMessage);
+				}
 				const agentOptions: AgentOption[] = this.agents.map((e) => ({
 					description: e.config.description,
 					model: e.config.model,
@@ -1036,14 +1121,15 @@ export class AgentManagerComponent implements Component {
 					const title = entry ? `Chain: ${entry.config.name}` : "Chain";
 					return renderTaskInput(title, this.taskEditor, this.skipClarify, w, this.theme);
 				}
-				if (this.parallelMode && this.parallelState)
-					{return renderTaskInput(
+				if (this.parallelMode && this.parallelState) {
+					return renderTaskInput(
 						formatParallelTitle(this.parallelState.slots),
 						this.taskEditor,
 						this.skipClarify,
 						w,
 						this.theme,
-					);}
+					);
+				}
 				const name = this.getAgentEntry(this.chainAgentIds[0] ?? null)?.config.name ?? "Agent";
 				return renderTaskInput(`Run: ${name}`, this.taskEditor, this.skipClarify, w, this.theme);
 			}

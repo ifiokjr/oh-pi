@@ -1,4 +1,3 @@
-
 import { executePtyCommand, ptyExecuteInternals, toAgentToolResult, toUserBashResult } from "../src/pty-execute.js";
 import { resetHeadlessModuleLoader, setHeadlessModuleLoader } from "../src/terminal-emulator.js";
 import {
@@ -433,20 +432,24 @@ describe("pTY execution", () => {
 		const candidates = getSpawnHelperCandidates("/tmp/chmod-me");
 		expect(candidates[0]).toBe("/tmp/chmod-me");
 		expect(spawnHelperInternals.uniquePaths(["a", "a", "b"])).toStrictEqual(["a", "b"]);
-		await expect(ensureSpawnHelperExecutable({
+		await expect(
+			ensureSpawnHelperExecutable({
 				explicitPath: "/tmp/chmod-me",
 				accessFn: accessFn as never,
 				chmodFn: chmodFn as never,
-			})).resolves.toBe("/tmp/chmod-me");
+			}),
+		).resolves.toBe("/tmp/chmod-me");
 		expect(chmodFn).toHaveBeenCalledWith("/tmp/chmod-me", 0o755);
 		const missingAccess = vi.fn(async () => {
 			throw new Error("missing");
 		});
-		await expect(ensureSpawnHelperExecutable({
+		await expect(
+			ensureSpawnHelperExecutable({
 				explicitPath: "/tmp/missing",
 				accessFn: missingAccess as never,
 				chmodFn: chmodFn as never,
-			})).resolves.toBeNull();
+			}),
+		).resolves.toBeNull();
 		await expect(spawnHelperInternals.isExecutable("/tmp/chmod-me", missingAccess as never)).resolves.toBeFalsy();
 		await ensureSpawnHelperExecutable();
 	});

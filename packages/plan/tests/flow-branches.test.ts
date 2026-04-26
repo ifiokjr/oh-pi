@@ -1,7 +1,6 @@
 import path from "node:path";
 
-
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	BorderedLoader: class BorderedLoader {
 		onAbort?: () => void;
 	},
@@ -23,8 +22,8 @@ const stateMocks = vi.hoisted(() => ({
 	hasEntryInSession: vi.fn(),
 }));
 
-vi.mock<typeof import('../plan-files')>(import('../plan-files'), () => planFileMocks);
-vi.mock<typeof import('../state')>(import('../state'), () => stateMocks);
+vi.mock<typeof import("../plan-files")>(import("../plan-files"), () => planFileMocks);
+vi.mock<typeof import("../state")>(import("../state"), () => stateMocks);
 
 const { registerPlanModeCommand } = await import("../flow");
 
@@ -123,7 +122,9 @@ beforeEach(() => {
 	planFileMocks.pathExists.mockResolvedValue(false);
 	planFileMocks.readPlanFile.mockResolvedValue();
 	planFileMocks.resolveActivePlanFilePath.mockImplementation((_ctx, planFilePath: string) => planFilePath);
-	planFileMocks.resolvePlanLocationInput.mockImplementation((_ctx, rawLocation: string) => Promise.resolve(rawLocation ? path.join("/plans", path.basename(rawLocation)) : null));
+	planFileMocks.resolvePlanLocationInput.mockImplementation((_ctx, rawLocation: string) =>
+		Promise.resolve(rawLocation ? path.join("/plans", path.basename(rawLocation)) : null),
+	);
 	planFileMocks.resetPlanFile.mockResolvedValue();
 
 	stateMocks.getFirstUserMessageId.mockReturnValue("user-1");

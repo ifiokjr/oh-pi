@@ -12,10 +12,10 @@ import {
 	refreshProviderCredential,
 	refreshProviderCredentialModels,
 } from "./auth.js";
-import { getCatalogModels, getCredentialModels, resolveProviderModels } from './catalog.js';
-import type { ProviderCatalogCredentials, ProviderCatalogModel } from './catalog.js';
-import { getEnvApiKey, resolveApiKeyConfig, SUPPORTED_PROVIDERS } from './config.js';
-import type { SupportedProviderDefinition } from './config.js';
+import { getCatalogModels, getCredentialModels, resolveProviderModels } from "./catalog.js";
+import type { ProviderCatalogCredentials, ProviderCatalogModel } from "./catalog.js";
+import { getEnvApiKey, resolveApiKeyConfig, SUPPORTED_PROVIDERS } from "./config.js";
+import type { SupportedProviderDefinition } from "./config.js";
 
 interface ScrollSelectOption<T> {
 	value: T;
@@ -317,7 +317,7 @@ async function renderProviderInfo(provider: SupportedProviderDefinition, ctx: Pr
 	const credential = getStoredCredential(ctx, provider.id);
 	const currentModels = credential ? getCredentialModels(credential) : (runtimeState.models.get(provider.id) ?? []);
 	const catalogModels = currentModels.length > 0 ? currentModels : await getCatalogModels(provider).catch(() => []);
-	const source = credential ? "login" : (getEnvApiKey(provider) ? "env" : "not configured");
+	const source = credential ? "login" : getEnvApiKey(provider) ? "env" : "not configured";
 	const refreshedAt = credential?.lastModelRefresh ?? runtimeState.lastRefresh.get(provider.id);
 
 	return [
@@ -517,7 +517,7 @@ function buildProviderPickerOptions(
 }
 
 function formatProviderPickerOption(provider: SupportedProviderDefinition, ctx: ProviderStatusContext): string {
-	const state = hasStoredCredential(ctx, provider.id) ? "✓ logged in" : (getEnvApiKey(provider) ? "env key" : "login");
+	const state = hasStoredCredential(ctx, provider.id) ? "✓ logged in" : getEnvApiKey(provider) ? "env key" : "login";
 	return `${provider.name} — ${provider.id} · ${state}`;
 }
 
@@ -559,7 +559,7 @@ async function loginProviderFromCommand(
 }
 
 function promptProviderInput(ctx: ProviderCommandContext, title: string, placeholder?: string): Promise<string> {
-	const {input} = ctx.ui;
+	const { input } = ctx.ui;
 	if (typeof input !== "function") {
 		throw new TypeError("Interactive input is unavailable for provider login.");
 	}

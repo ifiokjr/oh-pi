@@ -1,4 +1,3 @@
-
 import { areIconsEnabled, enableIcons, getDirectoryIcon, getFileIcon } from "../src/icons.js";
 
 describe(getFileIcon, () => {

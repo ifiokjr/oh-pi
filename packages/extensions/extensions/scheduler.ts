@@ -26,8 +26,8 @@ instance changes in the same repository.
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { openScrollableSelect } from '@ifi/pi-shared-qna';
-import type { ScrollSelectOption } from '@ifi/pi-shared-qna';
+import { openScrollableSelect } from "@ifi/pi-shared-qna";
+import type { ScrollSelectOption } from "@ifi/pi-shared-qna";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import {
@@ -38,8 +38,29 @@ import {
 	parseDuration,
 } from "./scheduler-parsing.js";
 import { registerCommands, registerEvents, registerTools } from "./scheduler-registration.js";
-import { DEFAULT_LOOP_INTERVAL, DEFAULT_RECURRING_EXPIRY_MS, DISPATCH_RATE_LIMIT_WINDOW_MS, FIFTEEN_MINUTES, getLegacySchedulerStoragePath, getSchedulerLeasePath, getSchedulerStoragePath, getSchedulerStorageRoot, MAX_DISPATCH_TIMESTAMPS, MAX_DISPATCHES_PER_WINDOW, MAX_RECURRING_EXPIRY_MS, MAX_TASKS, MIN_RECURRING_INTERVAL, ONE_HOUR, ONE_MINUTE, SCHEDULER_DISPATCHED_MESSAGE_TYPE, SCHEDULER_LEASE_HEARTBEAT_MS, SCHEDULER_LEASE_STALE_AFTER_MS, SCHEDULER_SAFE_MODE_HEARTBEAT_MS, THREE_DAYS } from './scheduler-shared.js';
-import type { ResumeReason, SchedulerLease, ScheduleScope, ScheduleTask } from './scheduler-shared.js';
+import {
+	DEFAULT_LOOP_INTERVAL,
+	DEFAULT_RECURRING_EXPIRY_MS,
+	DISPATCH_RATE_LIMIT_WINDOW_MS,
+	FIFTEEN_MINUTES,
+	getLegacySchedulerStoragePath,
+	getSchedulerLeasePath,
+	getSchedulerStoragePath,
+	getSchedulerStorageRoot,
+	MAX_DISPATCH_TIMESTAMPS,
+	MAX_DISPATCHES_PER_WINDOW,
+	MAX_RECURRING_EXPIRY_MS,
+	MAX_TASKS,
+	MIN_RECURRING_INTERVAL,
+	ONE_HOUR,
+	ONE_MINUTE,
+	SCHEDULER_DISPATCHED_MESSAGE_TYPE,
+	SCHEDULER_LEASE_HEARTBEAT_MS,
+	SCHEDULER_LEASE_STALE_AFTER_MS,
+	SCHEDULER_SAFE_MODE_HEARTBEAT_MS,
+	THREE_DAYS,
+} from "./scheduler-shared.js";
+import type { ResumeReason, SchedulerLease, ScheduleScope, ScheduleTask } from "./scheduler-shared.js";
 import { createStatusBarState } from "./ui-status-cache.js";
 import { RUNTIME_DIAGNOSTICS_EVENT } from "./watchdog-runtime-diagnostics.js";
 
@@ -1311,7 +1332,7 @@ export class SchedulerRuntime {
 			return;
 		}
 
-		const {maxAttempts} = task;
+		const { maxAttempts } = task;
 		if (Number.isFinite(maxAttempts) && (task.runCount ?? 0) >= (maxAttempts ?? 0)) {
 			task.enabled = false;
 			task.lastStatus = "error";
@@ -1341,7 +1362,7 @@ export class SchedulerRuntime {
 			if (message?.role !== "assistant") {
 				continue;
 			}
-			const {content} = message;
+			const { content } = message;
 			if (typeof content === "string") {
 				return content.trim();
 			}
@@ -1458,15 +1479,15 @@ export class SchedulerRuntime {
 		const base =
 			task.kind === "once"
 				? "once"
-				: (task.cronExpression
+				: task.cronExpression
 					? `cron ${task.cronExpression}`
-					: `every ${formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL)}`);
+					: `every ${formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL)}`;
 		return task.continueUntilComplete ? `${base} until-complete` : base;
 	}
 
 	private taskOptionLabel(task: ScheduleTask): string {
 		const origin = this.taskCreatorShortLabel(task);
-		const state = task.resumeRequired ? `! ${task.resumeReason ?? "review"}` : (task.enabled ? "+" : "-");
+		const state = task.resumeRequired ? `! ${task.resumeReason ?? "review"}` : task.enabled ? "+" : "-";
 		return `${task.id} • ${origin} • ${state} [${task.scope ?? "instance"}] ${this.taskMode(task)} • ${this.formatRelativeTime(task.nextRunAt)} • ${this.truncateText(task.prompt, 50)}`;
 	}
 

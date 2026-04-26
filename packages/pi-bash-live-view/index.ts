@@ -40,7 +40,7 @@ function toErrorToolResult(error: unknown) {
 }
 
 export default function bashLiveViewExtension(pi: ExtensionAPI): void {
-	const bashTemplate = createBashTool(process.cwd()) as typeof createBashTool extends (...args: any[]) => infer T
+	const bashTemplate = createBashTool(process.cwd()) as typeof createBashTool extends (...args: unknown[]) => infer T
 		? T & {
 				renderCall?: unknown;
 				renderResult?: unknown;
@@ -97,8 +97,8 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 		label: bashTemplate.label ?? "Bash",
 		name: BASH_LIVE_VIEW_TOOL,
 		parameters: BASH_TOOL_PARAMETERS,
-		renderCall: bashTemplate.renderCall as any,
-		renderResult: bashTemplate.renderResult as any,
+		renderCall: bashTemplate.renderCall as unknown as (call: unknown) => unknown,
+		renderResult: bashTemplate.renderResult as unknown as (call: unknown) => unknown,
 	});
 
 	pi.registerCommand(BASH_PTY_COMMAND, {

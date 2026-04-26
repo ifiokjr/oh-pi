@@ -1,4 +1,3 @@
-
 import { checkHealth, rescan } from "../src/fff-helpers.js";
 
 describe("fff-helpers", () => {

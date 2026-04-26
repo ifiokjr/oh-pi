@@ -23,7 +23,7 @@ export async function checkHealth(): Promise<FffStatus> {
 		// Attempt to load FFF module; if unavailable, return degraded status
 		const fff = await import("@ff-labs/fff-node");
 		// Safe access to any API surface
-		const cursor = (fff as any).CursorStore ? new (fff as any).CursorStore() : null;
+		const cursor = (fff as unknown as { CursorStore?: new () => { stats?(): { fileCount?: number }; rescan?(cwd: string): Promise<void> } }).CursorStore ? new (fff as unknown as { CursorStore?: new () => { stats?(): { fileCount?: number }; rescan?(cwd: string): Promise<void> } }).CursorStore() : null;
 		const stats = cursor?.stats?.() ?? {};
 		return {
 			fileCount: stats.fileCount,
@@ -44,7 +44,7 @@ export async function rescan(): Promise<FffStatus> {
 	try {
 		ensureFffDir();
 		const fff = await import("@ff-labs/fff-node");
-		const cursor = (fff as any).CursorStore ? new (fff as any).CursorStore() : null;
+		const cursor = (fff as unknown as { CursorStore?: new () => { stats?(): { fileCount?: number }; rescan?(cwd: string): Promise<void> } }).CursorStore ? new (fff as unknown as { CursorStore?: new () => { stats?(): { fileCount?: number }; rescan?(cwd: string): Promise<void> } }).CursorStore() : null;
 		if (cursor?.rescan) {
 			await cursor.rescan(process.cwd());
 			return {

@@ -92,7 +92,9 @@ function getProviderDisplayName(providerId: string): string {
 let migrationsDone = false;
 
 function ensureDatabase(): void {
-	if (migrationsDone) {return;}
+	if (migrationsDone) {
+		return;
+	}
 	runMigrations();
 	migrationsDone = true;
 }
@@ -124,7 +126,9 @@ function endAnalyticsSession(): void {
 }
 
 function updateCodebase(cwd: string | undefined): string | undefined {
-	if (!cwd) {return undefined;}
+	if (!cwd) {
+		return undefined;
+	}
 
 	const codebaseId = getCodebaseHash(cwd);
 
@@ -244,7 +248,9 @@ export default function piAnalytics(pi: ExtensionAPI) {
 	});
 
 	pi.on("turn_end", (event, ctx) => {
-		if (event.message.role !== "assistant") {return;}
+		if (event.message.role !== "assistant") {
+			return;
+		}
 
 		const msg = event.message as {
 			model: string;
@@ -276,7 +282,7 @@ export default function piAnalytics(pi: ExtensionAPI) {
 			const dashboardUrl = "http://localhost:31415";
 			try {
 				const { exec } = await import("node:child_process");
-				const openCmd = process.platform === "darwin" ? "open" : (process.platform === "win32" ? "start" : "xdg-open");
+				const openCmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
 				exec(`${openCmd} ${dashboardUrl}`);
 				ctx.ui.notify("Analytics Dashboard opened", "info");
 			} catch {

@@ -2,7 +2,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-
 const skillsMocks = vi.hoisted(() => ({
 	execSync: vi.fn(() => "/tmp/global-node-modules\n"),
 	expandHomeDir: vi.fn((value: string) => value.replace(/^~\//, "/tmp/home/")),
@@ -10,19 +9,19 @@ const skillsMocks = vi.hoisted(() => ({
 	resolveAgentDir: vi.fn(() => "/tmp/pi-agent"),
 }));
 
-vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({
+vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({
 	execSync: skillsMocks.execSync,
 }));
 
-vi.mock<typeof import('@ifi/oh-pi-core')>(import('@ifi/oh-pi-core'), () => ({
+vi.mock<typeof import("@ifi/oh-pi-core")>(import("@ifi/oh-pi-core"), () => ({
 	expandHomeDir: skillsMocks.expandHomeDir,
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	loadSkills: skillsMocks.loadSkills,
 }));
 
-vi.mock<typeof import('../paths.js')>(import('../paths.js'), () => ({
+vi.mock<typeof import("../paths.js")>(import("../paths.js"), () => ({
 	resolveAgentDir: skillsMocks.resolveAgentDir,
 }));
 

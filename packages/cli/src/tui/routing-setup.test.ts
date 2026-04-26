@@ -1,5 +1,3 @@
-
-
 const promptState = vi.hoisted(() => ({
 	cancels: [] as string[],
 	confirm: [] as unknown[],
@@ -25,7 +23,7 @@ const packageMocks = vi.hoisted(() => ({
 	installPiPackages: vi.fn(),
 }));
 
-vi.mock<typeof import('@clack/prompts')>(import('@clack/prompts'), () => ({
+vi.mock<typeof import("@clack/prompts")>(import("@clack/prompts"), () => ({
 	cancel: vi.fn((message: string) => {
 		promptState.cancels.push(message);
 	}),
@@ -51,8 +49,8 @@ vi.mock<typeof import('@clack/prompts')>(import('@clack/prompts'), () => ({
 	}),
 }));
 
-vi.mock<typeof import('./routing-dashboard.js')>(import('./routing-dashboard.js'), () => dashboardMocks);
-vi.mock<typeof import('../utils/pi-packages.js')>(import('../utils/pi-packages.js'), () => packageMocks);
+vi.mock<typeof import("./routing-dashboard.js")>(import("./routing-dashboard.js"), () => dashboardMocks);
+vi.mock<typeof import("../utils/pi-packages.js")>(import("../utils/pi-packages.js"), () => packageMocks);
 
 import { setupAdaptiveRouting, summarizeAdaptiveRouting } from "./routing-setup.js";
 

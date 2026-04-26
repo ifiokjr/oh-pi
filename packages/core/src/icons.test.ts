@@ -1,4 +1,3 @@
-
 import { icon, isPlainIcons, setPlainIcons } from "./icons.js";
 
 describe("icons", () => {

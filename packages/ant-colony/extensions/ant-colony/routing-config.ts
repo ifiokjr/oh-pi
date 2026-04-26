@@ -1,8 +1,14 @@
 /* C8 ignore file */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from '@ifi/oh-pi-core';
-import type { DelegatedAvailableModel, DelegatedSelectionLatencySnapshot, DelegatedSelectionPolicy, DelegatedSelectionUsageSnapshot, ModelTaskProfile } from '@ifi/oh-pi-core';
+import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from "@ifi/oh-pi-core";
+import type {
+	DelegatedAvailableModel,
+	DelegatedSelectionLatencySnapshot,
+	DelegatedSelectionPolicy,
+	DelegatedSelectionUsageSnapshot,
+	ModelTaskProfile,
+} from "@ifi/oh-pi-core";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import type { AntCaste, WorkerClass } from "./types.js";
 

@@ -15,8 +15,12 @@ interface FileEntry {
 }
 
 function sortEntries(a: FileEntry, b: FileEntry): number {
-	if (a.isDirectory && !b.isDirectory) {return -1;}
-	if (!a.isDirectory && b.isDirectory) {return 1;}
+	if (a.isDirectory && !b.isDirectory) {
+		return -1;
+	}
+	if (!a.isDirectory && b.isDirectory) {
+		return 1;
+	}
 	return a.name.localeCompare(b.name);
 }
 
@@ -46,7 +50,7 @@ export function enhanceLsTool(pi: ExtensionAPI): void {
 	pi.registerTool({
 		...original,
 		async execute(toolCallId, params, signal, onUpdate): Promise<AgentToolResult<unknown>> {
-			const result = await original.execute(toolCallId, params as any, signal, onUpdate);
+			const result = await original.execute(toolCallId, params as unknown, signal, onUpdate);
 			const text = result.content.find((c): c is { type: "text"; text: string } => c.type === "text")?.text ?? "";
 			let entries: FileEntry[] = [];
 			if (text.startsWith("[") || text.startsWith("{")) {

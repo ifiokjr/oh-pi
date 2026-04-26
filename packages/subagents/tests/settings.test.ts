@@ -2,8 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-
-vi.mock<typeof import('../skills.js')>(import('../skills.js'), () => ({
+vi.mock<typeof import("../skills.js")>(import("../skills.js"), () => ({
 	normalizeSkillInput: (value: unknown) => {
 		if (value === false) {
 			return false;

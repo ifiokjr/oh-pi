@@ -1,12 +1,10 @@
-
-
 const discoverAgentsMock = vi.hoisted(() => vi.fn());
 
-vi.mock<typeof import('../agents.js')>(import('../agents.js'), () => ({
+vi.mock<typeof import("../agents.js")>(import("../agents.js"), () => ({
 	discoverAgents: discoverAgentsMock,
 }));
 
-vi.mock<typeof import('../types.js')>(import('../types.js'), () => ({
+vi.mock<typeof import("../types.js")>(import("../types.js"), () => ({
 	MAX_PARALLEL: 2,
 }));
 

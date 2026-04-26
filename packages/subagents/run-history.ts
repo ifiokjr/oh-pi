@@ -33,7 +33,9 @@ export function recordRun(agent: string, task: string, exitCode: number, duratio
 }
 
 export function loadRunsForAgent(agent: string): RunEntry[] {
-	if (!fs.existsSync(HISTORY_PATH)) {return [];}
+	if (!fs.existsSync(HISTORY_PATH)) {
+		return [];
+	}
 	let raw: string;
 	try {
 		raw = fs.readFileSync(HISTORY_PATH, "utf8");

@@ -108,9 +108,15 @@ function loadAgentsFromDir(dir: string, source: AgentSource): AgentConfig[] {
 	}
 
 	for (const entry of entries) {
-		if (!entry.name.endsWith(".md")) {continue;}
-		if (entry.name.endsWith(".chain.md")) {continue;}
-		if (!entry.isFile() && !entry.isSymbolicLink()) {continue;}
+		if (!entry.name.endsWith(".md")) {
+			continue;
+		}
+		if (entry.name.endsWith(".chain.md")) {
+			continue;
+		}
+		if (!entry.isFile() && !entry.isSymbolicLink()) {
+			continue;
+		}
 
 		const filePath = path.join(dir, entry.name);
 		let content: string;
@@ -165,7 +171,9 @@ function loadAgentsFromDir(dir: string, source: AgentSource): AgentConfig[] {
 
 		const extraFields: Record<string, string> = {};
 		for (const [key, value] of Object.entries(frontmatter)) {
-			if (!KNOWN_FIELDS.has(key)) {extraFields[key] = value;}
+			if (!KNOWN_FIELDS.has(key)) {
+				extraFields[key] = value;
+			}
 		}
 
 		agents.push({
@@ -208,8 +216,12 @@ function loadChainsFromDir(dir: string, source: AgentSource): ChainConfig[] {
 	}
 
 	for (const entry of entries) {
-		if (!entry.name.endsWith(".chain.md")) {continue;}
-		if (!entry.isFile() && !entry.isSymbolicLink()) {continue;}
+		if (!entry.name.endsWith(".chain.md")) {
+			continue;
+		}
+		if (!entry.isFile() && !entry.isSymbolicLink()) {
+			continue;
+		}
 
 		const filePath = path.join(dir, entry.name);
 		let content: string;

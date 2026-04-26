@@ -1,4 +1,3 @@
-
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
 const { readFileSyncMock, getAgentDirMock } = vi.hoisted(() => ({
@@ -6,7 +5,7 @@ const { readFileSyncMock, getAgentDirMock } = vi.hoisted(() => ({
 	readFileSyncMock: vi.fn(),
 }));
 
-vi.mock<typeof import('node:fs')>(import('node:fs'), async (importOriginal) => {
+vi.mock<typeof import("node:fs")>(import("node:fs"), async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs")>();
 	return {
 		...actual,
@@ -14,7 +13,7 @@ vi.mock<typeof import('node:fs')>(import('node:fs'), async (importOriginal) => {
 	};
 });
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), async () => {
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), async () => {
 	const actual = await vi.importActual<typeof import("@mariozechner/pi-coding-agent")>("@mariozechner/pi-coding-agent");
 	return {
 		...actual,

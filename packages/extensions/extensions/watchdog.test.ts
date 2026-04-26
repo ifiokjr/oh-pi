@@ -1,5 +1,3 @@
-
-
 const { mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
 	mockExistsSync: vi.fn(() => false),
 	mockReadFileSync: vi.fn(),
@@ -14,16 +12,16 @@ const histogram = {
 	reset: vi.fn(),
 };
 
-vi.mock<typeof import('node:fs')>(import('node:fs'), () => ({
+vi.mock<typeof import("node:fs")>(import("node:fs"), () => ({
 	existsSync: mockExistsSync,
 	readFileSync: mockReadFileSync,
 }));
 
-vi.mock<typeof import('node:perf_hooks')>(import('node:perf_hooks'), () => ({
+vi.mock<typeof import("node:perf_hooks")>(import("node:perf_hooks"), () => ({
 	monitorEventLoopDelay: vi.fn(() => histogram),
 }));
 
-vi.mock<typeof import('node:os')>(import('node:os'), async (importOriginal) => {
+vi.mock<typeof import("node:os")>(import("node:os"), async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:os")>();
 	return {
 		...actual,
@@ -31,7 +29,7 @@ vi.mock<typeof import('node:os')>(import('node:os'), async (importOriginal) => {
 	};
 });
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({}));
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({}));
 
 import { getSafeModeState, resetSafeModeStateForTests } from "./runtime-mode";
 import watchdogExtension, {

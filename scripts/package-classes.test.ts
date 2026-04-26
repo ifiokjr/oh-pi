@@ -1,4 +1,3 @@
-
 import { compiledPackages, publishedPackages } from "./package-classes.mjs";
 
 describe("package classes", () => {

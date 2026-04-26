@@ -1,7 +1,9 @@
-
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
-vi.mock<typeof import('@ifi/pi-shared-qna')>(import('@ifi/pi-shared-qna'), async () => await import("../../shared-qna/index.js"));
+vi.mock<typeof import("@ifi/pi-shared-qna")>(
+	import("@ifi/pi-shared-qna"),
+	async () => await import("../../shared-qna/index.js"),
+);
 
 import { clearModelsDevCatalogCache } from "../catalog.js";
 import { getSupportedProvider } from "../config.js";

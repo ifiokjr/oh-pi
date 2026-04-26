@@ -235,7 +235,10 @@ function defaultApplyTemplate(template: string, data: QnATemplateData): string {
 		total: String(data.total),
 	};
 
-	return template.replaceAll(/\{\{(question|context|answer|index|total)\}\}/g, (_match, key: string) => replacements[key] ?? "");
+	return template.replaceAll(
+		/\{\{(question|context|answer|index|total)\}\}/g,
+		(_match, key: string) => replacements[key] ?? "",
+	);
 }
 
 function summarizeAnswer(text: string, maxLength: number = 60): string {
@@ -319,8 +322,7 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 		this.resolveNumericShortcut = options?.resolveNumericShortcut ?? defaultResolveNumericShortcut;
 		this.applyTemplate = options?.applyTemplate ?? defaultApplyTemplate;
 		this.questionSummaryLabel =
-			options?.questionSummaryLabel ??
-			((question) => question.header?.trim() || question.question);
+			options?.questionSummaryLabel ?? ((question) => question.header?.trim() || question.question);
 		this.cyan = options?.accentColor ?? this.cyan;
 		this.green = options?.successColor ?? this.green;
 		this.yellow = options?.warningColor ?? this.yellow;
@@ -793,7 +795,7 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 						if (i === 1) {
 							lines.push(padToWidth(boxLine(answerPrefix + editorLines[i])));
 						} else {
-							lines.push(padToWidth(boxLine(`   ${  editorLines[i]}`)));
+							lines.push(padToWidth(boxLine(`   ${editorLines[i]}`)));
 						}
 					}
 				} else {

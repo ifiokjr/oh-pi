@@ -16,8 +16,8 @@ import {
 	formatWorkflowStatus,
 	summarizeChecklists,
 } from "./status.js";
-import { SPEC_SUBCOMMANDS } from './types.js';
-import type { SpecSubcommand, WorkflowPaths, WorkflowStep } from './types.js';
+import { SPEC_SUBCOMMANDS } from "./types.js";
+import type { SpecSubcommand, WorkflowPaths, WorkflowStep } from "./types.js";
 import {
 	buildWorkflowPaths,
 	findRepoRoot,

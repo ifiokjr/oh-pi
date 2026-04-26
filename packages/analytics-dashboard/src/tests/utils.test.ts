@@ -2,7 +2,6 @@
  * Utility Function Tests
  */
 
-
 import {
 	calculatePercentage,
 	cn,

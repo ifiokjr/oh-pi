@@ -15,7 +15,7 @@ async function readNonEmptyFile(filePath: string): Promise<string | null> {
 		const trimmed = content.trim();
 		return trimmed.length > 0 ? trimmed : null;
 	} catch (error) {
-		const {code} = (error as NodeJS.ErrnoException);
+		const { code } = error as NodeJS.ErrnoException;
 		if (code === "ENOENT") {
 			return null;
 		}

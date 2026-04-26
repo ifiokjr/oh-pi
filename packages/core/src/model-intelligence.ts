@@ -561,7 +561,7 @@ function mergeStringLists(
 	const values = options.overrideFirst
 		? [...(override ?? []), ...(base ?? [])]
 		: [...(base ?? []), ...(override ?? [])];
-	const unique = [...new Set(values.filter((value) => typeof value === 'string' && value.trim().length > 0))];
+	const unique = [...new Set(values.filter((value) => typeof value === "string" && value.trim().length > 0))];
 	return unique.length > 0 ? unique : undefined;
 }
 

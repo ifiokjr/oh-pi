@@ -4,7 +4,6 @@
  * Runs in jsdom environment for all unit and component tests.
  */
 
-
 import { cleanup } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/vitest";
 

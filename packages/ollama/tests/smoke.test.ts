@@ -60,7 +60,7 @@ async function createDelayedCloudBootstrapBackend(
 	});
 
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-	const {port} = (server.address() as AddressInfo);
+	const { port } = server.address() as AddressInfo;
 	const origin = `http://127.0.0.1:${port}`;
 	return {
 		apiUrl: `${origin}/v1`,
@@ -228,8 +228,8 @@ describe("ollama provider smoke tests", () => {
 
 		const provider = harness.providers.get("ollama");
 		expect(provider).toBeDefined();
-		expect(() =>
-			provider?.streamSimple?.({ id: "missing-model", provider: "ollama" } as never, {} as never),
-		).toThrow(/\/ollama:pull missing-model/);
+		expect(() => provider?.streamSimple?.({ id: "missing-model", provider: "ollama" } as never, {} as never)).toThrow(
+			/\/ollama:pull missing-model/,
+		);
 	});
 });

@@ -376,7 +376,7 @@ function wrapContext<T>(ctx: T, extensionId: string, source: string): T {
 		return cached as T;
 	}
 
-	const {ui} = candidate;
+	const { ui } = candidate;
 	const wrapped = {
 		...(ctx as Record<string, unknown>),
 		ui: {
@@ -495,7 +495,7 @@ export function installRuntimeDiagnostics(pi: ExtensionAPI): void {
 			return;
 		}
 
-		const {extensionId} = (payload as RuntimeDiagnosticsMetric);
+		const { extensionId } = payload as RuntimeDiagnosticsMetric;
 		if (typeof extensionId !== "string" || extensionId.length === 0) {
 			return;
 		}

@@ -2,15 +2,15 @@ import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
-import { createTestOllamaBackend } from './test-backend.js';
-import type { TestOllamaBackend } from './test-backend.js';
+import { createTestOllamaBackend } from "./test-backend.js";
+import type { TestOllamaBackend } from "./test-backend.js";
 
 const execFileMock = vi.fn();
 const spawnMock = vi.fn();
 const envSnapshot = { ...process.env };
 const backends: TestOllamaBackend[] = [];
 
-vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({
+vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({
 	execFile: execFileMock,
 	spawn: spawnMock,
 }));
@@ -69,9 +69,7 @@ describe("ollama local downloads", () => {
 		const harness = createExtensionHarness();
 		ollamaProviderExtension(harness.pi as never);
 
-		await waitFor(
-			() => ((harness.providers.get("ollama")?.models as { id: string }[] | undefined)?.length ?? 0) === 2,
-		);
+		await waitFor(() => ((harness.providers.get("ollama")?.models as { id: string }[] | undefined)?.length ?? 0) === 2);
 
 		const models = harness.providers.get("ollama")?.models as
 			| { id: string; contextWindow: number; localAvailability?: string }[]
@@ -131,9 +129,7 @@ describe("ollama local downloads", () => {
 		(harness.ctx.modelRegistry as { refresh?: ReturnType<typeof vi.fn> }).refresh = vi.fn();
 		ollamaProviderExtension(harness.pi as never);
 
-		await waitFor(
-			() => ((harness.providers.get("ollama")?.models as { id: string }[] | undefined)?.length ?? 0) === 1,
-		);
+		await waitFor(() => ((harness.providers.get("ollama")?.models as { id: string }[] | undefined)?.length ?? 0) === 1);
 
 		await harness.emitAsync(
 			"model_select",

@@ -1,6 +1,6 @@
 import { Cron } from "croner";
-import { DEFAULT_LOOP_INTERVAL, MIN_RECURRING_INTERVAL, ONE_MINUTE } from './scheduler-shared.js';
-import type { ParseResult, ReminderParseResult, SchedulePromptAddPlan, TaskKind } from './scheduler-shared.js';
+import { DEFAULT_LOOP_INTERVAL, MIN_RECURRING_INTERVAL, ONE_MINUTE } from "./scheduler-shared.js";
+import type { ParseResult, ReminderParseResult, SchedulePromptAddPlan, TaskKind } from "./scheduler-shared.js";
 
 export function normalizeCronExpression(rawInput: string): { expression: string; note?: string } | undefined {
 	const input = rawInput.trim();

@@ -2,11 +2,11 @@ import { EXTENSIONS } from "@ifi/oh-pi-core";
 import chalk from "chalk";
 import type { OhPConfigWithRouting } from "../types.js";
 import { compareVersion, entriesBetween, parseChangelog, readChangelog, renderChangelog } from "../utils/changelog.js";
-import { detectEnv } from '../utils/detect.js';
-import type { EnvInfo } from '../utils/detect.js';
+import { detectEnv } from "../utils/detect.js";
+import type { EnvInfo } from "../utils/detect.js";
 import { applyConfig, backupConfig, installPi } from "../utils/install.js";
-import { pickExtensions } from './extension-picker.js';
-import type { ExtensionOption } from './extension-picker.js';
+import { pickExtensions } from "./extension-picker.js";
+import type { ExtensionOption } from "./extension-picker.js";
 import { runWithProgress } from "./progress.js";
 
 export interface InstallerDeps {

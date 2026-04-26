@@ -34,8 +34,8 @@ Key usage-tracker surfaces:
 import { existsSync, promises as fsp, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { AssistantMessage } from "@mariozechner/pi-ai";
-import { getAgentDir } from '@mariozechner/pi-coding-agent';
-import type { ExtensionAPI, ExtensionContext } from '@mariozechner/pi-coding-agent';
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode.js";
 import {
@@ -62,8 +62,22 @@ import {
 	readPiAuth,
 	shouldPreserveStaleWindows,
 } from "./usage-tracker-providers.js";
-import { COST_THRESHOLDS, PROBE_COOLDOWN_MS, ROLLING_COST_WINDOW_MS, ROLLING_HISTORY_MAX_POINTS } from './usage-tracker-shared.js';
-import type { HistoricalCostPoint, ModelUsage, PiAuthEntry, ProviderKey, ProviderRateLimits, SourceUsage, TurnSnapshot, UsageSample } from './usage-tracker-shared.js';
+import {
+	COST_THRESHOLDS,
+	PROBE_COOLDOWN_MS,
+	ROLLING_COST_WINDOW_MS,
+	ROLLING_HISTORY_MAX_POINTS,
+} from "./usage-tracker-shared.js";
+import type {
+	HistoricalCostPoint,
+	ModelUsage,
+	PiAuthEntry,
+	ProviderKey,
+	ProviderRateLimits,
+	SourceUsage,
+	TurnSnapshot,
+	UsageSample,
+} from "./usage-tracker-shared.js";
 
 // ─── Extension entry point ──────────────────────────────────────────────────
 
@@ -718,7 +732,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 		const lower = raw.toLowerCase();
 		return (
-			getSelectableProviders(getActiveProvider(ctx)).find((provider) => providerDisplayName(provider).toLowerCase().includes(lower)) ?? null
+			getSelectableProviders(getActiveProvider(ctx)).find((provider) =>
+				providerDisplayName(provider).toLowerCase().includes(lower),
+			) ?? null
 		);
 	}
 
@@ -1020,9 +1036,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 				const envToken = process.env.OLLAMA_API_KEY?.trim() || null;
 				const fresh = envToken
 					? { entry: ollamaEntry, token: envToken }
-					: (ollamaEntry?.access
+					: ollamaEntry?.access
 						? await ensureFreshToken("ollama-cloud", ollamaEntry, auth)
-						: null);
+						: null;
 				const limits = await probeOllamaDirect(fresh?.token ?? null);
 				rateLimits.set(provider, limits);
 				scheduleRateLimitCacheSave();
@@ -1302,7 +1318,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 				const pace = computeWindowPace(w);
 				if (pace) {
-					const paceColor = pace.deltaPercent > 2 ? "warning" : (pace.deltaPercent < -2 ? "success" : "accent");
+					const paceColor = pace.deltaPercent > 2 ? "warning" : pace.deltaPercent < -2 ? "success" : "accent";
 					const right = formatPaceRight(pace);
 					const rightText = right ? `${theme.fg("dim", " | ")}${theme.fg("dim", right)}` : "";
 					lines.push(

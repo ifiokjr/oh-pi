@@ -1,6 +1,5 @@
-
-import { pickExtensions } from './extension-picker.js';
-import type { ExtensionOption } from './extension-picker.js';
+import { pickExtensions } from "./extension-picker.js";
+import type { ExtensionOption } from "./extension-picker.js";
 
 function createMockStreams() {
 	const stdoutChunks: string[] = [];

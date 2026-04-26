@@ -100,7 +100,7 @@ export async function createTestOllamaBackend(): Promise<TestOllamaBackend> {
 	});
 
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-	const {port} = (server.address() as AddressInfo);
+	const { port } = server.address() as AddressInfo;
 	const origin = `http://127.0.0.1:${port}`;
 
 	return {

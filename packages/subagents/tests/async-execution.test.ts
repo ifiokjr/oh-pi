@@ -1,5 +1,3 @@
-
-
 const asyncMocks = vi.hoisted(() => {
 	const createRequire = () => {
 		const requireFn = ((specifier: string) => {
@@ -50,41 +48,41 @@ const asyncMocks = vi.hoisted(() => {
 	};
 });
 
-vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({ spawn: asyncMocks.spawn }));
-vi.mock<typeof import('node:fs')>(import('node:fs'), () => ({
+vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({ spawn: asyncMocks.spawn }));
+vi.mock<typeof import("node:fs")>(import("node:fs"), () => ({
 	existsSync: asyncMocks.existsSync,
 	mkdirSync: asyncMocks.mkdirSync,
 	mkdtempSync: asyncMocks.mkdtempSync,
 	realpathSync: asyncMocks.realpathSync,
 	writeFileSync: asyncMocks.writeFileSync,
 }));
-vi.mock<typeof import('node:module')>(import('node:module'), () => ({
+vi.mock<typeof import("node:module")>(import("node:module"), () => ({
 	createRequire: () => asyncMocks.createRequire(),
 }));
-vi.mock<typeof import('../execution.js')>(import('../execution.js'), () => ({
+vi.mock<typeof import("../execution.js")>(import("../execution.js"), () => ({
 	applyThinkingSuffix: asyncMocks.applyThinkingSuffix,
 }));
-vi.mock<typeof import('../single-output.js')>(import('../single-output.js'), () => ({
+vi.mock<typeof import("../single-output.js")>(import("../single-output.js"), () => ({
 	injectSingleOutputInstruction: asyncMocks.injectSingleOutputInstruction,
 	resolveSingleOutputPath: asyncMocks.resolveSingleOutputPath,
 }));
-vi.mock<typeof import('../settings.js')>(import('../settings.js'), () => ({
+vi.mock<typeof import("../settings.js")>(import("../settings.js"), () => ({
 	isParallelStep: asyncMocks.isParallelStep,
 	resolveStepBehavior: asyncMocks.resolveStepBehavior,
 }));
-vi.mock<typeof import('../pi-spawn.js')>(import('../pi-spawn.js'), () => ({
+vi.mock<typeof import("../pi-spawn.js")>(import("../pi-spawn.js"), () => ({
 	resolvePiPackageRoot: asyncMocks.resolvePiPackageRoot,
 }));
-vi.mock<typeof import('../skills.js')>(import('../skills.js'), () => ({
+vi.mock<typeof import("../skills.js")>(import("../skills.js"), () => ({
 	buildSkillInjection: asyncMocks.buildSkillInjection,
 	normalizeSkillInput: asyncMocks.normalizeSkillInput,
 	resolveSkills: asyncMocks.resolveSkills,
 }));
-vi.mock<typeof import('../types.js')>(import('../types.js'), () => ({
+vi.mock<typeof import("../types.js")>(import("../types.js"), () => ({
 	ASYNC_DIR: "/tmp/pi-async-subagent-runs",
 	RESULTS_DIR: "/tmp/pi-async-subagent-results",
 }));
-vi.mock<typeof import('../model-routing.js')>(import('../model-routing.js'), () => ({
+vi.mock<typeof import("../model-routing.js")>(import("../model-routing.js"), () => ({
 	resolveSubagentModelResolution: asyncMocks.resolveSubagentModelResolution,
 	toAvailableModelRefs: (models: any[]) =>
 		models.map((model) => ({

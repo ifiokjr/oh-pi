@@ -9,8 +9,8 @@ import * as path from "node:path";
 import type { Message } from "@mariozechner/pi-ai";
 import type { AgentConfig } from "./agents.js";
 import { ensureArtifactsDir, getArtifactPaths, writeArtifact, writeMetadata } from "./artifacts.js";
-import { DEFAULT_MAX_OUTPUT, DEFAULT_IDLE_TIMEOUT_MS, truncateOutput, getSubagentDepthEnv } from './types.js';
-import type { AgentProgress, ArtifactPaths, RunSyncOptions, SingleResult } from './types.js';
+import { DEFAULT_MAX_OUTPUT, DEFAULT_IDLE_TIMEOUT_MS, truncateOutput, getSubagentDepthEnv } from "./types.js";
+import type { AgentProgress, ArtifactPaths, RunSyncOptions, SingleResult } from "./types.js";
 import {
 	detectSubagentError,
 	extractTextFromContent,
@@ -26,9 +26,13 @@ import { createJsonlWriter } from "./jsonl-writer.js";
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
 
 export function applyThinkingSuffix(model: string | undefined, thinking: string | undefined): string | undefined {
-	if (!model || !thinking || thinking === "off") {return model;}
+	if (!model || !thinking || thinking === "off") {
+		return model;
+	}
 	const colonIdx = model.lastIndexOf(":");
-	if (colonIdx !== -1 && THINKING_LEVELS.includes(model.substring(colonIdx + 1))) {return model;}
+	if (colonIdx !== -1 && THINKING_LEVELS.includes(model.substring(colonIdx + 1))) {
+		return model;
+	}
 	return `${model}:${thinking}`;
 }
 
@@ -73,7 +77,9 @@ export async function runSync(
 	// Use --models (not --model) because pi CLI silently ignores --model
 	// Without a companion --provider flag. --models resolves the provider
 	// Automatically via resolveModelScope. See: #8
-	if (modelArg) {args.push("--models", modelArg);}
+	if (modelArg) {
+		args.push("--models", modelArg);
+	}
 	const toolExtensionPaths: string[] = [];
 	// Only pi's 7 builtin tools can be passed via --tools.
 	// Extension-registered tools (e.g. read_full) are not in allTools
@@ -219,10 +225,16 @@ export async function runSync(
 		let idleTimer: ReturnType<typeof setTimeout> | null = null;
 		let idleKilled = false;
 		const resetIdleTimer = () => {
-			if (idleTimeout <= 0 || processClosed) {return;}
-			if (idleTimer) {clearTimeout(idleTimer);}
+			if (idleTimeout <= 0 || processClosed) {
+				return;
+			}
+			if (idleTimer) {
+				clearTimeout(idleTimer);
+			}
 			idleTimer = setTimeout(() => {
-				if (processClosed) {return;}
+				if (processClosed) {
+					return;
+				}
 				idleKilled = true;
 				result.error = `Idle timeout: no activity for ${Math.round(idleTimeout / 60_000)} min`;
 				progress.error = result.error;
@@ -235,7 +247,9 @@ export async function runSync(
 		resetIdleTimer();
 
 		const scheduleUpdate = () => {
-			if (!onUpdate || processClosed) {return;}
+			if (!onUpdate || processClosed) {
+				return;
+			}
 			const now = Date.now();
 			const elapsed = now - lastUpdateTime;
 
@@ -272,7 +286,9 @@ export async function runSync(
 		};
 
 		const processLine = (line: string) => {
-			if (!line.trim()) {return;}
+			if (!line.trim()) {
+				return;
+			}
 			jsonlWriter.writeLine(line);
 			try {
 				const evt = JSON.parse(line) as { type?: string; message?: Message; toolName?: string; args?: unknown };
@@ -319,8 +335,12 @@ export async function runSync(
 							result.usage.cost += u.cost?.total || 0;
 							progress.tokens = result.usage.input + result.usage.output;
 						}
-						if (!result.model && evt.message.model) {result.model = evt.message.model;}
-						if (evt.message.errorMessage) {result.error = evt.message.errorMessage;}
+						if (!result.model && evt.message.model) {
+							result.model = evt.message.model;
+						}
+						if (evt.message.errorMessage) {
+							result.error = evt.message.errorMessage;
+						}
 
 						const text = extractTextFromContent(evt.message.content);
 						if (text) {
@@ -387,7 +407,9 @@ export async function runSync(
 				clearTimeout(idleTimer);
 				idleTimer = null;
 			}
-			if (buf.trim()) {processLine(buf);}
+			if (buf.trim()) {
+				processLine(buf);
+			}
 			if (code !== 0 && stderrBuf.trim() && !result.error) {
 				result.error = stderrBuf.trim();
 			}
@@ -429,7 +451,9 @@ export async function runSync(
 		} catch {}
 	}
 
-	if (tmpDir) {fs.rmSync(tmpDir, { recursive: true, force: true });}
+	if (tmpDir) {
+		fs.rmSync(tmpDir, { recursive: true, force: true });
+	}
 	result.exitCode = exitCode;
 
 	// Check for internal errors even when exit code is 0 (or non-zero without error details)

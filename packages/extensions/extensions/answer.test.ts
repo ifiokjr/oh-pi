@@ -1,12 +1,11 @@
 import { completeSimple } from "@mariozechner/pi-ai";
 
-
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({
 	completeSimple: vi.fn(),
 	getEnvApiKey: vi.fn(),
 }));
 
-vi.mock<typeof import('@ifi/pi-shared-qna')>(import('@ifi/pi-shared-qna'), () => ({
+vi.mock<typeof import("@ifi/pi-shared-qna")>(import("@ifi/pi-shared-qna"), () => ({
 	QnATuiComponent: class QnATuiComponent {
 		constructor(
 			public questions: any[],
@@ -18,7 +17,7 @@ vi.mock<typeof import('@ifi/pi-shared-qna')>(import('@ifi/pi-shared-qna'), () =>
 	requirePiTuiModule: vi.fn(),
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	BorderedLoader: class BorderedLoader {
 		public onAbort?: () => void;
 		constructor(
@@ -236,7 +235,9 @@ describe(normalizeExtractedQuestions, () => {
 		const result = normalizeExtractedQuestions([
 			{ options: [{ label: "  A  ", description: "  desc  " }], question: "Q?" },
 		]);
-		expect(result).toStrictEqual([{ options: [{ label: "A", description: "desc", recommended: false }], question: "Q?" }]);
+		expect(result).toStrictEqual([
+			{ options: [{ label: "A", description: "desc", recommended: false }], question: "Q?" },
+		]);
 	});
 
 	it("uses empty string for non-string description in options", () => {
@@ -267,7 +268,9 @@ describe(normalizeExtractedQuestions, () => {
 
 	it("defaults recommended to false when omitted", () => {
 		const result = normalizeExtractedQuestions([{ options: [{ label: "A", description: "Only" }], question: "Q?" }]);
-		expect(result).toStrictEqual([{ options: [{ label: "A", description: "Only", recommended: false }], question: "Q?" }]);
+		expect(result).toStrictEqual([
+			{ options: [{ label: "A", description: "Only", recommended: false }], question: "Q?" },
+		]);
 	});
 
 	it("synthesizes recommended option from recommendation string", () => {
@@ -786,7 +789,9 @@ describe("/answer command", () => {
 		const cmd = harness.commands.get("answer")!;
 		await cmd.handler("", harness.ctx as never);
 
-		expect(harness.notifications).toStrictEqual([expect.objectContaining({ msg: "No answers provided", type: "info" })]);
+		expect(harness.notifications).toStrictEqual([
+			expect.objectContaining({ msg: "No answers provided", type: "info" }),
+		]);
 	});
 });
 

@@ -1,19 +1,18 @@
 import { completeSimple, streamSimple } from "@mariozechner/pi-ai";
 
-
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({
 	completeSimple: vi.fn(),
 	getEnvApiKey: vi.fn((provider: string) => (provider === "openai" ? "env-openai-key" : undefined)),
 	streamSimple: vi.fn(),
 }));
 
-vi.mock<typeof import('@mariozechner/pi-tui')>(import('@mariozechner/pi-tui'), () => ({
+vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), () => ({
 	Text: class Text {
 		constructor(public text: string) {}
 	},
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	AuthStorage: {
 		create: vi.fn(() => ({ source: "auth-storage" })),
 	},

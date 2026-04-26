@@ -1,4 +1,3 @@
-
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
 const worktreeShared = vi.hoisted(() => ({
@@ -14,14 +13,14 @@ const worktreeShared = vi.hoisted(() => ({
 		sessionName: input.sessionName ?? null,
 	})),
 	formatOwnerLabel: vi.fn((owner) => owner.instanceId),
-	formatWorktreeKind: vi.fn((entry) => (entry.isMain ? "main" : (entry.isManaged ? "pi-owned" : "external"))),
+	formatWorktreeKind: vi.fn((entry) => (entry.isMain ? "main" : entry.isManaged ? "pi-owned" : "external")),
 	getRepoWorktreeContext: vi.fn(),
 	getRepoWorktreeSnapshot: vi.fn(),
 	removeManagedWorktree: vi.fn(),
 	touchManagedWorktreeSeen: vi.fn(),
 }));
 
-vi.mock<typeof import('./worktree-shared')>(import('./worktree-shared'), () => worktreeShared);
+vi.mock<typeof import("./worktree-shared")>(import("./worktree-shared"), () => worktreeShared);
 
 import worktreeExtension from "./worktree.js";
 

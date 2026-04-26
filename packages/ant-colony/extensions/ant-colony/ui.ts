@@ -175,7 +175,16 @@ export function boltIcon(): string {
 export function buildReport(state: ColonyState): string {
 	const m = state.metrics;
 	const elapsed = state.finishedAt ? formatDuration(state.finishedAt - state.createdAt) : "?";
-	const routingSummary = [...new Set(state.ants.filter((ant) => ant.model).map((ant) => `${ant.caste}: ${ant.model}${ant.routeSource ? ` (${ant.routeSource}${ant.routeCategory ? `:${ant.routeCategory}` : ''})` : ''}`))];
+	const routingSummary = [
+		...new Set(
+			state.ants
+				.filter((ant) => ant.model)
+				.map(
+					(ant) =>
+						`${ant.caste}: ${ant.model}${ant.routeSource ? ` (${ant.routeSource}${ant.routeCategory ? `:${ant.routeCategory}` : ""})` : ""}`,
+				),
+		),
+	];
 	return [
 		`## ${antIcon()} Ant Colony Report`,
 		`**Goal:** ${state.goal}`,

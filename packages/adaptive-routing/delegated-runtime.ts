@@ -2,8 +2,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
-import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from '@ifi/oh-pi-core';
-import type { DelegatedAvailableModel, DelegatedSelectionLatencySnapshot, DelegatedSelectionPolicy, DelegatedSelectionResult, DelegatedSelectionUsageSnapshot } from '@ifi/oh-pi-core';
+import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from "@ifi/oh-pi-core";
+import type {
+	DelegatedAvailableModel,
+	DelegatedSelectionLatencySnapshot,
+	DelegatedSelectionPolicy,
+	DelegatedSelectionResult,
+	DelegatedSelectionUsageSnapshot,
+} from "@ifi/oh-pi-core";
 import { readAdaptiveRoutingConfig } from "./config.js";
 import type { AdaptiveRoutingConfig, DelegatedTaskProfile } from "./types.js";
 

@@ -730,7 +730,7 @@ export function createManagedWorktree(options: CreateManagedWorktreeOptions): Cr
 		throw new Error("Not inside a git repository.");
 	}
 
-	const {repoRoot} = snapshot;
+	const { repoRoot } = snapshot;
 	const worktreeParentDir = getManagedWorktreeParentDir(repoRoot, options.sharedRoot);
 	fs.mkdirSync(worktreeParentDir, { recursive: true });
 	const worktreePath = nextAvailableWorktreePath(worktreeParentDir, branch);

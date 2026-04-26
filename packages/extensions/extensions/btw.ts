@@ -14,10 +14,10 @@
  * Based on https://github.com/dbachelder/pi-btw by Dan Bachelder (MIT).
  */
 
-import { completeSimple, streamSimple } from '@mariozechner/pi-ai';
-import type { ThinkingLevel as AiThinkingLevel, AssistantMessage, Message } from '@mariozechner/pi-ai';
-import { buildSessionContext } from '@mariozechner/pi-coding-agent';
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from '@mariozechner/pi-coding-agent';
+import { completeSimple, streamSimple } from "@mariozechner/pi-ai";
+import type { ThinkingLevel as AiThinkingLevel, AssistantMessage, Message } from "@mariozechner/pi-ai";
+import { buildSessionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 
 const BTW_MESSAGE_TYPE = "btw-note";
@@ -498,7 +498,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	async function runBtw(ctx: ExtensionCommandContext, question: string, saveRequested: boolean) {
-		const {model} = ctx;
+		const { model } = ctx;
 		if (!model) {
 			notify(ctx, "No active model selected.", "error");
 			return;
@@ -574,7 +574,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	async function summarizeThread(ctx: ExtensionCommandContext, thread: BtwDetails[]): Promise<string> {
-		const {model} = ctx;
+		const { model } = ctx;
 		if (!model) {
 			throw new Error("No active model selected.");
 		}
@@ -643,8 +643,8 @@ export default function (pi: ExtensionAPI) {
 	// ── Context filter — keep BTW notes out of the main agent ─────────────────
 
 	pi.on("context", async (event) => ({
-			messages: event.messages.filter((message) => !isVisibleBtwMessage(message)),
-		}));
+		messages: event.messages.filter((message) => !isVisibleBtwMessage(message)),
+	}));
 
 	// ── Session lifecycle — restore / cleanup ─────────────────────────────────
 

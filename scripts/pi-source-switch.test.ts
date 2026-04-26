@@ -306,7 +306,10 @@ describe("pi source switcher helpers", () => {
 	});
 
 	it("resolves pi from fallback candidates after PATH misses", () => {
-		const resolved = resolvePiCommand(["pi", "/Users/tester/Library/pnpm/pi"], (candidate) => candidate === "/Users/tester/Library/pnpm/pi");
+		const resolved = resolvePiCommand(
+			["pi", "/Users/tester/Library/pnpm/pi"],
+			(candidate) => candidate === "/Users/tester/Library/pnpm/pi",
+		);
 
 		expect(resolved).toBe("/Users/tester/Library/pnpm/pi");
 	});

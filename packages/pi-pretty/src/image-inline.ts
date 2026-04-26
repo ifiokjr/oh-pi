@@ -1,5 +1,10 @@
 import { execFileSync } from "node:child_process";
 
+declare global {
+	var TMUX_CLIENT_TERM_OVERRIDE: string | null | undefined;
+	var TMUX_ALLOW_PASSTHROUGH_OVERRIDE: boolean | null | undefined;
+}
+
 export type ImageProtocol = "iterm2" | "kitty" | "none";
 
 const TMUX_CLIENT_TERM_OVERRIDE: string | null | undefined = undefined;
@@ -16,11 +21,21 @@ export function isTmuxSession(): boolean {
 
 function normalizeTerminalName(term: string): string {
 	const t = term.toLowerCase();
-	if (t.includes("kitty")) {return "kitty";}
-	if (t.includes("ghostty")) {return "ghostty";}
-	if (t.includes("wezterm")) {return "WezTerm";}
-	if (t.includes("iterm")) {return "iTerm.app";}
-	if (t.includes("mintty")) {return "mintty";}
+	if (t.includes("kitty")) {
+		return "kitty";
+	}
+	if (t.includes("ghostty")) {
+		return "ghostty";
+	}
+	if (t.includes("wezterm")) {
+		return "WezTerm";
+	}
+	if (t.includes("iterm")) {
+		return "iTerm.app";
+	}
+	if (t.includes("mintty")) {
+		return "mintty";
+	}
 	return term;
 }
 
@@ -28,8 +43,12 @@ function readTmuxClientTerm(): string | null {
 	if (TMUX_CLIENT_TERM_OVERRIDE !== undefined) {
 		return TMUX_CLIENT_TERM_OVERRIDE ? normalizeTerminalName(TMUX_CLIENT_TERM_OVERRIDE) : null;
 	}
-	if (!isTmuxSession()) {return null;}
-	if (TMUX_CLIENT_TERM_CACHE !== undefined) {return TMUX_CLIENT_TERM_CACHE;} // Patch-coverage-ignore
+	if (!isTmuxSession()) {
+		return null;
+	}
+	if (TMUX_CLIENT_TERM_CACHE !== undefined) {
+		return TMUX_CLIENT_TERM_CACHE;
+	} // Patch-coverage-ignore
 	try {
 		const term = execFileSync("tmux", ["display-message", "-p", "#{client_termname}"], {
 			encoding: "utf8",
@@ -45,35 +64,64 @@ function readTmuxClientTerm(): string | null {
 }
 
 export function getOuterTerminal(): string {
-	if (process.env.LC_TERMINAL === "iTerm2") {return "iTerm.app";}
-	if (process.env.GHOSTTY_RESOURCES_DIR) {return "ghostty";}
-	if (process.env.KITTY_WINDOW_ID || process.env.KITTY_PID) {return "kitty";}
-	if (process.env.WEZTERM_EXECUTABLE || process.env.WEZTERM_CONFIG_DIR || process.env.WEZTERM_CONFIG_FILE)
-		{return "WezTerm";}
+	if (process.env.LC_TERMINAL === "iTerm2") {
+		return "iTerm.app";
+	}
+	if (process.env.GHOSTTY_RESOURCES_DIR) {
+		return "ghostty";
+	}
+	if (process.env.KITTY_WINDOW_ID || process.env.KITTY_PID) {
+		return "kitty";
+	}
+	if (process.env.WEZTERM_EXECUTABLE || process.env.WEZTERM_CONFIG_DIR || process.env.WEZTERM_CONFIG_FILE) {
+		return "WezTerm";
+	}
 	const termProgram = process.env.TERM_PROGRAM ?? "";
-	if (termProgram && termProgram !== "tmux" && termProgram !== "screen") {return normalizeTerminalName(termProgram);}
+	if (termProgram && termProgram !== "tmux" && termProgram !== "screen") {
+		return normalizeTerminalName(termProgram);
+	}
 	const tmuxClientTerm = readTmuxClientTerm();
-	if (tmuxClientTerm) {return tmuxClientTerm;}
+	if (tmuxClientTerm) {
+		return tmuxClientTerm;
+	}
 	const term = process.env.TERM ?? "";
-	if (term) {return normalizeTerminalName(term);}
-	if (process.env.COLORTERM === "truecolor" || process.env.COLORTERM === "24bit") {return "unknown-modern";}
+	if (term) {
+		return normalizeTerminalName(term);
+	}
+	if (process.env.COLORTERM === "truecolor" || process.env.COLORTERM === "24bit") {
+		return "unknown-modern";
+	}
 	return termProgram;
 }
 
 export function detectImageProtocol(): ImageProtocol {
 	const forced = (process.env.PRETTY_IMAGE_PROTOCOL ?? "").toLowerCase();
-	if (forced === "kitty" || forced === "iterm2" || forced === "none") {return forced as ImageProtocol;}
+	if (forced === "kitty" || forced === "iterm2" || forced === "none") {
+		return forced as ImageProtocol;
+	}
 	const term = getOuterTerminal();
-	if (term === "ghostty" || term === "kitty") {return "kitty";}
-	if (["iTerm.app", "WezTerm", "mintty"].includes(term)) {return "iterm2";}
-	if (process.env.LC_TERMINAL === "iTerm2") {return "iterm2";}
+	if (term === "ghostty" || term === "kitty") {
+		return "kitty";
+	}
+	if (["iTerm.app", "WezTerm", "mintty"].includes(term)) {
+		return "iterm2";
+	}
+	if (process.env.LC_TERMINAL === "iTerm2") {
+		return "iterm2";
+	}
 	return "none";
 }
 
 export function tmuxAllowsPassthrough(): boolean | null {
-	if (TMUX_ALLOW_PASSTHROUGH_OVERRIDE !== undefined) {return TMUX_ALLOW_PASSTHROUGH_OVERRIDE;}
-	if (!isTmuxSession()) {return null;}
-	if (TMUX_ALLOW_PASSTHROUGH_CACHE !== undefined) {return TMUX_ALLOW_PASSTHROUGH_CACHE;}
+	if (TMUX_ALLOW_PASSTHROUGH_OVERRIDE !== undefined) {
+		return TMUX_ALLOW_PASSTHROUGH_OVERRIDE;
+	}
+	if (!isTmuxSession()) {
+		return null;
+	}
+	if (TMUX_ALLOW_PASSTHROUGH_CACHE !== undefined) {
+		return TMUX_ALLOW_PASSTHROUGH_CACHE;
+	}
 	try {
 		const value = execFileSync("tmux", ["show-options", "-gv", "allow-passthrough"], {
 			encoding: "utf8",
@@ -91,7 +139,9 @@ export function tmuxAllowsPassthrough(): boolean | null {
 }
 
 export function getTmuxPassthroughWarning(protocol: ImageProtocol): string | null {
-	if (!isTmuxSession() || protocol === "none") {return null;}
+	if (!isTmuxSession() || protocol === "none") {
+		return null;
+	}
 	if (tmuxAllowsPassthrough() === false) {
 		return "tmux allow-passthrough is off. Run: tmux set -g allow-passthrough on";
 	}
@@ -99,7 +149,9 @@ export function getTmuxPassthroughWarning(protocol: ImageProtocol): string | nul
 }
 
 function tmuxWrap(seq: string): string {
-	if (!isTmuxSession()) {return seq;}
+	if (!isTmuxSession()) {
+		return seq;
+	}
 	const escaped = seq.split("\x1B").join("\u001b\u001b");
 	return `\x1BPtmux;${escaped}\x1B\\`;
 }
@@ -110,7 +162,9 @@ export function renderInlineImage(
 	base64Data: string,
 	opts: { maxWidth?: number } = {},
 ): string | null {
-	if (protocol === "none") {return null;}
+	if (protocol === "none") {
+		return null;
+	}
 
 	const mime = mediaType;
 	if (protocol === "iterm2") {
@@ -133,14 +187,14 @@ export const __imageInternals = {
 	resetCachesForTests: () => {
 		TMUX_CLIENT_TERM_CACHE = undefined;
 		TMUX_ALLOW_PASSTHROUGH_CACHE = undefined;
-		(globalThis as any).TMUX_CLIENT_TERM_OVERRIDE = undefined;
-		(globalThis as any).TMUX_ALLOW_PASSTHROUGH_OVERRIDE = undefined;
+		globalThis.TMUX_CLIENT_TERM_OVERRIDE = undefined;
+		globalThis.TMUX_ALLOW_PASSTHROUGH_OVERRIDE = undefined;
 	},
 	setTmuxAllowPassthroughOverrideForTests: (value: boolean | null | undefined) => {
-		(globalThis as any).TMUX_ALLOW_PASSTHROUGH_OVERRIDE = value;
+		globalThis.TMUX_ALLOW_PASSTHROUGH_OVERRIDE = value;
 	},
 	setTmuxClientTermOverrideForTests: (value: string | null | undefined) => {
-		(globalThis as any).TMUX_CLIENT_TERM_OVERRIDE = value;
+		globalThis.TMUX_CLIENT_TERM_OVERRIDE = value;
 	},
 	tmuxAllowsPassthrough,
 	tmuxWrap,

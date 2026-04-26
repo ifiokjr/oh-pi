@@ -1,4 +1,3 @@
-
 import {
 	discoverOllamaCloudModels,
 	discoverOllamaLocalModels,
@@ -87,7 +86,14 @@ describe("ollama models", () => {
 		expect(models?.[0]?.parameterSize).toBe("120B");
 		expect(models?.[0]?.quantization).toBe("Q4_K_M");
 		expect(models?.[1]?.input).toStrictEqual(["text", "image"]);
-		expect(backend.getAuthHeaders()).toStrictEqual(["", "", "", "Bearer test-key", "Bearer test-key", "Bearer test-key"]);
+		expect(backend.getAuthHeaders()).toStrictEqual([
+			"",
+			"",
+			"",
+			"Bearer test-key",
+			"Bearer test-key",
+			"Bearer test-key",
+		]);
 		await backend.close();
 	});
 

@@ -1,6 +1,4 @@
-
-
-vi.mock<typeof import('../pi-tui-loader.js')>(import('../pi-tui-loader.js'), () => ({
+vi.mock<typeof import("../pi-tui-loader.js")>(import("../pi-tui-loader.js"), () => ({
 	requirePiTuiModule: () => ({
 		Key: {
 			ctrl: (key: string) => `<ctrl-${key}>`,
@@ -16,8 +14,8 @@ vi.mock<typeof import('../pi-tui-loader.js')>(import('../pi-tui-loader.js'), () 
 	}),
 }));
 
-import { openScrollableSelect } from '../scroll-select.js';
-import type { ScrollSelectConfig } from '../scroll-select.js';
+import { openScrollableSelect } from "../scroll-select.js";
+import type { ScrollSelectConfig } from "../scroll-select.js";
 
 type CustomFactory = (...args: any[]) => {
 	render: (width: number) => string[];

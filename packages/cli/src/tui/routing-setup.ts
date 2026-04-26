@@ -3,8 +3,13 @@ import type { ProviderConfig } from "@ifi/oh-pi-core";
 import type { AdaptiveRoutingModeConfig, AdaptiveRoutingSetupConfig } from "../types.js";
 import type { WritablePiPackageInstallScope } from "../utils/pi-packages.js";
 import { installPiPackages } from "../utils/pi-packages.js";
-import { buildRoutingDashboard, detectOptionalRoutingPackages, ROUTING_CATEGORIES, suggestOptionalRoutingPackages } from './routing-dashboard.js';
-import type { PendingOptionalRoutingPackageSelection } from './routing-dashboard.js';
+import {
+	buildRoutingDashboard,
+	detectOptionalRoutingPackages,
+	ROUTING_CATEGORIES,
+	suggestOptionalRoutingPackages,
+} from "./routing-dashboard.js";
+import type { PendingOptionalRoutingPackageSelection } from "./routing-dashboard.js";
 
 interface SetupAdaptiveRoutingOptions {
 	piInstalled?: boolean;

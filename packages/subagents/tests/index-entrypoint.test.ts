@@ -1,5 +1,3 @@
-
-
 const runtimeMonitorMock = vi.hoisted(() => ({
 	clearResults: vi.fn(),
 	ensurePoller: vi.fn(),
@@ -53,7 +51,7 @@ const mocks = vi.hoisted(() => ({
 	runSync: vi.fn(),
 }));
 
-vi.mock<typeof import('node:fs')>(import('node:fs'), () => ({
+vi.mock<typeof import("node:fs")>(import("node:fs"), () => ({
 	accessSync: vi.fn(),
 	constants: { R_OK: 4, W_OK: 2 },
 	existsSync: vi.fn(() => false),
@@ -69,37 +67,37 @@ vi.mock<typeof import('node:fs')>(import('node:fs'), () => ({
 	})),
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	VERSION: "test",
 	getAgentDir: () => "/tmp/pi-agent",
 }));
 
-vi.mock<typeof import('@mariozechner/pi-tui')>(import('@mariozechner/pi-tui'), () => ({
+vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), () => ({
 	Text: class {},
 }));
 
-vi.mock<typeof import('../agents.js')>(import('../agents.js'), () => ({
+vi.mock<typeof import("../agents.js")>(import("../agents.js"), () => ({
 	discoverAgents: mocks.discoverAgents,
 	discoverAgentsAll: mocks.discoverAgentsAll,
 }));
-vi.mock<typeof import('../agent-scope.js')>(import('../agent-scope.js'), () => ({
+vi.mock<typeof import("../agent-scope.js")>(import("../agent-scope.js"), () => ({
 	resolveExecutionAgentScope: mocks.resolveExecutionAgentScope,
 }));
-vi.mock<typeof import('../settings.js')>(import('../settings.js'), () => ({
+vi.mock<typeof import("../settings.js")>(import("../settings.js"), () => ({
 	cleanupOldChainDirs: mocks.cleanupOldChainDirs,
 	getStepAgents: mocks.getStepAgents,
 	isParallelStep: mocks.isParallelStep,
 	resolveStepBehavior: mocks.resolveStepBehavior,
 }));
-vi.mock<typeof import('../chain-clarify.js')>(import('../chain-clarify.js'), () => ({
+vi.mock<typeof import("../chain-clarify.js")>(import("../chain-clarify.js"), () => ({
 	ChainClarifyComponent: class {},
 }));
-vi.mock<typeof import('../artifacts.js')>(import('../artifacts.js'), () => ({
+vi.mock<typeof import("../artifacts.js")>(import("../artifacts.js"), () => ({
 	cleanupAllArtifactDirs: mocks.cleanupAllArtifactDirs,
 	cleanupOldArtifacts: mocks.cleanupOldArtifacts,
 	getArtifactsDir: mocks.getArtifactsDir,
 }));
-vi.mock<typeof import('../types.js')>(import('../types.js'), () => ({
+vi.mock<typeof import("../types.js")>(import("../types.js"), () => ({
 	ASYNC_DIR: "/tmp/pi-async-subagent-runs",
 	DEFAULT_ARTIFACT_CONFIG: { cleanupDays: 7 },
 	DEFAULT_MAX_OUTPUT: { bytes: 200 * 1024, lines: 5000 },
@@ -109,62 +107,62 @@ vi.mock<typeof import('../types.js')>(import('../types.js'), () => ({
 	WIDGET_KEY: "subagent-async",
 	checkSubagentDepth: mocks.checkSubagentDepth,
 }));
-vi.mock<typeof import('../utils.js')>(import('../utils.js'), () => ({
+vi.mock<typeof import("../utils.js")>(import("../utils.js"), () => ({
 	findByPrefix: mocks.findByPrefix,
 	getFinalOutput: mocks.getFinalOutput,
 	mapConcurrent: mocks.mapConcurrent,
 	readStatus: mocks.readStatus,
 }));
-vi.mock<typeof import('../execution.js')>(import('../execution.js'), () => ({
+vi.mock<typeof import("../execution.js")>(import("../execution.js"), () => ({
 	runSync: mocks.runSync,
 }));
-vi.mock<typeof import('../render.js')>(import('../render.js'), () => ({
+vi.mock<typeof import("../render.js")>(import("../render.js"), () => ({
 	renderSubagentResult: mocks.renderSubagentResult,
 	renderWidget: mocks.renderWidget,
 }));
-vi.mock<typeof import('../schemas.js')>(import('../schemas.js'), () => ({
+vi.mock<typeof import("../schemas.js")>(import("../schemas.js"), () => ({
 	StatusParams: {},
 	SubagentParams: {},
 }));
-vi.mock<typeof import('../chain-execution.js')>(import('../chain-execution.js'), () => ({
+vi.mock<typeof import("../chain-execution.js")>(import("../chain-execution.js"), () => ({
 	executeChain: mocks.executeChain,
 }));
-vi.mock<typeof import('../async-execution.js')>(import('../async-execution.js'), () => ({
+vi.mock<typeof import("../async-execution.js")>(import("../async-execution.js"), () => ({
 	executeAsyncChain: mocks.executeAsyncChain,
 	executeAsyncSingle: mocks.executeAsyncSingle,
 	isAsyncAvailable: mocks.isAsyncAvailable,
 }));
-vi.mock<typeof import('../skills.js')>(import('../skills.js'), () => ({
+vi.mock<typeof import("../skills.js")>(import("../skills.js"), () => ({
 	discoverAvailableSkills: mocks.discoverAvailableSkills,
 	normalizeSkillInput: mocks.normalizeSkillInput,
 }));
-vi.mock<typeof import('../single-output.js')>(import('../single-output.js'), () => ({
+vi.mock<typeof import("../single-output.js")>(import("../single-output.js"), () => ({
 	finalizeSingleOutput: mocks.finalizeSingleOutput,
 	injectSingleOutputInstruction: mocks.injectSingleOutputInstruction,
 	resolveSingleOutputPath: mocks.resolveSingleOutputPath,
 }));
-vi.mock<typeof import('../agent-manager.js')>(import('../agent-manager.js'), () => ({
+vi.mock<typeof import("../agent-manager.js")>(import("../agent-manager.js"), () => ({
 	AgentManagerComponent: class {},
 }));
-vi.mock<typeof import('../run-history.js')>(import('../run-history.js'), () => ({
+vi.mock<typeof import("../run-history.js")>(import("../run-history.js"), () => ({
 	recordRun: mocks.recordRun,
 }));
-vi.mock<typeof import('../agent-management.js')>(import('../agent-management.js'), () => ({
+vi.mock<typeof import("../agent-management.js")>(import("../agent-management.js"), () => ({
 	handleManagementAction: mocks.handleManagementAction,
 }));
-vi.mock<typeof import('../command-registration.js')>(import('../command-registration.js'), () => ({
+vi.mock<typeof import("../command-registration.js")>(import("../command-registration.js"), () => ({
 	registerSubagentCommands: mocks.registerSubagentCommands,
 }));
-vi.mock<typeof import('../bootstrap.js')>(import('../bootstrap.js'), () => ({
+vi.mock<typeof import("../bootstrap.js")>(import("../bootstrap.js"), () => ({
 	ensureAccessibleDir: mocks.ensureAccessibleDir,
 	expandTildePath: mocks.expandTildePath,
 	getSubagentSessionRoot: mocks.getSubagentSessionRoot,
 	loadSubagentConfig: mocks.loadSubagentConfig,
 }));
-vi.mock<typeof import('../runtime-monitor.js')>(import('../runtime-monitor.js'), () => ({
+vi.mock<typeof import("../runtime-monitor.js")>(import("../runtime-monitor.js"), () => ({
 	createSubagentRuntimeMonitor: mocks.createSubagentRuntimeMonitor,
 }));
-vi.mock<typeof import('../model-routing.js')>(import('../model-routing.js'), () => ({
+vi.mock<typeof import("../model-routing.js")>(import("../model-routing.js"), () => ({
 	resolveSubagentModelResolution: mocks.resolveSubagentModelResolution,
 	toAvailableModelRefs: (models: any[]) =>
 		models.map((model) => ({
@@ -583,9 +581,7 @@ describe("subagent entrypoint", () => {
 		expect(missing.isError).toBeTruthy();
 		expect(missing.content[0]?.text).toBe("Async run not found. Provide id or dir.");
 
-		mocks.findByPrefix
-			.mockReturnValueOnce(null)
-			.mockReturnValueOnce("/tmp/pi-async-subagent-results/result-1.json");
+		mocks.findByPrefix.mockReturnValueOnce(null).mockReturnValueOnce("/tmp/pi-async-subagent-results/result-1.json");
 		const found = await statusTool.execute("status-2", { id: "result-1" }, undefined, undefined, ctx);
 		expect(found.content[0]?.text).toContain("Run: result-1");
 		expect(found.content[0]?.text).toContain("State: complete");

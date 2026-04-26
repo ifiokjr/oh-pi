@@ -2,12 +2,11 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-
 const { execFileSyncMock } = vi.hoisted(() => ({
 	execFileSyncMock: vi.fn(() => Buffer.from("")),
 }));
 
-vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({
+vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({
 	execFileSync: execFileSyncMock,
 }));
 

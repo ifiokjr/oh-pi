@@ -42,7 +42,9 @@ async function fetchApi<T>(path: string, params?: Record<string, string>): Promi
 		}
 	}
 	const res = await fetch(url.toString());
-	if (!res.ok) {throw new Error(`API error: ${res.status} ${res.statusText}`);}
+	if (!res.ok) {
+		throw new Error(`API error: ${res.status} ${res.statusText}`);
+	}
 	return res.json();
 }
 /* C8 ignore stop */

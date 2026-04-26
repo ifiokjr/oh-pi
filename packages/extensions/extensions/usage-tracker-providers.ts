@@ -2,8 +2,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { clampPercent, fmtDuration, fmtTokens, upsertWindow } from "./usage-tracker-formatting.js";
-import { PROBE_TIMEOUT_MS } from './usage-tracker-shared.js';
-import type { PiAuthEntry, ProviderKey, ProviderRateLimits } from './usage-tracker-shared.js';
+import { PROBE_TIMEOUT_MS } from "./usage-tracker-shared.js";
+import type { PiAuthEntry, ProviderKey, ProviderRateLimits } from "./usage-tracker-shared.js";
 
 // Pre-compiled regex for OpenAI-style compact duration parsing
 const OPENAI_DURATION_RE = /(\d+(?:\.\d+)?)(ms|s|m|h)/g;
@@ -279,7 +279,7 @@ function maybeAddAnthropicOAuthWindow(
 	}
 	// Biome-ignore lint/style/useNamingConvention: Anthropic OAuth payload uses snake_case keys.
 	const typed = entry as { utilization?: unknown; resets_at?: unknown };
-	const {utilization} = typed;
+	const { utilization } = typed;
 	if (!(typeof utilization === "number" && Number.isFinite(utilization))) {
 		return;
 	}
@@ -557,7 +557,7 @@ export async function probeOpenAIDirect(token: string): Promise<ProviderRateLimi
 			result.account = payload.email;
 		}
 
-		const {credits} = payload;
+		const { credits } = payload;
 		if (credits && typeof credits === "object") {
 			const typedCredits = credits as { unlimited?: unknown; balance?: unknown };
 			if (typedCredits.unlimited === true) {
@@ -583,9 +583,9 @@ export async function probeOpenAIDirect(token: string): Promise<ProviderRateLimi
 				const label =
 					typeof typedItem.limit_name === "string"
 						? typedItem.limit_name
-						: (typeof typedItem.metered_feature === "string"
+						: typeof typedItem.metered_feature === "string"
 							? typedItem.metered_feature
-							: "Additional");
+							: "Additional";
 				maybeAddOpenAIWhamRateLimitGroup(result, label, typedItem.rate_limit);
 			}
 		}

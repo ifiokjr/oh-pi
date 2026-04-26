@@ -1,4 +1,3 @@
-
 import {
 	createTerminalEmulator,
 	renderLineToAnsi,
@@ -170,7 +169,9 @@ describe("terminal emulator", () => {
 				},
 			),
 		).toBeTruthy();
-		expect(terminalEmulatorInternals.getVisibleLineIndexes({ baseY: 2, cursorY: 0, length: 6 }, 3)).toStrictEqual([2, 4]);
+		expect(terminalEmulatorInternals.getVisibleLineIndexes({ baseY: 2, cursorY: 0, length: 6 }, 3)).toStrictEqual([
+			2, 4,
+		]);
 		expect(terminalEmulatorInternals.getVisibleLineIndexes({ length: 0 }, 2)).toStrictEqual([0, -1]);
 		expect(terminalEmulatorInternals.getVisibleLineIndexes(undefined as never, 2)).toStrictEqual([0, 1]);
 		emulator.dispose();

@@ -1,7 +1,12 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { registerApiProvider, resetApiProviders, streamSimple, streamSimpleOpenAICompletions } from '@mariozechner/pi-ai';
-import type { Model } from '@mariozechner/pi-ai';
+import {
+	registerApiProvider,
+	resetApiProviders,
+	streamSimple,
+	streamSimpleOpenAICompletions,
+} from "@mariozechner/pi-ai";
+import type { Model } from "@mariozechner/pi-ai";
 
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import ollamaProviderExtension from "../index.js";
@@ -80,7 +85,7 @@ async function createReasoningAwareChatBackend(): Promise<{
 	});
 
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-	const {port} = (server.address() as AddressInfo);
+	const { port } = server.address() as AddressInfo;
 	const apiUrl = `http://127.0.0.1:${port}/v1`;
 
 	return {

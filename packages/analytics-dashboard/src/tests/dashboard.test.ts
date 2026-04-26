@@ -2,7 +2,6 @@
  * Dashboard Store Tests
  */
 
-
 import { useDashboardStore } from "../stores/dashboard";
 
 describe(useDashboardStore, () => {

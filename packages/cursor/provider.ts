@@ -1,7 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
-import { calculateCost, createAssistantMessageEventStream, getEnvApiKey } from '@mariozechner/pi-ai';
-import type { AssistantMessage, AssistantMessageEventStream, Context, Model, SimpleStreamOptions, ToolCall } from '@mariozechner/pi-ai';
+import { calculateCost, createAssistantMessageEventStream, getEnvApiKey } from "@mariozechner/pi-ai";
+import type {
+	AssistantMessage,
+	AssistantMessageEventStream,
+	Context,
+	Model,
+	SimpleStreamOptions,
+	ToolCall,
+} from "@mariozechner/pi-ai";
 import {
 	AgentServerMessageSchema,
 	BackgroundShellSpawnResultSchema,
@@ -27,11 +34,29 @@ import {
 	WriteShellStdinErrorSchema,
 	WriteShellStdinResultSchema,
 } from "./proto/agent_pb.js";
-import { buildCursorRequestPayload, decodeMcpArgsMap, makeHeartbeatFrame, parseCursorConversation, sendExecResult, sendKvBlobResponse, sendRequestContextResult } from './messages.js';
-import type { PendingExec, ToolResultInfo } from './messages.js';
+import {
+	buildCursorRequestPayload,
+	decodeMcpArgsMap,
+	makeHeartbeatFrame,
+	parseCursorConversation,
+	sendExecResult,
+	sendKvBlobResponse,
+	sendRequestContextResult,
+} from "./messages.js";
+import type { PendingExec, ToolResultInfo } from "./messages.js";
 import { CURSOR_RUN_PATH } from "./config.js";
-import { cleanupCursorRuntimeState, deleteActiveRun, deriveBridgeKey, deriveConversationKey, deterministicConversationId, getActiveRun, getConversationState, setActiveRun, upsertConversationState } from './runtime.js';
-import type { ActiveCursorRun } from './runtime.js';
+import {
+	cleanupCursorRuntimeState,
+	deleteActiveRun,
+	deriveBridgeKey,
+	deriveConversationKey,
+	deterministicConversationId,
+	getActiveRun,
+	getConversationState,
+	setActiveRun,
+	upsertConversationState,
+} from "./runtime.js";
+import type { ActiveCursorRun } from "./runtime.js";
 import {
 	CursorStreamingConnection,
 	createConnectFrameParser,
@@ -163,7 +188,7 @@ async function resumeActiveRun(
 	for (const pendingExec of activeRun.pendingExecs) {
 		const toolResult = toolResults.find((candidate) => candidate.toolCallId === pendingExec.toolCallId);
 		const result = toolResult
-			? (toolResult.isError
+			? toolResult.isError
 				? create(McpResultSchema, {
 						result: {
 							case: "error",
@@ -182,7 +207,7 @@ async function resumeActiveRun(
 								isError: false,
 							}),
 						},
-					}))
+					})
 			: create(McpResultSchema, {
 					result: { case: "error", value: create(McpErrorSchema, { error: "Tool result not provided" }) },
 				});
@@ -348,7 +373,7 @@ function handleServerMessage(options: {
 }
 
 function handleExecServerMessage(
-	execMessage: any,
+	execMessage: unknown,
 	run: ActiveCursorRun,
 	onToolExec: (pendingExec: PendingExec) => void,
 ): void {

@@ -29,14 +29,14 @@ export async function confirmApply(config: OhPConfigWithRouting, env: EnvInfo) {
 	const providerNames =
 		keepProviders || addProviders
 			? t("confirm.skipped")
-			: (config.providers.length > 0
+			: config.providers.length > 0
 				? config.providers.map((p) => p.name).join(", ")
-				: t("confirm.none"));
+				: t("confirm.none");
 	const primaryModel = keepProviders
 		? t("confirm.skipped")
-		: (addProviders
+		: addProviders
 			? t("confirm.skipped")
-			: config.providers[0]?.defaultModel || t("confirm.none"));
+			: config.providers[0]?.defaultModel || t("confirm.none");
 	const fallbackProviders = keepProviders
 		? t("confirm.skipped")
 		: addProviders
@@ -51,9 +51,9 @@ export async function confirmApply(config: OhPConfigWithRouting, env: EnvInfo) {
 				: t("confirm.none");
 	const providerStrategy = keepProviders
 		? t("confirm.providerStrategyKeep")
-		: (addProviders
+		: addProviders
 			? t("confirm.providerStrategyAdd")
-			: t("confirm.providerStrategyReplace"));
+			: t("confirm.providerStrategyReplace");
 
 	// ═══ Summary ═══
 	const adaptiveRoutingSummary = config.adaptiveRouting

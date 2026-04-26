@@ -85,7 +85,7 @@ function extractBgFlag(args: string): { args: string; bg: boolean } {
 
 function makeAgentCompletions(getBaseCwd: () => string, multiAgent: boolean) {
 	return (prefix: string) => {
-		const {agents} = discoverAgents(getBaseCwd(), "both");
+		const { agents } = discoverAgents(getBaseCwd(), "both");
 		if (!multiAgent) {
 			if (prefix.includes(" ")) {
 				return null;
@@ -175,7 +175,7 @@ function parseAgentArgs(
 		return null;
 	}
 
-	const {agents} = discoverAgents(getBaseCwd(), "both");
+	const { agents } = discoverAgents(getBaseCwd(), "both");
 	for (const step of steps) {
 		if (!agents.some((agent) => agent.name === step.name)) {
 			ctx.ui.notify(`Unknown agent: ${step.name}`, "error");
@@ -225,7 +225,7 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 				return;
 			}
 
-			const {agents} = discoverAgents(options.getBaseCwd(), "both");
+			const { agents } = discoverAgents(options.getBaseCwd(), "both");
 			if (!agents.some((agent) => agent.name === agentName)) {
 				ctx.ui.notify(`Unknown agent: ${agentName}`, "error");
 				return;
@@ -236,10 +236,18 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 				finalTask = `[Read from: ${inline.reads.join(", ")}]\n\n${finalTask}`;
 			}
 			const params: Record<string, unknown> = { agent: agentName, clarify: false, task: finalTask };
-			if (inline.output !== undefined) {params.output = inline.output;}
-			if (inline.skill !== undefined) {params.skill = inline.skill;}
-			if (inline.model) {params.model = inline.model;}
-			if (bg) {params.async = true;}
+			if (inline.output !== undefined) {
+				params.output = inline.output;
+			}
+			if (inline.skill !== undefined) {
+				params.skill = inline.skill;
+			}
+			if (inline.model) {
+				params.model = inline.model;
+			}
+			if (bg) {
+				params.async = true;
+			}
 			sendToolCall(params);
 		},
 	});
@@ -255,7 +263,7 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 			}
 			const chain = parsed.steps.map(({ name, config, task: stepTask }, index) => ({
 				agent: name,
-				...(stepTask ? { task: stepTask } : (index === 0 && parsed.task ? { task: parsed.task } : {})),
+				...(stepTask ? { task: stepTask } : index === 0 && parsed.task ? { task: parsed.task } : {}),
 				...(config.output !== undefined ? { output: config.output } : {}),
 				...(config.reads !== undefined ? { reads: config.reads } : {}),
 				...(config.model ? { model: config.model } : {}),
@@ -263,7 +271,9 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 				...(config.progress !== undefined ? { progress: config.progress } : {}),
 			}));
 			const params: Record<string, unknown> = { agentScope: "both", chain, clarify: false, task: parsed.task };
-			if (bg) {params.async = true;}
+			if (bg) {
+				params.async = true;
+			}
 			pi.sendUserMessage(`Call the subagent tool with these exact parameters: ${JSON.stringify(params)}`);
 		},
 	});
@@ -296,7 +306,9 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 				clarify: false,
 				task: parsed.task,
 			};
-			if (bg) {params.async = true;}
+			if (bg) {
+				params.async = true;
+			}
 			pi.sendUserMessage(`Call the subagent tool with these exact parameters: ${JSON.stringify(params)}`);
 		},
 	});

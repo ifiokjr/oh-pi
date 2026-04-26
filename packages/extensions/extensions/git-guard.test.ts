@@ -1,4 +1,3 @@
-
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import gitGuardExtension, { INTERACTIVE_GIT_WARNING_PREFIX, detectInteractiveGitCommand } from "./git-guard.js";
 

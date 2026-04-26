@@ -1,7 +1,6 @@
 import { EventEmitter } from "node:events";
 import { delimiter, join } from "node:path";
 
-
 const { createBashToolMock, getShellConfigMock, spawnMock } = vi.hoisted(() => ({
 	createBashToolMock: vi.fn(() => ({
 		description: "Built-in bash tool.",
@@ -14,17 +13,17 @@ const { createBashToolMock, getShellConfigMock, spawnMock } = vi.hoisted(() => (
 	spawnMock: vi.fn(),
 }));
 
-vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({
+vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({
 	spawn: spawnMock,
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	createBashTool: createBashToolMock,
 	getAgentDir: () => "/mock-home/.pi/agent",
 	getShellConfig: getShellConfigMock,
 }));
 
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({
 	StringEnum: (values: readonly string[], options?: Record<string, unknown>) => ({
 		enum: [...values],
 		type: "string",
@@ -32,9 +31,12 @@ vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () 
 	}),
 }));
 
-vi.mock<typeof import('@ifi/pi-background-tasks')>(import('@ifi/pi-background-tasks'), async () => await import("../../background-tasks/index.ts"));
+vi.mock<typeof import("@ifi/pi-background-tasks")>(
+	import("@ifi/pi-background-tasks"),
+	async () => await import("../../background-tasks/index.ts"),
+);
 
-vi.mock<typeof import('@sinclair/typebox')>(import('@sinclair/typebox'), () => ({
+vi.mock<typeof import("@sinclair/typebox")>(import("@sinclair/typebox"), () => ({
 	Type: {
 		Boolean: (options?: Record<string, unknown>) => ({ type: "boolean", ...options }),
 		Number: (options?: Record<string, unknown>) => ({ type: "number", ...options }),

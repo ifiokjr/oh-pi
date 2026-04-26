@@ -1,4 +1,3 @@
-
 import { getConfiguredExternalEditor, openTextInExternalEditor } from "./external-editor-shared";
 
 describe("external editor shared helpers", () => {

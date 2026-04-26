@@ -1,4 +1,3 @@
-
 import {
 	FG_MUTED,
 	fillToolBackground,

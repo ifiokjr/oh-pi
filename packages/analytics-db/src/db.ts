@@ -7,8 +7,8 @@
  */
 
 import Database from "better-sqlite3";
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";

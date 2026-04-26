@@ -38,7 +38,9 @@ describe("plan extension", () => {
 			harness.ctx,
 		);
 		expect(inactive.isError).toBeTruthy();
-		expect(inactive.content).toStrictEqual([{ text: "set_plan is only available while plan mode is active.", type: "text" }]);
+		expect(inactive.content).toStrictEqual([
+			{ text: "set_plan is only available while plan mode is active.", type: "text" },
+		]);
 	});
 
 	it("rejects empty plans and writes the canonical plan file when active", async () => {
@@ -79,7 +81,9 @@ describe("plan extension", () => {
 		expect(result.details).toStrictEqual({
 			plan: "# Canonical Plan\n\n- verify behavior\n- add coverage",
 		});
-		await expect(readFile(planFilePath, "utf8")).resolves.toBe("# Canonical Plan\n\n- verify behavior\n- add coverage\n");
+		await expect(readFile(planFilePath, "utf8")).resolves.toBe(
+			"# Canonical Plan\n\n- verify behavior\n- add coverage\n",
+		);
 		expect(harness.ctx.ui.setWidget).toHaveBeenCalledWith(
 			"pi-plan-banner",
 			expect.any(Function),

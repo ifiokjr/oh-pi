@@ -188,14 +188,14 @@ export class ChainClarifyComponent implements Component {
 		const fieldName = this.editMode === "template" ? "task" : this.editMode;
 		const rawAgentName = this.agentConfigs[this.editingStep!]?.name ?? "unknown";
 		const maxAgentLen = innerW - 30; // Reserve space for " Editing X (Step/Task N: ) "
-		const agentName = rawAgentName.length > maxAgentLen ? `${rawAgentName.slice(0, maxAgentLen - 1)  }…` : rawAgentName;
+		const agentName = rawAgentName.length > maxAgentLen ? `${rawAgentName.slice(0, maxAgentLen - 1)}…` : rawAgentName;
 		// Use mode-appropriate terminology
 		const stepLabel =
 			this.mode === "single"
 				? agentName
-				: (this.mode === "parallel"
+				: this.mode === "parallel"
 					? `Task ${this.editingStep! + 1}: ${agentName}`
-					: `Step ${this.editingStep! + 1}: ${agentName}`);
+					: `Step ${this.editingStep! + 1}: ${agentName}`;
 		const headerText = ` Editing ${fieldName} (${stepLabel}) `;
 		lines.push(this.renderHeader(headerText));
 		lines.push(this.row(""));
@@ -210,8 +210,12 @@ export class ChainClarifyComponent implements Component {
 		const hasMore = linesBelow > 0;
 		const hasLess = this.editState.viewportOffset > 0;
 		let scrollInfo = "";
-		if (hasLess) {scrollInfo += "↑";}
-		if (hasMore) {scrollInfo += `↓ ${linesBelow}+`;}
+		if (hasLess) {
+			scrollInfo += "↑";
+		}
+		if (hasMore) {
+			scrollInfo += `↓ ${linesBelow}+`;
+		}
 
 		lines.push(this.row(""));
 
@@ -232,7 +236,9 @@ export class ChainClarifyComponent implements Component {
 	private getEffectiveBehavior(stepIndex: number): ResolvedStepBehavior {
 		const base = this.resolvedBehaviors[stepIndex]!;
 		const override = this.behaviorOverrides.get(stepIndex);
-		if (!override) {return base;}
+		if (!override) {
+			return base;
+		}
 
 		return {
 			model: override.model !== undefined ? override.model : base.model,
@@ -246,17 +252,23 @@ export class ChainClarifyComponent implements Component {
 	/** Get the effective model for a step (override or agent default) */
 	private getEffectiveModel(stepIndex: number): string {
 		const override = this.behaviorOverrides.get(stepIndex);
-		if (override?.model) {return override.model;} // Override is already in provider/model format
+		if (override?.model) {
+			return override.model;
+		} // Override is already in provider/model format
 
 		const baseModel = this.resolvedBehaviors[stepIndex]?.model;
-		if (baseModel) {return this.resolveModelFullId(baseModel);}
+		if (baseModel) {
+			return this.resolveModelFullId(baseModel);
+		}
 		return "default";
 	}
 
 	/** Resolve a model name to its full provider/model format */
 	private resolveModelFullId(modelName: string): string {
 		// If already in provider/model format, return as-is
-		if (modelName.includes("/")) {return modelName;}
+		if (modelName.includes("/")) {
+			return modelName;
+		}
 
 		// Handle thinking level suffixes (e.g., "claude-sonnet-4-5:high")
 		// Strip the suffix for lookup, then add it back
@@ -292,11 +304,21 @@ export class ChainClarifyComponent implements Component {
 			const override = this.behaviorOverrides.get(i);
 			const template = this.templates[i] ?? "";
 			const step: ChainStepConfig = { agent: agent.name, task: template };
-			if (override?.output !== undefined) {step.output = behavior.output;}
-			if (override?.reads !== undefined) {step.reads = behavior.reads;}
-			if (override?.model !== undefined) {step.model = behavior.model;}
-			if (override?.skills !== undefined) {step.skills = behavior.skills;}
-			if (override?.progress !== undefined) {step.progress = behavior.progress;}
+			if (override?.output !== undefined) {
+				step.output = behavior.output;
+			}
+			if (override?.reads !== undefined) {
+				step.reads = behavior.reads;
+			}
+			if (override?.model !== undefined) {
+				step.model = behavior.model;
+			}
+			if (override?.skills !== undefined) {
+				step.skills = behavior.skills;
+			}
+			if (override?.progress !== undefined) {
+				step.progress = behavior.progress;
+			}
 			steps.push(step);
 		}
 		return {
@@ -315,7 +337,9 @@ export class ChainClarifyComponent implements Component {
 	}
 
 	private handleSaveChainNameInput(data: string): void {
-		if (matchesKey(data, "tab")) {return;}
+		if (matchesKey(data, "tab")) {
+			return;
+		}
 		const innerW = this.width - 2;
 		const boxInnerWidth = Math.max(10, innerW - 4);
 		const nextState = handleEditorInput(this.saveChainNameState, data, boxInnerWidth);
@@ -356,7 +380,9 @@ export class ChainClarifyComponent implements Component {
 
 	private showSaveMessage(text: string, type: "info" | "error"): void {
 		this.saveMessage = { text, type };
-		if (this.saveMessageTimer) {clearTimeout(this.saveMessageTimer);}
+		if (this.saveMessageTimer) {
+			clearTimeout(this.saveMessageTimer);
+		}
 		this.saveMessageTimer = setTimeout(() => {
 			this.saveMessage = null;
 			this.saveMessageTimer = null;
@@ -366,11 +392,19 @@ export class ChainClarifyComponent implements Component {
 	}
 
 	private arraysEqual(a: string[] | false, b: string[] | false): boolean {
-		if (a === b) {return true;}
-		if (a === false || b === false) {return false;}
-		if (a.length !== b.length) {return false;}
+		if (a === b) {
+			return true;
+		}
+		if (a === false || b === false) {
+			return false;
+		}
+		if (a.length !== b.length) {
+			return false;
+		}
 		for (let i = 0; i < a.length; i++) {
-			if (a[i] !== b[i]) {return false;}
+			if (a[i] !== b[i]) {
+				return false;
+			}
 		}
 		return true;
 	}
@@ -853,7 +887,9 @@ export class ChainClarifyComponent implements Component {
 			return;
 		}
 
-		if (matchesKey(data, "tab")) {return;}
+		if (matchesKey(data, "tab")) {
+			return;
+		}
 
 		const nextState = handleEditorInput(this.editState, data, textWidth);
 		if (nextState) {
@@ -1001,9 +1037,9 @@ export class ChainClarifyComponent implements Component {
 		const stepLabel =
 			this.mode === "single"
 				? agentName
-				: (this.mode === "parallel"
+				: this.mode === "parallel"
 					? `Task ${this.editingStep! + 1}: ${agentName}`
-					: `Step ${this.editingStep! + 1}: ${agentName}`);
+					: `Step ${this.editingStep! + 1}: ${agentName}`;
 		const headerText = ` Select Model (${stepLabel}) `;
 		lines.push(this.renderHeader(headerText));
 		lines.push(this.row(""));
@@ -1086,9 +1122,9 @@ export class ChainClarifyComponent implements Component {
 		const stepLabel =
 			this.mode === "single"
 				? agentName
-				: (this.mode === "parallel"
+				: this.mode === "parallel"
 					? `Task ${this.editingStep! + 1}: ${agentName}`
-					: `Step ${this.editingStep! + 1}: ${agentName}`);
+					: `Step ${this.editingStep! + 1}: ${agentName}`;
 		const headerText = ` Thinking Level (${stepLabel}) `;
 		lines.push(this.renderHeader(headerText));
 		lines.push(this.row(""));
@@ -1145,9 +1181,9 @@ export class ChainClarifyComponent implements Component {
 		const stepLabel =
 			this.mode === "single"
 				? agentName
-				: (this.mode === "parallel"
+				: this.mode === "parallel"
 					? `Task ${this.editingStep! + 1}: ${agentName}`
-					: `Step ${this.editingStep! + 1}: ${agentName}`);
+					: `Step ${this.editingStep! + 1}: ${agentName}`;
 		lines.push(this.renderHeader(` Select Skills (${stepLabel}) `));
 		lines.push(this.row(""));
 
@@ -1220,7 +1256,9 @@ export class ChainClarifyComponent implements Component {
 	}
 
 	private appendSaveMessage(lines: string[]): void {
-		if (!this.saveMessage) {return;}
+		if (!this.saveMessage) {
+			return;
+		}
 		const color = this.saveMessage.type === "error" ? "error" : "success";
 		lines.push(this.row(` ${this.theme.fg(color, this.saveMessage.text)}`));
 	}
@@ -1244,7 +1282,7 @@ export class ChainClarifyComponent implements Component {
 
 		// Agent name with selection indicator
 		const stepLabel = config.name;
-		lines.push(this.row(` ${th.fg("accent", `▶ ${  stepLabel}`)}`));
+		lines.push(this.row(` ${th.fg("accent", `▶ ${stepLabel}`)}`));
 
 		// Task line
 		const template = (this.templates[0] ?? "").split("\n")[0] ?? "";
@@ -1268,9 +1306,9 @@ export class ChainClarifyComponent implements Component {
 		const skillsValue =
 			behavior.skills === false
 				? th.fg("dim", "(disabled)")
-				: (behavior.skills?.length
+				: behavior.skills?.length
 					? behavior.skills.join(", ")
-					: th.fg("dim", "(none)"));
+					: th.fg("dim", "(none)");
 		const skillsLabel = th.fg("dim", "skills: ");
 		lines.push(this.row(`     ${skillsLabel}${truncateToWidth(skillsValue, innerW - 14)}`));
 
@@ -1304,7 +1342,7 @@ export class ChainClarifyComponent implements Component {
 			const prefix = isSelected ? "▶ " : "  ";
 			const taskPrefix = `Task ${i + 1}: `;
 			const maxNameLen = innerW - 4 - prefix.length - taskPrefix.length;
-			const agentName = config.name.length > maxNameLen ? `${config.name.slice(0, maxNameLen - 1)  }…` : config.name;
+			const agentName = config.name.length > maxNameLen ? `${config.name.slice(0, maxNameLen - 1)}…` : config.name;
 			const taskLabel = `${taskPrefix}${agentName}`;
 			lines.push(this.row(` ${th.fg(color, prefix + taskLabel)}`));
 
@@ -1325,9 +1363,9 @@ export class ChainClarifyComponent implements Component {
 			const skillsValue =
 				behavior.skills === false
 					? th.fg("dim", "(disabled)")
-					: (behavior.skills?.length
+					: behavior.skills?.length
 						? behavior.skills.join(", ")
-						: th.fg("dim", "(none)"));
+						: th.fg("dim", "(none)");
 			const skillsLabel = th.fg("dim", "skills: ");
 			lines.push(this.row(`     ${skillsLabel}${truncateToWidth(skillsValue, innerW - 14)}`));
 
@@ -1379,7 +1417,7 @@ export class ChainClarifyComponent implements Component {
 			const prefix = isSelected ? "▶ " : "  ";
 			const stepPrefix = `Step ${i + 1}: `;
 			const maxNameLen = innerW - 4 - prefix.length - stepPrefix.length; // 4 for " " prefix and padding
-			const agentName = config.name.length > maxNameLen ? `${config.name.slice(0, maxNameLen - 1)  }…` : config.name;
+			const agentName = config.name.length > maxNameLen ? `${config.name.slice(0, maxNameLen - 1)}…` : config.name;
 			const stepLabel = `${stepPrefix}${agentName}`;
 			lines.push(this.row(` ${th.fg(color, prefix + stepLabel)}`));
 
@@ -1411,18 +1449,18 @@ export class ChainClarifyComponent implements Component {
 			const readsValue =
 				behavior.reads === false
 					? th.fg("dim", "(disabled)")
-					: (behavior.reads && behavior.reads.length > 0
+					: behavior.reads && behavior.reads.length > 0
 						? behavior.reads.join(", ")
-						: th.fg("dim", "(none)"));
+						: th.fg("dim", "(none)");
 			const readsLabel = th.fg("dim", "reads: ");
 			lines.push(this.row(`     ${readsLabel}${truncateToWidth(readsValue, innerW - 13)}`));
 
 			const skillsValue =
 				behavior.skills === false
 					? th.fg("dim", "(disabled)")
-					: (behavior.skills?.length
+					: behavior.skills?.length
 						? behavior.skills.join(", ")
-						: th.fg("dim", "(none)"));
+						: th.fg("dim", "(none)");
 			const skillsLabel = th.fg("dim", "skills: ");
 			lines.push(this.row(`     ${skillsLabel}${truncateToWidth(skillsValue, innerW - 14)}`));
 
@@ -1459,7 +1497,9 @@ export class ChainClarifyComponent implements Component {
 
 	invalidate(): void {}
 	dispose(): void {
-		if (this.saveMessageTimer) {clearTimeout(this.saveMessageTimer);}
+		if (this.saveMessageTimer) {
+			clearTimeout(this.saveMessageTimer);
+		}
 		this.saveMessageTimer = null;
 	}
 }

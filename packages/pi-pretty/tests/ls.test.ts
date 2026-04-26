@@ -1,4 +1,3 @@
-
 import { renderTree } from "../src/ls.js";
 
 const { renderTree: rt } = await import("../src/ls.js");

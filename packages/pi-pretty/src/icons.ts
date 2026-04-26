@@ -56,16 +56,24 @@ const GENERIC_FILE_ICON = "󰈙";
 let ICONS_ENABLED = process.env.PRETTY_ICONS !== "none";
 
 export function getFileIcon(name: string): string {
-	if (!ICONS_ENABLED) {return "";}
+	if (!ICONS_ENABLED) {
+		return "";
+	}
 	const lower = name.toLowerCase();
-	if (ICON_MAP[lower]) {return `${ICON_MAP[lower]} `;}
+	if (ICON_MAP[lower]) {
+		return `${ICON_MAP[lower]} `;
+	}
 	const ext = extname(name).toLowerCase();
-	if (ICON_MAP[ext]) {return `${ICON_MAP[ext]} `;}
+	if (ICON_MAP[ext]) {
+		return `${ICON_MAP[ext]} `;
+	}
 	return `${GENERIC_FILE_ICON} `;
 }
 
 export function getDirectoryIcon(): string {
-	if (!ICONS_ENABLED) {return "";}
+	if (!ICONS_ENABLED) {
+		return "";
+	}
 	return `${DIRECTORY_ICON} `;
 }
 

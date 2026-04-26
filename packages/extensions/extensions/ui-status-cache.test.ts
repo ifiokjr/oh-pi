@@ -1,5 +1,3 @@
-
-
 import { createStatusBarState } from "./ui-status-cache";
 
 describe(createStatusBarState, () => {

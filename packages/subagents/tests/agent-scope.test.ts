@@ -1,4 +1,3 @@
-
 import { resolveExecutionAgentScope } from "../agent-scope.js";
 
 describe(resolveExecutionAgentScope, () => {

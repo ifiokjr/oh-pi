@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-
 const scriptsDir = import.meta.dirname;
 const repoRoot = path.resolve(scriptsDir, "..");
 const workflowPath = path.join(repoRoot, ".github", "workflows", "ci.yml");

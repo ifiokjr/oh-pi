@@ -1,10 +1,8 @@
-
-
 const osModule = vi.hoisted(() => ({
 	networkInterfaces: vi.fn(),
 }));
 
-vi.mock<typeof import('node:os')>(import('node:os'), () => osModule);
+vi.mock<typeof import("node:os")>(import("node:os"), () => osModule);
 
 import { getLanIp } from "../src/lan.js";
 

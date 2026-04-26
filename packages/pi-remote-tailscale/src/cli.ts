@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { buildPiCommand, buildRemotePtyEnv, createPtyProcess } from './pty.js';
-import type { CreatePtyProcessOptions } from './pty.js';
+import { buildPiCommand, buildRemotePtyEnv, createPtyProcess } from "./pty.js";
+import type { CreatePtyProcessOptions } from "./pty.js";
 
 export interface CliOptions {
 	args: string[];

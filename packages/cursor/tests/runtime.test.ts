@@ -1,4 +1,3 @@
-
 import {
 	cleanupCursorRuntimeState,
 	clearCursorRuntimeState,

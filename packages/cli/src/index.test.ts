@@ -1,5 +1,3 @@
-
-
 const getLocale = vi.fn(() => "en");
 const selectLanguage = vi.fn(async () => {});
 const confirmApply = vi.fn(async () => {});
@@ -11,7 +9,7 @@ const setupAdaptiveRouting = vi.fn(async () => ({ enabled: false }));
 const welcome = vi.fn();
 const detectEnv = vi.fn(async () => ({ existingProviders: ["anthropic"] }));
 
-vi.mock<typeof import('@ifi/oh-pi-core')>(import('@ifi/oh-pi-core'), () => ({
+vi.mock<typeof import("@ifi/oh-pi-core")>(import("@ifi/oh-pi-core"), () => ({
 	EXTENSIONS: [
 		{ default: true, name: "git-guard" },
 		{ default: true, name: "diagnostics" },
@@ -20,14 +18,14 @@ vi.mock<typeof import('@ifi/oh-pi-core')>(import('@ifi/oh-pi-core'), () => ({
 	getLocale,
 	selectLanguage,
 }));
-vi.mock<typeof import('./tui/config-wizard.js')>(import('./tui/config-wizard.js'), () => ({ runConfigWizard }));
-vi.mock<typeof import('./tui/confirm-apply.js')>(import('./tui/confirm-apply.js'), () => ({ confirmApply }));
-vi.mock<typeof import('./tui/mode-select.js')>(import('./tui/mode-select.js'), () => ({ selectMode }));
-vi.mock<typeof import('./tui/preset-select.js')>(import('./tui/preset-select.js'), () => ({ selectPreset }));
-vi.mock<typeof import('./tui/provider-setup.js')>(import('./tui/provider-setup.js'), () => ({ setupProviders }));
-vi.mock<typeof import('./tui/routing-setup.js')>(import('./tui/routing-setup.js'), () => ({ setupAdaptiveRouting }));
-vi.mock<typeof import('./tui/welcome.js')>(import('./tui/welcome.js'), () => ({ welcome }));
-vi.mock<typeof import('./utils/detect.js')>(import('./utils/detect.js'), () => ({ detectEnv }));
+vi.mock<typeof import("./tui/config-wizard.js")>(import("./tui/config-wizard.js"), () => ({ runConfigWizard }));
+vi.mock<typeof import("./tui/confirm-apply.js")>(import("./tui/confirm-apply.js"), () => ({ confirmApply }));
+vi.mock<typeof import("./tui/mode-select.js")>(import("./tui/mode-select.js"), () => ({ selectMode }));
+vi.mock<typeof import("./tui/preset-select.js")>(import("./tui/preset-select.js"), () => ({ selectPreset }));
+vi.mock<typeof import("./tui/provider-setup.js")>(import("./tui/provider-setup.js"), () => ({ setupProviders }));
+vi.mock<typeof import("./tui/routing-setup.js")>(import("./tui/routing-setup.js"), () => ({ setupAdaptiveRouting }));
+vi.mock<typeof import("./tui/welcome.js")>(import("./tui/welcome.js"), () => ({ welcome }));
+vi.mock<typeof import("./utils/detect.js")>(import("./utils/detect.js"), () => ({ detectEnv }));
 
 describe("cli setup flows", () => {
 	beforeEach(() => {

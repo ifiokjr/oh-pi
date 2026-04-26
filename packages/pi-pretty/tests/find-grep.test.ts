@@ -1,14 +1,13 @@
-
 import { execMultiGrep, multiGrep } from "../src/find-grep.js";
 
-vi.mock<typeof import('@ff-labs/fff-node')>(import('@ff-labs/fff-node'), async (importOriginal) => ({
-		CursorStore: vi.fn().mockImplementation(() => ({
-			init: vi.fn().mockResolvedValue(undefined),
-			grep: vi.fn().mockResolvedValue([{ file: "src/index.ts", line: 10, text: "function foo()" }]),
-			stats: vi.fn().mockReturnValue({ fileCount: 5 }),
-		})),
-		Cursor: vi.fn(),
-	}));
+vi.mock<typeof import("@ff-labs/fff-node")>(import("@ff-labs/fff-node"), async (importOriginal) => ({
+	CursorStore: vi.fn().mockImplementation(() => ({
+		init: vi.fn().mockResolvedValue(undefined),
+		grep: vi.fn().mockResolvedValue([{ file: "src/index.ts", line: 10, text: "function foo()" }]),
+		stats: vi.fn().mockReturnValue({ fileCount: 5 }),
+	})),
+	Cursor: vi.fn(),
+}));
 
 describe(multiGrep, () => {
 	it("returns no matches for empty patterns", async () => {

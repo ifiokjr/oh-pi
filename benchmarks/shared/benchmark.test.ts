@@ -1,4 +1,3 @@
-
 import { runBenchmark } from "./benchmark";
 
 describe("benchmark helper", () => {

@@ -32,7 +32,9 @@ export function readStatus(asyncDir: string): AsyncStatus | null {
 		// Limit cache size to prevent memory leaks
 		if (statusCache.size > 50) {
 			const firstKey = statusCache.keys().next().value;
-			if (firstKey) {statusCache.delete(firstKey);}
+			if (firstKey) {
+				statusCache.delete(firstKey);
+			}
 		}
 		return status;
 	} catch {
@@ -47,11 +49,15 @@ const outputTailCache = new Map<string, { mtime: number; size: number; lines: st
  * Get the last N lines from an output file (with mtime/size-based caching)
  */
 export function getOutputTail(outputFile: string | undefined, maxLines: number = 3): string[] {
-	if (!outputFile) {return [];}
+	if (!outputFile) {
+		return [];
+	}
 	let fd: number | null = null;
 	try {
 		const stat = fs.statSync(outputFile);
-		if (stat.size === 0) {return [];}
+		if (stat.size === 0) {
+			return [];
+		}
 
 		// Check cache using both mtime and size (size changes more frequently during writes)
 		const cached = outputTailCache.get(outputFile);
@@ -73,7 +79,9 @@ export function getOutputTail(outputFile: string | undefined, maxLines: number =
 		// Limit cache size
 		if (outputTailCache.size > 20) {
 			const firstKey = outputTailCache.keys().next().value;
-			if (firstKey) {outputTailCache.delete(firstKey);}
+			if (firstKey) {
+				outputTailCache.delete(firstKey);
+			}
 		}
 
 		return lines;
@@ -92,13 +100,19 @@ export function getOutputTail(outputFile: string | undefined, maxLines: number =
  * Get human-readable last activity time for a file
  */
 export function getLastActivity(outputFile: string | undefined): string {
-	if (!outputFile) {return "";}
+	if (!outputFile) {
+		return "";
+	}
 	try {
 		// Single stat call - throws if file doesn't exist
 		const stat = fs.statSync(outputFile);
 		const ago = Date.now() - stat.mtimeMs;
-		if (ago < 1000) {return "active now";}
-		if (ago < 60_000) {return `active ${Math.floor(ago / 1000)}s ago`;}
+		if (ago < 1000) {
+			return "active now";
+		}
+		if (ago < 60_000) {
+			return `active ${Math.floor(ago / 1000)}s ago`;
+		}
 		return `active ${Math.floor(ago / 60_000)}m ago`;
 	} catch {
 		return "";
@@ -109,13 +123,17 @@ export function getLastActivity(outputFile: string | undefined): string {
  * Find a file/directory by prefix in a directory
  */
 export function findByPrefix(dir: string, prefix: string, suffix?: string): string | null {
-	if (!fs.existsSync(dir)) {return null;}
+	if (!fs.existsSync(dir)) {
+		return null;
+	}
 	const entries = fs.readdirSync(dir).filter((entry) => entry.startsWith(prefix));
 	if (suffix) {
 		const withSuffix = entries.filter((entry) => entry.endsWith(suffix));
 		return withSuffix.length > 0 ? path.join(dir, withSuffix.toSorted()[0]) : null;
 	}
-	if (entries.length === 0) {return null;}
+	if (entries.length === 0) {
+		return null;
+	}
 	return path.join(dir, entries.toSorted()[0]);
 }
 
@@ -123,7 +141,9 @@ export function findByPrefix(dir: string, prefix: string, suffix?: string): stri
  * Find the latest session file in a directory
  */
 export function findLatestSessionFile(sessionDir: string): string | null {
-	if (!fs.existsSync(sessionDir)) {return null;}
+	if (!fs.existsSync(sessionDir)) {
+		return null;
+	}
 	const files = fs
 		.readdirSync(sessionDir)
 		.filter((f) => f.endsWith(".jsonl"))
@@ -160,7 +180,9 @@ export function getFinalOutput(messages: Message[]): string {
 		const msg = messages[i];
 		if (msg.role === "assistant") {
 			for (const part of msg.content) {
-				if (part.type === "text") {return part.text;}
+				if (part.type === "text") {
+					return part.text;
+				}
 			}
 		}
 	}
@@ -175,8 +197,11 @@ export function getDisplayItems(messages: Message[]): DisplayItem[] {
 	for (const msg of messages) {
 		if (msg.role === "assistant") {
 			for (const part of msg.content) {
-				if (part.type === "text") {items.push({ type: "text", text: part.text });}
-				else if (part.type === "toolCall") {items.push({ type: "tool", name: part.name, args: part.arguments });}
+				if (part.type === "text") {
+					items.push({ type: "text", text: part.text });
+				} else if (part.type === "toolCall") {
+					items.push({ type: "tool", name: part.name, args: part.arguments });
+				}
 			}
 		}
 	}
@@ -211,25 +236,31 @@ export function detectSubagentError(messages: Message[]): ErrorInfo {
 	// Step 3: Check tool results in the post-response window
 	for (let i = messages.length - 1; i >= scanStart; i--) {
 		const msg = messages[i];
-		if (msg.role !== "toolResult") {continue;}
+		if (msg.role !== "toolResult") {
+			continue;
+		}
 
-		if ((msg as any).isError) {
+		if ((msg as unknown as { isError: boolean }).isError) {
 			const text = msg.content.find((c) => c.type === "text");
 			const details = text && "text" in text ? text.text : undefined;
 			const exitMatch = details?.match(/exit(?:ed)?\s*(?:with\s*)?(?:code|status)?\s*[:\s]?\s*(\d+)/i);
 			return {
 				details: details?.slice(0, 200),
-				errorType: (msg as any).toolName || "tool",
+				errorType: (msg as unknown as { toolName: string }).toolName || "tool",
 				exitCode: exitMatch ? parseInt(exitMatch[1], 10) : 1,
 				hasError: true,
 			};
 		}
 
-		const {toolName} = (msg as any);
-		if (toolName !== "bash") {continue;}
+		const { toolName } = msg as unknown as { toolName: string };
+		if (toolName !== "bash") {
+			continue;
+		}
 
 		const text = msg.content.find((c) => c.type === "text");
-		if (!text || !("text" in text)) {continue;}
+		if (!text || !("text" in text)) {
+			continue;
+		}
 		const output = text.text;
 
 		const exitMatch = output.match(/exit(?:ed)?\s*(?:with\s*)?(?:code|status)?\s*[:\s]?\s*(\d+)/i);
@@ -296,11 +327,17 @@ export function extractToolArgsPreview(args: Record<string, unknown>): string {
  * Extract text content from various message content formats
  */
 export function extractTextFromContent(content: unknown): string {
-	if (!content) {return "";}
+	if (!content) {
+		return "";
+	}
 	// Handle string content directly
-	if (typeof content === "string") {return content;}
+	if (typeof content === "string") {
+		return content;
+	}
 	// Handle array content
-	if (!Array.isArray(content)) {return "";}
+	if (!Array.isArray(content)) {
+		return "";
+	}
 	const texts: string[] = [];
 	for (const part of content) {
 		if (part && typeof part === "object") {
@@ -311,7 +348,9 @@ export function extractTextFromContent(content: unknown): string {
 			// Handle { type: "tool_result", content: "..." }
 			else if ("type" in part && part.type === "tool_result" && "content" in part) {
 				const inner = extractTextFromContent(part.content);
-				if (inner) {texts.push(inner);}
+				if (inner) {
+					texts.push(inner);
+				}
 			}
 			// Handle { text: "..." } without type
 			else if ("text" in part) {

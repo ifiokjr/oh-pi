@@ -1,5 +1,3 @@
-
-
 const http2Mocks = vi.hoisted(() => {
 	const sessions: any[] = [];
 	const constants = { HTTP2_METHOD_POST: "POST" };
@@ -66,7 +64,7 @@ const http2Mocks = vi.hoisted(() => {
 	return { FakeRequest, FakeSession, connect, constants, sessions };
 });
 
-vi.mock<typeof import('node:http2')>(import('node:http2'), () => ({
+vi.mock<typeof import("node:http2")>(import("node:http2"), () => ({
 	connect: http2Mocks.connect,
 	constants: http2Mocks.constants,
 	default: { connect: http2Mocks.connect },

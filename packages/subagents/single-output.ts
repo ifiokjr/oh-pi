@@ -6,18 +6,24 @@ export function resolveSingleOutputPath(
 	runtimeCwd: string,
 	requestedCwd?: string,
 ): string | undefined {
-	if (typeof output !== "string" || !output) {return undefined;}
-	if (path.isAbsolute(output)) {return output;}
+	if (typeof output !== "string" || !output) {
+		return undefined;
+	}
+	if (path.isAbsolute(output)) {
+		return output;
+	}
 	const baseCwd = requestedCwd
-		? (path.isAbsolute(requestedCwd)
+		? path.isAbsolute(requestedCwd)
 			? requestedCwd
-			: path.resolve(runtimeCwd, requestedCwd))
+			: path.resolve(runtimeCwd, requestedCwd)
 		: runtimeCwd;
 	return path.resolve(baseCwd, output);
 }
 
 export function injectSingleOutputInstruction(task: string, outputPath: string | undefined): string {
-	if (!outputPath) {return task;}
+	if (!outputPath) {
+		return task;
+	}
 	return `${task}\n\n---\n**Output:** Write your findings to: ${outputPath}`;
 }
 
@@ -25,7 +31,9 @@ export function persistSingleOutput(
 	outputPath: string | undefined,
 	fullOutput: string,
 ): { savedPath?: string; error?: string } {
-	if (!outputPath) {return {};}
+	if (!outputPath) {
+		return {};
+	}
 	try {
 		fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 		fs.writeFileSync(outputPath, fullOutput, "utf8");

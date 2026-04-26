@@ -1,14 +1,15 @@
+vi.mock<typeof import("@ifi/pi-extension-subagents/execution.ts")>(
+	import("@ifi/pi-extension-subagents/execution.ts"),
+	() => ({
+		runSync: vi.fn(),
+	}),
+);
 
-
-vi.mock<typeof import('@ifi/pi-extension-subagents/execution.ts')>(import('@ifi/pi-extension-subagents/execution.ts'), () => ({
-	runSync: vi.fn(),
-}));
-
-vi.mock<typeof import('@ifi/pi-extension-subagents/utils.ts')>(import('@ifi/pi-extension-subagents/utils.ts'), () => ({
+vi.mock<typeof import("@ifi/pi-extension-subagents/utils.ts")>(import("@ifi/pi-extension-subagents/utils.ts"), () => ({
 	getFinalOutput: vi.fn(),
 }));
 
-vi.mock<typeof import('@ifi/pi-shared-qna')>(import('@ifi/pi-shared-qna'), () => ({
+vi.mock<typeof import("@ifi/pi-shared-qna")>(import("@ifi/pi-shared-qna"), () => ({
 	requirePiTuiModule: () => ({
 		Text: class Text {
 			constructor(

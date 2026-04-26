@@ -1,7 +1,7 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { QnATuiComponent, requirePiTuiModule } from '@ifi/pi-shared-qna';
-import type { QnAResponse, QnAResult } from '@ifi/pi-shared-qna';
+import { QnATuiComponent, requirePiTuiModule } from "@ifi/pi-shared-qna";
+import type { QnAResponse, QnAResult } from "@ifi/pi-shared-qna";
 import type {
 	NormalizedRequestUserInputQuestion,
 	PlanModeState,
@@ -128,16 +128,19 @@ async function collectRequestUserInputAnswers(
 	ctx: ExtensionContext,
 	questions: NormalizedRequestUserInputQuestion[],
 ): Promise<RequestUserInputResponse | null> {
-	const result = await ctx.ui.custom<QnAResult | null>((tui, theme, _kb, done) => new QnATuiComponent(questions, tui, done, {
-			title: "Questions",
-			questionSummaryLabel: (question) => question.header?.trim() || question.question,
-			accentColor: (text) => theme.fg("accent", text),
-			successColor: (text) => theme.fg("success", text),
-			warningColor: (text) => theme.fg("warning", text),
-			mutedColor: (text) => theme.fg("muted", text),
-			dimColor: (text) => theme.fg("dim", text),
-			boldText: (text) => theme.bold(text),
-		}));
+	const result = await ctx.ui.custom<QnAResult | null>(
+		(tui, theme, _kb, done) =>
+			new QnATuiComponent(questions, tui, done, {
+				title: "Questions",
+				questionSummaryLabel: (question) => question.header?.trim() || question.question,
+				accentColor: (text) => theme.fg("accent", text),
+				successColor: (text) => theme.fg("success", text),
+				warningColor: (text) => theme.fg("warning", text),
+				mutedColor: (text) => theme.fg("muted", text),
+				dimColor: (text) => theme.fg("dim", text),
+				boldText: (text) => theme.bold(text),
+			}),
+	);
 
 	if (!result) {
 		return null;

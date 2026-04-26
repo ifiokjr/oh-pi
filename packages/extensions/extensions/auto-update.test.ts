@@ -1,4 +1,3 @@
-
 import { isNewer, runAutoUpdateCheck } from "./auto-update.js";
 
 describe("auto-update helpers", () => {

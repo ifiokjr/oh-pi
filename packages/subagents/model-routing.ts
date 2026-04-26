@@ -2,8 +2,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
-import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from '@ifi/oh-pi-core';
-import type { DelegatedAvailableModel, DelegatedSelectionLatencySnapshot, DelegatedSelectionPolicy, DelegatedSelectionUsageSnapshot, ModelTaskProfile } from '@ifi/oh-pi-core';
+import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from "@ifi/oh-pi-core";
+import type {
+	DelegatedAvailableModel,
+	DelegatedSelectionLatencySnapshot,
+	DelegatedSelectionPolicy,
+	DelegatedSelectionUsageSnapshot,
+	ModelTaskProfile,
+} from "@ifi/oh-pi-core";
 import type { AgentConfig } from "./agents.js";
 
 export interface AvailableModelRef {
@@ -340,7 +346,9 @@ export function findAvailableModel(
 	modelName: string | undefined,
 	availableModels: AvailableModelRef[],
 ): string | undefined {
-	if (!modelName) {return undefined;}
+	if (!modelName) {
+		return undefined;
+	}
 
 	// Strip thinking suffix for lookup
 	const colonIdx = modelName.lastIndexOf(":");

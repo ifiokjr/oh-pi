@@ -1,6 +1,5 @@
-
-import { createJsonlWriter } from '../jsonl-writer.js';
-import type { DrainableSource, JsonlWriteStream } from '../jsonl-writer.js';
+import { createJsonlWriter } from "../jsonl-writer.js";
+import type { DrainableSource, JsonlWriteStream } from "../jsonl-writer.js";
 
 class MockSource implements DrainableSource {
 	paused = 0;

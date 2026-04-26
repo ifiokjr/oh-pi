@@ -1,5 +1,5 @@
-import { execFile, spawn } from 'node:child_process';
-import type { ChildProcessByStdio } from 'node:child_process';
+import { execFile, spawn } from "node:child_process";
+import type { ChildProcessByStdio } from "node:child_process";
 import process from "node:process";
 import type { Readable } from "node:stream";
 
@@ -45,7 +45,7 @@ export async function pullOllamaModel(
 		throw new Error("Ollama CLI is not installed.");
 	}
 
-	const {command} = cli;
+	const { command } = cli;
 	await new Promise<void>((resolve, reject) => {
 		const child = spawn(command, ["pull", modelId], {
 			env: options.env,

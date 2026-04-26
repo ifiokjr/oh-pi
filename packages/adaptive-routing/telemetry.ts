@@ -194,7 +194,9 @@ export function formatStats(stats: AdaptiveRoutingStats): string[] {
 			lines.push(`  - ${category}: ${count}`);
 		}
 	}
-	const latencyEntries = Object.entries(stats.perModelLatencyMs).toSorted((left, right) => left[0].localeCompare(right[0]));
+	const latencyEntries = Object.entries(stats.perModelLatencyMs).toSorted((left, right) =>
+		left[0].localeCompare(right[0]),
+	);
 	if (latencyEntries.length > 0) {
 		lines.push("Measured latency:");
 		for (const [model, value] of latencyEntries) {

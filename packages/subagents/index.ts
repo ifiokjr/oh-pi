@@ -17,16 +17,33 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
-import { discoverAgents, discoverAgentsAll } from './agents.js';
-import type { AgentConfig, AgentScope } from './agents.js';
+import { discoverAgents, discoverAgentsAll } from "./agents.js";
+import type { AgentConfig, AgentScope } from "./agents.js";
 import { resolveExecutionAgentScope } from "./agent-scope.js";
-import { cleanupOldChainDirs, getStepAgents, isParallelStep, resolveStepBehavior } from './settings.js';
-import type { ChainStep, SequentialStep } from './settings.js';
-import { ChainClarifyComponent } from './chain-clarify.js';
-import type { ChainClarifyResult, ModelInfo } from './chain-clarify.js';
+import { cleanupOldChainDirs, getStepAgents, isParallelStep, resolveStepBehavior } from "./settings.js";
+import type { ChainStep, SequentialStep } from "./settings.js";
+import { ChainClarifyComponent } from "./chain-clarify.js";
+import type { ChainClarifyResult, ModelInfo } from "./chain-clarify.js";
 import { cleanupAllArtifactDirs, cleanupOldArtifacts, getArtifactsDir } from "./artifacts.js";
-import { ASYNC_DIR, DEFAULT_ARTIFACT_CONFIG, DEFAULT_MAX_OUTPUT, MAX_CONCURRENCY, MAX_PARALLEL, RESULTS_DIR, WIDGET_KEY, checkSubagentDepth } from './types.js';
-import type { AgentProgress, ArtifactConfig, ArtifactPaths, AsyncJobState, Details, ExtensionConfig, SingleResult } from './types.js';
+import {
+	ASYNC_DIR,
+	DEFAULT_ARTIFACT_CONFIG,
+	DEFAULT_MAX_OUTPUT,
+	MAX_CONCURRENCY,
+	MAX_PARALLEL,
+	RESULTS_DIR,
+	WIDGET_KEY,
+	checkSubagentDepth,
+} from "./types.js";
+import type {
+	AgentProgress,
+	ArtifactConfig,
+	ArtifactPaths,
+	AsyncJobState,
+	Details,
+	ExtensionConfig,
+	SingleResult,
+} from "./types.js";
 import { findByPrefix, getFinalOutput, mapConcurrent, readStatus } from "./utils.js";
 import { runSync } from "./execution.js";
 import { renderSubagentResult, renderWidget } from "./render.js";
@@ -35,8 +52,8 @@ import { executeChain } from "./chain-execution.js";
 import { executeAsyncChain, executeAsyncSingle, isAsyncAvailable } from "./async-execution.js";
 import { discoverAvailableSkills, normalizeSkillInput } from "./skills.js";
 import { finalizeSingleOutput, injectSingleOutputInstruction, resolveSingleOutputPath } from "./single-output.js";
-import { AgentManagerComponent } from './agent-manager.js';
-import type { ManagerResult } from './agent-manager.js';
+import { AgentManagerComponent } from "./agent-manager.js";
+import type { ManagerResult } from "./agent-manager.js";
 import { recordRun } from "./run-history.js";
 import { handleManagementAction } from "./agent-management.js";
 import { registerSubagentCommands } from "./command-registration.js";
@@ -74,7 +91,8 @@ export default function registerSubagentExtension(pi: ExtensionAPI): void {
 		getSafeModeEnabled: () => safeModeEnabled,
 		pi,
 	});
-	const getAvailableRoutingModels = (ctx: ExtensionContext): ModelInfo[] => toAvailableModelRefs(
+	const getAvailableRoutingModels = (ctx: ExtensionContext): ModelInfo[] =>
+		toAvailableModelRefs(
 			ctx.modelRegistry.getAvailable().map((model) => ({
 				provider: model.provider,
 				id: model.id,
@@ -954,13 +972,15 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			(tui, theme, _kb, done) => new AgentManagerComponent(tui, theme, agentData, models, skills, done),
 			{ overlay: true, overlayOptions: { anchor: "center", maxHeight: "80%", width: 84 } },
 		);
-		if (!result) {return;}
+		if (!result) {
+			return;
+		}
 
 		// Ad-hoc chains from the overlay use direct execution for the chain-clarify TUI.
 		// All other paths (single, saved-chain, parallel launches, slash commands)
 		// Route through sendToolCall → LLM → tool handler to get live progress.
 		if (result.action === "chain") {
-			const {agents} = discoverAgents(baseCwd, "both");
+			const { agents } = discoverAgents(baseCwd, "both");
 			const exec = setupDirectRun(ctx);
 			const chain: SequentialStep[] = result.agents.map((name, i) => ({
 				agent: name,
@@ -1001,7 +1021,9 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					}
 					pi.sendUserMessage(r.content[0]?.text || "(no output)");
 				})
-				.catch((error) => pi.sendUserMessage(`Chain failed: ${error instanceof Error ? error.message : String(error)}`));
+				.catch((error) =>
+					pi.sendUserMessage(`Chain failed: ${error instanceof Error ? error.message : String(error)}`),
+				);
 			return;
 		}
 
@@ -1047,9 +1069,11 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			agent?: string;
 			chain?: string[];
 		};
-		if (!info.id) {return;}
+		if (!info.id) {
+			return;
+		}
 		const asyncDir = info.asyncDir ?? path.join(ASYNC_DIR, info.id);
-		const agents = info.chain && info.chain.length > 0 ? info.chain : (info.agent ? [info.agent] : undefined);
+		const agents = info.chain && info.chain.length > 0 ? info.chain : info.agent ? [info.agent] : undefined;
 		const now = Date.now();
 		asyncJobs.set(info.id, {
 			agents,
@@ -1070,12 +1094,16 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 	pi.events.on("subagent:complete", (data) => {
 		const result = data as { id?: string; success?: boolean; asyncDir?: string };
 		const asyncId = result.id;
-		if (!asyncId) {return;}
+		if (!asyncId) {
+			return;
+		}
 		const job = asyncJobs.get(asyncId);
 		if (job) {
 			job.status = result.success ? "complete" : "failed";
 			job.updatedAt = Date.now();
-			if (result.asyncDir) {job.asyncDir = result.asyncDir;}
+			if (result.asyncDir) {
+				job.asyncDir = result.asyncDir;
+			}
 		}
 		if (lastUiContext) {
 			runtimeMonitor.refreshWidget();
@@ -1092,8 +1120,12 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 	});
 
 	pi.on("tool_result", (event, ctx) => {
-		if (event.toolName !== "subagent") {return;}
-		if (!ctx.hasUI) {return;}
+		if (event.toolName !== "subagent") {
+			return;
+		}
+		if (!ctx.hasUI) {
+			return;
+		}
 		lastUiContext = ctx;
 		if (asyncJobs.size > 0) {
 			runtimeMonitor.refreshWidget();
@@ -1154,7 +1186,9 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			cancelStartupCleanup();
 			void cleanupSessionArtifacts(ctx);
 		}
-		for (const timer of cleanupTimers.values()) {clearTimeout(timer);}
+		for (const timer of cleanupTimers.values()) {
+			clearTimeout(timer);
+		}
 		cleanupTimers.clear();
 		asyncJobs.clear();
 		runtimeMonitor.clearResults();

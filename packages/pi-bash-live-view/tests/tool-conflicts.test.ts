@@ -1,7 +1,6 @@
-
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), async () => {
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), async () => {
 	const actual = await vi.importActual<typeof import("@mariozechner/pi-coding-agent")>("@mariozechner/pi-coding-agent");
 	return {
 		...actual,

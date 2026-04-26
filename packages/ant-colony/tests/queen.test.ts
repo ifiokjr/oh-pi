@@ -2,16 +2,15 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-
 const childProcessMocks = vi.hoisted(() => ({
 	execFileSync: vi.fn(),
 }));
 
-vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({
+vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({
 	execFileSync: childProcessMocks.execFileSync,
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	AuthStorage: class {},
 	ModelRegistry: class {},
 	SessionManager: { inMemory: vi.fn() },
@@ -27,7 +26,7 @@ vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi
 	createWriteTool: vi.fn(),
 	getAgentDir: () => "/mock-home/.pi/agent",
 }));
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({ getModel: vi.fn() }));
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({ getModel: vi.fn() }));
 
 import { Nest } from "../extensions/ant-colony/nest.js";
 import {

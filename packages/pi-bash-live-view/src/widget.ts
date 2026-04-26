@@ -25,7 +25,7 @@ export interface WidgetTuiLike {
 export interface WidgetContextLike {
 	hasUI?: boolean;
 	ui?: {
-		setWidget: (...args: any[]) => void;
+		setWidget: (...args: unknown[]) => void;
 	};
 }
 

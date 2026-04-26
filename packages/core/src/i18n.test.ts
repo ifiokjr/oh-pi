@@ -1,4 +1,3 @@
-
 import { getLocale, setLocale, t } from "./i18n.js";
 
 afterEach(() => setLocale("en"));

@@ -9,8 +9,13 @@ import {
 	parseRemindScheduleArgs,
 	validateSchedulePromptAddInput,
 } from "./scheduler-parsing.js";
-import { DEFAULT_LOOP_INTERVAL, DEFAULT_RECURRING_EXPIRY_MS, MAX_RECURRING_EXPIRY_MS, MAX_TASKS } from './scheduler-shared.js';
-import type { ScheduleScope, TaskKind } from './scheduler-shared.js';
+import {
+	DEFAULT_LOOP_INTERVAL,
+	DEFAULT_RECURRING_EXPIRY_MS,
+	MAX_RECURRING_EXPIRY_MS,
+	MAX_TASKS,
+} from "./scheduler-shared.js";
+import type { ScheduleScope, TaskKind } from "./scheduler-shared.js";
 
 const STARTUP_OWNERSHIP_DELAY_MS = 250;
 
@@ -75,7 +80,10 @@ const SchedulePromptToolParams = Type.Object({
 	),
 });
 
-interface ToolResult { content: { type: "text"; text: string }[]; details: Record<string, unknown> }
+interface ToolResult {
+	content: { type: "text"; text: string }[];
+	details: Record<string, unknown>;
+}
 
 function parseLeadingDurationValue(input: string): { duration: string; rest: string } | undefined {
 	const tokens = input.trim().split(/\s+/).filter(Boolean);
@@ -489,7 +497,7 @@ function handleToolList(runtime: SchedulerRuntime): ToolResult {
 				: (task.cronExpression ?? formatDurationShort(task.intervalMs ?? DEFAULT_LOOP_INTERVAL));
 		const schedule = task.continueUntilComplete ? `${scheduleBase} (until-complete)` : scheduleBase;
 		const creator = task.creatorInstanceId ?? "legacy";
-		const state = task.resumeRequired ? `due:${task.resumeReason ?? "unknown"}` : (task.enabled ? "on" : "off");
+		const state = task.resumeRequired ? `due:${task.resumeReason ?? "unknown"}` : task.enabled ? "on" : "off";
 		const status = task.resumeRequired ? "resume_required" : (task.lastStatus ?? "pending");
 		const last = task.lastRunAt ? runtime.formatRelativeTime(task.lastRunAt) : "never";
 		return `${task.id}\t${creator}\t${state}\t${task.kind}\t${task.scope ?? "instance"}\t${schedule}\t${runtime.formatRelativeTime(task.nextRunAt)}\t${task.runCount}\t${last}\t${status}\t${task.prompt}`;

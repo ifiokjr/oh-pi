@@ -18,17 +18,17 @@ import { existsSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import type { DelegatedSelectionUsageSnapshot } from "@ifi/oh-pi-core";
 import type { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
-import { applyConcurrencyCap, buildBudgetPromptSection, planBudget } from './budget-planner.js';
-import type { BudgetPlan, UsageLimitsEvent } from './budget-planner.js';
+import { applyConcurrencyCap, buildBudgetPromptSection, planBudget } from "./budget-planner.js";
+import type { BudgetPlan, UsageLimitsEvent } from "./budget-planner.js";
 import { adapt, defaultConcurrency, sampleSystem } from "./concurrency.js";
-import { buildImportGraph, taskDependsOn } from './deps.js';
-import type { ImportGraph } from './deps.js';
+import { buildImportGraph, taskDependsOn } from "./deps.js";
+import type { ImportGraph } from "./deps.js";
 import { preprocessMultimodalTask, shouldEscalateMultimodalRoute } from "./multimodal-routing.js";
 import { Nest } from "./nest.js";
 import { DEFAULT_COLONY_CATEGORIES, resolveColonyCategoryModel, toAvailableModelRefs } from "./routing-config.js";
 import { makePheromoneId, makeTaskId, resetAntCounter, runDrone, spawnAnt } from "./spawner.js";
-import { cleanupEmptyColonyStorageDirs, resolveColonyStorageOptions } from './storage.js';
-import type { ColonyStorageOptions } from './storage.js';
+import { cleanupEmptyColonyStorageDirs, resolveColonyStorageOptions } from "./storage.js";
+import type { ColonyStorageOptions } from "./storage.js";
 import type {
 	Ant,
 	AntCaste,
@@ -546,7 +546,7 @@ function makeReviewTask(completedTasks: Task[]): Task {
 
 function updateMetrics(nest: Nest): ColonyMetrics {
 	const state = nest.getStateLight();
-	const {tasks} = state;
+	const { tasks } = state;
 	const now = Date.now();
 	const elapsed = (now - state.metrics.startTime) / 60_000; // Minutes
 
@@ -939,7 +939,8 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 
 	// Scheduling loop: keep dispatching ants until no pending tasks remain
 	let lastSampleTime = 0;
-	while (!signal?.aborted) {
+	while (true) {
+			if (signal?.aborted) break;
 		const state = nest.getStateLight();
 		const pending = state.tasks.filter((t) => t.status === "pending" && t.caste === caste);
 		if (pending.length === 0) {
@@ -1106,7 +1107,7 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		waveBase.budgetPlan = refreshBudgetPlan();
 
 		// ═══ Phase 1: Scouting (Bio 5: Colony voting — complex goals get multiple scouts) ═══
-		const scoutCountBase = opts.goal.length > 500 ? 3 : (opts.goal.length > 200 ? 2 : 1);
+		const scoutCountBase = opts.goal.length > 500 ? 3 : opts.goal.length > 200 ? 2 : 1;
 		const scoutCount = shouldUseScoutQuorum(opts.goal) ? Math.max(2, scoutCountBase) : scoutCountBase;
 		if (scoutCount > 1) {
 			// Multiple scouts in parallel: create independent tasks for each scout

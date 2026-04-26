@@ -16,7 +16,7 @@ export interface RemoteWidgetState {
 export interface RemoteUiTarget {
 	ui: {
 		setStatus: (key: string, value: string | undefined) => void;
-		setWidget: (...args: any[]) => void;
+		setWidget: (...args: unknown[]) => void;
 	};
 }
 

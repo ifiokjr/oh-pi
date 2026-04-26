@@ -1,4 +1,3 @@
-
 import { computeBenchmarkTargets } from "./select-targets";
 
 describe("startup benchmark target selection", () => {

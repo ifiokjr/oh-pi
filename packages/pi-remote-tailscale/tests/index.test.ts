@@ -1,4 +1,3 @@
-
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import { main, parseArgs } from "../src/cli.js";
 import { appendTokenQuery, createQrRenderer, renderTokenQr, splitQrOutput } from "../src/qr.js";
@@ -10,7 +9,7 @@ const serverModule = vi.hoisted(() => ({
 	startRemoteSessionServer: vi.fn(),
 }));
 
-vi.mock<typeof import('../src/server.js')>(import('../src/server.js'), () => serverModule);
+vi.mock<typeof import("../src/server.js")>(import("../src/server.js"), () => serverModule);
 
 function createRemoteHandle(overrides: Partial<Record<string, unknown>> = {}) {
 	const handlers = {
@@ -293,9 +292,11 @@ describe("qr helpers", () => {
 		const stringModule = {
 			generate: vi.fn(() => "CC\nDD\n"),
 		};
-		await expect(renderTokenQr("http://localhost:4100", "next", {
+		await expect(
+			renderTokenQr("http://localhost:4100", "next", {
 				loadModule: (async () => stringModule) as () => Promise<any>,
-			})).resolves.toStrictEqual(["CC", "DD"]);
+			}),
+		).resolves.toStrictEqual(["CC", "DD"]);
 		renderer.clear();
 	});
 });

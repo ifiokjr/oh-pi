@@ -18,7 +18,9 @@ function groupResultsByDir(files: string[]): Record<string, string[]> {
 }
 
 function renderFindResults(files: string[]): string {
-	if (files.length === 0) {return fillToolBackground(`${FG_DIM}No matches found.${RST}`);}
+	if (files.length === 0) {
+		return fillToolBackground(`${FG_DIM}No matches found.${RST}`);
+	}
 	const groups = groupResultsByDir(files);
 	const lines: string[] = [];
 	for (const [dir, groupFiles] of Object.entries(groups)) {
@@ -33,7 +35,9 @@ function renderFindResults(files: string[]): string {
 }
 
 function renderGrepResults(files: { file: string; matches: Array<{ line: number; text: string }> }[]): string {
-	if (files.length === 0) {return fillToolBackground(`${FG_DIM}No matches found.${RST}`);}
+	if (files.length === 0) {
+		return fillToolBackground(`${FG_DIM}No matches found.${RST}`);
+	}
 	const lines: string[] = [];
 	for (const { file, matches } of files) {
 		lines.push(`${FG_BLUE}▸ ${file}${RST}`);
@@ -52,7 +56,7 @@ export function enhanceFindTool(pi: ExtensionAPI): void {
 	pi.registerTool({
 		...original,
 		async execute(toolCallId, params, signal, onUpdate): Promise<AgentToolResult<unknown>> {
-			const result = await original.execute(toolCallId, params as any, signal, onUpdate);
+			const result = await original.execute(toolCallId, params as unknown, signal, onUpdate);
 			const text = result.content.find((c): c is { type: "text"; text: string } => c.type === "text")?.text ?? "";
 			let files: string[] = [];
 			if (text.startsWith("[") || text.startsWith("{")) {
@@ -83,7 +87,7 @@ export function enhanceGrepTool(pi: ExtensionAPI): void {
 	pi.registerTool({
 		...original,
 		async execute(toolCallId, params, signal, onUpdate): Promise<AgentToolResult<unknown>> {
-			const result = await original.execute(toolCallId, params as any, signal, onUpdate);
+			const result = await original.execute(toolCallId, params as unknown, signal, onUpdate);
 			const text = result.content.find((c): c is { type: "text"; text: string } => c.type === "text")?.text ?? "";
 			if (text.startsWith("[")) {
 				try {
@@ -144,15 +148,20 @@ function execMultiGrep(patterns: string[], glob: string, basePath: string): Mult
 	let totalMatches = 0;
 	for (const pattern of patterns) {
 		try {
-			const output = execSync(`grep -rn --include="${glob}" "${pattern.replaceAll(/"/g, String.raw`\"`)}" "${basePath}"`, {
-				encoding: "utf8",
-				stdio: ["pipe", "pipe", "ignore"],
-			});
+			const output = execSync(
+				`grep -rn --include="${glob}" "${pattern.replaceAll(/"/g, String.raw`\"`)}" "${basePath}"`,
+				{
+					encoding: "utf8",
+					stdio: ["pipe", "pipe", "ignore"],
+				},
+			);
 			const lines = output.split("\n").filter(Boolean);
 			for (const line of lines) {
 				const [file, lineNum, ...textParts] = line.split(":"); // Patch-coverage-ignore
 				const text = textParts.join(":"); // Patch-coverage-ignore
-				if (!file || !lineNum) {continue;} // Patch-coverage-ignore
+				if (!file || !lineNum) {
+					continue;
+				} // Patch-coverage-ignore
 				const num = Number(lineNum); // Patch-coverage-ignore
 				const existing = results.find((r) => r.file === file); // Patch-coverage-ignore
 				if (existing) {

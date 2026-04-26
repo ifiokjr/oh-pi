@@ -1,5 +1,3 @@
-
-
 const executionMocks = vi.hoisted(() => {
 	class MiniEmitter {
 		private listeners = new Map<string, ((...args: any[]) => void)[]>();
@@ -80,26 +78,26 @@ const executionMocks = vi.hoisted(() => {
 	};
 });
 
-vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({ spawn: executionMocks.spawn }));
-vi.mock<typeof import('node:fs')>(import('node:fs'), () => ({
+vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({ spawn: executionMocks.spawn }));
+vi.mock<typeof import("node:fs")>(import("node:fs"), () => ({
 	mkdirSync: executionMocks.mkdirSync,
 	mkdtempSync: executionMocks.mkdtempSync,
 	rmSync: executionMocks.rmSync,
 	writeFileSync: executionMocks.writeFileSync,
 }));
-vi.mock<typeof import('../artifacts.js')>(import('../artifacts.js'), () => ({
+vi.mock<typeof import("../artifacts.js")>(import("../artifacts.js"), () => ({
 	ensureArtifactsDir: executionMocks.ensureArtifactsDir,
 	getArtifactPaths: executionMocks.getArtifactPaths,
 	writeArtifact: executionMocks.writeArtifact,
 	writeMetadata: executionMocks.writeMetadata,
 }));
-vi.mock<typeof import('../types.js')>(import('../types.js'), () => ({
+vi.mock<typeof import("../types.js")>(import("../types.js"), () => ({
 	DEFAULT_IDLE_TIMEOUT_MS: 15 * 60 * 1000,
 	DEFAULT_MAX_OUTPUT: { bytes: 200 * 1024, lines: 5000 },
 	getSubagentDepthEnv: executionMocks.getSubagentDepthEnv,
 	truncateOutput: executionMocks.truncateOutput,
 }));
-vi.mock<typeof import('../utils.js')>(import('../utils.js'), () => ({
+vi.mock<typeof import("../utils.js")>(import("../utils.js"), () => ({
 	detectSubagentError: executionMocks.detectSubagentError,
 	extractTextFromContent: executionMocks.extractTextFromContent,
 	extractToolArgsPreview: executionMocks.extractToolArgsPreview,
@@ -107,14 +105,14 @@ vi.mock<typeof import('../utils.js')>(import('../utils.js'), () => ({
 	getFinalOutput: executionMocks.getFinalOutput,
 	writePrompt: executionMocks.writePrompt,
 }));
-vi.mock<typeof import('../skills.js')>(import('../skills.js'), () => ({
+vi.mock<typeof import("../skills.js")>(import("../skills.js"), () => ({
 	buildSkillInjection: executionMocks.buildSkillInjection,
 	resolveSkills: executionMocks.resolveSkills,
 }));
-vi.mock<typeof import('../pi-spawn.js')>(import('../pi-spawn.js'), () => ({
+vi.mock<typeof import("../pi-spawn.js")>(import("../pi-spawn.js"), () => ({
 	getPiSpawnCommand: executionMocks.getPiSpawnCommand,
 }));
-vi.mock<typeof import('../jsonl-writer.js')>(import('../jsonl-writer.js'), () => ({
+vi.mock<typeof import("../jsonl-writer.js")>(import("../jsonl-writer.js"), () => ({
 	createJsonlWriter: executionMocks.createJsonlWriter,
 }));
 

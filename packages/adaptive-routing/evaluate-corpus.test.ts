@@ -1,4 +1,3 @@
-
 import { DEFAULT_ADAPTIVE_ROUTING_CONFIG } from "./defaults.js";
 import { evaluateCorpus, formatEvaluationSummary } from "./evaluate-corpus.js";
 import { normalizeRouteCandidates } from "./normalize.js";

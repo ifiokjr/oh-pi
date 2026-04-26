@@ -1,21 +1,19 @@
-
-
-vi.mock<typeof import('../src/read.js')>(import('../src/read.js'), () => ({
+vi.mock<typeof import("../src/read.js")>(import("../src/read.js"), () => ({
 	enhanceReadTool: vi.fn(),
 }));
-vi.mock<typeof import('../src/bash.js')>(import('../src/bash.js'), () => ({
+vi.mock<typeof import("../src/bash.js")>(import("../src/bash.js"), () => ({
 	enhanceBashTool: vi.fn(),
 }));
-vi.mock<typeof import('../src/ls.js')>(import('../src/ls.js'), () => ({
+vi.mock<typeof import("../src/ls.js")>(import("../src/ls.js"), () => ({
 	enhanceLsTool: vi.fn(),
 }));
-vi.mock<typeof import('../src/find-grep.js')>(import('../src/find-grep.js'), () => ({
+vi.mock<typeof import("../src/find-grep.js")>(import("../src/find-grep.js"), () => ({
 	enhanceFindTool: vi.fn(),
 	enhanceGrepTool: vi.fn(),
 	enhanceMultiGrepTool: vi.fn(),
 	multiGrep: vi.fn().mockResolvedValue({ matches: 1, message: "found 1 match", ok: true, results: [] }),
 }));
-vi.mock<typeof import('../src/fff-helpers.js')>(import('../src/fff-helpers.js'), () => ({
+vi.mock<typeof import("../src/fff-helpers.js")>(import("../src/fff-helpers.js"), () => ({
 	checkHealth: vi.fn().mockResolvedValue({ ok: true, message: "healthy", indexed: true, fileCount: 42 }),
 	multiGrep: vi.fn().mockResolvedValue({ ok: true, message: "found 1 match", matches: 1, results: [] }),
 	rescan: vi.fn().mockResolvedValue({ ok: true, message: "rescan done", indexed: true }),

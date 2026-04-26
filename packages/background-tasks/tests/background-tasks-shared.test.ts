@@ -1,7 +1,6 @@
 import { delimiter, join } from "node:path";
 
-
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	getAgentDir: () => "/mock-home/.pi/agent",
 }));
 

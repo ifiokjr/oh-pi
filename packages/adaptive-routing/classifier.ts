@@ -138,7 +138,7 @@ function detectIntent(text: string): RouteIntent {
 
 function detectComplexity(text: string, intent: RouteIntent): 1 | 2 | 3 | 4 | 5 {
 	let score = 1;
-	const {length} = text.split(/\s+/);
+	const { length } = text.split(/\s+/);
 
 	if (length > 20) {
 		score += 1;

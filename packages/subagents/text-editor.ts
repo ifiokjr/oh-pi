@@ -93,16 +93,24 @@ function isWordChar(ch: string): boolean {
 
 function wordBackward(buffer: string, cursor: number): number {
 	let pos = cursor;
-	while (pos > 0 && !isWordChar(buffer[pos - 1]!)) {pos--;}
-	while (pos > 0 && isWordChar(buffer[pos - 1]!)) {pos--;}
+	while (pos > 0 && !isWordChar(buffer[pos - 1]!)) {
+		pos--;
+	}
+	while (pos > 0 && isWordChar(buffer[pos - 1]!)) {
+		pos--;
+	}
 	return pos;
 }
 
 function wordForward(buffer: string, cursor: number): number {
 	const len = buffer.length;
 	let pos = cursor;
-	while (pos < len && isWordChar(buffer[pos]!)) {pos++;}
-	while (pos < len && !isWordChar(buffer[pos]!)) {pos++;}
+	while (pos < len && isWordChar(buffer[pos]!)) {
+		pos++;
+	}
+	while (pos < len && !isWordChar(buffer[pos]!)) {
+		pos++;
+	}
 	return pos;
 }
 
@@ -115,16 +123,22 @@ function normalizeInsertText(data: string, multiLine: boolean): string | null {
 
 	if (!multiLine) {
 		const nl = text.indexOf("\n");
-		if (nl !== -1) {text = text.slice(0, nl);}
+		if (nl !== -1) {
+			text = text.slice(0, nl);
+		}
 	}
 
 	text = text.replaceAll(/\t/g, "    ");
-	if (text.length === 0) {return null;}
+	if (text.length === 0) {
+		return null;
+	}
 
 	for (let i = 0; i < text.length; i++) {
 		const code = text.codePointAt(i);
 		if (code < 32) {
-			if (multiLine && text[i] === "\n") {continue;}
+			if (multiLine && text[i] === "\n") {
+				continue;
+			}
 			return null;
 		}
 	}
@@ -145,8 +159,10 @@ export function handleEditorInput(
 	}
 
 	if (matchesKey(data, "return")) {
-		if (!multiLine) {return null;}
-		const buffer = `${state.buffer.slice(0, state.cursor)  }\n${  state.buffer.slice(state.cursor)}`;
+		if (!multiLine) {
+			return null;
+		}
+		const buffer = `${state.buffer.slice(0, state.cursor)}\n${state.buffer.slice(state.cursor)}`;
 		return { ...state, buffer, cursor: state.cursor + 1 };
 	}
 
@@ -162,12 +178,16 @@ export function handleEditorInput(
 	}
 
 	if (matchesKey(data, "left")) {
-		if (state.cursor > 0) {return { ...state, cursor: state.cursor - 1 };}
+		if (state.cursor > 0) {
+			return { ...state, cursor: state.cursor - 1 };
+		}
 		return state;
 	}
 
 	if (matchesKey(data, "right")) {
-		if (state.cursor < state.buffer.length) {return { ...state, cursor: state.cursor + 1 };}
+		if (state.cursor < state.buffer.length) {
+			return { ...state, cursor: state.cursor + 1 };
+		}
 		return state;
 	}
 
@@ -207,7 +227,9 @@ export function handleEditorInput(
 
 	if (matchesKey(data, "alt+backspace")) {
 		const target = wordBackward(state.buffer, state.cursor);
-		if (target === state.cursor) {return state;}
+		if (target === state.cursor) {
+			return state;
+		}
 		const buffer = state.buffer.slice(0, target) + state.buffer.slice(state.cursor);
 		return { ...state, buffer, cursor: target };
 	}

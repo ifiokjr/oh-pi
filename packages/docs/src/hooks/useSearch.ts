@@ -17,8 +17,12 @@ let searchIndex: MiniSearch | null = null;
 let indexPromise: Promise<MiniSearch> | null = null;
 
 async function getSearchIndex(): Promise<MiniSearch> {
-	if (searchIndex) {return searchIndex;}
-	if (indexPromise) {return indexPromise;}
+	if (searchIndex) {
+		return searchIndex;
+	}
+	if (indexPromise) {
+		return indexPromise;
+	}
 
 	indexPromise = (async () => {
 		const modules = import.meta.glob<{ default: string }>("../content/**/*.mdx", {
@@ -91,7 +95,9 @@ export function useSearch() {
 
 		getSearchIndex()
 			.then((index) => {
-				if (cancelled) {return;}
+				if (cancelled) {
+					return;
+				}
 				const hits = index.search(query) as unknown as { id: string; title: string }[];
 				const searchResults: SearchResult[] = hits.map((hit) => ({
 					id: hit.id,
@@ -101,10 +107,14 @@ export function useSearch() {
 				setResults(searchResults);
 			})
 			.catch(() => {
-				if (!cancelled) {setResults([]);}
+				if (!cancelled) {
+					setResults([]);
+				}
 			})
 			.finally(() => {
-				if (!cancelled) {setLoading(false);}
+				if (!cancelled) {
+					setLoading(false);
+				}
 			});
 
 		return () => {

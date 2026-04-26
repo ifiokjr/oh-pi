@@ -1,5 +1,3 @@
-
-
 const {
 	mockRenderWidget,
 	mockReadStatus,
@@ -22,7 +20,7 @@ const {
 	mockWatcherClose: vi.fn(),
 }));
 
-vi.mock<typeof import('node:fs')>(import('node:fs'), () => ({
+vi.mock<typeof import("node:fs")>(import("node:fs"), () => ({
 	accessSync: vi.fn(),
 	constants: { R_OK: 4, W_OK: 2 },
 	existsSync: vi.fn(() => false),
@@ -38,36 +36,36 @@ vi.mock<typeof import('node:fs')>(import('node:fs'), () => ({
 	})),
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	VERSION: "test",
 	getAgentDir: () => "/tmp/pi-agent",
 }));
-vi.mock<typeof import('@mariozechner/pi-tui')>(import('@mariozechner/pi-tui'), () => ({
+vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), () => ({
 	Text: class {},
 }));
 
-vi.mock<typeof import('../agents.js')>(import('../agents.js'), () => ({
+vi.mock<typeof import("../agents.js")>(import("../agents.js"), () => ({
 	discoverAgents: () => ({ agents: [] }),
 	discoverAgentsAll: () => ({ agents: [] }),
 }));
-vi.mock<typeof import('../agent-scope.js')>(import('../agent-scope.js'), () => ({
+vi.mock<typeof import("../agent-scope.js")>(import("../agent-scope.js"), () => ({
 	resolveExecutionAgentScope: () => "both",
 }));
-vi.mock<typeof import('../settings.js')>(import('../settings.js'), () => ({
+vi.mock<typeof import("../settings.js")>(import("../settings.js"), () => ({
 	cleanupOldChainDirs: mockCleanupOldChainDirs,
 	getStepAgents: vi.fn(() => []),
 	isParallelStep: vi.fn(() => false),
 	resolveStepBehavior: vi.fn(() => ({})),
 }));
-vi.mock<typeof import('../chain-clarify.js')>(import('../chain-clarify.js'), () => ({
+vi.mock<typeof import("../chain-clarify.js")>(import("../chain-clarify.js"), () => ({
 	ChainClarifyComponent: class {},
 }));
-vi.mock<typeof import('../artifacts.js')>(import('../artifacts.js'), () => ({
+vi.mock<typeof import("../artifacts.js")>(import("../artifacts.js"), () => ({
 	cleanupAllArtifactDirs: mockCleanupAllArtifactDirs,
 	cleanupOldArtifacts: mockCleanupOldArtifacts,
 	getArtifactsDir: vi.fn(() => "/tmp/artifacts"),
 }));
-vi.mock<typeof import('../types.js')>(import('../types.js'), () => ({
+vi.mock<typeof import("../types.js")>(import("../types.js"), () => ({
 	ASYNC_DIR: "/tmp/pi-async-subagent-runs",
 	DEFAULT_ARTIFACT_CONFIG: { cleanupDays: 7 },
 	DEFAULT_MAX_OUTPUT: { bytes: 200 * 1024, lines: 5000 },
@@ -78,60 +76,60 @@ vi.mock<typeof import('../types.js')>(import('../types.js'), () => ({
 	WIDGET_KEY: "subagent-async",
 	checkSubagentDepth: () => ({ blocked: false, depth: 0, maxDepth: 2 }),
 }));
-vi.mock<typeof import('../utils.js')>(import('../utils.js'), () => ({
+vi.mock<typeof import("../utils.js")>(import("../utils.js"), () => ({
 	findByPrefix: vi.fn(),
 	getFinalOutput: vi.fn(() => ""),
 	mapConcurrent: async <T, R>(items: T[], fn: (item: T) => Promise<R>) => Promise.all(items.map((item) => fn(item))),
 	readStatus: mockReadStatus,
 }));
-vi.mock<typeof import('../completion-dedupe.js')>(import('../completion-dedupe.js'), () => ({
+vi.mock<typeof import("../completion-dedupe.js")>(import("../completion-dedupe.js"), () => ({
 	buildCompletionKey: vi.fn(() => "key"),
 	markSeenWithTtl: vi.fn(() => false),
 }));
-vi.mock<typeof import('../file-coalescer.js')>(import('../file-coalescer.js'), () => ({
+vi.mock<typeof import("../file-coalescer.js")>(import("../file-coalescer.js"), () => ({
 	createFileCoalescer: vi.fn(() => ({
 		clear: mockCoalescerClear,
 		schedule: mockCoalescerSchedule,
 	})),
 }));
-vi.mock<typeof import('../execution.js')>(import('../execution.js'), () => ({
+vi.mock<typeof import("../execution.js")>(import("../execution.js"), () => ({
 	runSync: vi.fn(),
 }));
-vi.mock<typeof import('../render.js')>(import('../render.js'), () => ({
+vi.mock<typeof import("../render.js")>(import("../render.js"), () => ({
 	renderSubagentResult: vi.fn(),
 	renderWidget: mockRenderWidget,
 }));
-vi.mock<typeof import('../schemas.js')>(import('../schemas.js'), () => ({
+vi.mock<typeof import("../schemas.js")>(import("../schemas.js"), () => ({
 	StatusParams: {},
 	SubagentParams: {},
 }));
-vi.mock<typeof import('../chain-execution.js')>(import('../chain-execution.js'), () => ({
+vi.mock<typeof import("../chain-execution.js")>(import("../chain-execution.js"), () => ({
 	executeChain: vi.fn(),
 }));
-vi.mock<typeof import('../async-execution.js')>(import('../async-execution.js'), () => ({
+vi.mock<typeof import("../async-execution.js")>(import("../async-execution.js"), () => ({
 	executeAsyncChain: vi.fn(),
 	executeAsyncSingle: vi.fn(),
 	isAsyncAvailable: vi.fn(() => true),
 }));
-vi.mock<typeof import('../skills.js')>(import('../skills.js'), () => ({
+vi.mock<typeof import("../skills.js")>(import("../skills.js"), () => ({
 	discoverAvailableSkills: vi.fn(() => []),
 	normalizeSkillInput: vi.fn((value) => value),
 }));
-vi.mock<typeof import('../single-output.js')>(import('../single-output.js'), () => ({
+vi.mock<typeof import("../single-output.js")>(import("../single-output.js"), () => ({
 	finalizeSingleOutput: vi.fn(),
 	injectSingleOutputInstruction: vi.fn((value) => value),
 	resolveSingleOutputPath: vi.fn(),
 }));
-vi.mock<typeof import('../agent-manager.js')>(import('../agent-manager.js'), () => ({
+vi.mock<typeof import("../agent-manager.js")>(import("../agent-manager.js"), () => ({
 	AgentManagerComponent: class {},
 }));
-vi.mock<typeof import('../run-history.js')>(import('../run-history.js'), () => ({
+vi.mock<typeof import("../run-history.js")>(import("../run-history.js"), () => ({
 	recordRun: vi.fn(),
 }));
-vi.mock<typeof import('../agent-management.js')>(import('../agent-management.js'), () => ({
+vi.mock<typeof import("../agent-management.js")>(import("../agent-management.js"), () => ({
 	handleManagementAction: vi.fn(),
 }));
-vi.mock<typeof import('../bootstrap.js')>(import('../bootstrap.js'), () => ({
+vi.mock<typeof import("../bootstrap.js")>(import("../bootstrap.js"), () => ({
 	ensureAccessibleDir: vi.fn(),
 	expandTildePath: vi.fn((value: string) => value),
 	getSubagentSessionRoot: vi.fn(() => "/tmp/subagent-session-root"),

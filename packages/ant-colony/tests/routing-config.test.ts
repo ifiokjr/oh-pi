@@ -2,13 +2,17 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-
 const { getAgentDir } = vi.hoisted(() => ({
 	getAgentDir: vi.fn(() => "/mock-home/.pi/agent"),
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({ getAgentDir }));
-vi.mock<typeof import('@ifi/oh-pi-core')>(import('@ifi/oh-pi-core'), async () => await import("../../core/src/model-intelligence.ts"));
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
+	getAgentDir,
+}));
+vi.mock<typeof import("@ifi/oh-pi-core")>(
+	import("@ifi/oh-pi-core"),
+	async () => await import("../../core/src/model-intelligence.ts"),
+);
 
 import {
 	DEFAULT_COLONY_CATEGORIES,

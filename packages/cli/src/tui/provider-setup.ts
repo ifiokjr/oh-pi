@@ -36,7 +36,7 @@ export function isUnsafeUrl(urlStr: string): boolean {
 		}
 
 		// Block private IP ranges
-		if (host.startsWith('10.')) {
+		if (host.startsWith("10.")) {
 			return true;
 		}
 
@@ -44,11 +44,11 @@ export function isUnsafeUrl(urlStr: string): boolean {
 			return true;
 		}
 
-		if (host.startsWith('192.168.')) {
+		if (host.startsWith("192.168.")) {
 			return true;
 		}
 
-		if (host.startsWith('0.') || host === "0.0.0.0") {
+		if (host.startsWith("0.") || host === "0.0.0.0") {
 			return true;
 		}
 
@@ -56,7 +56,7 @@ export function isUnsafeUrl(urlStr: string): boolean {
 			return true;
 		}
 
-		if (host.startsWith('169.254.')) {
+		if (host.startsWith("169.254.")) {
 			return true;
 		}
 
@@ -405,9 +405,9 @@ async function setupProviderChoice(choice: string): Promise<ProviderConfig | nul
 			placeholder: t("provider.baseUrlPlaceholder"),
 			validate: (v) =>
 				v?.startsWith("http")
-					? (isUnsafeUrl(v)
+					? isUnsafeUrl(v)
 						? "URL must use HTTPS for remote hosts (private IPs blocked)"
-						: undefined)
+						: undefined
 					: t("provider.baseUrlValidation"),
 		});
 		if (p.isCancel(url)) {
@@ -498,9 +498,9 @@ async function setupCustomProvider(): Promise<ProviderConfig | null> {
 		placeholder: t("provider.baseUrlCustomPlaceholder"),
 		validate: (v) =>
 			v?.startsWith("http")
-				? (isUnsafeUrl(v)
+				? isUnsafeUrl(v)
 					? "URL must use HTTPS for remote hosts (private IPs blocked)"
-					: undefined)
+					: undefined
 				: t("provider.baseUrlValidation"),
 	});
 	if (p.isCancel(baseUrl)) {

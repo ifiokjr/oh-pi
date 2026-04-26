@@ -1,10 +1,8 @@
-
-
 const run = vi.fn();
 const parseArgs = vi.fn();
 
-vi.mock<typeof import('../index.js')>(import('../index.js'), () => ({ run }));
-vi.mock<typeof import('../utils/args.js')>(import('../utils/args.js'), () => ({ parseArgs }));
+vi.mock<typeof import("../index.js")>(import("../index.js"), () => ({ run }));
+vi.mock<typeof import("../utils/args.js")>(import("../utils/args.js"), () => ({ parseArgs }));
 
 describe("oh-pi bin", () => {
 	beforeEach(() => {

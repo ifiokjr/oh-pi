@@ -5,8 +5,23 @@ import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-age
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { recordRuntimeSample } from "./watchdog-runtime-diagnostics";
-import { buildPaiInstanceId, createManagedWorktree, createOwnerMetadata, formatOwnerLabel, formatWorktreeKind, getRepoWorktreeContext, getRepoWorktreeSnapshot, removeManagedWorktree, touchManagedWorktreeSeen } from './worktree-shared';
-import type { GitWorktreeEntry, ManagedWorktreeMetadata, RepoWorktreeContext, RepoWorktreeSnapshot } from './worktree-shared';
+import {
+	buildPaiInstanceId,
+	createManagedWorktree,
+	createOwnerMetadata,
+	formatOwnerLabel,
+	formatWorktreeKind,
+	getRepoWorktreeContext,
+	getRepoWorktreeSnapshot,
+	removeManagedWorktree,
+	touchManagedWorktreeSeen,
+} from "./worktree-shared";
+import type {
+	GitWorktreeEntry,
+	ManagedWorktreeMetadata,
+	RepoWorktreeContext,
+	RepoWorktreeSnapshot,
+} from "./worktree-shared";
 
 const COMMAND = "worktree";
 const COMMAND_ALIASES = [COMMAND, "Worktree", "wt"] as const;
@@ -85,7 +100,7 @@ function appendInventory(lines: string[], snapshot: RepoWorktreeSnapshot): void 
 }
 
 function buildStatusReport(snapshot: RepoWorktreeSnapshot): string {
-	const {current} = snapshot;
+	const { current } = snapshot;
 	const lines = ["# /worktree status", "", "## Current checkout"];
 	lines.push(`- Repo: ${path.basename(snapshot.repoRoot)}`);
 	lines.push(`- Repo root: ${snapshot.repoRoot}`);
@@ -263,13 +278,13 @@ function refreshStatus(ctx: ExtensionContext): RepoWorktreeContext | null {
 
 async function openPath(pi: ExtensionAPI, targetPath: string): Promise<boolean> {
 	const normalized = path.resolve(targetPath);
-	const {platform} = process;
+	const { platform } = process;
 	const command =
 		platform === "darwin"
 			? { args: [normalized], bin: "open" }
-			: (platform === "win32"
+			: platform === "win32"
 				? { bin: "cmd", args: ["/c", "start", "", normalized] }
-				: { bin: "xdg-open", args: [normalized] });
+				: { bin: "xdg-open", args: [normalized] };
 
 	try {
 		const result = await pi.exec(command.bin, command.args, { timeout: 8000 });
@@ -309,7 +324,7 @@ async function handleCreate(pi: ExtensionAPI, args: string, ctx: ExtensionContex
 		return;
 	}
 
-	let {purpose} = parsed;
+	let { purpose } = parsed;
 	if (!purpose) {
 		purpose = (await ctx.ui.input("Worktree purpose", "Why are you creating this worktree?"))?.trim() ?? "";
 	}
@@ -580,7 +595,7 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 		lines.push("");
 		lines.push("## Worktrees");
 		for (const entry of snapshot.worktrees) {
-			const kind = entry.isMain ? "[main]" : (entry.isManaged ? "[pi-owned]" : "[external]");
+			const kind = entry.isMain ? "[main]" : entry.isManaged ? "[pi-owned]" : "[external]";
 			const current = entry.isCurrent ? "[current] " : "";
 			lines.push(`- ${current}${kind} ${entry.branch ?? "(detached)"}`);
 			lines.push(`  path: ${entry.path}`);
@@ -792,7 +807,7 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 		renderCall(args, theme) {
 			const action = args.action ?? "?";
 			const detail =
-				action === "create" ? `${args.branch ?? "?"}` : (action === "cleanup" ? `${args.target ?? "?"}` : "");
+				action === "create" ? `${args.branch ?? "?"}` : action === "cleanup" ? `${args.target ?? "?"}` : "";
 			return new Text(`${theme.fg("toolTitle", theme.bold("⌥ worktree"))} ${action} ${detail}`, 0, 0);
 		},
 

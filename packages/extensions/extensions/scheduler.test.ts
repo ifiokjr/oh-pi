@@ -6,11 +6,9 @@
  * event wiring, command handlers, tool actions, persistence, and edge cases.
  */
 
-
-
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
-vi.mock<typeof import('node:fs')>(import('node:fs'), async (importOriginal) => {
+vi.mock<typeof import("node:fs")>(import("node:fs"), async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs")>();
 	return {
 		...actual,
@@ -26,17 +24,17 @@ vi.mock<typeof import('node:fs')>(import('node:fs'), async (importOriginal) => {
 	};
 });
 
-vi.mock<typeof import('node:os')>(import('node:os'), async (importOriginal) => {
+vi.mock<typeof import("node:os")>(import("node:os"), async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:os")>();
 	return { ...actual, homedir: () => "/mock-home" };
 });
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	getAgentDir: () => "/mock-home/.pi/agent",
 }));
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({}));
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({}));
 
-vi.mock<typeof import('@sinclair/typebox')>(import('@sinclair/typebox'), () => ({
+vi.mock<typeof import("@sinclair/typebox")>(import("@sinclair/typebox"), () => ({
 	Type: {
 		Literal: (value: any) => ({ const: value }),
 		Number: (opts?: any) => ({ type: "number", ...opts }),
@@ -1654,7 +1652,7 @@ describe(SchedulerRuntime, () => {
 		it("returns unsigned 32-bit integer", () => {
 			const hash = runtime.hashString("test");
 			expect(hash).toBeGreaterThanOrEqual(0);
-			expect(hash).toBeLessThanOrEqual(0xFFFFFFFF);
+			expect(hash).toBeLessThanOrEqual(0xffffffff);
 		});
 	});
 });
@@ -2377,10 +2375,14 @@ describe("event wiring", () => {
 
 		const ctx = createMockCtx();
 		pi._emit("session_start", { type: "session_start" }, ctx);
-		expect(ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review"))).toBeFalsy();
+		expect(
+			ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review")),
+		).toBeFalsy();
 
 		await vi.advanceTimersByTimeAsync(250);
-		expect(ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review"))).toBeTruthy();
+		expect(
+			ctx._notifications.some((n: any) => n.msg.includes("stale task") && n.msg.includes("need review")),
+		).toBeTruthy();
 		expect(pi._userMessages).toHaveLength(0);
 	});
 

@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-
 const discoveryState = vi.hoisted(() => ({
 	builtin: [] as any[],
 	chains: [] as any[],
@@ -16,19 +15,19 @@ const serializeAgentMock = vi.hoisted(() => vi.fn((agent: { name: string }) => `
 const serializeChainMock = vi.hoisted(() => vi.fn((chain: { name: string }) => `chain:${chain.name}`));
 const discoverSkillsMock = vi.hoisted(() => vi.fn(() => [{ name: "git" }, { name: "context7" }]));
 
-vi.mock<typeof import('../agents.js')>(import('../agents.js'), () => ({
+vi.mock<typeof import("../agents.js")>(import("../agents.js"), () => ({
 	discoverAgentsAll: vi.fn(() => ({ ...discoveryState })),
 }));
 
-vi.mock<typeof import('../agent-serializer.js')>(import('../agent-serializer.js'), () => ({
+vi.mock<typeof import("../agent-serializer.js")>(import("../agent-serializer.js"), () => ({
 	serializeAgent: serializeAgentMock,
 }));
 
-vi.mock<typeof import('../chain-serializer.js')>(import('../chain-serializer.js'), () => ({
+vi.mock<typeof import("../chain-serializer.js")>(import("../chain-serializer.js"), () => ({
 	serializeChain: serializeChainMock,
 }));
 
-vi.mock<typeof import('../skills.js')>(import('../skills.js'), () => ({
+vi.mock<typeof import("../skills.js")>(import("../skills.js"), () => ({
 	discoverAvailableSkills: discoverSkillsMock,
 }));
 

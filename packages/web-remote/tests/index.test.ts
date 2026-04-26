@@ -1,4 +1,3 @@
-
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
 const webServerModule = vi.hoisted(() => ({
@@ -8,7 +7,7 @@ const webServerModule = vi.hoisted(() => ({
 	startTunnel: vi.fn(),
 }));
 
-vi.mock<typeof import('@ifi/pi-web-server')>(import('@ifi/pi-web-server'), () => webServerModule);
+vi.mock<typeof import("@ifi/pi-web-server")>(import("@ifi/pi-web-server"), () => webServerModule);
 
 import remoteExtension from "../index.ts";
 

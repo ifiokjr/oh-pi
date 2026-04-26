@@ -1,4 +1,3 @@
-
 import { createPlanModeStateManager, getLatestState } from "../state";
 
 describe(getLatestState, () => {

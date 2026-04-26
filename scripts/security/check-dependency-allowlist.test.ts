@@ -3,7 +3,6 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-
 const tempDirs: string[] = [];
 const scriptPath = path.resolve(import.meta.dirname, "check-dependency-allowlist.mjs");
 

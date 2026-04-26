@@ -1,4 +1,3 @@
-
 import { PtyLiveWidgetController, buildWidgetLines, formatElapsedMmSs, widgetInternals } from "../src/widget.js";
 
 const theme = {

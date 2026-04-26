@@ -82,12 +82,12 @@ export function writeProviderEnv(agentDir: string, config: OhPConfigWithRouting)
 
 	const defaultProviderModel =
 		strategy === "add"
-			? (!existingSettings.defaultProvider && primary
+			? !existingSettings.defaultProvider && primary
 				? { defaultProvider: primary.name, defaultModel: primaryModel }
-				: {})
-			: (primary
+				: {}
+			: primary
 				? { defaultProvider: primary.name, defaultModel: primaryModel }
-				: {});
+				: {};
 
 	const settings: Record<string, unknown> = {
 		...existingSettings,

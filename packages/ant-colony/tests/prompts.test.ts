@@ -1,4 +1,3 @@
-
 import { CASTE_PROMPTS, buildPrompt } from "../extensions/ant-colony/prompts.js";
 import type { Task } from "../extensions/ant-colony/types.js";
 

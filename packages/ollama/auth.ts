@@ -6,8 +6,8 @@ import {
 	OLLAMA_CLOUD_PROVIDER,
 	getOllamaCloudRuntimeConfig,
 } from "./config.js";
-import { enrichOllamaCloudCredentials, getCredentialModels } from './models.js';
-import type { OllamaCloudCredentials, OllamaProviderModel } from './models.js';
+import { enrichOllamaCloudCredentials, getCredentialModels } from "./models.js";
+import type { OllamaCloudCredentials, OllamaProviderModel } from "./models.js";
 
 const STATIC_CREDENTIAL_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 

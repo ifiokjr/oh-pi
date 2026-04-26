@@ -144,14 +144,18 @@ describe("worktree-shared", () => {
 
 		const before = getRepoWorktreeSnapshot(repo, sharedRoot);
 		expect(before?.worktrees.some((entry) => entry.path === managed.worktreePath && entry.isManaged)).toBeTruthy();
-		expect(before?.worktrees.some((entry) => entry.path === real(externalWorktreePath) && !entry.isManaged)).toBeTruthy();
+		expect(
+			before?.worktrees.some((entry) => entry.path === real(externalWorktreePath) && !entry.isManaged),
+		).toBeTruthy();
 
 		const removed = removeManagedWorktree(managed.metadata, sharedRoot);
 		expect(removed.removed).toBeTruthy();
 
 		const after = getRepoWorktreeSnapshot(repo, sharedRoot);
 		expect(after?.worktrees.some((entry) => entry.path === managed.worktreePath)).toBeFalsy();
-		expect(after?.worktrees.some((entry) => entry.path === real(externalWorktreePath) && !entry.isManaged)).toBeTruthy();
+		expect(
+			after?.worktrees.some((entry) => entry.path === real(externalWorktreePath) && !entry.isManaged),
+		).toBeTruthy();
 		expect(loadWorktreeRegistry(repo, sharedRoot).managedWorktrees).toHaveLength(0);
 	}, 30_000);
 });

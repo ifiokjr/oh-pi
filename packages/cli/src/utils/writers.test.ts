@@ -50,7 +50,9 @@ describe(writeExtensions, () => {
 
 		expect(existsSync(join(dir, "extensions", "plan", "index.ts"))).toBeTruthy();
 		expect(existsSync(join(dir, "extensions", "plan", "prompts", "PLAN.prompt.md"))).toBeTruthy();
-		expect(existsSync(join(dir, "extensions", "plan", "node_modules", "@ifi", "pi-shared-qna", "index.ts"))).toBeTruthy();
+		expect(
+			existsSync(join(dir, "extensions", "plan", "node_modules", "@ifi", "pi-shared-qna", "index.ts")),
+		).toBeTruthy();
 		expect(
 			existsSync(join(dir, "extensions", "plan", "node_modules", "@ifi", "pi-extension-subagents", "execution.ts")),
 		).toBeTruthy();

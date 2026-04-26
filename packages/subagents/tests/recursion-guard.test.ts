@@ -1,4 +1,3 @@
-
 import { DEFAULT_SUBAGENT_MAX_DEPTH, checkSubagentDepth, getSubagentDepthEnv } from "../types.js";
 
 let savedDepth: string | undefined;

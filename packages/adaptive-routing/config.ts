@@ -1,8 +1,8 @@
 /* C8 ignore file */
 import { join } from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
-import { loadJsonConfigFile } from './config-loader.js';
-import type { NormalizedConfigResult } from './config-loader.js';
+import { loadJsonConfigFile } from "./config-loader.js";
+import type { NormalizedConfigResult } from "./config-loader.js";
 import { DEFAULT_ADAPTIVE_ROUTING_CONFIG } from "./defaults.js";
 import type {
 	AdaptiveRoutingConfig,

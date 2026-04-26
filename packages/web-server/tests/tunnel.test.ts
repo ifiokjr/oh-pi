@@ -1,12 +1,11 @@
 import { EventEmitter } from "node:events";
 
-
 const childProcess = vi.hoisted(() => ({
 	execFileSync: vi.fn(),
 	spawn: vi.fn(),
 }));
 
-vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => childProcess);
+vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => childProcess);
 
 import { detectTunnelProvider, startTunnel } from "../src/tunnel.js";
 

@@ -1,7 +1,7 @@
 import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "@mariozechner/pi-ai";
 import { CURSOR_PROVIDER, getCursorRuntimeConfig } from "./config.js";
-import { enrichCursorCredentials, getCredentialModels } from './models.js';
-import type { CursorCredentials } from './models.js';
+import { enrichCursorCredentials, getCredentialModels } from "./models.js";
+import type { CursorCredentials } from "./models.js";
 
 const POLL_MAX_ATTEMPTS = 150;
 const POLL_BASE_DELAY_MS = 1000;

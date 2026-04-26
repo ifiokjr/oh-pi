@@ -6,8 +6,8 @@ import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { expandHomeDir } from "@ifi/oh-pi-core";
-import { loadSkills } from '@mariozechner/pi-coding-agent';
-import type { Skill } from '@mariozechner/pi-coding-agent';
+import { loadSkills } from "@mariozechner/pi-coding-agent";
+import type { Skill } from "@mariozechner/pi-coding-agent";
 import { resolveAgentDir } from "./paths.js";
 
 export type SkillSource =
@@ -64,10 +64,14 @@ const SOURCE_PRIORITY: Record<SkillSource, number> = {
 
 function stripSkillFrontmatter(content: string): string {
 	const normalized = content.replaceAll(/\r\n/g, "\n");
-	if (!normalized.startsWith("---")) {return normalized;}
+	if (!normalized.startsWith("---")) {
+		return normalized;
+	}
 
 	const endIndex = normalized.indexOf("\n---", 3);
-	if (endIndex === -1) {return normalized;}
+	if (endIndex === -1) {
+		return normalized;
+	}
 
 	return normalized.slice(endIndex + 4).trim();
 }
@@ -83,7 +87,9 @@ function getPackageSkillPaths(packageRoot: string): string[] {
 		const content = fs.readFileSync(pkgJsonPath, "utf8");
 		const pkg = JSON.parse(content);
 		const piSkills = pkg?.pi?.skills;
-		if (!Array.isArray(piSkills)) {return [];}
+		if (!Array.isArray(piSkills)) {
+			return [];
+		}
 		return piSkills.filter((s: unknown) => typeof s === "string").map((s: string) => path.resolve(packageRoot, s));
 	} catch {
 		return [];
@@ -93,7 +99,9 @@ function getPackageSkillPaths(packageRoot: string): string[] {
 let cachedGlobalNpmRoot: string | null = null;
 
 function getGlobalNpmRoot(): string | null {
-	if (cachedGlobalNpmRoot !== null) {return cachedGlobalNpmRoot;}
+	if (cachedGlobalNpmRoot !== null) {
+		return cachedGlobalNpmRoot;
+	}
 	try {
 		cachedGlobalNpmRoot = execSync("npm root -g", { encoding: "utf8", timeout: 5000 }).trim();
 		return cachedGlobalNpmRoot;
@@ -115,7 +123,9 @@ function collectPackageSkillPaths(cwd: string): string[] {
 	const results: string[] = [];
 
 	for (const dir of dirs) {
-		if (!fs.existsSync(dir)) {continue;}
+		if (!fs.existsSync(dir)) {
+			continue;
+		}
 		let entries: fs.Dirent[];
 		try {
 			entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -124,8 +134,12 @@ function collectPackageSkillPaths(cwd: string): string[] {
 		}
 
 		for (const entry of entries) {
-			if (entry.name.startsWith(".")) {continue;}
-			if (!entry.isDirectory() && !entry.isSymbolicLink()) {continue;}
+			if (entry.name.startsWith(".")) {
+				continue;
+			}
+			if (!entry.isDirectory() && !entry.isSymbolicLink()) {
+				continue;
+			}
 
 			if (entry.name.startsWith("@")) {
 				const scopeDir = path.join(dir, entry.name);
@@ -136,8 +150,12 @@ function collectPackageSkillPaths(cwd: string): string[] {
 					continue;
 				}
 				for (const scopeEntry of scopeEntries) {
-					if (scopeEntry.name.startsWith(".")) {continue;}
-					if (!scopeEntry.isDirectory() && !scopeEntry.isSymbolicLink()) {continue;}
+					if (scopeEntry.name.startsWith(".")) {
+						continue;
+					}
+					if (!scopeEntry.isDirectory() && !scopeEntry.isSymbolicLink()) {
+						continue;
+					}
 					const pkgRoot = path.join(scopeDir, scopeEntry.name);
 					results.push(...getPackageSkillPaths(pkgRoot));
 				}
@@ -164,9 +182,13 @@ function collectSettingsSkillPaths(cwd: string): string[] {
 			const content = fs.readFileSync(file, "utf8");
 			const settings = JSON.parse(content);
 			const skills = settings?.skills;
-			if (!Array.isArray(skills)) {continue;}
+			if (!Array.isArray(skills)) {
+				continue;
+			}
 			for (const entry of skills) {
-				if (typeof entry !== "string") {continue;}
+				if (typeof entry !== "string") {
+					continue;
+				}
 				let resolved = entry;
 				if (resolved.startsWith("~/")) {
 					resolved = expandHomeDir(resolved);
@@ -196,24 +218,46 @@ function inferSkillSource(rawSource: unknown, filePath: string, cwd: string): Sk
 	const globalRoot = getGlobalNpmRoot();
 	const isGlobalPackage = globalRoot ? isWithinPath(filePath, globalRoot) : false;
 
-	if (source === "project") {return "project";}
-	if (source === "user") {return "user";}
+	if (source === "project") {
+		return "project";
+	}
+	if (source === "user") {
+		return "user";
+	}
 	if (source === "settings") {
-		if (isProjectScoped) {return "project-settings";}
-		if (isUserScoped) {return "user-settings";}
+		if (isProjectScoped) {
+			return "project-settings";
+		}
+		if (isUserScoped) {
+			return "user-settings";
+		}
 		return "unknown";
 	}
 	if (source === "package") {
-		if (isProjectScoped) {return "project-package";}
-		if (isUserScoped || isGlobalPackage) {return "user-package";}
+		if (isProjectScoped) {
+			return "project-package";
+		}
+		if (isUserScoped || isGlobalPackage) {
+			return "user-package";
+		}
 		return "unknown";
 	}
-	if (source === "extension") {return "extension";}
-	if (source === "builtin") {return "builtin";}
+	if (source === "extension") {
+		return "extension";
+	}
+	if (source === "builtin") {
+		return "builtin";
+	}
 
-	if (isProjectScoped) {return "project";}
-	if (isUserScoped) {return "user";}
-	if (isGlobalPackage) {return "user-package";}
+	if (isProjectScoped) {
+		return "project";
+	}
+	if (isUserScoped) {
+		return "user";
+	}
+	if (isGlobalPackage) {
+		return "user-package";
+	}
 	return "unknown";
 }
 
@@ -221,11 +265,17 @@ function chooseHigherPrioritySkill(
 	existing: CachedSkillEntry | undefined,
 	candidate: CachedSkillEntry,
 ): CachedSkillEntry {
-	if (!existing) {return candidate;}
+	if (!existing) {
+		return candidate;
+	}
 	const existingPriority = SOURCE_PRIORITY[existing.source] ?? 0;
 	const candidatePriority = SOURCE_PRIORITY[candidate.source] ?? 0;
-	if (candidatePriority > existingPriority) {return candidate;}
-	if (candidatePriority < existingPriority) {return existing;}
+	if (candidatePriority > existingPriority) {
+		return candidate;
+	}
+	if (candidatePriority < existingPriority) {
+		return existing;
+	}
 	return candidate.order < existing.order ? candidate : existing;
 }
 
@@ -260,7 +310,9 @@ function getCachedSkills(cwd: string): CachedSkillEntry[] {
 export function resolveSkillPath(skillName: string, cwd: string): { path: string; source: SkillSource } | undefined {
 	const skills = getCachedSkills(cwd);
 	const skill = skills.find((s) => s.name === skillName);
-	if (!skill) {return undefined;}
+	if (!skill) {
+		return undefined;
+	}
 	return { path: skill.filePath, source: skill.source };
 }
 
@@ -284,7 +336,9 @@ export function readSkill(skillName: string, skillPath: string, source: SkillSou
 		skillCache.set(skillPath, { mtime: stat.mtimeMs, skill });
 		if (skillCache.size > MAX_CACHE_SIZE) {
 			const firstKey = skillCache.keys().next().value;
-			if (firstKey) {skillCache.delete(firstKey);}
+			if (firstKey) {
+				skillCache.delete(firstKey);
+			}
 		}
 
 		return skill;
@@ -299,7 +353,9 @@ export function resolveSkills(skillNames: string[], cwd: string): { resolved: Re
 
 	for (const name of skillNames) {
 		const trimmed = name.trim();
-		if (!trimmed) {continue;}
+		if (!trimmed) {
+			continue;
+		}
 
 		const location = resolveSkillPath(trimmed, cwd);
 		if (!location) {
@@ -319,14 +375,20 @@ export function resolveSkills(skillNames: string[], cwd: string): { resolved: Re
 }
 
 export function buildSkillInjection(skills: ResolvedSkill[]): string {
-	if (skills.length === 0) {return "";}
+	if (skills.length === 0) {
+		return "";
+	}
 
 	return skills.map((s) => `<skill name="${s.name}">\n${s.content}\n</skill>`).join("\n\n");
 }
 
 export function normalizeSkillInput(input: string | string[] | boolean | undefined): string[] | false | undefined {
-	if (input === false) {return false;}
-	if (input === true || input === undefined) {return undefined;}
+	if (input === false) {
+		return false;
+	}
+	if (input === true || input === undefined) {
+		return undefined;
+	}
 	if (Array.isArray(input)) {
 		return [...new Set(input.map((s) => s.trim()).filter((s) => s.length > 0))];
 	}

@@ -139,14 +139,18 @@ export function resolveChainTemplates(steps: ChainStep[]): ResolvedTemplates {
 		if (isParallelStep(step)) {
 			// Parallel step: resolve each task's template
 			return step.parallel.map((task) => {
-				if (task.task) {return task.task;}
+				if (task.task) {
+					return task.task;
+				}
 				// Default for parallel tasks is {previous}
 				return "{previous}";
 			});
 		}
 		// Sequential step: existing logic
 		const seq = step as SequentialStep;
-		if (seq.task) {return seq.task;}
+		if (seq.task) {
+			return seq.task;
+		}
 		// Default: first step uses {task}, others use {previous}
 		return i === 0 ? "{task}" : "{previous}";
 	});
@@ -245,9 +249,9 @@ export function buildChainInstructions(
 		suffixParts.push(`Previous step output:\n${previousSummary.trim()}`);
 	}
 
-	const prefix = prefixParts.length > 0 ? `${prefixParts.join("\n")  }\n\n` : "";
+	const prefix = prefixParts.length > 0 ? `${prefixParts.join("\n")}\n\n` : "";
 
-	const suffix = suffixParts.length > 0 ? `\n\n---\n${  suffixParts.join("\n")}` : "";
+	const suffix = suffixParts.length > 0 ? `\n\n---\n${suffixParts.join("\n")}` : "";
 
 	return { prefix, suffix };
 }

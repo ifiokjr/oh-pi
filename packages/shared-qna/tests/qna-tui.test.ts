@@ -1,6 +1,4 @@
-
-
-vi.mock<typeof import('../pi-tui-loader.js')>(import('../pi-tui-loader.js'), () => {
+vi.mock<typeof import("../pi-tui-loader.js")>(import("../pi-tui-loader.js"), () => {
 	class FakeEditor {
 		disableSubmit?: boolean;
 		onChange?: () => void;

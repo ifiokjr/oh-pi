@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, test } from "vitest";
 /* C8 ignore file */
 /**
  * Pi Analytics Dashboard — Playwright Test Suite
@@ -7,8 +7,8 @@ import { expect, test } from 'vitest';
  * Pure-logic tests (utils, API) stay in vitest.
  */
 
-import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import { test, expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -31,7 +31,9 @@ async function navigateTo(page: Page, name: RegExp | string) {
 async function expectNoErrors(page: Page, fn: () => Promise<void>) {
 	const errors: string[] = [];
 	const handler = (msg: { type(): string; text(): string }) => {
-		if (msg.type() === "error") {errors.push(msg.text());}
+		if (msg.type() === "error") {
+			errors.push(msg.text());
+		}
 	};
 	const errorHandler = (err: Error) => errors.push(err.message);
 

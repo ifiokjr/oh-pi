@@ -1,8 +1,8 @@
 import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "@mariozechner/pi-ai";
-import { getCredentialModels, resolveProviderModels } from './catalog.js';
-import type { ProviderCatalogCredentials } from './catalog.js';
-import { getEnvApiKey, STATIC_CREDENTIAL_TTL_MS } from './config.js';
-import type { SupportedProviderDefinition } from './config.js';
+import { getCredentialModels, resolveProviderModels } from "./catalog.js";
+import type { ProviderCatalogCredentials } from "./catalog.js";
+import { getEnvApiKey, STATIC_CREDENTIAL_TTL_MS } from "./config.js";
+import type { SupportedProviderDefinition } from "./config.js";
 
 export async function loginProvider(
 	provider: SupportedProviderDefinition,

@@ -33,7 +33,10 @@ describe("background task installer", () => {
 
 	it("normalizes install and removal command outcomes", () => {
 		const error = vi.fn();
-		expect(run("pi", "install", ["npm:@ifi/pi-background-tasks"], vi.fn(), error)).toStrictEqual({ ok: true, status: "ok" });
+		expect(run("pi", "install", ["npm:@ifi/pi-background-tasks"], vi.fn(), error)).toStrictEqual({
+			ok: true,
+			status: "ok",
+		});
 		expect(
 			run(
 				"pi",

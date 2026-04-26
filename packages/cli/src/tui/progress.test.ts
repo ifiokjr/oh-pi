@@ -1,4 +1,3 @@
-
 import { clearProgressLine, renderProgress, runWithProgress } from "./progress.js";
 
 describe(renderProgress, () => {

@@ -4,8 +4,8 @@ import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-age
 import { buildCompletionKey, markSeenWithTtl } from "./completion-dedupe.js";
 import { createFileCoalescer } from "./file-coalescer.js";
 import { renderWidget } from "./render.js";
-import { POLL_INTERVAL_MS, RESULTS_DIR } from './types.js';
-import type { AsyncJobState } from './types.js';
+import { POLL_INTERVAL_MS, RESULTS_DIR } from "./types.js";
+import type { AsyncJobState } from "./types.js";
 import { readStatus } from "./utils.js";
 
 interface RuntimeMonitorOptions {

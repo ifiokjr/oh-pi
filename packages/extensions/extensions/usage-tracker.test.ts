@@ -6,8 +6,6 @@
  * tool/command APIs.
  */
 
-
-
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const { mockFsReadFile, mockFsAccess } = vi.hoisted(() => ({
@@ -15,7 +13,7 @@ const { mockFsReadFile, mockFsAccess } = vi.hoisted(() => ({
 	mockFsReadFile: vi.fn().mockResolvedValue("{}"),
 }));
 
-vi.mock<typeof import('node:fs')>(import('node:fs'), async (importOriginal) => {
+vi.mock<typeof import("node:fs")>(import("node:fs"), async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs")>();
 	return {
 		...actual,
@@ -31,19 +29,19 @@ vi.mock<typeof import('node:fs')>(import('node:fs'), async (importOriginal) => {
 	};
 });
 
-vi.mock<typeof import('node:os')>(import('node:os'), async (importOriginal) => {
+vi.mock<typeof import("node:os")>(import("node:os"), async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:os")>();
 	return { ...actual, homedir: () => "/mock-home" };
 });
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	CustomEditor: class {},
 	getAgentDir: () => "/mock-home/.pi/agent",
 }));
 
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({}));
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({}));
 
-vi.mock<typeof import('@sinclair/typebox')>(import('@sinclair/typebox'), () => ({
+vi.mock<typeof import("@sinclair/typebox")>(import("@sinclair/typebox"), () => ({
 	Type: {
 		Literal: (value: any) => ({ const: value }),
 		Number: (opts?: any) => ({ type: "number", ...opts }),
@@ -468,7 +466,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 			expect(text).toContain("claude-sonnet-4-20250514");
 			expect(text).toContain("gpt-4o");
 		});
@@ -730,7 +728,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 			expect(text).toContain("No pi auth configured for Anthropic");
 		});
 	});
@@ -752,7 +750,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "summary" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 			expect(text).toContain("Session:");
 			expect(text).toContain("1 turns");
 			expect(text).toContain("in /");
@@ -787,7 +785,7 @@ describe("usage-tracker extension", () => {
 			const result = await runWithTimers(() =>
 				tool.execute("id", { format: "detailed" }, undefined, undefined, ollamaCtx),
 			);
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 			expect(text).toContain("Ollama Rate Limits:");
 			expect(text).toContain("Local daemon reachable");
 			expect(text).toContain("remaining account limits are unavailable");
@@ -820,7 +818,7 @@ describe("usage-tracker extension", () => {
 			const result = await runWithTimers(() =>
 				tool.execute("id", { format: "detailed" }, undefined, undefined, ollamaCtx),
 			);
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 			expect(text).toContain("Ollama Rate Limits:");
 			expect(text).toContain("75% left");
 			expect(text).toContain("Cloud auth configured (1 model(s)).");
@@ -852,7 +850,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 
 			expect(text).toContain("Anthropic Rate Limits:");
 			expect(text).toContain("5-hour");
@@ -880,7 +878,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 			expect(text).toContain("7-day Sonnet");
 			expect(text).toContain("99% left");
 			expect(text).toContain("(1% used)");
@@ -913,7 +911,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 
 			expect(text).toContain("5-hour");
 			expect(text).toContain("60% left");
@@ -940,7 +938,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 
 			expect(text).toContain("Anthropic Rate Limits:");
 			expect(text).toContain("7-day Sonnet");
@@ -983,7 +981,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 
 			expect(text).toContain("OpenAI Rate Limits:");
 			expect(text).toContain("Codex (5h)");
@@ -1025,7 +1023,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 
 			expect(text).toContain("Google Rate Limits:");
 			expect(text).toContain("Plan: Gemini Code Assist (standard-tier)");
@@ -1058,7 +1056,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 			expect(text).toContain("Subscription quota");
 			expect(text).toContain("100% left");
 			expect(text).toContain("Tier reports unlimited coding assistant capacity");
@@ -1072,7 +1070,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 
 			expect(text).toContain("Anthropic auth token expired");
 			expect(text).toContain("re-authenticate in pi settings");
@@ -1086,7 +1084,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 
 			expect(text).toContain("Anthropic OAuth usage endpoint is rate-limited");
 			expect(text).not.toContain("Anthropic auth token expired");
@@ -1101,7 +1099,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 
 			expect(text).toContain("OpenAI auth token expired");
 			expect(text).toContain("re-authenticate in pi settings");
@@ -1121,7 +1119,7 @@ describe("usage-tracker extension", () => {
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
-			const {text} = result.content[0];
+			const { text } = result.content[0];
 
 			expect(text).toContain("No pi auth configured for OpenAI");
 			expect(text).toContain("run pi login");
@@ -1627,7 +1625,9 @@ describe("usage-tracker extension", () => {
 			await runWithTimers(() => pi._commands.get("usage").handler("", ctx));
 
 			const pickerOptions = (ctx.ui.select as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string[];
-			expect(pickerOptions).toStrictEqual(expect.arrayContaining([expect.stringContaining("OpenAI — recently viewed")]));
+			expect(pickerOptions).toStrictEqual(
+				expect.arrayContaining([expect.stringContaining("OpenAI — recently viewed")]),
+			);
 		});
 	});
 

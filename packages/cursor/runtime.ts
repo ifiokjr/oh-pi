@@ -124,7 +124,9 @@ function trimConversationStates(): void {
 	if (conversationStates.size <= CURSOR_MAX_CHECKPOINTS) {
 		return;
 	}
-	const sorted = [...conversationStates.entries()].toSorted((left, right) => left[1].lastAccessMs - right[1].lastAccessMs);
+	const sorted = [...conversationStates.entries()].toSorted(
+		(left, right) => left[1].lastAccessMs - right[1].lastAccessMs,
+	);
 	for (const [conversationKey] of sorted.slice(0, conversationStates.size - CURSOR_MAX_CHECKPOINTS)) {
 		conversationStates.delete(conversationKey);
 	}

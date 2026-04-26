@@ -13,7 +13,7 @@ export function enhanceBashTool(pi: ExtensionAPI): void {
 			resolveBaseBackground(null);
 			const result = await original.execute(toolCallId, params, signal, onUpdate);
 
-			const exitCode = (result as any).exitCode ?? 0;
+			const exitCode = (result as unknown as { exitCode?: number }).exitCode ?? 0;
 			const ok = exitCode === 0;
 			const output = result.content.find((c): c is { type: "text"; text: string } => c.type === "text")?.text ?? "";
 

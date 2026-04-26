@@ -1,7 +1,7 @@
 import * as path from "node:path";
 
-import { getPiSpawnCommand, resolveWindowsPiCliScript } from '../pi-spawn.js';
-import type { PiSpawnDeps } from '../pi-spawn.js';
+import { getPiSpawnCommand, resolveWindowsPiCliScript } from "../pi-spawn.js";
+import type { PiSpawnDeps } from "../pi-spawn.js";
 
 function makeDeps(input: {
 	platform?: NodeJS.Platform;
@@ -12,8 +12,8 @@ function makeDeps(input: {
 	packageJsonContent?: string;
 }): PiSpawnDeps {
 	const existing = new Set(input.existing ?? []);
-	const {packageJsonPath} = input;
-	const {packageJsonContent} = input;
+	const { packageJsonPath } = input;
+	const { packageJsonContent } = input;
 
 	return {
 		argv1: input.argv1,

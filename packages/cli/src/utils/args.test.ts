@@ -1,4 +1,3 @@
-
 import { parseArgs } from "./args.js";
 
 describe(parseArgs, () => {

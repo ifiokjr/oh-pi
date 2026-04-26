@@ -2,7 +2,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-
 const chainMocks = vi.hoisted(() => ({
 	aggregateParallelOutputs: vi.fn((taskResults: any[]) => taskResults.map((task) => task.output).join("\n---\n")),
 	buildChainInstructions: vi.fn((behavior: any, chainDir: string) => ({
@@ -53,10 +52,10 @@ const chainMocks = vi.hoisted(() => ({
 	runSync: vi.fn(),
 }));
 
-vi.mock<typeof import('../chain-clarify.js')>(import('../chain-clarify.js'), () => ({
+vi.mock<typeof import("../chain-clarify.js")>(import("../chain-clarify.js"), () => ({
 	ChainClarifyComponent: class {},
 }));
-vi.mock<typeof import('../settings.js')>(import('../settings.js'), () => ({
+vi.mock<typeof import("../settings.js")>(import("../settings.js"), () => ({
 	aggregateParallelOutputs: chainMocks.aggregateParallelOutputs,
 	buildChainInstructions: chainMocks.buildChainInstructions,
 	createChainDir: chainMocks.createChainDir,
@@ -67,24 +66,24 @@ vi.mock<typeof import('../settings.js')>(import('../settings.js'), () => ({
 	resolveParallelBehaviors: chainMocks.resolveParallelBehaviors,
 	resolveStepBehavior: chainMocks.resolveStepBehavior,
 }));
-vi.mock<typeof import('../skills.js')>(import('../skills.js'), () => ({
+vi.mock<typeof import("../skills.js")>(import("../skills.js"), () => ({
 	discoverAvailableSkills: chainMocks.discoverAvailableSkills,
 	normalizeSkillInput: chainMocks.normalizeSkillInput,
 }));
-vi.mock<typeof import('../execution.js')>(import('../execution.js'), () => ({
+vi.mock<typeof import("../execution.js")>(import("../execution.js"), () => ({
 	runSync: chainMocks.runSync,
 }));
-vi.mock<typeof import('../formatters.js')>(import('../formatters.js'), () => ({
+vi.mock<typeof import("../formatters.js")>(import("../formatters.js"), () => ({
 	buildChainSummary: chainMocks.buildChainSummary,
 }));
-vi.mock<typeof import('../utils.js')>(import('../utils.js'), () => ({
+vi.mock<typeof import("../utils.js")>(import("../utils.js"), () => ({
 	getFinalOutput: chainMocks.getFinalOutput,
 	mapConcurrent: chainMocks.mapConcurrent,
 }));
-vi.mock<typeof import('../run-history.js')>(import('../run-history.js'), () => ({
+vi.mock<typeof import("../run-history.js")>(import("../run-history.js"), () => ({
 	recordRun: chainMocks.recordRun,
 }));
-vi.mock<typeof import('../model-routing.js')>(import('../model-routing.js'), () => ({
+vi.mock<typeof import("../model-routing.js")>(import("../model-routing.js"), () => ({
 	resolveSubagentModelResolution: chainMocks.resolveSubagentModelResolution,
 	toAvailableModelRefs: (models: any[]) =>
 		models.map((model) => ({
@@ -93,7 +92,7 @@ vi.mock<typeof import('../model-routing.js')>(import('../model-routing.js'), () 
 			input: model.input ?? ["text"],
 		})),
 }));
-vi.mock<typeof import('../types.js')>(import('../types.js'), () => ({
+vi.mock<typeof import("../types.js")>(import("../types.js"), () => ({
 	MAX_CONCURRENCY: 4,
 }));
 

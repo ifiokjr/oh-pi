@@ -9,19 +9,25 @@ interface CompletionDataLike {
 }
 
 function asNonEmptyString(value: unknown): string | undefined {
-	if (typeof value !== "string") {return undefined;}
+	if (typeof value !== "string") {
+		return undefined;
+	}
 	const trimmed = value.trim();
 	return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function asFiniteNumber(value: unknown): number | undefined {
-	if (typeof value !== "number") {return undefined;}
+	if (typeof value !== "number") {
+		return undefined;
+	}
 	return Number.isFinite(value) ? value : undefined;
 }
 
 export function buildCompletionKey(data: CompletionDataLike, fallback: string): string {
 	const id = asNonEmptyString(data.id);
-	if (id) {return `id:${id}`;}
+	if (id) {
+		return `id:${id}`;
+	}
 	const sessionId = asNonEmptyString(data.sessionId) ?? "no-session";
 	const agent = asNonEmptyString(data.agent) ?? "unknown";
 	const timestamp = asFiniteNumber(data.timestamp);
@@ -42,13 +48,17 @@ export function buildCompletionKey(data: CompletionDataLike, fallback: string): 
 
 export function pruneSeenMap(seen: Map<string, number>, now: number, ttlMs: number): void {
 	for (const [key, ts] of seen.entries()) {
-		if (now - ts > ttlMs) {seen.delete(key);}
+		if (now - ts > ttlMs) {
+			seen.delete(key);
+		}
 	}
 }
 
 export function markSeenWithTtl(seen: Map<string, number>, key: string, now: number, ttlMs: number): boolean {
 	pruneSeenMap(seen, now, ttlMs);
-	if (seen.has(key)) {return true;}
+	if (seen.has(key)) {
+		return true;
+	}
 	seen.set(key, now);
 	return false;
 }
@@ -56,7 +66,9 @@ export function markSeenWithTtl(seen: Map<string, number>, key: string, now: num
 export function getGlobalSeenMap(storeKey: string): Map<string, number> {
 	const globalStore = globalThis as Record<string, unknown>;
 	const existing = globalStore[storeKey];
-	if (existing instanceof Map) {return existing as Map<string, number>;}
+	if (existing instanceof Map) {
+		return existing as Map<string, number>;
+	}
 	const map = new Map<string, number>();
 	globalStore[storeKey] = map;
 	return map;

@@ -15,8 +15,8 @@ import type { ExtensionAPI, ModelRegistry } from "@mariozechner/pi-coding-agent"
 import { Container, Text, matchesKey } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { Nest } from "./nest.js";
-import { createUsageLimitsTracker, resumeColony, runColony } from './queen.js';
-import type { QueenCallbacks } from './queen.js';
+import { createUsageLimitsTracker, resumeColony, runColony } from "./queen.js";
+import type { QueenCallbacks } from "./queen.js";
 import { createStatusBarState } from "./status-cache.js";
 import { resolveColonyStorageOptions, shouldManageProjectGitignore } from "./storage.js";
 
@@ -236,7 +236,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		workspace: ColonyWorkspace,
 		colony?: BackgroundColony,
 	) => {
-		const {usage} = event;
+		const { usage } = event;
 		if (usage.input + usage.output + usage.cacheRead + usage.cacheWrite + usage.costTotal <= 0) {
 			return;
 		}
@@ -731,10 +731,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 		container.addChild(
 			new Text(
-				`${ok ? theme.fg("success", checkMark()) : theme.fg("error", crossMark()) 
-					} ${ 
-					theme.fg("toolTitle", theme.bold(`${antIcon()} Ant Colony Report`)) 
-					}${durationMatch ? theme.fg("muted", ` │ ${durationMatch[1]}`) : ""}`,
+				`${ok ? theme.fg("success", checkMark()) : theme.fg("error", crossMark())} ${theme.fg(
+					"toolTitle",
+					theme.bold(`${antIcon()} Ant Colony Report`),
+				)}${durationMatch ? theme.fg("muted", ` │ ${durationMatch[1]}`) : ""}`,
 				0,
 				0,
 			),
@@ -965,9 +965,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 									const levelIcon =
 										log.level === "error"
 											? theme.fg("error", crossMark())
-											: (log.level === "warning"
+											: log.level === "warning"
 												? theme.fg("warning", "!")
-												: theme.fg("muted", "."));
+												: theme.fg("muted", ".");
 									lines.push(`  ${levelIcon} ${theme.fg("muted", age)} ${theme.fg("text", trim(log.text, w - 12))}`);
 								}
 							}
@@ -1171,7 +1171,7 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 	/** Build a status summary for a single colony. */
 	function buildColonyStatusText(c: BackgroundColony): string {
-		const {state} = c;
+		const { state } = c;
 		const elapsed = state ? formatDuration(Date.now() - state.createdAt) : "0s";
 		const m = state?.metrics;
 		const phase = state?.status || "scouting";

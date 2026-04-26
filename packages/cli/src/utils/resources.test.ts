@@ -1,4 +1,3 @@
-
 import { resources } from "./resources.js";
 
 describe(resources, () => {

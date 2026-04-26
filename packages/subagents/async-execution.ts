@@ -12,15 +12,15 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import type { AgentConfig } from "./agents.js";
 import { applyThinkingSuffix } from "./execution.js";
 import { injectSingleOutputInstruction, resolveSingleOutputPath } from "./single-output.js";
-import { isParallelStep, resolveStepBehavior } from './settings.js';
-import type { ChainStep, ParallelStep, SequentialStep, StepOverrides } from './settings.js';
+import { isParallelStep, resolveStepBehavior } from "./settings.js";
+import type { ChainStep, ParallelStep, SequentialStep, StepOverrides } from "./settings.js";
 import type { RunnerStep } from "./parallel-utils.js";
 import { resolvePiPackageRoot } from "./pi-spawn.js";
 import { buildSkillInjection, normalizeSkillInput, resolveSkills } from "./skills.js";
-import { ASYNC_DIR, RESULTS_DIR } from './types.js';
-import type { ArtifactConfig, Details, MaxOutputConfig } from './types.js';
-import { resolveSubagentModelResolution } from './model-routing.js';
-import type { AvailableModelRef } from './model-routing.js';
+import { ASYNC_DIR, RESULTS_DIR } from "./types.js";
+import type { ArtifactConfig, Details, MaxOutputConfig } from "./types.js";
+import { resolveSubagentModelResolution } from "./model-routing.js";
+import type { AvailableModelRef } from "./model-routing.js";
 
 const require = createRequire(import.meta.url);
 const piPackageRoot = resolvePiPackageRoot();
@@ -37,7 +37,9 @@ const jitiCliPath: string | undefined = (() => {
 	for (const candidate of candidates) {
 		try {
 			const p = candidate();
-			if (fs.existsSync(p)) {return p;}
+			if (fs.existsSync(p)) {
+				return p;
+			}
 		} catch {}
 	}
 	return;
@@ -96,7 +98,9 @@ export function isAsyncAvailable(): boolean {
  * Spawn the async runner process
  */
 function spawnRunner(cfg: object, suffix: string, cwd: string): number | undefined {
-	if (!jitiCliPath) {return undefined;}
+	if (!jitiCliPath) {
+		return undefined;
+	}
 
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `pi-async-cfg-`));
 	const cfgPath = path.join(tmpDir, `${suffix}.json`);

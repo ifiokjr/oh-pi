@@ -34,11 +34,13 @@ export function createRoutes(options: RoutesOptions): Hono {
 	});
 
 	// Instance info
-	app.get("/api/instance", (c) => c.json({
+	app.get("/api/instance", (c) =>
+		c.json({
 			instanceId: options.instanceId,
 			uptime: Math.floor((Date.now() - options.startTime) / 1000),
 			connectedClients: options.getConnectedClients(),
-		}));
+		}),
+	);
 
 	// Session state
 	app.get("/api/session/state", (c) => {

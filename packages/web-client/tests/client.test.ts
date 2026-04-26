@@ -1,4 +1,3 @@
-
 import { PiWebClient } from "../src/client.js";
 
 // Minimal mock WebSocket

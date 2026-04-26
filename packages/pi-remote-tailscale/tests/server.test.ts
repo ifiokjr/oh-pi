@@ -1,5 +1,3 @@
-
-
 const webServerModule = vi.hoisted(() => ({
 	createPiWebServer: vi.fn(),
 	getLanIp: vi.fn(),
@@ -10,8 +8,8 @@ const tailscaleModule = vi.hoisted(() => ({
 	startTailscaleServe: vi.fn(),
 }));
 
-vi.mock<typeof import('@ifi/pi-web-server')>(import('@ifi/pi-web-server'), () => webServerModule);
-vi.mock<typeof import('../src/tailscale.js')>(import('../src/tailscale.js'), () => tailscaleModule);
+vi.mock<typeof import("@ifi/pi-web-server")>(import("@ifi/pi-web-server"), () => webServerModule);
+vi.mock<typeof import("../src/tailscale.js")>(import("../src/tailscale.js"), () => tailscaleModule);
 
 import {
 	appendAuthToken,

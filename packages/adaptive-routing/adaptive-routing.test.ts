@@ -8,13 +8,16 @@ const { getAgentDir } = vi.hoisted(() => ({
 	getAgentDir: vi.fn(() => "/mock-home/.pi/agent"),
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	getAgentDir,
 }));
 
-vi.mock<typeof import('@ifi/oh-pi-core')>(import('@ifi/oh-pi-core'), async () => await import("../core/src/model-intelligence.js"));
+vi.mock<typeof import("@ifi/oh-pi-core")>(
+	import("@ifi/oh-pi-core"),
+	async () => await import("../core/src/model-intelligence.js"),
+);
 
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({
 	completeSimple: vi.fn(async () => ({
 		api: "openai-responses",
 		content: [
@@ -364,7 +367,9 @@ describe("adaptive routing extension", () => {
 
 		adaptiveRoutingExtension(harness.pi as never);
 		await harness.commands.get("route:assignments")?.handler?.("", harness.ctx as never);
-		expect(renderedLines).toStrictEqual(expect.arrayContaining([expect.stringContaining("groq/llama-3.3-70b-versatile")]));
+		expect(renderedLines).toStrictEqual(
+			expect.arrayContaining([expect.stringContaining("groq/llama-3.3-70b-versatile")]),
+		);
 	});
 
 	it("resolves delegated quick-discovery fallbacks directly", () => {

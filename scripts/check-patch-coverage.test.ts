@@ -2,12 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-
 const childProcessMocks = vi.hoisted(() => ({
 	execFileSync: vi.fn(),
 }));
 
-vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({
+vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({
 	execFileSync: childProcessMocks.execFileSync,
 }));
 
@@ -194,7 +193,9 @@ describe("check-patch-coverage", () => {
 	it("skips patch coverage checks when base or head is missing", () => {
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-		expect(runPatchCoverageCheck({ base: "", head: "head", lcovPath: "coverage/lcov.info", threshold: 100 })).toStrictEqual({
+		expect(
+			runPatchCoverageCheck({ base: "", head: "head", lcovPath: "coverage/lcov.info", threshold: 100 }),
+		).toStrictEqual({
 			covered: 0,
 			pct: 100,
 			perFile: [],

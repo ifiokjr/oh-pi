@@ -111,7 +111,8 @@ const DEFAULT_CELL_STYLE: CellStyle = {
 	underline: false,
 };
 
-const DEFAULT_HEADLESS_MODULE_LOADER = async (): Promise<HeadlessModuleLike> => (await import("@xterm/headless")) as HeadlessModuleLike;
+const DEFAULT_HEADLESS_MODULE_LOADER = async (): Promise<HeadlessModuleLike> =>
+	(await import("@xterm/headless")) as HeadlessModuleLike;
 
 let headlessModuleLoader: () => Promise<HeadlessModuleLike> = DEFAULT_HEADLESS_MODULE_LOADER;
 
@@ -171,7 +172,11 @@ export function sanitizeAnsiOutput(text: string): string {
 	return text
 		.replace(OSC_SEQUENCE_REGEX, "")
 		.replace(BELL_REGEX, "")
-		.replace(CSI_SEQUENCE_REGEX, (_match, params: string, intermediates: string, final: string) => `\u001B[${sanitizeCsiParams(params)}${intermediates}${final}`)
+		.replace(
+			CSI_SEQUENCE_REGEX,
+			(_match, params: string, intermediates: string, final: string) =>
+				`\u001B[${sanitizeCsiParams(params)}${intermediates}${final}`,
+		)
 		.replace(C0_CONTROL_REGEX, "");
 }
 
@@ -184,7 +189,7 @@ export function stripAnsiSequences(text: string): string {
 }
 
 function decodeRgb(value: number): [number, number, number] {
-	return [(value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF];
+	return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
 }
 
 function readColor(cell: TerminalCellLike | undefined, type: "fg" | "bg"): ColorValue | null {
@@ -200,10 +205,10 @@ function readColor(cell: TerminalCellLike | undefined, type: "fg" | "bg"): Color
 	}
 
 	if (mode == null || mode === 0) {
-		return value === 0 ? null : { kind: value > 0xFF ? "rgb" : "palette", value };
+		return value === 0 ? null : { kind: value > 0xff ? "rgb" : "palette", value };
 	}
 
-	if (mode === 3 || value > 0xFF) {
+	if (mode === 3 || value > 0xff) {
 		return { kind: "rgb", value };
 	}
 

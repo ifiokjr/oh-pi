@@ -10,8 +10,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { getAgentDir } from '@mariozechner/pi-coding-agent';
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 const IS_WINDOWS = process.platform === "win32";
 

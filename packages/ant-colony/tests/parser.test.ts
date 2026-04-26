@@ -1,6 +1,4 @@
-
-
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	AuthStorage: class {},
 	ModelRegistry: class {},
 	SessionManager: { inMemory: vi.fn() },
@@ -15,8 +13,8 @@ vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi
 	createReadTool: vi.fn(),
 	createWriteTool: vi.fn(),
 }));
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({ getModel: vi.fn() }));
-vi.mock<typeof import('./spawner.js')>(import('./spawner.js'), async () => {
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({ getModel: vi.fn() }));
+vi.mock<typeof import("./spawner.js")>(import("./spawner.js"), async () => {
 	const actual = await vi.importActual<any>("./spawner.js");
 	return { ...actual, makePheromoneId: () => "p-test" };
 });

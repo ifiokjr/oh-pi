@@ -1,8 +1,8 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createCursorOAuthProvider, refreshCursorCredentialModels, refreshCursorToken } from "./auth.js";
 import { CURSOR_API, CURSOR_PROVIDER, getCursorRuntimeConfig } from "./config.js";
-import { getCredentialModels, getFallbackCursorModels, toProviderModels } from './models.js';
-import type { CursorCredentials } from './models.js';
+import { getCredentialModels, getFallbackCursorModels, toProviderModels } from "./models.js";
+import type { CursorCredentials } from "./models.js";
 import { streamSimpleCursor } from "./provider.js";
 import { clearCursorRuntimeState, getCursorRuntimeStateSummary } from "./runtime.js";
 
@@ -27,7 +27,7 @@ function registerCursorCommand(pi: ExtensionAPI): void {
 				return;
 			}
 
-			const {authStorage} = ctx.modelRegistry;
+			const { authStorage } = ctx.modelRegistry;
 			const credential = authStorage.get(CURSOR_PROVIDER);
 			if (!credential || credential.type !== "oauth") {
 				ctx.ui.notify("Not logged in to Cursor. Run /login cursor first.", "warning");

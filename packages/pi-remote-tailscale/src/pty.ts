@@ -6,8 +6,8 @@ const NODE_PTY_MODULE = "node-pty";
 
 export interface PtyLike {
 	pid: number;
-	on: (event: "data" | "exit", handler: (...args: any[]) => void) => void;
-	off?: (event: "data" | "exit", handler: (...args: any[]) => void) => void;
+	on: (event: "data" | "exit", handler: (...args: unknown[]) => void) => void;
+	off?: (event: "data" | "exit", handler: (...args: unknown[]) => void) => void;
 	write: (data: string) => void;
 	resize: (columns: number, rows: number) => void;
 	kill: (signal?: string) => void;

@@ -1,6 +1,6 @@
 import path from "node:path";
-import { BorderedLoader } from '@mariozechner/pi-coding-agent';
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from '@mariozechner/pi-coding-agent';
+import { BorderedLoader } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import {
 	PLAN_MODE_END_OPTIONS,
 	PLAN_MODE_START_OPTIONS,
@@ -211,7 +211,7 @@ async function exitPlanMode(
 
 	const activeState = state;
 	const planningLeafId = ctx.sessionManager.getLeafId();
-	const {originLeafId} = activeState;
+	const { originLeafId } = activeState;
 	const planFilePath = resolveActivePlanFilePath(ctx, activeState.planFilePath);
 
 	const canNavigateToOrigin = Boolean(originLeafId && hasEntryInSession(ctx, originLeafId));

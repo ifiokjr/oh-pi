@@ -1,10 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
-import { create, fromBinary, fromJson, toBinary, toJson } from '@bufbuild/protobuf';
-import type { JsonValue } from '@bufbuild/protobuf';
+import { create, fromBinary, fromJson, toBinary, toJson } from "@bufbuild/protobuf";
+import type { JsonValue } from "@bufbuild/protobuf";
 import { ValueSchema } from "@bufbuild/protobuf/wkt";
 import type { Context, Message, ToolResultMessage } from "@mariozechner/pi-ai";
-import type {
-	GetBlobArgs} from "./proto/agent_pb.js";
+import type { GetBlobArgs } from "./proto/agent_pb.js";
 import {
 	AgentClientMessageSchema,
 	AgentConversationTurnStructureSchema,
@@ -62,7 +61,7 @@ export interface CursorRequestPayload {
 }
 
 export function parseCursorConversation(context: Context): ParsedCursorConversation {
-	const {messages} = context;
+	const { messages } = context;
 	const trailingToolResults: ToolResultInfo[] = [];
 	let cutoff = messages.length;
 	while (cutoff > 0 && messages[cutoff - 1]?.role === "toolResult") {

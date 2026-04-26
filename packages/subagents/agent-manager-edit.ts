@@ -80,7 +80,9 @@ function parseTools(value: string): { tools?: string[]; mcp?: string[] } {
 	for (const item of items) {
 		if (item.startsWith("mcp:")) {
 			const name = item.slice(4).trim();
-			if (name) {mcp.push(name);}
+			if (name) {
+				mcp.push(name);
+			}
 		} else {
 			tools.push(item);
 		}
@@ -128,7 +130,7 @@ export function createEditState(
 }
 
 function renderFieldValue(field: EditField, state: EditState): string {
-	const {draft} = state;
+	const { draft } = state;
 	switch (field) {
 		case "name": {
 			return draft.name;
@@ -174,7 +176,7 @@ function renderFieldValue(field: EditField, state: EditState): string {
 }
 
 function applyFieldValue(field: EditField, state: EditState, value: string): void {
-	const {draft} = state;
+	const { draft } = state;
 	switch (field) {
 		case "name": {
 			draft.name = value.trim();
@@ -264,7 +266,9 @@ function renderModelPicker(state: EditState, width: number, theme: Theme): strin
 			startIdx = Math.min(startIdx, list.length - maxVisible);
 		}
 		const endIdx = Math.min(startIdx + maxVisible, list.length);
-		if (startIdx > 0) {lines.push(row(` ${theme.fg("dim", `  ↑ ${startIdx} more`)}`, width, theme));}
+		if (startIdx > 0) {
+			lines.push(row(` ${theme.fg("dim", `  ↑ ${startIdx} more`)}`, width, theme));
+		}
 		for (let i = startIdx; i < endIdx; i++) {
 			const model = list[i]!;
 			const isSelected = i === state.modelCursor;
@@ -274,9 +278,13 @@ function renderModelPicker(state: EditState, width: number, theme: Theme): strin
 			lines.push(row(` ${prefix}${modelText}${provider}`, width, theme));
 		}
 		const remaining = list.length - endIdx;
-		if (remaining > 0) {lines.push(row(` ${theme.fg("dim", `  ↓ ${remaining} more`)}`, width, theme));}
+		if (remaining > 0) {
+			lines.push(row(` ${theme.fg("dim", `  ↓ ${remaining} more`)}`, width, theme));
+		}
 	}
-	while (lines.length < 19) {lines.push(row("", width, theme));}
+	while (lines.length < 19) {
+		lines.push(row("", width, theme));
+	}
 	lines.push(renderFooter(" [enter] select  [esc] cancel  type to search ", width, theme));
 	return lines;
 }
@@ -305,7 +313,9 @@ function renderThinkingPicker(state: EditState, width: number, theme: Theme): st
 		const desc = theme.fg("dim", ` - ${descriptions[level]}`);
 		lines.push(row(` ${prefix}${levelText}${desc}`, width, theme));
 	}
-	while (lines.length < 19) {lines.push(row("", width, theme));}
+	while (lines.length < 19) {
+		lines.push(row("", width, theme));
+	}
 	lines.push(renderFooter(" [enter] select  [esc] cancel  [↑↓] navigate ", width, theme));
 	return lines;
 }
@@ -330,7 +340,9 @@ function renderSkillPicker(state: EditState, width: number, theme: Theme): strin
 			startIdx = Math.min(startIdx, list.length - SKILL_SELECTOR_HEIGHT);
 		}
 		const endIdx = Math.min(startIdx + SKILL_SELECTOR_HEIGHT, list.length);
-		if (startIdx > 0) {lines.push(row(` ${theme.fg("dim", `  ↑ ${startIdx} more`)}`, width, theme));}
+		if (startIdx > 0) {
+			lines.push(row(` ${theme.fg("dim", `  ↑ ${startIdx} more`)}`, width, theme));
+		}
 		for (let i = startIdx; i < endIdx; i++) {
 			const skill = list[i]!;
 			const isCursor = i === state.skillCursor;
@@ -343,9 +355,13 @@ function renderSkillPicker(state: EditState, width: number, theme: Theme): strin
 			lines.push(row(` ${prefix}${checkbox} ${nameText}${sourceBadge}${desc}`, width, theme));
 		}
 		const remaining = list.length - endIdx;
-		if (remaining > 0) {lines.push(row(` ${theme.fg("dim", `  ↓ ${remaining} more`)}`, width, theme));}
+		if (remaining > 0) {
+			lines.push(row(` ${theme.fg("dim", `  ↓ ${remaining} more`)}`, width, theme));
+		}
 	}
-	while (lines.length < 19) {lines.push(row("", width, theme));}
+	while (lines.length < 19) {
+		lines.push(row("", width, theme));
+	}
 	lines.push(renderFooter(" [enter] confirm  [space] toggle  [esc] cancel ", width, theme));
 	return lines;
 }
@@ -363,7 +379,9 @@ function renderPromptEditor(state: EditState, width: number, theme: Theme): stri
 		state.promptEditor.viewportOffset,
 	);
 	const editorLines = renderEditor(state.promptEditor, textWidth, PROMPT_VIEWPORT_HEIGHT);
-	for (const line of editorLines) {lines.push(row(` ${line}`, width, theme));}
+	for (const line of editorLines) {
+		lines.push(row(` ${line}`, width, theme));
+	}
 	const scrollInfo = formatScrollInfo(
 		state.promptEditor.viewportOffset,
 		Math.max(0, wrapped.lines.length - state.promptEditor.viewportOffset - PROMPT_VIEWPORT_HEIGHT),
@@ -382,8 +400,12 @@ export function handleEditInput(
 	skills: SkillInfo[],
 ): EditInputResult | undefined {
 	if (screen === "edit") {
-		if (matchesKey(data, "ctrl+s")) {return { action: "save" };}
-		if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) {return { action: "discard" };}
+		if (matchesKey(data, "ctrl+s")) {
+			return { action: "save" };
+		}
+		if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) {
+			return { action: "discard" };
+		}
 		if (matchesKey(data, "up")) {
 			state.fieldIndex = Math.max(0, state.fieldIndex - 1);
 			return;
@@ -406,8 +428,12 @@ export function handleEditInput(
 			return { nextScreen: "edit-field" };
 		}
 		if (data === " " && (field === "progress" || field === "interactive")) {
-			if (field === "progress") {state.draft.defaultProgress = !state.draft.defaultProgress;}
-			if (field === "interactive") {state.draft.interactive = !state.draft.interactive;}
+			if (field === "progress") {
+				state.draft.defaultProgress = !state.draft.defaultProgress;
+			}
+			if (field === "interactive") {
+				state.draft.interactive = !state.draft.interactive;
+			}
 			return;
 		}
 		if (matchesKey(data, "return")) {
@@ -427,7 +453,9 @@ export function handleEditInput(
 				state.promptEditor = createEditorState(state.draft.systemPrompt ?? "");
 				return { nextScreen: "edit-prompt" };
 			}
-			if (field === "progress" || field === "interactive") {return;}
+			if (field === "progress" || field === "interactive") {
+				return;
+			}
 			state.fieldMode = "text";
 			state.fieldEditor = createEditorState(renderFieldValue(field, state));
 			return { nextScreen: "edit-field" };
@@ -442,23 +470,31 @@ export function handleEditInput(
 			}
 			if (matchesKey(data, "return")) {
 				const selected = state.filteredModels[state.modelCursor];
-				if (selected) {state.draft.model = selected.fullId;}
+				if (selected) {
+					state.draft.model = selected.fullId;
+				}
 				state.fieldMode = null;
 				return { nextScreen: "edit" };
 			}
 			if (matchesKey(data, "up")) {
-				if (state.filteredModels.length > 0)
-					{state.modelCursor = state.modelCursor === 0 ? state.filteredModels.length - 1 : state.modelCursor - 1;}
+				if (state.filteredModels.length > 0) {
+					state.modelCursor = state.modelCursor === 0 ? state.filteredModels.length - 1 : state.modelCursor - 1;
+				}
 				return;
 			}
 			if (matchesKey(data, "down")) {
-				if (state.filteredModels.length > 0)
-					{state.modelCursor = state.modelCursor === state.filteredModels.length - 1 ? 0 : state.modelCursor + 1;}
+				if (state.filteredModels.length > 0) {
+					state.modelCursor = state.modelCursor === state.filteredModels.length - 1 ? 0 : state.modelCursor + 1;
+				}
 				return;
 			}
 			if (matchesKey(data, "backspace")) {
-				if (state.modelSearchQuery.length > 0) {state.modelSearchQuery = state.modelSearchQuery.slice(0, -1);}
-			} else if (data.length === 1 && data.codePointAt(0) >= 32) {state.modelSearchQuery += data;}
+				if (state.modelSearchQuery.length > 0) {
+					state.modelSearchQuery = state.modelSearchQuery.slice(0, -1);
+				}
+			} else if (data.length === 1 && data.codePointAt(0) >= 32) {
+				state.modelSearchQuery += data;
+			}
 			const query = state.modelSearchQuery.toLowerCase();
 			state.filteredModels = query
 				? models.filter(
@@ -506,24 +542,33 @@ export function handleEditInput(
 			if (data === " ") {
 				const skill = state.filteredSkills[state.skillCursor];
 				if (skill) {
-					if (state.skillSelected.has(skill.name)) {state.skillSelected.delete(skill.name);}
-					else {state.skillSelected.add(skill.name);}
+					if (state.skillSelected.has(skill.name)) {
+						state.skillSelected.delete(skill.name);
+					} else {
+						state.skillSelected.add(skill.name);
+					}
 				}
 				return;
 			}
 			if (matchesKey(data, "up")) {
-				if (state.filteredSkills.length > 0)
-					{state.skillCursor = state.skillCursor === 0 ? state.filteredSkills.length - 1 : state.skillCursor - 1;}
+				if (state.filteredSkills.length > 0) {
+					state.skillCursor = state.skillCursor === 0 ? state.filteredSkills.length - 1 : state.skillCursor - 1;
+				}
 				return;
 			}
 			if (matchesKey(data, "down")) {
-				if (state.filteredSkills.length > 0)
-					{state.skillCursor = state.skillCursor === state.filteredSkills.length - 1 ? 0 : state.skillCursor + 1;}
+				if (state.filteredSkills.length > 0) {
+					state.skillCursor = state.skillCursor === state.filteredSkills.length - 1 ? 0 : state.skillCursor + 1;
+				}
 				return;
 			}
 			if (matchesKey(data, "backspace")) {
-				if (state.skillSearchQuery.length > 0) {state.skillSearchQuery = state.skillSearchQuery.slice(0, -1);}
-			} else if (data.length === 1 && data.codePointAt(0) >= 32) {state.skillSearchQuery += data;}
+				if (state.skillSearchQuery.length > 0) {
+					state.skillSearchQuery = state.skillSearchQuery.slice(0, -1);
+				}
+			} else if (data.length === 1 && data.codePointAt(0) >= 32) {
+				state.skillSearchQuery += data;
+			}
 			const query = state.skillSearchQuery.toLowerCase();
 			state.filteredSkills = query
 				? skills.filter(
@@ -543,12 +588,16 @@ export function handleEditInput(
 			state.fieldMode = null;
 			return { nextScreen: "edit" };
 		}
-		if (matchesKey(data, "tab")) {return;}
+		if (matchesKey(data, "tab")) {
+			return;
+		}
 		const innerW = width - 2;
 		const labelWidth = 12;
 		const textWidth = Math.max(10, innerW - labelWidth - 6);
 		const nextState = handleEditorInput(state.fieldEditor, data, textWidth);
-		if (nextState) {state.fieldEditor = nextState;}
+		if (nextState) {
+			state.fieldEditor = nextState;
+		}
 		return;
 	}
 	if (screen === "edit-prompt") {
@@ -574,17 +623,27 @@ export function handleEditInput(
 			return;
 		}
 		const nextState = handleEditorInput(state.promptEditor, data, textWidth, { multiLine: true });
-		if (nextState) {state.promptEditor = nextState;}
+		if (nextState) {
+			state.promptEditor = nextState;
+		}
 		return;
 	}
 	return;
 }
 
 export function renderEdit(screen: EditScreen, state: EditState, width: number, theme: Theme): string[] {
-	if (screen === "edit-field" && state.fieldMode === "model") {return renderModelPicker(state, width, theme);}
-	if (screen === "edit-field" && state.fieldMode === "thinking") {return renderThinkingPicker(state, width, theme);}
-	if (screen === "edit-field" && state.fieldMode === "skills") {return renderSkillPicker(state, width, theme);}
-	if (screen === "edit-prompt") {return renderPromptEditor(state, width, theme);}
+	if (screen === "edit-field" && state.fieldMode === "model") {
+		return renderModelPicker(state, width, theme);
+	}
+	if (screen === "edit-field" && state.fieldMode === "thinking") {
+		return renderThinkingPicker(state, width, theme);
+	}
+	if (screen === "edit-field" && state.fieldMode === "skills") {
+		return renderSkillPicker(state, width, theme);
+	}
+	if (screen === "edit-prompt") {
+		return renderPromptEditor(state, width, theme);
+	}
 	const lines: string[] = [];
 	const scopeBadge = state.draft.source === "user" ? "[user]" : "[proj]";
 	const label = state.isNew ? " [new]" : "";
@@ -595,7 +654,9 @@ export function renderEdit(screen: EditScreen, state: EditState, width: number, 
 	const valueWidth = Math.max(10, innerW - labelWidth - 6);
 	for (let i = 0; i < FIELD_ORDER.length; i++) {
 		const field = FIELD_ORDER[i]!;
-		if (field === "prompt") {break;}
+		if (field === "prompt") {
+			break;
+		}
 		const isFocused = i === state.fieldIndex;
 		const prefix = isFocused ? theme.fg("accent", "▸ ") : "  ";
 		const labelText = pad(`${field[0]!.toUpperCase()}${field.slice(1)}:`, labelWidth);
@@ -633,10 +694,17 @@ export function renderEdit(screen: EditScreen, state: EditState, width: number, 
 	const previewWidth = innerW - 2;
 	const wrapped = wrapText(state.draft.systemPrompt ?? "", previewWidth);
 	const previewLines = wrapped.lines.slice(0, 4);
-	for (const line of previewLines) {lines.push(row(` ${line}`, width, theme));}
-	for (let i = previewLines.length; i < 4; i++) {lines.push(row("", width, theme));}
-	if (state.error) {lines.push(row(` ${theme.fg("error", state.error)}`, width, theme));}
-	else {lines.push(row("", width, theme));}
+	for (const line of previewLines) {
+		lines.push(row(` ${line}`, width, theme));
+	}
+	for (let i = previewLines.length; i < 4; i++) {
+		lines.push(row("", width, theme));
+	}
+	if (state.error) {
+		lines.push(row(` ${theme.fg("error", state.error)}`, width, theme));
+	} else {
+		lines.push(row("", width, theme));
+	}
 	lines.push(renderFooter(" [ctrl+s] save  [esc] back ", width, theme));
 	return lines;
 }

@@ -240,7 +240,9 @@ export function formatEvaluationSummary(summary: CorpusSummary): string {
 		lines.push("");
 		lines.push("Mismatched examples:");
 		for (const run of summary.runs) {
-			if (run.mismatches.length === 0 && !run.modelMismatch) {continue;}
+			if (run.mismatches.length === 0 && !run.modelMismatch) {
+				continue;
+			}
 			lines.push(`  • ${run.name}`);
 			for (const m of run.mismatches) {
 				lines.push(`    - ${m.fieldName}: expected ${String(m.expected)} — got ${String(m.actual)}`);

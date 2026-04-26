@@ -3,7 +3,6 @@ import { rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-
 const { gitClientMock } = vi.hoisted(() => ({
 	gitClientMock: {
 		createAndSwitchBranch: vi.fn<(repoRoot: string, branchName: string) => void>(),
@@ -14,11 +13,11 @@ const { gitClientMock } = vi.hoisted(() => ({
 	},
 }));
 
-vi.mock<typeof import('../extension/git.js')>(import('../extension/git.js'), () => ({
+vi.mock<typeof import("../extension/git.js")>(import("../extension/git.js"), () => ({
 	createGitClient: () => gitClientMock,
 }));
 
-vi.mock<typeof import('@mariozechner/pi-tui')>(import('@mariozechner/pi-tui'), () => ({
+vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), () => ({
 	Text: class {
 		constructor(public text: string) {}
 	},

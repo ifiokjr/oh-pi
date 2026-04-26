@@ -1,6 +1,5 @@
-
-import { runInstaller } from './installer.js';
-import type { InstallerDeps } from './installer.js';
+import { runInstaller } from "./installer.js";
+import type { InstallerDeps } from "./installer.js";
 
 function createMockDeps(overrides: Partial<InstallerDeps> = {}): InstallerDeps {
 	const chunks: string[] = [];

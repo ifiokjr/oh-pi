@@ -7,10 +7,16 @@ import { pathToFileURL } from "node:url";
 import { appendJsonl, getArtifactPaths } from "./artifacts.js";
 import { getPiSpawnCommand } from "./pi-spawn.js";
 import { persistSingleOutput } from "./single-output.js";
-import { DEFAULT_MAX_OUTPUT, truncateOutput, getSubagentDepthEnv } from './types.js';
-import type { ArtifactConfig, ArtifactPaths, MaxOutputConfig } from './types.js';
-import { isParallelGroup, flattenSteps, mapConcurrent, aggregateParallelOutputs, MAX_PARALLEL_CONCURRENCY } from './parallel-utils.js';
-import type { RunnerSubagentStep as SubagentStep, RunnerStep } from './parallel-utils.js';
+import { DEFAULT_MAX_OUTPUT, truncateOutput, getSubagentDepthEnv } from "./types.js";
+import type { ArtifactConfig, ArtifactPaths, MaxOutputConfig } from "./types.js";
+import {
+	isParallelGroup,
+	flattenSteps,
+	mapConcurrent,
+	aggregateParallelOutputs,
+	MAX_PARALLEL_CONCURRENCY,
+} from "./parallel-utils.js";
+import type { RunnerSubagentStep as SubagentStep, RunnerStep } from "./parallel-utils.js";
 
 interface SubagentRunConfig {
 	id: string;
@@ -47,7 +53,9 @@ function findLatestSessionFile(sessionDir: string): string | null {
 			.readdirSync(sessionDir)
 			.filter((f) => f.endsWith(".jsonl"))
 			.map((f) => path.join(sessionDir, f));
-		if (files.length === 0) {return null;}
+		if (files.length === 0) {
+			return null;
+		}
 		files.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
 		return files[0] ?? null;
 	} catch {
@@ -63,13 +71,17 @@ interface TokenUsage {
 
 function parseSessionTokens(sessionDir: string): TokenUsage | null {
 	const sessionFile = findLatestSessionFile(sessionDir);
-	if (!sessionFile) {return null;}
+	if (!sessionFile) {
+		return null;
+	}
 	try {
 		const content = fs.readFileSync(sessionFile, "utf8");
 		let input = 0;
 		let output = 0;
 		for (const line of content.split("\n")) {
-			if (!line.trim()) {continue;}
+			if (!line.trim()) {
+				continue;
+			}
 			try {
 				const entry = JSON.parse(line);
 				if (entry.usage) {
@@ -132,7 +144,9 @@ function resolvePiPackageRootFallback(): string {
 		const pkgJsonPath = path.join(dir, "package.json");
 		try {
 			const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
-			if (pkg.name === "@mariozechner/pi-coding-agent") {return dir;}
+			if (pkg.name === "@mariozechner/pi-coding-agent") {
+				return dir;
+			}
 		} catch {}
 		dir = path.dirname(dir);
 	}
@@ -144,7 +158,9 @@ async function exportSessionHtml(sessionFile: string, outputDir: string, piPacka
 	const exportModulePath = path.join(pkgRoot, "dist", "core", "export-html", "index.js");
 	const moduleUrl = pathToFileURL(exportModulePath).href;
 	const mod = await import(moduleUrl);
-	const {exportFromFile} = (mod as { exportFromFile?: (inputPath: string, options?: { outputPath?: string }) => string });
+	const { exportFromFile } = mod as {
+		exportFromFile?: (inputPath: string, options?: { outputPath?: string }) => string;
+	};
 	if (typeof exportFromFile !== "function") {
 		throw new TypeError("exportFromFile not available");
 	}
@@ -170,7 +186,9 @@ function createShareLink(htmlPath: string): { shareUrl: string; gistUrl: string 
 		}
 		const gistUrl = (result.stdout || "").trim();
 		const gistId = gistUrl.split("/").pop();
-		if (!gistId) {return { error: "Failed to parse gist ID." };}
+		if (!gistId) {
+			return { error: "Failed to parse gist ID." };
+		}
 		const shareUrl = `https://shittycodingagent.ai/session/?${gistId}`;
 		return { gistUrl, shareUrl };
 	} catch (error) {
@@ -184,8 +202,12 @@ function writeJson(filePath: string, payload: object): void {
 }
 
 function formatDuration(ms: number): string {
-	if (ms < 1000) {return `${ms}ms`;}
-	if (ms < 60_000) {return `${(ms / 1000).toFixed(1)}s`;}
+	if (ms < 1000) {
+		return `${ms}ms`;
+	}
+	if (ms < 60_000) {
+		return `${(ms / 1000).toFixed(1)}s`;
+	}
 	const minutes = Math.floor(ms / 60_000);
 	const seconds = Math.floor((ms % 60_000) / 1000);
 	return `${minutes}m${seconds}s`;
@@ -220,10 +242,18 @@ function writeRunLog(
 	lines.push(`- **Started:** ${new Date(input.startedAt).toISOString()}`);
 	lines.push(`- **Ended:** ${new Date(input.endedAt).toISOString()}`);
 	lines.push(`- **Duration:** ${formatDuration(input.endedAt - input.startedAt)}`);
-	if (input.sessionFile) {lines.push(`- **Session:** ${input.sessionFile}`);}
-	if (input.shareUrl) {lines.push(`- **Share:** ${input.shareUrl}`);}
-	if (input.shareError) {lines.push(`- **Share error:** ${input.shareError}`);}
-	if (input.artifactsDir) {lines.push(`- **Artifacts:** ${input.artifactsDir}`);}
+	if (input.sessionFile) {
+		lines.push(`- **Session:** ${input.sessionFile}`);
+	}
+	if (input.shareUrl) {
+		lines.push(`- **Share:** ${input.shareUrl}`);
+	}
+	if (input.shareError) {
+		lines.push(`- **Share error:** ${input.shareError}`);
+	}
+	if (input.artifactsDir) {
+		lines.push(`- **Artifacts:** ${input.artifactsDir}`);
+	}
 	lines.push("");
 	lines.push("## Steps");
 	lines.push("| Step | Agent | Status | Duration |");
@@ -274,7 +304,9 @@ async function runSingleStep(
 		} catch {}
 		args.push("--session-dir", ctx.sessionDir);
 	}
-	if (step.model) {args.push("--models", step.model);}
+	if (step.model) {
+		args.push("--models", step.model);
+	}
 
 	// Only pi's 7 builtin tools can be passed via --tools.
 	// Extension-registered tools (e.g. read_full) are not in allTools
@@ -294,13 +326,19 @@ async function runSingleStep(
 			// Else: extension-registered tool (e.g. read_full) — let the
 			// Extension register it naturally; don't pass via --tools.
 		}
-		if (builtinTools.length > 0) {args.push("--tools", builtinTools.join(","));}
+		if (builtinTools.length > 0) {
+			args.push("--tools", builtinTools.join(","));
+		}
 	}
 	if (step.extensions !== undefined) {
 		args.push("--no-extensions");
-		for (const extPath of step.extensions) {args.push("--extension", extPath);}
+		for (const extPath of step.extensions) {
+			args.push("--extension", extPath);
+		}
 	} else {
-		for (const extPath of toolExtensionPaths) {args.push("--extension", extPath);}
+		for (const extPath of toolExtensionPaths) {
+			args.push("--extension", extPath);
+		}
 	}
 
 	if (step.skills?.length) {
@@ -324,7 +362,9 @@ async function runSingleStep(
 
 	const TASK_ARG_LIMIT = 8000;
 	if (task.length > TASK_ARG_LIMIT) {
-		if (!tmpDir) {tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagent-"));}
+		if (!tmpDir) {
+			tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagent-"));
+		}
 		const taskFilePath = path.join(tmpDir, "task.md");
 		fs.writeFileSync(taskFilePath, `Task: ${task}`, { mode: 0o600 });
 		args.push(`@${taskFilePath}`);
@@ -412,7 +452,7 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 	const overallStartTime = Date.now();
 	const shareEnabled = config.share === true;
 	const sessionEnabled = Boolean(config.sessionDir) || shareEnabled;
-	const {asyncDir} = config;
+	const { asyncDir } = config;
 	const statusPath = path.join(asyncDir, "status.json");
 	const eventsPath = path.join(asyncDir, "events.jsonl");
 	const logPath = path.join(asyncDir, `subagent-log-${id}.md`);
@@ -577,7 +617,9 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 					}),
 				);
 
-				if (singleResult.exitCode !== 0 && failFast) {aborted = true;}
+				if (singleResult.exitCode !== 0 && failFast) {
+					aborted = true;
+				}
 				return { ...singleResult, skipped: false };
 			});
 
@@ -750,8 +792,9 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 			try {
 				const htmlPath = await exportSessionHtml(sessionFile, config.sessionDir, config.piPackageRoot);
 				const share = createShareLink(htmlPath);
-				if ("error" in share) {shareError = share.error;}
-				else {
+				if ("error" in share) {
+					shareError = share.error;
+				} else {
 					({ shareUrl } = share);
 					({ gistUrl } = share);
 				}
@@ -847,7 +890,9 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 
 /** Write a failure result file so the parent process knows what happened. */
 function writeFailureResult(resultPath: string | undefined, id: string, error: unknown): void {
-	if (!resultPath) {return;}
+	if (!resultPath) {
+		return;
+	}
 	try {
 		const errMsg = error instanceof Error ? `${error.message}\n${error.stack || ""}` : String(error);
 		fs.mkdirSync(path.dirname(resultPath), { recursive: true });

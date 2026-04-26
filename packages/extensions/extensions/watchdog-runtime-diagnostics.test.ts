@@ -1,4 +1,3 @@
-
 import {
 	formatExtensionDiagnostic,
 	getExtensionDiagnostics,

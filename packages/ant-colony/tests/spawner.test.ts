@@ -1,6 +1,4 @@
-
-
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	AuthStorage: class {},
 	ModelRegistry: class {},
 	SessionManager: { inMemory: vi.fn() },
@@ -16,7 +14,7 @@ vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi
 	createWriteTool: vi.fn(),
 	getAgentDir: () => "/mock-home/.pi/agent",
 }));
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({ getModel: vi.fn() }));
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({ getModel: vi.fn() }));
 
 import * as fs from "node:fs";
 import * as os from "node:os";

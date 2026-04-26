@@ -31,12 +31,18 @@ export function parseAnsiRgb(ansi: string): { r: number; g: number; b: number } 
 }
 
 export function resolveBaseBackground(theme: { getBgAnsi?: (key: string) => string } | null | undefined): void {
-	if (!theme?.getBgAnsi) {return;}
+	if (!theme?.getBgAnsi) {
+		return;
+	}
 	try {
 		const success = theme.getBgAnsi("toolSuccessBg");
 		const error = theme.getBgAnsi("toolErrorBg");
-		if (success && parseAnsiRgb(success)) {BG_BASE = success;}
-		if (error && parseAnsiRgb(error)) {BG_ERROR = error;}
+		if (success && parseAnsiRgb(success)) {
+			BG_BASE = success;
+		}
+		if (error && parseAnsiRgb(error)) {
+			BG_ERROR = error;
+		}
 		RST = `\u001b[0m${BG_BASE}`;
 	} catch {}
 }
@@ -69,18 +75,28 @@ export function termW(): number {
 
 /** Low-contrast fix: replace dark Shiki foregrounds with muted color. */
 export function isLowContrastShikiFg(params: string): boolean {
-	if (params === "30" || params === "90") {return true;}
-	if (params === "38;5;0" || params === "38;5;8") {return true;}
-	if (!params.startsWith("38;2;")) {return false;}
+	if (params === "30" || params === "90") {
+		return true;
+	}
+	if (params === "38;5;0" || params === "38;5;8") {
+		return true;
+	}
+	if (!params.startsWith("38;2;")) {
+		return false;
+	}
 	const parts = params.split(";").map(Number);
-	if (parts.length !== 5 || parts.some((n) => !Number.isFinite(n))) {return false;}
+	if (parts.length !== 5 || parts.some((n) => !Number.isFinite(n))) {
+		return false;
+	}
 	const [, , r, g, b] = parts;
 	const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 	return luminance < 72;
 }
 
 export function normalizeShikiContrast(ansi: string): string {
-	return ansi.replaceAll(/\u001B\[([0-9;]*)m/g, (seq, params: string) => isLowContrastShikiFg(params) ? FG_MUTED : seq);
+	return ansi.replaceAll(/\u001B\[([0-9;]*)m/g, (seq, params: string) =>
+		isLowContrastShikiFg(params) ? FG_MUTED : seq,
+	);
 }
 
 export function lnum(n: number, w: number): string {

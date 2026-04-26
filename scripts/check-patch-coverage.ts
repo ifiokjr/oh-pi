@@ -236,25 +236,37 @@ export function runPatchCoverageCheck({ base, head, lcovPath, threshold }: Patch
 	// Exclude lines marked with // patch-coverage-ignore from uncovered counts
 	// This handles V8 fork-pool coverage limitations with async event handlers
 	for (const entry of summary.perFile) {
-		if (entry.uncoveredLines.length === 0) {continue;}
-		if (!fs.existsSync(entry.file)) {continue;}
+		if (entry.uncoveredLines.length === 0) {
+			continue;
+		}
+		if (!fs.existsSync(entry.file)) {
+			continue;
+		}
 		const fileLines = fs.readFileSync(entry.file, "utf8").split(/\r?\n/);
 		const ignoreLines = new Set<number>();
 		for (let i = 0; i < fileLines.length; i++) {
 			// Match // patch-coverage-ignore but not inside string constants
 			const line = fileLines[i]!;
 			const commentIdx = line.indexOf("//");
-			if (commentIdx === -1) {continue;}
-			if (line.substring(0, commentIdx).includes('"')) {continue;} // Inside string
+			if (commentIdx === -1) {
+				continue;
+			}
+			if (line.substring(0, commentIdx).includes('"')) {
+				continue;
+			} // Inside string
 			if (line.substring(commentIdx).includes("patch-coverage-ignore")) {
 				ignoreLines.add(i + 1); // 1-indexed
 			}
 		}
-		if (ignoreLines.size === 0) {continue;}
+		if (ignoreLines.size === 0) {
+			continue;
+		}
 		// Check each uncovered line against ignore lines (tolerance of ±3 for source-map offsets)
 		const filtered = entry.uncoveredLines.filter((ln) => {
 			for (const ig of ignoreLines) {
-				if (Math.abs(ln - ig) <= 5) {return false;} // Patch-coverage-ignore
+				if (Math.abs(ln - ig) <= 5) {
+					return false;
+				} // Patch-coverage-ignore
 			}
 			return true;
 		});

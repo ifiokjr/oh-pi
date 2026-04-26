@@ -593,8 +593,8 @@ function buildDelegatedAssignmentLines(
 		lines.push("No delegated categories configured.");
 		return lines;
 	}
-	const {disabledProviders} = config.delegatedModelSelection;
-	const {disabledModels} = config.delegatedModelSelection;
+	const { disabledProviders } = config.delegatedModelSelection;
+	const { disabledModels } = config.delegatedModelSelection;
 	if (disabledProviders.length > 0) {
 		lines.push(`Disabled providers: ${disabledProviders.join(", ")}`);
 	}
@@ -776,7 +776,10 @@ export function resolveDelegatedAssignmentModel(params: {
 		...(override?.blockedProviders ?? []),
 	]);
 	const blockedModels = new Set([...config.delegatedModelSelection.disabledModels, ...(override?.blockedModels ?? [])]);
-	const unblockedModels = availableModels.filter((model) => !blockedProviders.has(model.provider) && !blockedModels.has(model.fullId) && !blockedModels.has(model.id));
+	const unblockedModels = availableModels.filter(
+		(model) =>
+			!blockedProviders.has(model.provider) && !blockedModels.has(model.fullId) && !blockedModels.has(model.id),
+	);
 	for (const ref of override?.preferredModels ?? []) {
 		const match = ref.endsWith("/<best-available>")
 			? unblockedModels.find((model) => model.provider === ref.slice(0, ref.indexOf("/")))

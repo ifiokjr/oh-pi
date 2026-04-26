@@ -1,6 +1,6 @@
 import { EXTENSIONS, getLocale, selectLanguage } from "@ifi/oh-pi-core";
-import { runConfigWizard } from './tui/config-wizard.js';
-import type { WizardBaseConfig } from './tui/config-wizard.js';
+import { runConfigWizard } from "./tui/config-wizard.js";
+import type { WizardBaseConfig } from "./tui/config-wizard.js";
 import { confirmApply } from "./tui/confirm-apply.js";
 import { runInstaller } from "./tui/installer.js";
 import { selectMode } from "./tui/mode-select.js";
@@ -9,8 +9,8 @@ import { setupProviders } from "./tui/provider-setup.js";
 import { setupAdaptiveRouting } from "./tui/routing-setup.js";
 import { welcome } from "./tui/welcome.js";
 import type { OhPConfigWithRouting } from "./types.js";
-import { detectEnv } from './utils/detect.js';
-import type { EnvInfo } from './utils/detect.js';
+import { detectEnv } from "./utils/detect.js";
+import type { EnvInfo } from "./utils/detect.js";
 
 export interface RunOptions {
 	yes?: boolean;

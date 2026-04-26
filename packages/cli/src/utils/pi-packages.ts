@@ -129,7 +129,7 @@ export function detectPiPackageInstallScopes(
 	return packageNames.map((packageName) => {
 		const installedInUser = userPackages.has(packageName);
 		const installedInProject = projectPackages.has(packageName);
-		const scope = installedInUser ? (installedInProject ? "both" : "user") : (installedInProject ? "project" : "none");
+		const scope = installedInUser ? (installedInProject ? "both" : "user") : installedInProject ? "project" : "none";
 		return { packageName, scope };
 	});
 }
@@ -151,7 +151,7 @@ function readStderr(error: unknown): string {
 	if (!error || typeof error !== "object" || !("stderr" in error)) {
 		return "";
 	}
-	const {stderr} = (error as { stderr?: { toString(): string } });
+	const { stderr } = error as { stderr?: { toString(): string } };
 	return stderr ? stderr.toString().trim() : "";
 }
 

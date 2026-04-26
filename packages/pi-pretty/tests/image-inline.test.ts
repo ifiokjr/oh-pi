@@ -1,4 +1,3 @@
-
 import {
 	__imageInternals,
 	detectImageProtocol,

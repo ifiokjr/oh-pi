@@ -1,5 +1,3 @@
-
-
 const providerMocks = vi.hoisted(() => {
 	const streams: any[] = [];
 	const connections: any[] = [];
@@ -99,19 +97,19 @@ const providerMocks = vi.hoisted(() => {
 	};
 });
 
-vi.mock<typeof import('@bufbuild/protobuf')>(import('@bufbuild/protobuf'), () => ({
+vi.mock<typeof import("@bufbuild/protobuf")>(import("@bufbuild/protobuf"), () => ({
 	create: providerMocks.create,
 	fromBinary: providerMocks.fromBinary,
 	toBinary: providerMocks.toBinary,
 }));
 
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({
 	calculateCost: providerMocks.calculateCost,
 	createAssistantMessageEventStream: providerMocks.createAssistantMessageEventStream,
 	getEnvApiKey: providerMocks.getEnvApiKey,
 }));
 
-vi.mock<typeof import('../messages.js')>(import('../messages.js'), () => ({
+vi.mock<typeof import("../messages.js")>(import("../messages.js"), () => ({
 	buildCursorRequestPayload: providerMocks.buildCursorRequestPayload,
 	decodeMcpArgsMap: providerMocks.decodeMcpArgsMap,
 	makeHeartbeatFrame: providerMocks.makeHeartbeatFrame,
@@ -121,7 +119,7 @@ vi.mock<typeof import('../messages.js')>(import('../messages.js'), () => ({
 	sendRequestContextResult: providerMocks.sendRequestContextResult,
 }));
 
-vi.mock<typeof import('../runtime.js')>(import('../runtime.js'), () => ({
+vi.mock<typeof import("../runtime.js")>(import("../runtime.js"), () => ({
 	cleanupCursorRuntimeState: providerMocks.cleanupCursorRuntimeState,
 	deleteActiveRun: providerMocks.deleteActiveRun,
 	deriveBridgeKey: providerMocks.deriveBridgeKey,
@@ -133,7 +131,7 @@ vi.mock<typeof import('../runtime.js')>(import('../runtime.js'), () => ({
 	upsertConversationState: providerMocks.upsertConversationState,
 }));
 
-vi.mock<typeof import('../transport.js')>(import('../transport.js'), () => ({
+vi.mock<typeof import("../transport.js")>(import("../transport.js"), () => ({
 	CursorStreamingConnection: providerMocks.FakeConnection,
 	createConnectFrameParser: providerMocks.createConnectFrameParser,
 	frameConnectMessage: providerMocks.frameConnectMessage,

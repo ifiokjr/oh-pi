@@ -1,4 +1,3 @@
-
 import type { ColonyState } from "../extensions/ant-colony/types.js";
 import {
 	antIcon,

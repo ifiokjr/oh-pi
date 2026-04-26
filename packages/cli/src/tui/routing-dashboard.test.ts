@@ -55,9 +55,9 @@ describe(detectOptionalRoutingPackages, () => {
 					scope:
 						packageName === "@ifi/pi-provider-ollama"
 							? "user"
-							: (packageName === "@ifi/pi-provider-cursor"
+							: packageName === "@ifi/pi-provider-cursor"
 								? "project"
-								: "none"),
+								: "none",
 				})),
 			[{ packageName: "@ifi/pi-extension-adaptive-routing", scope: "project" }],
 		);

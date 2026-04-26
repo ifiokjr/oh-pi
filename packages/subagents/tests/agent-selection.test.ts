@@ -1,4 +1,3 @@
-
 import { mergeAgentsForScope } from "../agent-selection.js";
 
 interface TestAgent {

@@ -3,12 +3,20 @@
  */
 
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import { getMarkdownTheme } from '@mariozechner/pi-coding-agent';
-import type { ExtensionContext } from '@mariozechner/pi-coding-agent';
-import { Container, Markdown, Spacer, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from '@mariozechner/pi-tui';
-import type { Widget } from '@mariozechner/pi-tui';
-import { MAX_WIDGET_JOBS, WIDGET_KEY } from './types.js';
-import type { AsyncJobState, Details } from './types.js';
+import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
+import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import {
+	Container,
+	Markdown,
+	Spacer,
+	Text,
+	truncateToWidth,
+	visibleWidth,
+	wrapTextWithAnsi,
+} from "@mariozechner/pi-tui";
+import type { Widget } from "@mariozechner/pi-tui";
+import { MAX_WIDGET_JOBS, WIDGET_KEY } from "./types.js";
+import type { AsyncJobState, Details } from "./types.js";
 import { formatDuration, formatTokens, formatToolCall, formatUsage, shortenPath } from "./formatters.js";
 import { getDisplayItems, getFinalOutput, getLastActivity, getOutputTail } from "./utils.js";
 
@@ -31,7 +39,9 @@ const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
  * Uses Intl.Segmenter for proper Unicode/emoji handling (not char-by-char).
  */
 function truncLine(text: string, maxWidth: number): string {
-	if (visibleWidth(text) <= maxWidth) {return text;}
+	if (visibleWidth(text) <= maxWidth) {
+		return text;
+	}
 
 	const targetWidth = maxWidth - 1; // Room for single ellipsis character
 	let result = "";
@@ -69,7 +79,7 @@ function truncLine(text: string, maxWidth: number): string {
 
 			if (currentWidth + graphemeWidth > targetWidth) {
 				// Re-apply all active styles before ellipsis to preserve background/colors
-				return `${result + activeStyles.join("")  }…`;
+				return `${result + activeStyles.join("")}…`;
 			}
 
 			result += grapheme;
@@ -79,7 +89,7 @@ function truncLine(text: string, maxWidth: number): string {
 	}
 
 	// Reached end without exceeding width (shouldn't happen given initial check)
-	return `${result + activeStyles.join("")  }…`;
+	return `${result + activeStyles.join("")}…`;
 }
 
 // Track last rendered widget state to avoid no-op re-renders
@@ -97,16 +107,24 @@ function computeWidgetHash(jobs: AsyncJobState[]): string {
 
 function extractOutputTarget(task: string): string | undefined {
 	const writeToMatch = task.match(/\[Write to:\s*([^\]\n]+)\]/i);
-	if (writeToMatch?.[1]?.trim()) {return writeToMatch[1].trim();}
+	if (writeToMatch?.[1]?.trim()) {
+		return writeToMatch[1].trim();
+	}
 	const findingsMatch = task.match(/Write your findings to:\s*(\S+)/i);
-	if (findingsMatch?.[1]?.trim()) {return findingsMatch[1].trim();}
+	if (findingsMatch?.[1]?.trim()) {
+		return findingsMatch[1].trim();
+	}
 	const outputMatch = task.match(/[Oo]utput(?:\s+to)?\s*:\s*(\S+)/i);
-	if (outputMatch?.[1]?.trim()) {return outputMatch[1].trim();}
+	if (outputMatch?.[1]?.trim()) {
+		return outputMatch[1].trim();
+	}
 	return undefined;
 }
 
 function hasEmptyTextOutputWithoutOutputTarget(task: string, output: string): boolean {
-	if (output.trim()) {return false;}
+	if (output.trim()) {
+		return false;
+	}
 	return !extractOutputTarget(task);
 }
 
@@ -118,7 +136,9 @@ export function renderWidget(
 	jobs: AsyncJobState[],
 	options: { suppressed?: boolean } = {},
 ): void {
-	if (!ctx.hasUI) {return;}
+	if (!ctx.hasUI) {
+		return;
+	}
 	if (options.suppressed || jobs.length === 0) {
 		if (lastWidgetHash !== "") {
 			lastWidgetHash = "";
@@ -137,7 +157,7 @@ export function renderWidget(
 	}
 	lastWidgetHash = newHash;
 
-	const {theme} = ctx.ui;
+	const { theme } = ctx.ui;
 	const w = getTermWidth();
 	const lines: string[] = [];
 	lines.push(theme.fg("accent", "Async subagents"));
@@ -147,9 +167,9 @@ export function renderWidget(
 		const status =
 			job.status === "complete"
 				? theme.fg("success", "complete")
-				: (job.status === "failed"
+				: job.status === "failed"
 					? theme.fg("error", "failed")
-					: theme.fg("warning", "running"));
+					: theme.fg("warning", "running");
 
 		const stepsTotal = job.stepsTotal ?? job.agents?.length ?? 1;
 		const stepIndex = job.currentStep !== undefined ? job.currentStep + 1 : undefined;
@@ -203,17 +223,17 @@ export function renderSubagentResult(
 		const isRunning = r.progress?.status === "running";
 		const icon = isRunning
 			? theme.fg("warning", "...")
-			: (r.exitCode === 0
+			: r.exitCode === 0
 				? theme.fg("success", "ok")
-				: theme.fg("error", "X"));
+				: theme.fg("error", "X");
 		const output = r.truncation?.text || getFinalOutput(r.messages);
 
 		const progressInfo =
 			isRunning && r.progress
 				? ` | ${r.progress.toolCount} tools, ${formatTokens(r.progress.tokens)} tok, ${formatDuration(r.progress.durationMs)}`
-				: (r.progressSummary
+				: r.progressSummary
 					? ` | ${r.progressSummary.toolCount} tools, ${formatTokens(r.progressSummary.tokens)} tok, ${formatDuration(r.progressSummary.durationMs)}`
-					: "");
+					: "";
 
 		const w = getTermWidth() - 4;
 		const c = new Container();
@@ -226,12 +246,17 @@ export function renderSubagentResult(
 
 		const items = getDisplayItems(r.messages);
 		for (const item of items) {
-			if (item.type === "tool")
-				{c.addChild(new Text(truncLine(theme.fg("muted", formatToolCall(item.name, item.args)), w), 0, 0));}
+			if (item.type === "tool") {
+				c.addChild(new Text(truncLine(theme.fg("muted", formatToolCall(item.name, item.args)), w), 0, 0));
+			}
 		}
-		if (items.length > 0) {c.addChild(new Spacer(1));}
+		if (items.length > 0) {
+			c.addChild(new Spacer(1));
+		}
 
-		if (output) {c.addChild(new Markdown(output, 0, 0, mdTheme));}
+		if (output) {
+			c.addChild(new Markdown(output, 0, 0, mdTheme));
+		}
 		c.addChild(new Spacer(1));
 		if (r.skills?.length) {
 			c.addChild(new Text(truncLine(theme.fg("dim", `Skills: ${r.skills.join(", ")}`), w), 0, 0));
@@ -408,9 +433,9 @@ export function renderSubagentResult(
 			if (rProg.currentTool) {
 				const maxToolArgsLen = Math.max(50, w - 20);
 				const toolArgsPreview = rProg.currentToolArgs
-					? (rProg.currentToolArgs.length > maxToolArgsLen
+					? rProg.currentToolArgs.length > maxToolArgsLen
 						? `${rProg.currentToolArgs.slice(0, maxToolArgsLen)}...`
-						: rProg.currentToolArgs)
+						: rProg.currentToolArgs
 					: "";
 				const toolLine = toolArgsPreview ? `${rProg.currentTool}: ${toolArgsPreview}` : rProg.currentTool;
 				c.addChild(new Text(truncLine(theme.fg("warning", `    > ${toolLine}`), w), 0, 0));

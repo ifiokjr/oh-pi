@@ -8,11 +8,11 @@ const { createBashToolMock, getShellConfigMock, spawnMock } = vi.hoisted(() => (
 	spawnMock: vi.fn(),
 }));
 
-vi.mock<typeof import('node:child_process')>(import('node:child_process'), () => ({
+vi.mock<typeof import("node:child_process")>(import("node:child_process"), () => ({
 	spawn: spawnMock,
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), async () => {
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), async () => {
 	const actual = await vi.importActual<typeof import("@mariozechner/pi-coding-agent")>("@mariozechner/pi-coding-agent");
 	return {
 		...actual,
@@ -22,7 +22,7 @@ vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi
 	};
 });
 
-vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () => ({
+vi.mock<typeof import("@mariozechner/pi-ai")>(import("@mariozechner/pi-ai"), () => ({
 	StringEnum: (values: readonly string[], options?: Record<string, unknown>) => ({
 		enum: [...values],
 		type: "string",
@@ -30,7 +30,7 @@ vi.mock<typeof import('@mariozechner/pi-ai')>(import('@mariozechner/pi-ai'), () 
 	}),
 }));
 
-vi.mock<typeof import('@sinclair/typebox')>(import('@sinclair/typebox'), () => ({
+vi.mock<typeof import("@sinclair/typebox")>(import("@sinclair/typebox"), () => ({
 	Type: {
 		Boolean: (options?: Record<string, unknown>) => ({ type: "boolean", ...options }),
 		Number: (options?: Record<string, unknown>) => ({ type: "number", ...options }),

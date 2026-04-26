@@ -1,7 +1,6 @@
-
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
-import diagnosticsExtension, { diagnosticsInternals } from '../index.js';
-import type { PromptCompletionDiagnostics } from '../index.js';
+import diagnosticsExtension, { diagnosticsInternals } from "../index.js";
+import type { PromptCompletionDiagnostics } from "../index.js";
 
 interface ThemeStub {
 	bg: (_color: string, text: string) => string;

@@ -7,22 +7,34 @@ import * as path from "node:path";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import type { AgentConfig } from "./agents.js";
-import { ChainClarifyComponent } from './chain-clarify.js';
-import type { ChainClarifyResult, BehaviorOverride, ModelInfo } from './chain-clarify.js';
-import { resolveChainTemplates, createChainDir, removeChainDir, resolveStepBehavior, resolveParallelBehaviors, buildChainInstructions, createParallelDirs, aggregateParallelOutputs, isParallelStep } from './settings.js';
-import type { StepOverrides, ChainStep, SequentialStep, ParallelTaskResult, ResolvedTemplates } from './settings.js';
+import { ChainClarifyComponent } from "./chain-clarify.js";
+import type { ChainClarifyResult, BehaviorOverride, ModelInfo } from "./chain-clarify.js";
+import {
+	resolveChainTemplates,
+	createChainDir,
+	removeChainDir,
+	resolveStepBehavior,
+	resolveParallelBehaviors,
+	buildChainInstructions,
+	createParallelDirs,
+	aggregateParallelOutputs,
+	isParallelStep,
+} from "./settings.js";
+import type { StepOverrides, ChainStep, SequentialStep, ParallelTaskResult, ResolvedTemplates } from "./settings.js";
 import { discoverAvailableSkills, normalizeSkillInput } from "./skills.js";
 import { runSync } from "./execution.js";
 import { buildChainSummary } from "./formatters.js";
 import { getFinalOutput, mapConcurrent } from "./utils.js";
 import { recordRun } from "./run-history.js";
 import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
-import { MAX_CONCURRENCY } from './types.js';
-import type { AgentProgress, ArtifactConfig, ArtifactPaths, Details, SingleResult } from './types.js';
+import { MAX_CONCURRENCY } from "./types.js";
+import type { AgentProgress, ArtifactConfig, ArtifactPaths, Details, SingleResult } from "./types.js";
 
 /** Resolve a model name to its full provider/model format */
 function resolveModelFullId(modelName: string | undefined, availableModels: ModelInfo[]): string | undefined {
-	if (!modelName) {return undefined;}
+	if (!modelName) {
+		return undefined;
+	}
 
 	// Handle thinking level suffixes (e.g., "claude-sonnet-4-5:high")
 	// Strip the suffix for lookup, then add it back
@@ -205,7 +217,9 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 			removeChainDir(chainDir); // Will be recreated by async runner
 			// Apply TUI edits (templates + behavior overrides) to chain steps
 			const updatedChain = chainSteps.map((step, i) => {
-				if (isParallelStep(step)) {return step;} // Parallel steps unchanged (TUI skipped for parallel chains)
+				if (isParallelStep(step)) {
+					return step;
+				} // Parallel steps unchanged (TUI skipped for parallel chains)
 				const override = result.behaviorOverrides[i];
 				return {
 					...step,
@@ -365,8 +379,12 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 			// Collect results and progress
 			for (const r of parallelResults) {
 				results.push(r);
-				if (r.progress) {allProgress.push(r.progress);}
-				if (r.artifactPaths) {allArtifactPaths.push(r.artifactPaths);}
+				if (r.progress) {
+					allProgress.push(r.progress);
+				}
+				if (r.artifactPaths) {
+					allArtifactPaths.push(r.artifactPaths);
+				}
 			}
 
 			// Check for failures (track original task index for better error messages)
@@ -402,9 +420,9 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 				const outputTarget = parallelBehaviors[i]?.output;
 				const outputTargetPath =
 					typeof outputTarget === "string"
-						? (path.isAbsolute(outputTarget)
+						? path.isAbsolute(outputTarget)
 							? outputTarget
-							: path.join(chainDir, outputTarget))
+							: path.join(chainDir, outputTarget)
 						: undefined;
 				return {
 					agent: r.agent,
@@ -513,8 +531,12 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 
 			globalTaskIndex++;
 			results.push(r);
-			if (r.progress) {allProgress.push(r.progress);}
-			if (r.artifactPaths) {allArtifactPaths.push(r.artifactPaths);}
+			if (r.progress) {
+				allProgress.push(r.progress);
+			}
+			if (r.artifactPaths) {
+				allArtifactPaths.push(r.artifactPaths);
+			}
 
 			// Validate expected output file was created
 			if (behavior.output && r.exitCode === 0) {

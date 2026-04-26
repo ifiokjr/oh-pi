@@ -1,6 +1,6 @@
 import type { Api, Model, OAuthCredentials } from "@mariozechner/pi-ai";
-import { MODELS_DEV_CACHE_TTL_MS, MODELS_DEV_CATALOG_URL, normalizeProviderBaseUrl } from './config.js';
-import type { SupportedProviderDefinition } from './config.js';
+import { MODELS_DEV_CACHE_TTL_MS, MODELS_DEV_CATALOG_URL, normalizeProviderBaseUrl } from "./config.js";
+import type { SupportedProviderDefinition } from "./config.js";
 
 export interface ProviderCatalogModel {
 	id: string;

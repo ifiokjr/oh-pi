@@ -1,8 +1,13 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-import { streamSimpleOpenAICompletions } from '@mariozechner/pi-ai';
-import type { AssistantMessageEventStream, Context, Model, SimpleStreamOptions } from '@mariozechner/pi-ai';
-import { createOllamaCloudOAuthProvider, loginOllamaCloud, refreshOllamaCloudCredential, refreshOllamaCloudCredentialModels } from './auth.js';
-import type { CloudModelsGetter } from './auth.js';
+import { streamSimpleOpenAICompletions } from "@mariozechner/pi-ai";
+import type { Api, AssistantMessageEventStream, Context, Model, SimpleStreamOptions } from "@mariozechner/pi-ai";
+import {
+	createOllamaCloudOAuthProvider,
+	loginOllamaCloud,
+	refreshOllamaCloudCredential,
+	refreshOllamaCloudCredentialModels,
+} from "./auth.js";
+import type { CloudModelsGetter } from "./auth.js";
 import {
 	OLLAMA_API,
 	OLLAMA_CLOUD_API_KEY_ENV,
@@ -12,10 +17,18 @@ import {
 	getOllamaCloudRuntimeConfig,
 	getOllamaLocalRuntimeConfig,
 } from "./config.js";
-import { clearOllamaCliStatusCache, getOllamaCliStatus, pullOllamaModel } from './local.js';
-import type { OllamaCliStatus } from './local.js';
-import { discoverOllamaCloudModels, discoverOllamaLocalModels, getCredentialModels, getFallbackOllamaCloudModels, mergeOllamaLocalCatalog, toDownloadableOllamaLocalModel, toProviderModels } from './models.js';
-import type { OllamaCloudCredentials, OllamaProviderModel } from './models.js';
+import { clearOllamaCliStatusCache, getOllamaCliStatus, pullOllamaModel } from "./local.js";
+import type { OllamaCliStatus } from "./local.js";
+import {
+	discoverOllamaCloudModels,
+	discoverOllamaLocalModels,
+	getCredentialModels,
+	getFallbackOllamaCloudModels,
+	mergeOllamaLocalCatalog,
+	toDownloadableOllamaLocalModel,
+	toProviderModels,
+} from "./models.js";
+import type { OllamaCloudCredentials, OllamaProviderModel } from "./models.js";
 
 interface RuntimeDiscoveryState {
 	models: OllamaProviderModel[];
@@ -25,7 +38,7 @@ interface RuntimeDiscoveryState {
 
 interface ModelRegistryAuthStorage {
 	get: (provider: string) => unknown;
-	set: (provider: string, credential: any) => void;
+	set: (provider: string, credential: unknown) => void;
 }
 
 interface ModelRegistryLike {
@@ -491,7 +504,7 @@ async function pullLocalModel(pi: ExtensionAPI, ctx: CommandContextLike, modelId
 }
 
 function streamSimpleOllama(
-	model: Model<any>,
+	model: Model<Api>,
 	context: Context,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
@@ -507,7 +520,7 @@ function streamSimpleOllama(
 }
 
 function streamSimpleOllamaCloud(
-	model: Model<any>,
+	model: Model<Api>,
 	context: Context,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
@@ -515,7 +528,7 @@ function streamSimpleOllamaCloud(
 }
 
 function streamSimpleOllamaLocal(
-	model: Model<any>,
+	model: Model<Api>,
 	context: Context,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
@@ -534,9 +547,9 @@ function streamSimpleOllamaLocal(
 function getCloudModels(credential: OllamaCloudCredentials | null): OllamaProviderModel[] {
 	return cloudEnvDiscoveryState.models.length > 0
 		? cloudEnvDiscoveryState.models
-		: (credential
+		: credential
 			? getCredentialModels(credential)
-			: getFallbackOllamaCloudModels());
+			: getFallbackOllamaCloudModels();
 }
 
 function getCloudRefreshAge(credential: OllamaCloudCredentials | null): string {
@@ -665,7 +678,7 @@ function renderModelInfo(model: CollectedOllamaModel): string {
 	}
 	const capabilitySummary = summarizeCapabilities(model);
 	if (capabilitySummary) {
-		lines.splice(- 1, 0, `Capabilities: ${capabilitySummary}`);
+		lines.splice(-1, 0, `Capabilities: ${capabilitySummary}`);
 	}
 	return lines.join("\n");
 }

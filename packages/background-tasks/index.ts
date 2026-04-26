@@ -2,13 +2,41 @@
 
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { getShellConfig } from '@mariozechner/pi-coding-agent';
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext, Theme } from '@mariozechner/pi-coding-agent';
+import { getShellConfig } from "@mariozechner/pi-coding-agent";
+import type { AgentToolResult, ExtensionAPI, ExtensionCommandContext, ExtensionContext, Theme } from "@mariozechner/pi-coding-agent";
 import { StringEnum } from "@mariozechner/pi-ai";
 import { Text, matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
-import { BG_COMMAND, BG_DASHBOARD_MAX_HEIGHT, BG_DASHBOARD_WIDTH, BG_DEFAULT_TIMEOUT_MS, BG_INSTALL_SYMBOL, BG_LOG_TAIL_MAX_CHARS, BG_MESSAGE_TYPE, BG_OUTPUT_ALERT_MAX_CHARS, BG_OUTPUT_SETTLE_MS, BG_SHORTCUT, BG_WIDGET_KEY, buildTaskSummaryLine, createBgProcessShellEnv, formatDuration, formatRelativeTime, getBgProcessLogFilePath, isBackgroundTaskEventDetails, parseOutputMatcher, resolveTaskByToken, summarizeTaskStatus, tailText, taskDisplayName, trimOutputBuffer } from './background-tasks-shared.js';
-import type { BackgroundTaskEventDetails, BackgroundTaskSnapshot, BackgroundTaskStatus } from './background-tasks-shared.js';
+import {
+	BG_COMMAND,
+	BG_DASHBOARD_MAX_HEIGHT,
+	BG_DASHBOARD_WIDTH,
+	BG_DEFAULT_TIMEOUT_MS,
+	BG_INSTALL_SYMBOL,
+	BG_LOG_TAIL_MAX_CHARS,
+	BG_MESSAGE_TYPE,
+	BG_OUTPUT_ALERT_MAX_CHARS,
+	BG_OUTPUT_SETTLE_MS,
+	BG_SHORTCUT,
+	BG_WIDGET_KEY,
+	buildTaskSummaryLine,
+	createBgProcessShellEnv,
+	formatDuration,
+	formatRelativeTime,
+	getBgProcessLogFilePath,
+	isBackgroundTaskEventDetails,
+	parseOutputMatcher,
+	resolveTaskByToken,
+	summarizeTaskStatus,
+	tailText,
+	taskDisplayName,
+	trimOutputBuffer,
+} from "./background-tasks-shared.js";
+import type {
+	BackgroundTaskEventDetails,
+	BackgroundTaskSnapshot,
+	BackgroundTaskStatus,
+} from "./background-tasks-shared.js";
 
 type ManagedTask = BackgroundTaskSnapshot & {
 	child: ReturnType<typeof spawn>;
@@ -645,7 +673,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 
 					for (const task of sorted.slice(taskScroll, taskScroll + DASHBOARD_TASK_VIEWPORT)) {
 						const marker = task.id === selected?.id ? theme.fg("accent", "→") : theme.fg("dim", "·");
-						const statusColor = task.status === "running" ? "success" : (task.status === "failed" ? "error" : "muted");
+						const statusColor = task.status === "running" ? "success" : task.status === "failed" ? "error" : "muted";
 						left.push(
 							`${marker} ${theme.fg(statusColor, task.id)} ${theme.fg("dim", summarizeTaskStatus(task.status, task.exitCode))}`,
 						);
@@ -848,7 +876,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 	const makeToolResult = (
 		text: string,
 		options: { details?: Record<string, unknown>; isError?: boolean } = {},
-	): any => ({
+	): AgentToolResult<unknown> => ({
 		content: [{ text, type: "text" }],
 		details: options.details ?? {},
 		isError: options.isError,
@@ -903,7 +931,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 
 	pi.registerTool({
 		description: "Check status, view output, or stop background tasks that were spawned explicitly.",
-		async execute(_toolCallId, params, _signal, _onUpdate, _ctx): Promise<any> {
+		async execute(_toolCallId, params, _signal, _onUpdate, _ctx): Promise<AgentToolResult<unknown>> {
 			if (params.action === "list") {
 				return makeToolResult(formatTaskListText());
 			}
@@ -934,7 +962,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 	pi.registerTool({
 		description:
 			"Spawn, inspect, and stop background shell tasks. Tasks keep running after the tool returns, append output to a log file, and can wake the agent up when new output arrives or when the task exits. Background tasks expire after 10 minutes by default to prevent indefinite runs. Pass expiresAt=null to disable the expiry.",
-		async execute(_toolCallId, params, _signal, _onUpdate, _ctx): Promise<any> {
+		async execute(_toolCallId, params, _signal, _onUpdate, _ctx): Promise<AgentToolResult<unknown>> {
 			const { action } = params;
 
 			if (action === "list") {

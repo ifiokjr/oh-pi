@@ -1,5 +1,3 @@
-
-
 const renderMocks = vi.hoisted(() => ({
 	getDisplayItems: vi.fn(() => []),
 	getFinalOutput: vi.fn((messages: any[]) => messages.at(-1)?.content?.[0]?.text ?? ""),
@@ -7,11 +5,11 @@ const renderMocks = vi.hoisted(() => ({
 	getOutputTail: vi.fn(() => ["line a", "line b"]),
 }));
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), () => ({
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), () => ({
 	getMarkdownTheme: () => ({ theme: "markdown" }),
 }));
 
-vi.mock<typeof import('@mariozechner/pi-tui')>(import('@mariozechner/pi-tui'), () => ({
+vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), () => ({
 	Container: class {
 		children: unknown[] = [];
 		addChild(child: unknown) {
@@ -50,7 +48,7 @@ vi.mock<typeof import('@mariozechner/pi-tui')>(import('@mariozechner/pi-tui'), (
 	},
 }));
 
-vi.mock<typeof import('../formatters.js')>(import('../formatters.js'), () => ({
+vi.mock<typeof import("../formatters.js")>(import("../formatters.js"), () => ({
 	formatDuration: (value: number) => `${value}ms`,
 	formatTokens: (value: number) => `${value}t`,
 	formatToolCall: (name: string) => `tool:${name}`,
@@ -58,7 +56,7 @@ vi.mock<typeof import('../formatters.js')>(import('../formatters.js'), () => ({
 	shortenPath: (value: string) => value.replace(process.env.HOME ?? "", "~"),
 }));
 
-vi.mock<typeof import('../utils.js')>(import('../utils.js'), () => ({
+vi.mock<typeof import("../utils.js")>(import("../utils.js"), () => ({
 	getDisplayItems: renderMocks.getDisplayItems,
 	getFinalOutput: renderMocks.getFinalOutput,
 	getLastActivity: renderMocks.getLastActivity,

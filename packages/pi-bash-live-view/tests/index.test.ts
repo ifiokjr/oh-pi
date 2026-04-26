@@ -1,4 +1,3 @@
-
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 
 const mocks = vi.hoisted(() => {
@@ -33,7 +32,7 @@ const mocks = vi.hoisted(() => {
 	};
 });
 
-vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi-coding-agent'), async () => {
+vi.mock<typeof import("@mariozechner/pi-coding-agent")>(import("@mariozechner/pi-coding-agent"), async () => {
 	const actual = await vi.importActual<typeof import("@mariozechner/pi-coding-agent")>("@mariozechner/pi-coding-agent");
 	return {
 		...actual,
@@ -41,7 +40,7 @@ vi.mock<typeof import('@mariozechner/pi-coding-agent')>(import('@mariozechner/pi
 	};
 });
 
-vi.mock<typeof import('@sinclair/typebox')>(import('@sinclair/typebox'), () => ({
+vi.mock<typeof import("@sinclair/typebox")>(import("@sinclair/typebox"), () => ({
 	Type: {
 		Boolean: (options?: Record<string, unknown>) => ({ type: "boolean", ...options }),
 		Integer: (options?: Record<string, unknown>) => ({ type: "integer", ...options }),
@@ -53,13 +52,13 @@ vi.mock<typeof import('@sinclair/typebox')>(import('@sinclair/typebox'), () => (
 	},
 }));
 
-vi.mock<typeof import('../src/pty-execute.js')>(import('../src/pty-execute.js'), () => ({
+vi.mock<typeof import("../src/pty-execute.js")>(import("../src/pty-execute.js"), () => ({
 	executePtyCommand: mocks.executePtyCommand,
 	toAgentToolResult: mocks.toAgentToolResult,
 	toUserBashResult: mocks.toUserBashResult,
 }));
 
-vi.mock<typeof import('../src/pty-session.js')>(import('../src/pty-session.js'), () => ({
+vi.mock<typeof import("../src/pty-session.js")>(import("../src/pty-session.js"), () => ({
 	PtySessionManager: class {
 		dispose() {
 			mocks.sessionManagerDispose();

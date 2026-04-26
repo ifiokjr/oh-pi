@@ -1,12 +1,12 @@
 import type { AgentToolResult, AgentToolUpdateCallback } from "@mariozechner/pi-coding-agent";
-import { appendExitSummary, highlightErrorOutput, tailText, truncateOutput } from './truncate.js';
-import type { OutputTruncation } from './truncate.js';
-import { PtySessionManager } from './pty-session.js';
-import type { ManagedPtySession } from './pty-session.js';
-import { createTerminalEmulator } from './terminal-emulator.js';
-import type { TerminalEmulator } from './terminal-emulator.js';
-import { PtyLiveWidgetController } from './widget.js';
-import type { WidgetContextLike, WidgetStatus } from './widget.js';
+import { appendExitSummary, highlightErrorOutput, tailText, truncateOutput } from "./truncate.js";
+import type { OutputTruncation } from "./truncate.js";
+import { PtySessionManager } from "./pty-session.js";
+import type { ManagedPtySession } from "./pty-session.js";
+import { createTerminalEmulator } from "./terminal-emulator.js";
+import type { TerminalEmulator } from "./terminal-emulator.js";
+import { PtyLiveWidgetController } from "./widget.js";
+import type { WidgetContextLike, WidgetStatus } from "./widget.js";
 
 const STREAM_UPDATE_DEBOUNCE_MS = 120;
 const DEFAULT_PREVIEW_LINES = 40;
@@ -223,7 +223,7 @@ export async function executePtyCommand(options: ExecutePtyCommandOptions): Prom
 			clearTimeout(flushTimer);
 			flushTimer = null;
 		}
-		timeoutTimer && clearTimeout(timeoutTimer);
+		if (timeoutTimer) clearTimeout(timeoutTimer);
 		options.signal?.removeEventListener("abort", abortListener);
 
 		const status = toExecutionStatus(exitEvent.exitCode, cancelled, timedOut);

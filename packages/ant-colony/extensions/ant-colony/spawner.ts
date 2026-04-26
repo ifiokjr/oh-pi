@@ -8,11 +8,25 @@
  */
 
 import { getModel } from "@mariozechner/pi-ai";
-import { AuthStorage, createAgentSession, createBashTool, createEditTool, createExtensionRuntime, createFindTool, createGrepTool, createLsTool, createReadTool, createWriteTool, ModelRegistry, SessionManager, SettingsManager } from '@mariozechner/pi-coding-agent';
-import type { AgentSessionEvent, ResourceLoader } from '@mariozechner/pi-coding-agent';
+import {
+	AuthStorage,
+	createAgentSession,
+	createBashTool,
+	createEditTool,
+	createExtensionRuntime,
+	createFindTool,
+	createGrepTool,
+	createLsTool,
+	createReadTool,
+	createWriteTool,
+	ModelRegistry,
+	SessionManager,
+	SettingsManager,
+} from "@mariozechner/pi-coding-agent";
+import type { AgentSession, AgentSessionEvent, ResourceLoader } from "@mariozechner/pi-coding-agent";
 import type { Nest } from "./nest.js";
-import { extractPheromones, parseSubTasks } from './parser.js';
-import type { ParsedSubTask } from './parser.js';
+import { extractPheromones, parseSubTasks } from "./parser.js";
+import type { ParsedSubTask } from "./parser.js";
 import { CASTE_PROMPTS, buildPrompt } from "./prompts.js";
 import type { Ant, AntCaste, AntConfig, AntStreamEvent, AntUsageEvent, DroneCommandPolicy, Task } from "./types.js";
 
@@ -134,7 +148,7 @@ export type { ParsedSubTask } from "./parser.js";
 /** Create tool instances for the given caste's allowed tool names. */
 function createToolsForCaste(cwd: string, toolNames: string[]) {
 	// Biome-ignore lint/suspicious/noExplicitAny: Tool factory return types vary across the SDK
-	const toolMap: Record<string, (cwd: string) => any> = {
+	const toolMap: Record<string, (cwd: string) => unknown> = {
 		bash: createBashTool,
 		edit: createEditTool,
 		find: createFindTool,
@@ -330,7 +344,7 @@ export async function spawnAnt(
 	let accumulatedText = "";
 	let rateLimited = false;
 	// Biome-ignore lint/suspicious/noExplicitAny: AgentSession type is not exported from the SDK
-	let session: any = null;
+	let session: AgentSession | null = null;
 
 	try {
 		const created = await createAgentSession({
@@ -349,7 +363,7 @@ export async function spawnAnt(
 		// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Ant stream handling needs streaming, usage, and pheromone updates in one subscription.
 		session.subscribe((event: AgentSessionEvent) => {
 			if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
-				const {delta} = event.assistantMessageEvent;
+				const { delta } = event.assistantMessageEvent;
 				accumulatedText += delta;
 				onStream?.({
 					antId,
@@ -383,7 +397,7 @@ export async function spawnAnt(
 					provider?: string;
 					model?: string;
 				};
-				const {usage} = message;
+				const { usage } = message;
 				if (usage) {
 					const input = toNumber(usage.input);
 					const output = toNumber(usage.output);
@@ -433,7 +447,7 @@ export async function spawnAnt(
 			}
 		}
 
-		const {messages} = session;
+		const { messages } = session;
 		let finalOutput = accumulatedText;
 		if (!finalOutput) {
 			for (let i = messages.length - 1; i >= 0; i--) {

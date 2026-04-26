@@ -1,4 +1,3 @@
-
 import { createCursorOAuthProvider, generateCursorAuthParams, getTokenExpiry, refreshCursorToken } from "../auth.js";
 import { createTestCursorBackend } from "./test-backend.js";
 

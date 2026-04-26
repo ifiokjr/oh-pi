@@ -86,7 +86,9 @@ function getProviderDisplayName(providerId: string): string {
 let migrationsDone = false;
 
 function ensureDatabase(): void {
-	if (migrationsDone) {return;}
+	if (migrationsDone) {
+		return;
+	}
 	runMigrations();
 	migrationsDone = true;
 }
@@ -118,7 +120,9 @@ function endAnalyticsSession(): void {
 }
 
 function updateCodebase(cwd: string | undefined): string | undefined {
-	if (!cwd) {return undefined;}
+	if (!cwd) {
+		return undefined;
+	}
 
 	const codebaseId = getCodebaseHash(cwd);
 
@@ -232,7 +236,9 @@ export default function piAnalytics(pi: ExtensionAPI) {
 	});
 
 	pi.on("turn_end", (event, ctx) => {
-		if (event.message.role !== "assistant") {return;}
+		if (event.message.role !== "assistant") {
+			return;
+		}
 
 		const msg = event.message as {
 			model: string;

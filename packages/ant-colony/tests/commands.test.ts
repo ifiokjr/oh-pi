@@ -1,4 +1,3 @@
-
 import antColonyExtension from "../extensions/ant-colony/index.js";
 
 const { runColonyMock, resumeColonyMock } = vi.hoisted(() => {
@@ -48,36 +47,42 @@ const { runColonyMock, resumeColonyMock } = vi.hoisted(() => {
 	return { resumeColonyMock, runColonyMock };
 });
 
-vi.mock<typeof import('../extensions/ant-colony/queen.js')>(import('../extensions/ant-colony/queen.js'), async (importActual) => {
-	const actual = await importActual<typeof import("../extensions/ant-colony/queen.js")>();
-	return {
-		...actual,
-		resumeColony: resumeColonyMock,
-		runColony: runColonyMock,
-	};
-});
+vi.mock<typeof import("../extensions/ant-colony/queen.js")>(
+	import("../extensions/ant-colony/queen.js"),
+	async (importActual) => {
+		const actual = await importActual<typeof import("../extensions/ant-colony/queen.js")>();
+		return {
+			...actual,
+			resumeColony: resumeColonyMock,
+			runColony: runColonyMock,
+		};
+	},
+);
 
-vi.mock<typeof import('../extensions/ant-colony/worktree.js')>(import('../extensions/ant-colony/worktree.js'), async (importActual) => {
-	const actual = await importActual<typeof import("../extensions/ant-colony/worktree.js")>();
+vi.mock<typeof import("../extensions/ant-colony/worktree.js")>(
+	import("../extensions/ant-colony/worktree.js"),
+	async (importActual) => {
+		const actual = await importActual<typeof import("../extensions/ant-colony/worktree.js")>();
 
-	const mkShared = (cwd: string) => ({
-		baseBranch: null,
-		branch: null,
-		executionCwd: cwd,
-		mode: "shared" as const,
-		note: null,
-		originCwd: cwd,
-		repoRoot: null,
-		worktreeRoot: null,
-	});
+		const mkShared = (cwd: string) => ({
+			baseBranch: null,
+			branch: null,
+			executionCwd: cwd,
+			mode: "shared" as const,
+			note: null,
+			originCwd: cwd,
+			repoRoot: null,
+			worktreeRoot: null,
+		});
 
-	return {
-		...actual,
-		cleanupIsolatedWorktree: () => null,
-		prepareColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
-		resumeColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
-	};
-});
+		return {
+			...actual,
+			cleanupIsolatedWorktree: () => null,
+			prepareColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
+			resumeColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
+		};
+	},
+);
 
 interface CommandSpec {
 	description?: string;

@@ -13,10 +13,10 @@
  * - Uses `completeSimple` for LLM-powered question extraction
  */
 
-import { QnATuiComponent } from '@ifi/pi-shared-qna';
-import type { QnAQuestion, QnAResult, QnATemplate } from '@ifi/pi-shared-qna';
-import { completeSimple } from '@mariozechner/pi-ai';
-import type { UserMessage } from '@mariozechner/pi-ai';
+import { QnATuiComponent } from "@ifi/pi-shared-qna";
+import type { QnAQuestion, QnAResult, QnATemplate } from "@ifi/pi-shared-qna";
+import { completeSimple } from "@mariozechner/pi-ai";
+import type { UserMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader } from "@mariozechner/pi-coding-agent";
 
@@ -313,16 +313,19 @@ async function runAnswerFlow(
 	}
 
 	// Show the QnA component
-	const result = await ctx.ui.custom<QnAResult | null>((tui, theme, _kb, done) => new QnATuiComponent(toQnAQuestions(questions), tui, done, {
-			title: "Answer",
-			templates: DEFAULT_TEMPLATES,
-			accentColor: (text) => theme.fg("accent", text),
-			successColor: (text) => theme.fg("success", text),
-			warningColor: (text) => theme.fg("warning", text),
-			mutedColor: (text) => theme.fg("muted", text),
-			dimColor: (text) => theme.fg("dim", text),
-			boldText: (text) => theme.bold(text),
-		}));
+	const result = await ctx.ui.custom<QnAResult | null>(
+		(tui, theme, _kb, done) =>
+			new QnATuiComponent(toQnAQuestions(questions), tui, done, {
+				title: "Answer",
+				templates: DEFAULT_TEMPLATES,
+				accentColor: (text) => theme.fg("accent", text),
+				successColor: (text) => theme.fg("success", text),
+				warningColor: (text) => theme.fg("warning", text),
+				mutedColor: (text) => theme.fg("muted", text),
+				dimColor: (text) => theme.fg("dim", text),
+				boldText: (text) => theme.bold(text),
+			}),
+	);
 
 	if (!result) {
 		ctx.ui.notify("Answer cancelled", "info");

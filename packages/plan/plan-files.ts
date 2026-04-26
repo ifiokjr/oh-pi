@@ -62,7 +62,7 @@ export async function resolvePlanLocationInput(ctx: ExtensionContext, rawLocatio
 			isDirectory = true;
 		}
 	} catch (error) {
-		const {code} = (error as { code?: string });
+		const { code } = error as { code?: string };
 		if (code !== "ENOENT") {
 			throw error;
 		}
@@ -92,7 +92,7 @@ export async function movePlanFile(sourcePath: string | undefined, targetPath: s
 		await rename(sourcePath, targetPath);
 		return;
 	} catch (error) {
-		const {code} = (error as { code?: string });
+		const { code } = error as { code?: string };
 		if (code === "ENOENT") {
 			await ensurePlanFileExists(targetPath);
 			return;
@@ -143,7 +143,7 @@ export async function pathExists(filePath: string | undefined): Promise<boolean>
 		await stat(filePath);
 		return true;
 	} catch (error) {
-		const {code} = (error as { code?: string });
+		const { code } = error as { code?: string };
 		if (code === "ENOENT") {
 			return false;
 		}

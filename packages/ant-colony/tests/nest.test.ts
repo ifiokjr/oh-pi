@@ -211,7 +211,7 @@ describe("withStateLock spin", () => {
 	});
 
 	it("times out cleanly when another live process keeps the state lock", () => {
-		const {lockFile} = (nest as { lockFile: string });
+		const { lockFile } = nest as { lockFile: string };
 		fs.writeFileSync(lockFile, `${process.pid}:invalid`, "utf8");
 		const nowSpy = vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValueOnce(0).mockReturnValueOnce(3001);
 

@@ -88,59 +88,65 @@ const queenMocks = vi.hoisted(() => {
 
 const runInvocations = queenMocks.runInvocations as ColonyInvocation[];
 const resumeInvocations = queenMocks.resumeInvocations as ColonyInvocation[];
-const {runColonyMock} = queenMocks;
-const {resumeColonyMock} = queenMocks;
-const {createUsageLimitsTrackerMock} = queenMocks;
+const { runColonyMock } = queenMocks;
+const { resumeColonyMock } = queenMocks;
+const { createUsageLimitsTrackerMock } = queenMocks;
 
 const storageMocks = vi.hoisted(() => ({
 	resolveColonyStorageOptionsMock: vi.fn(),
 	shouldManageProjectGitignoreMock: vi.fn(),
 }));
 
-vi.mock<typeof import('../extensions/ant-colony/queen.js')>(import('../extensions/ant-colony/queen.js'), () => ({
+vi.mock<typeof import("../extensions/ant-colony/queen.js")>(import("../extensions/ant-colony/queen.js"), () => ({
 	createUsageLimitsTracker: queenMocks.createUsageLimitsTrackerMock,
 	resumeColony: queenMocks.resumeColonyMock,
 	runColony: queenMocks.runColonyMock,
 }));
 
-vi.mock<typeof import('../extensions/ant-colony/storage.js')>(import('../extensions/ant-colony/storage.js'), async (importActual) => {
-	const actual = await importActual<typeof import("../extensions/ant-colony/storage.js")>();
-	storageMocks.resolveColonyStorageOptionsMock.mockImplementation((options?: any) =>
-		actual.resolveColonyStorageOptions(options),
-	);
-	storageMocks.shouldManageProjectGitignoreMock.mockImplementation((options?: any) =>
-		actual.shouldManageProjectGitignore(options),
-	);
-	return {
-		...actual,
-		resolveColonyStorageOptions: storageMocks.resolveColonyStorageOptionsMock,
-		shouldManageProjectGitignore: storageMocks.shouldManageProjectGitignoreMock,
-	};
-});
+vi.mock<typeof import("../extensions/ant-colony/storage.js")>(
+	import("../extensions/ant-colony/storage.js"),
+	async (importActual) => {
+		const actual = await importActual<typeof import("../extensions/ant-colony/storage.js")>();
+		storageMocks.resolveColonyStorageOptionsMock.mockImplementation((options?: any) =>
+			actual.resolveColonyStorageOptions(options),
+		);
+		storageMocks.shouldManageProjectGitignoreMock.mockImplementation((options?: any) =>
+			actual.shouldManageProjectGitignore(options),
+		);
+		return {
+			...actual,
+			resolveColonyStorageOptions: storageMocks.resolveColonyStorageOptionsMock,
+			shouldManageProjectGitignore: storageMocks.shouldManageProjectGitignoreMock,
+		};
+	},
+);
 
-vi.mock<typeof import('../extensions/ant-colony/worktree.js')>(import('../extensions/ant-colony/worktree.js'), async (importActual) => {
-	const actual = await importActual<typeof import("../extensions/ant-colony/worktree.js")>();
+vi.mock<typeof import("../extensions/ant-colony/worktree.js")>(
+	import("../extensions/ant-colony/worktree.js"),
+	async (importActual) => {
+		const actual = await importActual<typeof import("../extensions/ant-colony/worktree.js")>();
 
-	const mkShared = (cwd: string) => ({
-		baseBranch: null,
-		branch: null,
-		executionCwd: cwd,
-		mode: "shared" as const,
-		note: null,
-		originCwd: cwd,
-		repoRoot: null,
-		worktreeRoot: null,
-	});
+		const mkShared = (cwd: string) => ({
+			baseBranch: null,
+			branch: null,
+			executionCwd: cwd,
+			mode: "shared" as const,
+			note: null,
+			originCwd: cwd,
+			repoRoot: null,
+			worktreeRoot: null,
+		});
 
-	return {
-		...actual,
-		cleanupIsolatedWorktree: () => null,
-		prepareColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
-		resumeColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
-	};
-});
+		return {
+			...actual,
+			cleanupIsolatedWorktree: () => null,
+			prepareColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
+			resumeColonyWorkspace: ({ cwd }: { cwd: string }) => mkShared(cwd),
+		};
+	},
+);
 
-vi.mock<typeof import('@sinclair/typebox')>(import('@sinclair/typebox'), () => ({
+vi.mock<typeof import("@sinclair/typebox")>(import("@sinclair/typebox"), () => ({
 	Type: {
 		Number: (opts?: any) => ({ type: "number", ...opts }),
 		Object: (schema: any) => schema,
@@ -149,7 +155,7 @@ vi.mock<typeof import('@sinclair/typebox')>(import('@sinclair/typebox'), () => (
 	},
 }));
 
-vi.mock<typeof import('@mariozechner/pi-tui')>(import('@mariozechner/pi-tui'), () => ({
+vi.mock<typeof import("@mariozechner/pi-tui")>(import("@mariozechner/pi-tui"), () => ({
 	Container: class {
 		children: unknown[] = [];
 		addChild(child: unknown) {
@@ -360,7 +366,7 @@ describe("ant-colony extension commands", () => {
 		const colonyCmd = pi._commands.get("colony");
 		await colonyCmd.handler("Status goal", ctx);
 
-		const {stableId} = runInvocations[0];
+		const { stableId } = runInvocations[0];
 		const statusCmd = pi._commands.get("colony-status");
 		await statusCmd.handler(stableId, ctx);
 
