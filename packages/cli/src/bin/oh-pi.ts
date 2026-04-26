@@ -17,8 +17,10 @@ if (process.platform === "win32") {
 }
 
 import { run } from "../index.js";
+import { parseArgs } from "../utils/args.js";
 
-run().catch((e) => {
+const args = parseArgs(process.argv.slice(2));
+run(args).catch((e) => {
 	console.error(e);
 	process.exit(1);
 });
