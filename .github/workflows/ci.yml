@@ -220,21 +220,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
-
       - uses: pnpm/action-setup@v4.4.0
-
       - uses: actions/setup-node@v6.3.0
         with:
           node-version: 22
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile
 
-    - name: Format check (oxfmt)
-      run: pnpm format:check
+      - name: "Format check (oxfmt)"
+        run: pnpm format:check
 
-    - name: Lint (oxlint, strict)
-      run: pnpm lint
+      - name: Lint (oxlint, strict)
+        run: pnpm lint
 
   typecheck:
     name: Type Check (tsgo)
