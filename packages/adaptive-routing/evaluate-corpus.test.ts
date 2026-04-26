@@ -182,6 +182,25 @@ describe("evaluateCorpus", () => {
 		expect(result.mismatched).toBe(0);
 	});
 
+	it("reports an intent mismatch when the expected intent differs", () => {
+		const badIntentExample: CorpusEntry = {
+			...cheapQnaExample,
+			expectedIntent: "design",
+		};
+
+		const result = evaluateCorpus([badIntentExample], {
+			config: DEFAULT_ADAPTIVE_ROUTING_CONFIG,
+			candidates,
+		});
+
+		expect(result.total).toBe(1);
+		expect(result.mismatched).toBe(1);
+		expect(result.runs[0].mismatches).toHaveLength(1);
+		expect(result.runs[0].mismatches[0].fieldName).toBe("intent");
+		expect(result.runs[0].mismatches[0].expected).toBe("design");
+		expect(result.runs[0].mismatches[0].actual).toBe("quick-qna");
+	});
+
 	it("formats a summary with zero mismatches", () => {
 		const result = evaluateCorpus([cheapQnaExample], {
 			config: DEFAULT_ADAPTIVE_ROUTING_CONFIG,
