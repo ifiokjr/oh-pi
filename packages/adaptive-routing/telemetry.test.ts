@@ -116,4 +116,82 @@ describe("adaptive routing telemetry", () => {
 			rmSync(tempAgentDir, { recursive: true, force: true });
 		}
 	});
+
+	it("increments override count for route_override events", () => {
+		const tempAgentDir = mkdtempSync(join(tmpdir(), "adaptive-routing-telemetry-"));
+		getAgentDir.mockReturnValue(tempAgentDir);
+		mkdirSync(join(tempAgentDir, "adaptive-routing"), { recursive: true });
+
+		try {
+			appendTelemetryEvent(
+				{ mode: "local", privacy: "minimal" },
+				{
+					type: "route_override",
+					timestamp: 100,
+					decisionId: "d1",
+					from: { model: "openai/gpt-4", thinking: "high" },
+					to: { model: "anthropic/claude-3", thinking: "high" },
+					reason: "manual",
+				},
+			);
+
+			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf-8")) as {
+				overrides?: number;
+			};
+			expect(aggregates.overrides).toBe(1);
+		} finally {
+			rmSync(tempAgentDir, { recursive: true, force: true });
+		}
+	});
+
+	it("increments shadow disagreement count for route_shadow_disagreement events", () => {
+		const tempAgentDir = mkdtempSync(join(tmpdir(), "adaptive-routing-telemetry-"));
+		getAgentDir.mockReturnValue(tempAgentDir);
+		mkdirSync(join(tempAgentDir, "adaptive-routing"), { recursive: true });
+
+		try {
+			appendTelemetryEvent(
+				{ mode: "local", privacy: "minimal" },
+				{
+					type: "route_shadow_disagreement",
+					timestamp: 100,
+					decisionId: "d1",
+					suggested: { model: "anthropic/claude-3", thinking: "high" },
+					actual: { model: "openai/gpt-4", thinking: "high" },
+				},
+			);
+
+			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf-8")) as {
+				shadowDisagreements?: number;
+			};
+			expect(aggregates.shadowDisagreements).toBe(1);
+		} finally {
+			rmSync(tempAgentDir, { recursive: true, force: true });
+		}
+	});
+
+	it("increments feedback count for route_feedback events", () => {
+		const tempAgentDir = mkdtempSync(join(tmpdir(), "adaptive-routing-telemetry-"));
+		getAgentDir.mockReturnValue(tempAgentDir);
+		mkdirSync(join(tempAgentDir, "adaptive-routing"), { recursive: true });
+
+		try {
+			appendTelemetryEvent(
+				{ mode: "local", privacy: "minimal" },
+				{
+					type: "route_feedback",
+					timestamp: 100,
+					decisionId: "d1",
+					category: "good",
+				},
+			);
+
+			const aggregates = JSON.parse(readFileSync(getAdaptiveRoutingAggregatesPath(), "utf-8")) as {
+				feedback?: Record<string, number>;
+			};
+			expect(aggregates.feedback?.["good"]).toBe(1);
+		} finally {
+			rmSync(tempAgentDir, { recursive: true, force: true });
+		}
+	});
 });

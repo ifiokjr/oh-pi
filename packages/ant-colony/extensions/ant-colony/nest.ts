@@ -324,13 +324,18 @@ export class Nest {
 	 * Uses incremental reads to avoid re-parsing the entire log each time.
 	 */
 	getAllPheromones(): Pheromone[] {
-		if (!fs.existsSync(this.pheromoneFile)) {
+		const now = Date.now();
+		let stat: fs.Stats | undefined;
+		try {
+			stat = fs.statSync(this.pheromoneFile);
+		} catch {
 			return [];
 		}
-		const now = Date.now();
+		if (!stat) {
+			return [];
+		}
 
 		// Incremental read: only parse bytes added since last call
-		const stat = fs.statSync(this.pheromoneFile);
 		if (stat.size > this.pheromoneOffset) {
 			const fd = fs.openSync(this.pheromoneFile, "r");
 			const buf = Buffer.alloc(stat.size - this.pheromoneOffset);

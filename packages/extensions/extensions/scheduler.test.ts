@@ -3062,3 +3062,82 @@ describe("edge cases", () => {
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 });
+
+describe("schedulePersistTasks debounce", () => {
+	let pi: ReturnType<typeof createMockPi>;
+	let ctx: ReturnType<typeof createMockCtx>;
+
+	beforeEach(() => {
+		vi.useFakeTimers();
+		vi.clearAllMocks();
+		(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
+		(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
+		(mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(copyFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		(readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([]);
+		(rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => undefined);
+		pi = createMockPi();
+		ctx = createMockCtx();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("debounces multiple persist calls into a single write", () => {
+		const runtime = new SchedulerRuntime(pi as any);
+		runtime.setRuntimeContext(ctx as any);
+
+		// Directly add a task without triggering persistTasks
+		const task1 = runtime.addOneShotTask("task 1", ONE_MINUTE);
+		// Stop the scheduler interval so it does not fire during timer advancement
+		// @ts-expect-error accessing private field for test
+		if (runtime.schedulerTimer) {
+			// @ts-expect-error accessing private field for test
+			clearInterval(runtime.schedulerTimer);
+			// @ts-expect-error accessing private field for test
+			runtime.schedulerTimer = undefined;
+		}
+		// Clear any direct persist calls from addOneShotTask
+		(writeFileSync as ReturnType<typeof vi.fn>).mockClear();
+
+		// Call schedulePersistTasks multiple times rapidly
+		runtime.schedulePersistTasks();
+		runtime.schedulePersistTasks();
+		runtime.schedulePersistTasks();
+
+		// Timer should be scheduled but not yet fired
+		expect(vi.mocked(writeFileSync)).not.toHaveBeenCalled();
+
+		// Advance past debounce — advance exactly to the timer to avoid
+		// triggering the scheduler tick interval (1s) extra times.
+		vi.advanceTimersByTime(2_000);
+
+		// Should have written exactly once since the timer fired
+		expect(vi.mocked(writeFileSync)).toHaveBeenCalledTimes(1);
+		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
+			expect.stringContaining(".tmp"),
+			expect.stringContaining(task1.id),
+			"utf-8",
+		);
+	});
+
+	it("does not schedule a second timer when one is already pending", () => {
+		const runtime = new SchedulerRuntime(pi as any);
+		runtime.setRuntimeContext(ctx as any);
+
+		// @ts-expect-error accessing private field for test
+		runtime.tasksDirty = true;
+		runtime.schedulePersistTasks();
+		// @ts-expect-error accessing private field for test
+		const firstTimer = runtime.tasksSaveTimer;
+
+		// Second call should not create a new timer
+		runtime.schedulePersistTasks();
+		// @ts-expect-error accessing private field for test
+		expect(runtime.tasksSaveTimer).toBe(firstTimer);
+	});
+});

@@ -159,6 +159,16 @@ export class SchedulerRuntime {
 	private safeModeEnabled = false;
 	private awaitingTaskId: string | null = null;
 
+	// Lease cache to avoid readFileSync on every tick (hot-path perf)
+	private leaseCache: SchedulerLease | undefined;
+	private leaseCacheAt = 0;
+	private static readonly LEASE_CACHE_TTL_MS = 500;
+
+	// Debounced task persistence to avoid blocking the event loop
+	private tasksDirty = false;
+	private tasksSaveTimer: ReturnType<typeof setTimeout> | null = null;
+	private static readonly TASKS_PERSIST_DEBOUNCE_MS = 2_000;
+
 	constructor(private readonly pi: ExtensionAPI) {}
 
 	get taskCount(): number {
@@ -815,7 +825,7 @@ export class SchedulerRuntime {
 		}
 
 		if (mutated) {
-			this.persistTasks();
+			this.schedulePersistTasks();
 		}
 		this.updateStatus();
 
@@ -1579,17 +1589,29 @@ export class SchedulerRuntime {
 		if (!this.leasePath) {
 			return undefined;
 		}
+		const now = Date.now();
+		if (this.leaseCache && now - this.leaseCacheAt < SchedulerRuntime.LEASE_CACHE_TTL_MS) {
+			return this.leaseCache;
+		}
 		try {
 			if (!fs.existsSync(this.leasePath)) {
+				this.leaseCache = undefined;
+				this.leaseCacheAt = now;
 				return undefined;
 			}
 			const raw = fs.readFileSync(this.leasePath, "utf-8");
 			const parsed = JSON.parse(raw) as SchedulerLease;
 			if (!(parsed?.instanceId && Number.isFinite(parsed?.heartbeatAt))) {
+				this.leaseCache = undefined;
+				this.leaseCacheAt = now;
 				return undefined;
 			}
+			this.leaseCache = parsed;
+			this.leaseCacheAt = now;
 			return parsed;
 		} catch {
+			this.leaseCache = undefined;
+			this.leaseCacheAt = now;
 			return undefined;
 		}
 	}
@@ -1633,6 +1655,9 @@ export class SchedulerRuntime {
 			const tempPath = `${this.leasePath}.tmp`;
 			fs.writeFileSync(tempPath, JSON.stringify(lease, null, 2), "utf-8");
 			fs.renameSync(tempPath, this.leasePath);
+			// Update cache so subsequent reads in this tick don't hit disk
+			this.leaseCache = lease;
+			this.leaseCacheAt = now;
 			const confirmed = this.readLease();
 			return confirmed ? confirmed.instanceId === this.instanceId : true;
 		} catch {
@@ -1650,6 +1675,8 @@ export class SchedulerRuntime {
 				return;
 			}
 			fs.rmSync(this.leasePath, { force: true });
+			this.leaseCache = undefined;
+			this.leaseCacheAt = 0;
 		} catch {
 			// Best-effort cleanup.
 		}
@@ -2064,6 +2091,22 @@ export class SchedulerRuntime {
 			default:
 				return "overdue task";
 		}
+	}
+
+	/** Debounce task persistence so it doesn't block the event loop on every tick. */
+	schedulePersistTasks() {
+		this.tasksDirty = true;
+		if (this.tasksSaveTimer) {
+			return;
+		}
+		this.tasksSaveTimer = setTimeout(() => {
+			this.tasksSaveTimer = null;
+			if (this.tasksDirty) {
+				this.tasksDirty = false;
+				this.persistTasks();
+			}
+		}, SchedulerRuntime.TASKS_PERSIST_DEBOUNCE_MS);
+		this.tasksSaveTimer.unref?.();
 	}
 
 	persistTasks() {

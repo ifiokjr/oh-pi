@@ -22,12 +22,32 @@ export function readAdaptiveRoutingState(): AdaptiveRoutingState {
 	}
 }
 
+let pendingState: AdaptiveRoutingState | undefined;
+let stateSaveTimer: ReturnType<typeof setTimeout> | null = null;
+const STATE_PERSIST_DEBOUNCE_MS = 2_000;
+
+function scheduleStateSave(path: string): void {
+	if (stateSaveTimer) {
+		return;
+	}
+	stateSaveTimer = setTimeout(() => {
+		stateSaveTimer = null;
+		if (pendingState) {
+			const stateToWrite = pendingState;
+			pendingState = undefined;
+			try {
+				mkdirSync(dirname(path), { recursive: true });
+				writeFileSync(path, `${JSON.stringify(stateToWrite, null, 2)}\n`, "utf-8");
+			} catch {
+				// Non-critical persistence only.
+			}
+		}
+	}, STATE_PERSIST_DEBOUNCE_MS);
+	stateSaveTimer.unref?.();
+}
+
 export function writeAdaptiveRoutingState(state: AdaptiveRoutingState): void {
 	const path = getAdaptiveRoutingStatePath();
-	try {
-		mkdirSync(dirname(path), { recursive: true });
-		writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`, "utf-8");
-	} catch {
-		// Non-critical persistence only.
-	}
+	pendingState = state;
+	scheduleStateSave(path);
 }
