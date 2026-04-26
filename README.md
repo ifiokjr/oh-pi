@@ -678,7 +678,7 @@ pnpm typecheck           # Type check with tsgo (fast)
 pnpm test                # Run all tests
 pnpm test:coverage       # Run tests with repo-wide coverage reporting
 pnpm test:patch-coverage # Enforce 100% patch coverage from coverage/lcov.info
-pnpm lint                # Biome lint + format check
+pnpm lint                # oxlint + oxfmt check
 pnpm security:check      # Dependency allowlist + vulnerability audits
 pnpm lint:fix            # Auto-fix lint issues
 pnpm format              # Format all files
@@ -879,7 +879,7 @@ oh-pi/
 ├── .changeset/                 Pending changesets (knope)
 ├── CHANGELOG.md                Release history
 ├── knope.toml                  Release automation config
-└── biome.json                  Linter + formatter config
+└── .oxlintrc.json + .oxfmtrc.json                  Linter + formatter config
 ```
 
 ## License

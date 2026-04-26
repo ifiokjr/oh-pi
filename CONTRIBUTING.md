@@ -135,7 +135,7 @@ frontmatter, knope will ignore that changeset in this repo.
 
 ## Code Style
 
-- Follow existing project style (enforced by Biome)
+- Follow existing project style (enforced by oxlint + oxfmt)
 - Use meaningful variable names
 - Keep functions under 50 lines where possible
 - Add comments only for complex logic

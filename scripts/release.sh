@@ -42,7 +42,7 @@ fi
 echo ""
 echo "🔍 Running CI checks..."
 echo "  → lint"
-pnpm exec biome ci . || { echo "❌ Biome lint failed"; exit 1; }
+pnpm lint || { echo "❌ oxlint failed"; exit 1; }
 echo "  → security"
 pnpm security:check || { echo "❌ Security checks failed"; exit 1; }
 echo "  → typecheck"
