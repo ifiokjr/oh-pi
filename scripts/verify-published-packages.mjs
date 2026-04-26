@@ -26,7 +26,7 @@ function verifyExtensionEntrypoints(pkg, manifest, packedFiles) {
 			throw new Error(`${pkg.name}: packed tarball is missing declared pi.extensions entry: ${entry}`);
 		}
 		const source = fs.readFileSync(absoluteEntry, "utf8");
-		if (!/export\s+default\b/.test(source)) {
+		if (!/export\s+default\b|export\s*\{[^}]*\bas\s+default\b/.test(source)) {
 			throw new Error(`${pkg.name}: declared extension entrypoint is missing a default export: ${entry}`);
 		}
 	}
