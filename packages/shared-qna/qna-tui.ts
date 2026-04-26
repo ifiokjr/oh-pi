@@ -1,22 +1,22 @@
 import { requirePiTuiModule } from "./pi-tui-loader.js";
 
-interface Component {
+type Component = {
 	handleInput: (data: string) => void;
 	render: (width: number) => string[];
 	invalidate: () => void;
-}
+};
 
-interface TUI {
+type TUI = {
 	requestRender: () => void;
-}
+};
 
-interface EditorTheme {
+type EditorTheme = {
 	borderColor: (text: string) => string;
 	selectList: {
 		matchHighlight?: (text: string) => string;
 		itemSecondary?: (text: string) => string;
 	};
-}
+};
 
 function getPiTui() {
 	return requirePiTuiModule() as {
@@ -138,7 +138,7 @@ export function normalizeResponseForQuestion(
 			}
 		} else {
 			const optionIndex = options.findIndex((option) => option.label === fallbackTrimmed);
-			selectedOptionIndex = optionIndex !== -1 ? optionIndex : options.length;
+			selectedOptionIndex = optionIndex >= 0 ? optionIndex : options.length;
 			if (response?.selectionTouched === undefined) {
 				selectionTouched = true;
 			}
@@ -149,7 +149,7 @@ export function normalizeResponseForQuestion(
 			const fallbackTrimmed = rawFallback.trim();
 			if (fallbackTrimmed.length > 0) {
 				const optionIndex = options.findIndex((option) => option.label === fallbackTrimmed);
-				if (optionIndex !== -1) {
+				if (optionIndex >= 0) {
 					selectionTouched = optionIndex === selectedOptionIndex && optionIndex !== 0;
 				} else {
 					selectionTouched = selectedOptionIndex === options.length;
@@ -167,24 +167,24 @@ export function normalizeResponseForQuestion(
 	if (response?.committed === undefined && inferCommittedFromContent) {
 		committed =
 			formatResponseAnswer(question, {
-				committed: false,
-				customText: normalizedCustomText,
 				selectedOptionIndex: normalizedIndex,
+				customText: normalizedCustomText,
 				selectionTouched,
+				committed: false,
 			}).trim().length > 0;
 	}
 
 	return {
-		committed,
-		customText: normalizedCustomText,
 		selectedOptionIndex: normalizedIndex,
+		customText: normalizedCustomText,
 		selectionTouched,
+		committed,
 	};
 }
 
 export function normalizeResponses(
 	questions: QnAQuestion[],
-	responses: Partial<QnAResponse>[] | undefined,
+	responses: Array<Partial<QnAResponse>> | undefined,
 	fallbackAnswers: string[] | undefined,
 	inferCommittedFromContent: boolean,
 ): QnAResponse[] {
@@ -228,21 +228,20 @@ function defaultResolveNumericShortcut(
 
 function defaultApplyTemplate(template: string, data: QnATemplateData): string {
 	const replacements: Record<string, string> = {
-		answer: data.answer,
-		context: data.context ?? "",
-		index: String(data.index + 1),
 		question: data.question,
+		context: data.context ?? "",
+		answer: data.answer,
+		index: String(data.index + 1),
 		total: String(data.total),
 	};
 
-	return template.replaceAll(
-		/\{\{(question|context|answer|index|total)\}\}/g,
-		(_match, key: string) => replacements[key] ?? "",
-	);
+	return template.replace(/\{\{(question|context|answer|index|total)\}\}/g, (_match, key: string) => {
+		return replacements[key] ?? "";
+	});
 }
 
 function summarizeAnswer(text: string, maxLength: number = 60): string {
-	const singleLine = text.replaceAll(/\s+/g, " ").trim();
+	const singleLine = text.replace(/\s+/g, " ").trim();
 	if (singleLine.length <= maxLength) {
 		return singleLine;
 	}
@@ -278,7 +277,7 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 
 	private dim = (s: string) => s;
 	private bold = (s: string) => s;
-	private italic = (s: string) => `\x1B[3m${s}\x1B[0m`;
+	private italic = (s: string) => `\x1b[3m${s}\x1b[0m`;
 	private cyan = (s: string) => s;
 	private green = (s: string) => s;
 	private yellow = (s: string) => s;
@@ -291,7 +290,7 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 		options?: {
 			title?: string;
 			templates?: QnATemplate[];
-			initialResponses?: Partial<QnAResponse>[];
+			initialResponses?: Array<Partial<QnAResponse>>;
 			fallbackAnswers?: string[];
 			inferCommittedFromContent?: boolean;
 			onResponsesChange?: (responses: QnAResponse[]) => void;
@@ -322,7 +321,10 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 		this.resolveNumericShortcut = options?.resolveNumericShortcut ?? defaultResolveNumericShortcut;
 		this.applyTemplate = options?.applyTemplate ?? defaultApplyTemplate;
 		this.questionSummaryLabel =
-			options?.questionSummaryLabel ?? ((question) => question.header?.trim() || question.question);
+			options?.questionSummaryLabel ??
+			((question) => {
+				return question.header?.trim() || question.question;
+			});
 		this.cyan = options?.accentColor ?? this.cyan;
 		this.green = options?.successColor ?? this.green;
 		this.yellow = options?.warningColor ?? this.yellow;
@@ -334,8 +336,8 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 		const editorTheme: EditorTheme = {
 			borderColor: this.dim,
 			selectList: {
-				itemSecondary: this.gray,
 				matchHighlight: this.cyan,
+				itemSecondary: this.gray,
 			},
 		};
 
@@ -360,7 +362,7 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 			return false;
 		}
 
-		const code = data.codePointAt(0);
+		const code = data.charCodeAt(0);
 		return code >= 32 && code !== 127;
 	}
 
@@ -460,10 +462,10 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 
 		const template = this.templates[this.templateIndex];
 		const updated = this.applyTemplate(template.template, {
-			answer: this.getCurrentAnswerText(),
-			context: question.context,
-			index: this.currentIndex,
 			question: question.question,
+			context: question.context,
+			answer: this.getCurrentAnswerText(),
+			index: this.currentIndex,
 			total: this.questions.length,
 		});
 
@@ -492,9 +494,9 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 		}
 
 		this.onDone({
+			text: parts.join("\n").trim(),
 			answers,
 			responses: cloneResponses(this.responses),
-			text: parts.join("\n").trim(),
 		});
 	}
 
@@ -657,7 +659,9 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 			return this.dim("│") + paddedContent + " ".repeat(rightPad) + this.dim("│");
 		};
 
-		const emptyBoxLine = (): string => this.dim("│") + " ".repeat(boxWidth - 2) + this.dim("│");
+		const emptyBoxLine = (): string => {
+			return this.dim("│") + " ".repeat(boxWidth - 2) + this.dim("│");
+		};
 
 		const padToWidth = (line: string): string => {
 			const len = visibleWidth(line);
@@ -795,7 +799,7 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 						if (i === 1) {
 							lines.push(padToWidth(boxLine(answerPrefix + editorLines[i])));
 						} else {
-							lines.push(padToWidth(boxLine(`   ${editorLines[i]}`)));
+							lines.push(padToWidth(boxLine("   " + editorLines[i])));
 						}
 					}
 				} else {

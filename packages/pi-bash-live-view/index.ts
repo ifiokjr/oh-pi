@@ -10,10 +10,10 @@ const BASH_PTY_MESSAGE_TYPE = "pi-bash-live-view:result";
 
 const BASH_TOOL_PARAMETERS = Type.Object({
 	command: Type.String({ description: "Bash command to execute" }),
-	cwd: Type.Optional(Type.String({ description: "Optional working directory override for this command" })),
 	timeout: Type.Optional(
 		Type.Number({ description: "Optional timeout in seconds before the PTY command is terminated" }),
 	),
+	cwd: Type.Optional(Type.String({ description: "Optional working directory override for this command" })),
 	usePTY: Type.Optional(
 		Type.Boolean({ description: "Run the command inside a pseudo-terminal with live terminal rendering" }),
 	),
@@ -34,20 +34,14 @@ function resolveCwd(
 function toErrorToolResult(error: unknown) {
 	const message = error instanceof Error ? error.message : String(error);
 	return {
-		content: [{ text: `PTY execution failed: ${message}`, type: "text" as const }],
-		details: { error: true, pty: true },
+		content: [{ type: "text" as const, text: `PTY execution failed: ${message}` }],
+		details: { pty: true, error: true },
 	};
 }
 
 export default function bashLiveViewExtension(pi: ExtensionAPI): void {
-	const bashTemplate = createBashTool(process.cwd()) as typeof createBashTool extends (...args: unknown[]) => infer T
-		? T & {
-				renderCall?: unknown;
-				renderResult?: unknown;
-				label?: string;
-				description: string;
-			}
-		: never;
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+	const bashTemplate = createBashTool(process.cwd()) as any;
 	const sessionManager = new PtySessionManager();
 	let activeCtx: ExtensionContext | null = null;
 
@@ -66,7 +60,12 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.registerTool({
+		name: BASH_LIVE_VIEW_TOOL,
+		label: bashTemplate.label ?? "Bash",
 		description: buildToolDescription(bashTemplate.description),
+		parameters: BASH_TOOL_PARAMETERS,
+		renderCall: bashTemplate.renderCall,
+		renderResult: bashTemplate.renderResult,
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
 			const commandCwd = resolveCwd(ctx, activeCtx, params.cwd);
 			if (!params.usePTY) {
@@ -94,11 +93,6 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 				return toErrorToolResult(error);
 			}
 		},
-		label: bashTemplate.label ?? "Bash",
-		name: BASH_LIVE_VIEW_TOOL,
-		parameters: BASH_TOOL_PARAMETERS,
-		renderCall: bashTemplate.renderCall as unknown as (call: unknown) => unknown,
-		renderResult: bashTemplate.renderResult as unknown as (call: unknown) => unknown,
 	});
 
 	pi.registerCommand(BASH_PTY_COMMAND, {
@@ -114,20 +108,20 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 			try {
 				const result = await executePtyCommand({
 					command,
-					ctx,
 					cwd: resolveCwd(ctx, activeCtx),
+					ctx,
 					sessionManager,
 				});
 				pi.sendMessage({
-					content: result.text,
 					customType: BASH_PTY_MESSAGE_TYPE,
+					content: result.text,
+					display: true,
 					details: {
-						exitCode: result.exitCode,
 						pty: true,
 						sessionId: result.sessionId,
 						status: result.status,
+						exitCode: result.exitCode,
 					},
-					display: true,
 				});
 			} catch (error) {
 				ctx.ui.notify(`PTY execution failed: ${error instanceof Error ? error.message : String(error)}`, "error");
@@ -140,8 +134,8 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 		try {
 			const result = await executePtyCommand({
 				command: event.command,
-				ctx,
 				cwd: resolveCwd(ctx, activeCtx, event.cwd),
+				ctx,
 				sessionManager,
 			});
 			return {
@@ -151,9 +145,9 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 			const message = error instanceof Error ? error.message : String(error);
 			return {
 				result: {
-					cancelled: false,
-					exitCode: 1,
 					output: `PTY execution failed: ${message}`,
+					exitCode: 1,
+					cancelled: false,
 					truncated: false,
 				},
 			};
@@ -162,8 +156,8 @@ export default function bashLiveViewExtension(pi: ExtensionAPI): void {
 }
 
 export const bashLiveViewInternals = {
-	BASH_TOOL_PARAMETERS,
 	buildToolDescription,
 	resolveCwd,
 	toErrorToolResult,
+	BASH_TOOL_PARAMETERS,
 };

@@ -79,7 +79,7 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 	}
 
 	function refreshUsageSnapshot(): void {
-		pi.events.emit("usage:query");
+		pi.events.emit("usage:query", undefined);
 	}
 
 	pi.events.on("usage:limits", (payload: unknown) => {

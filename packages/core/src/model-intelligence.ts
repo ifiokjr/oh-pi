@@ -235,7 +235,10 @@ export function selectDelegatedModel(params: {
 				usage: params.usage,
 			}),
 		)
-		.toSorted((left, right) => right.score - left.score || left.model.localeCompare(right.model));
+		.sort(
+			(left: DelegatedSelectionRankedCandidate, right: DelegatedSelectionRankedCandidate) =>
+				right.score - left.score || left.model.localeCompare(right.model),
+		);
 
 	return {
 		minimumContextWindow,

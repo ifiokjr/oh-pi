@@ -1,7 +1,7 @@
 const DEFAULT_WIDGET_KEY_PREFIX = "pi-bash-live-view";
 const DEFAULT_WIDGET_MAX_LINES = 12;
 const DEFAULT_RENDER_DEBOUNCE_MS = 120;
-const ELAPSED_TICK_MS = 1000;
+const ELAPSED_TICK_MS = 1_000;
 
 export type WidgetStatus = "running" | "completed" | "failed" | "cancelled" | "timed_out";
 
@@ -25,7 +25,7 @@ export interface WidgetTuiLike {
 export interface WidgetContextLike {
 	hasUI?: boolean;
 	ui?: {
-		setWidget: (...args: unknown[]) => void;
+		setWidget: <TArgs extends unknown[]>(...args: TArgs) => void;
 	};
 }
 
@@ -46,35 +46,29 @@ function truncateCommand(command: string, maxLength = 96): string {
 
 function toStatusColor(status: WidgetStatus): string {
 	switch (status) {
-		case "completed": {
+		case "completed":
 			return "success";
-		}
-		case "failed": {
+		case "failed":
 			return "error";
-		}
 		case "cancelled":
-		case "timed_out": {
+		case "timed_out":
 			return "warning";
-		}
-		default: {
+		default:
 			return "accent";
-		}
 	}
 }
 
 function toStatusLabel(status: WidgetStatus): string {
 	switch (status) {
-		case "timed_out": {
+		case "timed_out":
 			return "timed out";
-		}
-		default: {
+		default:
 			return status;
-		}
 	}
 }
 
 export function formatElapsedMmSs(elapsedMs: number): string {
-	const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+	const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1_000));
 	const minutes = Math.floor(totalSeconds / 60);
 	const seconds = totalSeconds % 60;
 	return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
@@ -229,7 +223,7 @@ export class PtyLiveWidgetController {
 }
 
 export const widgetInternals = {
+	truncateCommand,
 	toStatusColor,
 	toStatusLabel,
-	truncateCommand,
 };

@@ -1,12 +1,14 @@
 import type { AgentToolResult, AgentToolUpdateCallback } from "@mariozechner/pi-coding-agent";
-import { appendExitSummary, highlightErrorOutput, tailText, truncateOutput } from "./truncate.js";
-import type { OutputTruncation } from "./truncate.js";
-import { PtySessionManager } from "./pty-session.js";
-import type { ManagedPtySession } from "./pty-session.js";
-import { createTerminalEmulator } from "./terminal-emulator.js";
-import type { TerminalEmulator } from "./terminal-emulator.js";
-import { PtyLiveWidgetController } from "./widget.js";
-import type { WidgetContextLike, WidgetStatus } from "./widget.js";
+import {
+	appendExitSummary,
+	highlightErrorOutput,
+	tailText,
+	truncateOutput,
+	type OutputTruncation,
+} from "./truncate.js";
+import { PtySessionManager, type ManagedPtySession } from "./pty-session.js";
+import { createTerminalEmulator, type TerminalEmulator } from "./terminal-emulator.js";
+import { PtyLiveWidgetController, type WidgetContextLike, type WidgetStatus } from "./widget.js";
 
 const STREAM_UPDATE_DEBOUNCE_MS = 120;
 const DEFAULT_PREVIEW_LINES = 40;
@@ -69,15 +71,15 @@ function flushQueuedChunks(queue: string[]): string {
 
 export function toAgentToolResult(result: PtyExecutionResult): AgentToolResult<Record<string, unknown>> {
 	return {
-		content: [{ text: result.text, type: "text" }],
+		content: [{ type: "text", text: result.text }],
 		details: {
-			cancelled: result.cancelled,
-			durationMs: result.durationMs,
-			exitCode: result.exitCode,
 			pty: true,
 			sessionId: result.sessionId,
 			status: result.status,
+			exitCode: result.exitCode,
+			cancelled: result.cancelled,
 			timedOut: result.timedOut,
+			durationMs: result.durationMs,
 			truncation: result.truncation,
 		},
 	};
@@ -90,9 +92,9 @@ export function toUserBashResult(result: PtyExecutionResult): {
 	truncated: boolean;
 } {
 	return {
-		cancelled: result.cancelled,
-		exitCode: result.exitCode ?? (result.status === "completed" ? 0 : 1),
 		output: result.text,
+		exitCode: result.exitCode ?? (result.status === "completed" ? 0 : 1),
+		cancelled: result.cancelled,
 		truncated: result.truncated,
 	};
 }
@@ -140,20 +142,20 @@ export async function executePtyCommand(options: ExecutePtyCommandOptions): Prom
 	try {
 		emulator = await createEmulator();
 		session = await sessionManager.createSession({
-			cols: DEFAULT_TERMINAL_COLUMNS,
 			command: options.command,
 			cwd: options.cwd,
+			cols: DEFAULT_TERMINAL_COLUMNS,
 			rows: DEFAULT_TERMINAL_ROWS,
 		});
 
 		if (options.ctx?.hasUI) {
 			widget = createWidget(options.ctx, session.id);
 			widget.update({
-				ansiLines: [],
 				command: options.command,
-				exitCode: null,
 				startedAt,
+				ansiLines: [],
 				status: "running",
+				exitCode: null,
 			});
 		}
 
@@ -165,21 +167,21 @@ export async function executePtyCommand(options: ExecutePtyCommandOptions): Prom
 
 			const plainOutput = session?.getOutput() ?? "";
 			widget?.update({
-				ansiLines: emulator?.toAnsiLines(12) ?? [],
 				command: options.command,
-				exitCode,
 				startedAt,
+				ansiLines: emulator?.toAnsiLines(12) ?? [],
 				status,
+				exitCode,
 			});
 
 			options.onUpdate?.({
-				content: [{ text: buildPreviewText(plainOutput), type: "text" }],
+				content: [{ type: "text", text: buildPreviewText(plainOutput) }],
 				details: {
-					exitCode,
-					partial: status === "running",
 					pty: true,
 					sessionId: session?.id,
 					status,
+					exitCode,
+					partial: status === "running",
 				},
 			});
 		};
@@ -202,7 +204,7 @@ export async function executePtyCommand(options: ExecutePtyCommandOptions): Prom
 		});
 
 		const timeoutSeconds = options.timeout;
-		const timeoutMs = timeoutSeconds != null ? Math.max(1, timeoutSeconds * 1000) : null;
+		const timeoutMs = timeoutSeconds != null ? Math.max(1, timeoutSeconds * 1_000) : null;
 		const timeoutTimer =
 			timeoutMs == null
 				? null
@@ -223,7 +225,9 @@ export async function executePtyCommand(options: ExecutePtyCommandOptions): Prom
 			clearTimeout(flushTimer);
 			flushTimer = null;
 		}
-		if (timeoutTimer) clearTimeout(timeoutTimer);
+		if (timeoutTimer) {
+			clearTimeout(timeoutTimer);
+		}
 		options.signal?.removeEventListener("abort", abortListener);
 
 		const status = toExecutionStatus(exitEvent.exitCode, cancelled, timedOut);
@@ -239,18 +243,18 @@ export async function executePtyCommand(options: ExecutePtyCommandOptions): Prom
 		});
 
 		return {
-			cancelled,
 			command: options.command,
 			cwd: options.cwd,
-			durationMs: now() - startedAt,
-			exitCode: exitEvent.exitCode,
-			output,
 			sessionId: session.id,
 			status,
-			text,
+			exitCode: exitEvent.exitCode,
+			cancelled,
 			timedOut,
+			output,
+			text,
 			truncated: truncatedOutput.truncation.truncated,
 			truncation: truncatedOutput.truncation,
+			durationMs: now() - startedAt,
 		};
 	} finally {
 		cleanup();
@@ -258,7 +262,7 @@ export async function executePtyCommand(options: ExecutePtyCommandOptions): Prom
 }
 
 export const ptyExecuteInternals = {
+	toExecutionStatus,
 	buildPreviewText,
 	flushQueuedChunks,
-	toExecutionStatus,
 };

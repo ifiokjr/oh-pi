@@ -1,13 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
-import { calculateCost, createAssistantMessageEventStream, getEnvApiKey } from "@mariozechner/pi-ai";
-import type {
-	AssistantMessage,
-	AssistantMessageEventStream,
-	Context,
-	Model,
-	SimpleStreamOptions,
-	ToolCall,
+import {
+	calculateCost,
+	createAssistantMessageEventStream,
+	getEnvApiKey,
+	type AssistantMessage,
+	type AssistantMessageEventStream,
+	type Context,
+	type Model,
+	type SimpleStreamOptions,
+	type ToolCall,
 } from "@mariozechner/pi-ai";
 import {
 	AgentServerMessageSchema,
@@ -42,8 +44,9 @@ import {
 	sendExecResult,
 	sendKvBlobResponse,
 	sendRequestContextResult,
+	type PendingExec,
+	type ToolResultInfo,
 } from "./messages.js";
-import type { PendingExec, ToolResultInfo } from "./messages.js";
 import { CURSOR_RUN_PATH } from "./config.js";
 import {
 	cleanupCursorRuntimeState,
@@ -55,11 +58,11 @@ import {
 	getConversationState,
 	setActiveRun,
 	upsertConversationState,
+	type ActiveCursorRun,
 } from "./runtime.js";
-import type { ActiveCursorRun } from "./runtime.js";
 import {
-	CursorStreamingConnection,
 	createConnectFrameParser,
+	CursorStreamingConnection,
 	frameConnectMessage,
 	parseConnectEndStream,
 } from "./transport.js";
@@ -70,20 +73,20 @@ const MAX_THINKING_TAG_LEN = 16;
 // Pre-compiled thinking tag pattern — avoid new RegExp() per stream chunk.
 const THINKING_TAG_PATTERN = new RegExp(`<(/?)(?:${THINKING_TAG_NAMES.join("|")})\\s*>`, "gi");
 
-interface StreamState {
+type StreamState = {
 	outputTokens: number;
 	totalTokens: number;
 	pendingExecs: PendingExec[];
-}
+};
 
-interface RuntimeOptions {
+type RuntimeOptions = {
 	bridgeKey: string;
 	conversationKey: string;
 	model: Model<string>;
 	output: AssistantMessage;
 	stream: AssistantMessageEventStream;
 	signal?: AbortSignal;
-}
+};
 
 export const streamSimpleCursor = (
 	model: Model<string>,
@@ -105,12 +108,12 @@ export const streamSimpleCursor = (
 			const conversationKey = deriveConversationKey(options?.sessionId, parsed.seed);
 			const bridgeKey = deriveBridgeKey(conversationKey, model.id);
 
-			stream.push({ partial: output, type: "start" });
+			stream.push({ type: "start", partial: output });
 
 			const activeRun = parsed.trailingToolResults.length > 0 ? getActiveRun(bridgeKey) : undefined;
 			if (activeRun) {
 				await resumeActiveRun(
-					{ bridgeKey, conversationKey, model, output, signal: options?.signal, stream },
+					{ bridgeKey, conversationKey, model, output, stream, signal: options?.signal },
 					activeRun,
 					parsed.trailingToolResults,
 				);
@@ -124,13 +127,13 @@ export const streamSimpleCursor = (
 			const stateRecord = getConversationState(conversationKey);
 			const conversationId = stateRecord?.conversationId ?? deterministicConversationId(conversationKey);
 			const payload = buildCursorRequestPayload({
-				conversationId,
-				conversationState: stateRecord,
 				modelId: model.id,
+				conversationId,
 				parsed,
 				tools: context.tools,
+				conversationState: stateRecord,
 			});
-			options?.onPayload?.({ conversationId, model: model.id, toolCount: payload.mcpTools.length });
+			options?.onPayload?.({ model: model.id, conversationId, toolCount: payload.mcpTools.length });
 			const connection = new CursorStreamingConnection({
 				accessToken: apiKey,
 				rpcPath: CURSOR_RUN_PATH,
@@ -140,19 +143,19 @@ export const streamSimpleCursor = (
 			connection.write(toFrame(payload.requestBytes));
 
 			await streamConnection(
-				{ bridgeKey, conversationKey, model, output, signal: options?.signal, stream },
+				{ bridgeKey, conversationKey, model, output, stream, signal: options?.signal },
 				{
-					blobStore: payload.blobStore,
 					connection,
-					lastAccessMs: Date.now(),
+					blobStore: payload.blobStore,
 					mcpTools: payload.mcpTools,
 					pendingExecs: [],
+					lastAccessMs: Date.now(),
 				},
 			);
 		} catch (error) {
 			output.stopReason = options?.signal?.aborted ? "aborted" : "error";
 			output.errorMessage = error instanceof Error ? error.message : String(error);
-			stream.push({ error: output, reason: output.stopReason, type: "error" });
+			stream.push({ type: "error", reason: output.stopReason, error: output });
 			stream.end();
 		}
 	})();
@@ -162,21 +165,21 @@ export const streamSimpleCursor = (
 
 function createOutput(model: Model<string>): AssistantMessage {
 	return {
-		api: model.api,
-		content: [],
-		model: model.id,
-		provider: model.provider,
 		role: "assistant",
-		stopReason: "stop",
-		timestamp: Date.now(),
+		content: [],
+		api: model.api,
+		provider: model.provider,
+		model: model.id,
 		usage: {
-			cacheRead: 0,
-			cacheWrite: 0,
-			cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0, total: 0 },
 			input: 0,
 			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
 			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 		},
+		stopReason: "stop",
+		timestamp: Date.now(),
 	};
 }
 
@@ -220,7 +223,7 @@ async function resumeActiveRun(
 }
 
 async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): Promise<void> {
-	const state: StreamState = { outputTokens: 0, pendingExecs: run.pendingExecs, totalTokens: 0 };
+	const state: StreamState = { outputTokens: 0, totalTokens: 0, pendingExecs: run.pendingExecs };
 	const emitter = new CursorOutputEmitter(runtime.output, runtime.stream);
 	const thinkingFilter = createThinkingTagFilter();
 
@@ -239,8 +242,12 @@ async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): 
 			(messageBytes) => {
 				try {
 					handleServerMessage({
-						emitter,
 						messageBytes,
+						run,
+						state,
+						emitter,
+						thinkingFilter,
+						runtime,
 						onToolExec: (pendingExec) => {
 							state.pendingExecs.push(pendingExec);
 							run.pendingExecs = state.pendingExecs;
@@ -259,10 +266,6 @@ async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): 
 							run.connection.clearHandlers();
 							settle(resolve);
 						},
-						run,
-						runtime,
-						state,
-						thinkingFilter,
 					});
 				} catch (error) {
 					settle(() => reject(error instanceof Error ? error : new Error(String(error))));
@@ -288,6 +291,8 @@ async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): 
 		);
 
 		run.connection.setHandlers({
+			onData: parser,
+			onError: (error) => settle(() => reject(error)),
 			onClose: () => {
 				if (yieldedToolUse) {
 					return;
@@ -299,8 +304,6 @@ async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): 
 				runtime.stream.end();
 				settle(resolve);
 			},
-			onData: parser,
-			onError: (error) => settle(() => reject(error)),
 		});
 
 		runtime.signal?.addEventListener(
@@ -364,16 +367,17 @@ function handleServerMessage(options: {
 		}
 		const checkpoint = toBinary(ConversationStateStructureSchema, serverMessage.message.value);
 		upsertConversationState(options.runtime.conversationKey, (current) => ({
-			blobStore: current?.blobStore ?? new Map(options.run.blobStore),
-			checkpoint,
 			conversationId: current?.conversationId ?? deterministicConversationId(options.runtime.conversationKey),
+			checkpoint,
+			blobStore: current?.blobStore ?? new Map(options.run.blobStore),
 			lastAccessMs: Date.now(),
 		}));
 	}
 }
 
+// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 function handleExecServerMessage(
-	execMessage: unknown,
+	execMessage: any,
 	run: ActiveCursorRun,
 	onToolExec: (pendingExec: PendingExec) => void,
 ): void {
@@ -385,11 +389,11 @@ function handleExecServerMessage(
 	if (execCase === "mcpArgs") {
 		const mcpArgs = execMessage.message.value;
 		onToolExec({
-			decodedArgs: JSON.stringify(decodeMcpArgsMap(mcpArgs.args ?? {})),
 			execId: execMessage.execId,
 			execMsgId: execMessage.id,
 			toolCallId: mcpArgs.toolCallId || randomUUID(),
 			toolName: mcpArgs.toolName || mcpArgs.name,
+			decodedArgs: JSON.stringify(decodeMcpArgsMap(mcpArgs.args ?? {})),
 		});
 		return;
 	}
@@ -456,7 +460,7 @@ function handleExecServerMessage(
 			create(FetchResultSchema, {
 				result: {
 					case: "error",
-					value: create(FetchErrorSchema, { error: REJECT_REASON, url: execMessage.message.value.url ?? "" }),
+					value: create(FetchErrorSchema, { url: execMessage.message.value.url ?? "", error: REJECT_REASON }),
 				},
 			}),
 			(data) => run.connection.write(data),
@@ -473,9 +477,9 @@ function handleExecServerMessage(
 					case: "rejected",
 					value: create(ShellRejectedSchema, {
 						command: execMessage.message.value.command ?? "",
-						isReadonly: false,
-						reason: REJECT_REASON,
 						workingDirectory: execMessage.message.value.workingDirectory ?? "",
+						reason: REJECT_REASON,
+						isReadonly: false,
 					}),
 				},
 			}),
@@ -493,9 +497,9 @@ function handleExecServerMessage(
 					case: "rejected",
 					value: create(ShellRejectedSchema, {
 						command: execMessage.message.value.command ?? "",
-						isReadonly: false,
-						reason: REJECT_REASON,
 						workingDirectory: execMessage.message.value.workingDirectory ?? "",
+						reason: REJECT_REASON,
+						isReadonly: false,
 					}),
 				},
 			}),
@@ -561,16 +565,16 @@ class CursorOutputEmitter {
 		}
 		if (this.textIndex === undefined) {
 			this.closeThinking();
-			this.output.content.push({ text: "", type: "text" });
+			this.output.content.push({ type: "text", text: "" });
 			this.textIndex = this.output.content.length - 1;
-			this.stream.push({ contentIndex: this.textIndex, partial: this.output, type: "text_start" });
+			this.stream.push({ type: "text_start", contentIndex: this.textIndex, partial: this.output });
 		}
 		const block = this.output.content[this.textIndex];
 		if (block?.type !== "text") {
 			return;
 		}
 		block.text += text;
-		this.stream.push({ contentIndex: this.textIndex, delta: text, partial: this.output, type: "text_delta" });
+		this.stream.push({ type: "text_delta", contentIndex: this.textIndex, delta: text, partial: this.output });
 	}
 
 	appendThinking(thinking: string): void {
@@ -579,9 +583,9 @@ class CursorOutputEmitter {
 		}
 		if (this.thinkingIndex === undefined) {
 			this.closeText();
-			this.output.content.push({ thinking: "", type: "thinking" });
+			this.output.content.push({ type: "thinking", thinking: "" });
 			this.thinkingIndex = this.output.content.length - 1;
-			this.stream.push({ contentIndex: this.thinkingIndex, partial: this.output, type: "thinking_start" });
+			this.stream.push({ type: "thinking_start", contentIndex: this.thinkingIndex, partial: this.output });
 		}
 		const block = this.output.content[this.thinkingIndex];
 		if (block?.type !== "thinking") {
@@ -589,10 +593,10 @@ class CursorOutputEmitter {
 		}
 		block.thinking += thinking;
 		this.stream.push({
+			type: "thinking_delta",
 			contentIndex: this.thinkingIndex,
 			delta: thinking,
 			partial: this.output,
-			type: "thinking_delta",
 		});
 	}
 
@@ -601,18 +605,18 @@ class CursorOutputEmitter {
 		this.closeThinking();
 		this.output.content.push(toolCall);
 		const index = this.output.content.length - 1;
-		this.stream.push({ contentIndex: index, partial: this.output, type: "toolcall_start" });
+		this.stream.push({ type: "toolcall_start", contentIndex: index, partial: this.output });
 		if (rawArguments) {
-			this.stream.push({ contentIndex: index, delta: rawArguments, partial: this.output, type: "toolcall_delta" });
+			this.stream.push({ type: "toolcall_delta", contentIndex: index, delta: rawArguments, partial: this.output });
 		}
-		this.stream.push({ contentIndex: index, partial: this.output, toolCall, type: "toolcall_end" });
+		this.stream.push({ type: "toolcall_end", contentIndex: index, toolCall, partial: this.output });
 	}
 
 	finishToolUse(): void {
 		this.closeText();
 		this.closeThinking();
 		this.output.stopReason = "toolUse";
-		this.stream.push({ message: this.output, reason: "toolUse", type: "done" });
+		this.stream.push({ type: "done", reason: "toolUse", message: this.output });
 		this.stream.end();
 	}
 
@@ -628,7 +632,7 @@ class CursorOutputEmitter {
 		}
 		const block = this.output.content[this.textIndex];
 		if (block?.type === "text") {
-			this.stream.push({ content: block.text, contentIndex: this.textIndex, partial: this.output, type: "text_end" });
+			this.stream.push({ type: "text_end", contentIndex: this.textIndex, content: block.text, partial: this.output });
 		}
 		this.textIndex = undefined;
 	}
@@ -640,10 +644,10 @@ class CursorOutputEmitter {
 		const block = this.output.content[this.thinkingIndex];
 		if (block?.type === "thinking") {
 			this.stream.push({
-				content: block.thinking,
-				contentIndex: this.thinkingIndex,
-				partial: this.output,
 				type: "thinking_end",
+				contentIndex: this.thinkingIndex,
+				content: block.thinking,
+				partial: this.output,
 			});
 		}
 		this.thinkingIndex = undefined;
@@ -657,14 +661,6 @@ function createThinkingTagFilter(): {
 	let buffer = "";
 	let inThinking = false;
 	return {
-		flush() {
-			const remainder = buffer;
-			buffer = "";
-			if (!remainder) {
-				return { content: "", reasoning: "" };
-			}
-			return inThinking ? { content: "", reasoning: remainder } : { content: remainder, reasoning: "" };
-		},
 		process(text: string) {
 			const input = buffer + text;
 			buffer = "";
@@ -705,6 +701,14 @@ function createThinkingTagFilter(): {
 				content += rest;
 			}
 			return { content, reasoning };
+		},
+		flush() {
+			const remainder = buffer;
+			buffer = "";
+			if (!remainder) {
+				return { content: "", reasoning: "" };
+			}
+			return inThinking ? { content: "", reasoning: remainder } : { content: remainder, reasoning: "" };
 		},
 	};
 }

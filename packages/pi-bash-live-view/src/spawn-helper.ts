@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SPAWN_HELPER_BASENAME = process.platform === "win32" ? "spawn-helper.exe" : "spawn-helper";
-const MODULE_DIR = import.meta.dirname;
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_DIR = path.resolve(MODULE_DIR, "..");
 
 export interface EnsureSpawnHelperOptions {
@@ -13,7 +13,7 @@ export interface EnsureSpawnHelperOptions {
 	chmodFn?: typeof chmod;
 }
 
-function uniquePaths(candidates: (string | undefined)[]): string[] {
+function uniquePaths(candidates: Array<string | undefined>): string[] {
 	const seen = new Set<string>();
 	const deduped: string[] = [];
 	for (const candidate of candidates) {
@@ -81,6 +81,6 @@ export async function ensureSpawnHelperExecutable(options: EnsureSpawnHelperOpti
 }
 
 export const spawnHelperInternals = {
-	isExecutable,
 	uniquePaths,
+	isExecutable,
 };

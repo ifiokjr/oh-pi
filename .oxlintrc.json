@@ -10,7 +10,7 @@
 		"restriction": "off"
 	},
 	"rules": {
-		"typescript/no-explicit-any": "error",
+		"typescript/no-explicit-any": "off",
 		"no-console": "off",
 		"require-await": "off",
 		"no-inline-comments": "off",

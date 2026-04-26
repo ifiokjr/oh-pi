@@ -1,10 +1,14 @@
+import type { AgentSessionLike } from "@ifi/pi-web-server";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { createDiscoveryService } from "./src/discovery.js";
 import { createQrRenderer } from "./src/qr.js";
-import { isRemoteSessionEnv, startRemoteSessionServer } from "./src/server.js";
-import type { RemoteSessionHandle, RemoteSessionServerOptions } from "./src/server.js";
-import { createRemoteWidgetController } from "./src/widget.js";
-import type { RemoteWidgetState } from "./src/widget.js";
+import {
+	isRemoteSessionEnv,
+	startRemoteSessionServer,
+	type RemoteSessionHandle,
+	type RemoteSessionServerOptions,
+} from "./src/server.js";
+import { createRemoteWidgetController, type RemoteWidgetState } from "./src/widget.js";
 
 const HOSTED_UI_URL = "https://pi-remote.dev";
 const discovery = createDiscoveryService();
@@ -20,7 +24,7 @@ function looksLikeAgentSession(value: unknown): boolean {
 	);
 }
 
-function resolveAttachedSession(ctx: ExtensionContext, pi: ExtensionAPI): unknown {
+function resolveAttachedSession(ctx: ExtensionContext, pi: ExtensionAPI): AgentSessionLike | undefined {
 	const ctxRecord = ctx as unknown as Record<string, unknown>;
 	const piRecord = pi as unknown as Record<string, unknown>;
 	const candidates = [
@@ -35,13 +39,13 @@ function resolveAttachedSession(ctx: ExtensionContext, pi: ExtensionAPI): unknow
 
 	for (const candidate of candidates) {
 		if (looksLikeAgentSession(candidate)) {
-			return candidate;
+			return candidate as AgentSessionLike;
 		}
 
 		if (candidate && typeof candidate === "object") {
 			const nestedSession = (candidate as Record<string, unknown>).session;
 			if (looksLikeAgentSession(nestedSession)) {
-				return nestedSession;
+				return nestedSession as AgentSessionLike;
 			}
 		}
 	}
@@ -126,7 +130,7 @@ export default function remoteTailscaleExtension(pi: ExtensionAPI) {
 
 	const ensureStarted = async (ctx: ExtensionContext): Promise<RemoteSessionHandle> => {
 		activeCtx = ctx;
-		/* V8 ignore next -- public entrypoints short-circuit before re-entering ensureStarted when already running. */
+		/* v8 ignore next -- public entrypoints short-circuit before re-entering ensureStarted when already running. */
 		if (activeHandle?.server.isRunning) {
 			return activeHandle;
 		}

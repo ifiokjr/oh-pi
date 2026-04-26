@@ -1,7 +1,7 @@
-import type { AgentToolResult, ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, AgentToolResult } from "@mariozechner/pi-coding-agent";
 import { createFindTool, createGrepTool } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { FG_BLUE, FG_DIM, FG_MUTED, RST, fillToolBackground } from "./theme.js";
+import { FG_BLUE, FG_DIM, FG_MUTED, fillToolBackground, RST } from "./theme.js";
 import { getFileIcon } from "./icons.js";
 
 function groupResultsByDir(files: string[]): Record<string, string[]> {
@@ -18,9 +18,7 @@ function groupResultsByDir(files: string[]): Record<string, string[]> {
 }
 
 function renderFindResults(files: string[]): string {
-	if (files.length === 0) {
-		return fillToolBackground(`${FG_DIM}No matches found.${RST}`);
-	}
+	if (files.length === 0) return fillToolBackground(`${FG_DIM}No matches found.${RST}`);
 	const groups = groupResultsByDir(files);
 	const lines: string[] = [];
 	for (const [dir, groupFiles] of Object.entries(groups)) {
@@ -34,10 +32,8 @@ function renderFindResults(files: string[]): string {
 	return fillToolBackground(lines.join("\n").trimEnd());
 }
 
-function renderGrepResults(files: { file: string; matches: Array<{ line: number; text: string }> }[]): string {
-	if (files.length === 0) {
-		return fillToolBackground(`${FG_DIM}No matches found.${RST}`);
-	}
+function renderGrepResults(files: Array<{ file: string; matches: Array<{ line: number; text: string }> }>): string {
+	if (files.length === 0) return fillToolBackground(`${FG_DIM}No matches found.${RST}`);
 	const lines: string[] = [];
 	for (const { file, matches } of files) {
 		lines.push(`${FG_BLUE}▸ ${file}${RST}`);
@@ -56,7 +52,12 @@ export function enhanceFindTool(pi: ExtensionAPI): void {
 	pi.registerTool({
 		...original,
 		async execute(toolCallId, params, signal, onUpdate): Promise<AgentToolResult<unknown>> {
-			const result = await original.execute(toolCallId, params as unknown, signal, onUpdate);
+			const result = await original.execute(
+				toolCallId,
+				params as Parameters<typeof original.execute>[1],
+				signal,
+				onUpdate,
+			);
 			const text = result.content.find((c): c is { type: "text"; text: string } => c.type === "text")?.text ?? "";
 			let files: string[] = [];
 			if (text.startsWith("[") || text.startsWith("{")) {
@@ -64,7 +65,7 @@ export function enhanceFindTool(pi: ExtensionAPI): void {
 					const parsed = JSON.parse(text);
 					files = Array.isArray(parsed) ? parsed : (parsed.files ?? []);
 				} catch {
-					// Patch-coverage-ignore
+					// patch-coverage-ignore
 					files = text.split("\n").filter(Boolean);
 				}
 			} else {
@@ -73,7 +74,7 @@ export function enhanceFindTool(pi: ExtensionAPI): void {
 			if (files.length > 0) {
 				return {
 					...result,
-					content: [{ text: renderFindResults(files), type: "text" as const }],
+					content: [{ type: "text" as const, text: renderFindResults(files) }],
 				};
 			}
 			return result;
@@ -87,19 +88,24 @@ export function enhanceGrepTool(pi: ExtensionAPI): void {
 	pi.registerTool({
 		...original,
 		async execute(toolCallId, params, signal, onUpdate): Promise<AgentToolResult<unknown>> {
-			const result = await original.execute(toolCallId, params as unknown, signal, onUpdate);
+			const result = await original.execute(
+				toolCallId,
+				params as Parameters<typeof original.execute>[1],
+				signal,
+				onUpdate,
+			);
 			const text = result.content.find((c): c is { type: "text"; text: string } => c.type === "text")?.text ?? "";
 			if (text.startsWith("[")) {
 				try {
-					const parsed = JSON.parse(text) as { file: string; matches: Array<{ line: number; text: string }> }[];
+					const parsed = JSON.parse(text) as Array<{ file: string; matches: Array<{ line: number; text: string }> }>;
 					if (Array.isArray(parsed) && parsed[0]?.matches) {
 						return {
 							...result,
-							content: [{ text: renderGrepResults(parsed), type: "text" as const }],
+							content: [{ type: "text" as const, text: renderGrepResults(parsed) }],
 						};
 					}
 				} catch {
-					// Patch-coverage-ignore
+					// patch-coverage-ignore
 					// Fallback
 				}
 			}
@@ -109,14 +115,17 @@ export function enhanceGrepTool(pi: ExtensionAPI): void {
 }
 
 const multiGrepParams = Type.Object({
-	glob: Type.Optional(Type.String({ description: "File glob constraint (e.g. *.ts)" })),
-	path: Type.Optional(Type.String({ description: "Base directory or file to search within" })),
 	patterns: Type.Array(Type.String(), { description: "Multiple patterns to search for (OR logic)" }),
+	path: Type.Optional(Type.String({ description: "Base directory or file to search within" })),
+	glob: Type.Optional(Type.String({ description: "File glob constraint (e.g. *.ts)" })),
 });
 
 export function enhanceMultiGrepTool(pi: ExtensionAPI): void {
 	pi.registerTool({
+		name: "multi_grep",
+		label: "multi_grep",
 		description: "OR-search across multiple string patterns in one pass",
+		parameters: multiGrepParams,
 		async execute(_toolCallId, params, _signal, _onUpdate): Promise<AgentToolResult<unknown>> {
 			const {
 				patterns,
@@ -129,9 +138,6 @@ export function enhanceMultiGrepTool(pi: ExtensionAPI): void {
 				details: result,
 			};
 		},
-		label: "multi_grep",
-		name: "multi_grep",
-		parameters: multiGrepParams,
 	});
 }
 
@@ -139,7 +145,7 @@ interface MultiGrepResult {
 	ok: boolean;
 	message: string;
 	matches: number;
-	results: { file: string; matches: Array<{ line: number; text: string; pattern: string }> }[];
+	results: Array<{ file: string; matches: Array<{ line: number; text: string; pattern: string }> }>;
 }
 
 function execMultiGrep(patterns: string[], glob: string, basePath: string): MultiGrepResult {
@@ -148,46 +154,41 @@ function execMultiGrep(patterns: string[], glob: string, basePath: string): Mult
 	let totalMatches = 0;
 	for (const pattern of patterns) {
 		try {
-			const output = execSync(
-				`grep -rn --include="${glob}" "${pattern.replaceAll(/"/g, String.raw`\"`)}" "${basePath}"`,
-				{
-					encoding: "utf8",
-					stdio: ["pipe", "pipe", "ignore"],
-				},
-			);
+			const output = execSync(`grep -rn --include="${glob}" "${pattern.replace(/"/g, '\\"')}" "${basePath}"`, {
+				encoding: "utf-8",
+				stdio: ["pipe", "pipe", "ignore"],
+			});
 			const lines = output.split("\n").filter(Boolean);
 			for (const line of lines) {
-				const [file, lineNum, ...textParts] = line.split(":"); // Patch-coverage-ignore
-				const text = textParts.join(":"); // Patch-coverage-ignore
-				if (!file || !lineNum) {
-					continue;
-				} // Patch-coverage-ignore
-				const num = Number(lineNum); // Patch-coverage-ignore
-				const existing = results.find((r) => r.file === file); // Patch-coverage-ignore
+				const [file, lineNum, ...textParts] = line.split(":"); // patch-coverage-ignore
+				const text = textParts.join(":"); // patch-coverage-ignore
+				if (!file || !lineNum) continue; // patch-coverage-ignore
+				const num = Number(lineNum); // patch-coverage-ignore
+				const existing = results.find((r) => r.file === file); // patch-coverage-ignore
 				if (existing) {
-					// Patch-coverage-ignore
-					existing.matches.push({ line: num, pattern, text }); // Patch-coverage-ignore
+					// patch-coverage-ignore
+					existing.matches.push({ line: num, text, pattern }); // patch-coverage-ignore
 				} else {
-					results.push({ file, matches: [{ line: num, pattern, text }] }); // Patch-coverage-ignore
+					results.push({ file, matches: [{ line: num, text, pattern }] }); // patch-coverage-ignore
 				}
 			}
 			totalMatches += lines.length;
 		} catch {
-			// Patch-coverage-ignore
-			// Grep returns exit 1 when no matches
+			// patch-coverage-ignore
+			// grep returns exit 1 when no matches
 		}
 	}
 	return {
-		matches: totalMatches,
-		message: totalMatches > 0 ? `Found ${totalMatches} matches` : "No matches",
 		ok: totalMatches > 0,
+		message: totalMatches > 0 ? `Found ${totalMatches} matches` : "No matches",
+		matches: totalMatches,
 		results,
 	};
 }
 
 async function multiGrep(patterns: string[], glob: string, basePath: string): Promise<MultiGrepResult> {
 	if (patterns.length === 0) {
-		return { matches: 0, message: "No patterns provided", ok: false, results: [] };
+		return { ok: false, message: "No patterns provided", matches: 0, results: [] };
 	}
 	try {
 		const { CursorStore } = await import("@ff-labs/fff-node");
@@ -200,22 +201,22 @@ async function multiGrep(patterns: string[], glob: string, basePath: string): Pr
 			for (const m of fffMatches) {
 				const existing = results.find((r) => r.file === m.file);
 				if (existing) {
-					// Patch-coverage-ignore
-					existing.matches.push({ line: m.line, pattern, text: m.text }); // Patch-coverage-ignore
+					// patch-coverage-ignore
+					existing.matches.push({ line: m.line, text: m.text, pattern }); // patch-coverage-ignore
 				} else {
-					results.push({ file: m.file, matches: [{ line: m.line, pattern, text: m.text }] });
+					results.push({ file: m.file, matches: [{ line: m.line, text: m.text, pattern }] });
 				}
 				totalMatches++;
 			}
 		}
 		return {
-			matches: totalMatches,
-			message: totalMatches > 0 ? `Found ${totalMatches} matches` : "No matches",
 			ok: totalMatches > 0,
+			message: totalMatches > 0 ? `Found ${totalMatches} matches` : "No matches",
+			matches: totalMatches,
 			results,
 		};
 	} catch {
-		// Patch-coverage-ignore
+		// patch-coverage-ignore
 		return execMultiGrep(patterns, glob, basePath);
 	}
 }

@@ -16,7 +16,7 @@ export interface RemoteWidgetState {
 export interface RemoteUiTarget {
 	ui: {
 		setStatus: (key: string, value: string | undefined) => void;
-		setWidget: (...args: unknown[]) => void;
+		setWidget: <TArgs extends unknown[]>(...args: TArgs) => void;
 	};
 }
 
@@ -111,12 +111,12 @@ export function createRemoteWidgetController(
 			latestCtx = undefined;
 			latestState = undefined;
 		},
-		get enabled() {
-			return enabled;
-		},
 		flush() {
 			clearTimer();
 			renderNow();
+		},
+		get enabled() {
+			return enabled;
 		},
 		schedule(ctx: RemoteUiTarget, state: RemoteWidgetState) {
 			latestCtx = ctx;

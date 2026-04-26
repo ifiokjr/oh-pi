@@ -755,7 +755,7 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 					},
 					handleInput(data: string) {
 						if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c") || data === "q") {
-							done();
+							done(undefined);
 							return;
 						}
 
@@ -882,11 +882,12 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 	const makeToolResult = (
 		text: string,
 		options: { details?: Record<string, unknown>; isError?: boolean } = {},
-	): AgentToolResult<unknown> => ({
-		content: [{ text, type: "text" }],
-		details: options.details ?? {},
-		isError: options.isError,
-	});
+	): AgentToolResult<unknown> & { isError?: boolean } =>
+		({
+			content: [{ text, type: "text" }],
+			details: options.details ?? {},
+			isError: options.isError,
+		}) as AgentToolResult<unknown> & { isError?: boolean };
 
 	pi.registerMessageRenderer(BG_MESSAGE_TYPE, (message, { expanded }, theme) =>
 		renderTaskEventMessage(message, expanded, theme),

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -23,29 +23,19 @@ export async function checkHealth(): Promise<FffStatus> {
 		// Attempt to load FFF module; if unavailable, return degraded status
 		const fff = await import("@ff-labs/fff-node");
 		// Safe access to any API surface
-		const cursor = (
-			fff as unknown as {
-				CursorStore?: new () => { stats?(): { fileCount?: number }; rescan?(cwd: string): Promise<void> };
-			}
-		).CursorStore
-			? new (
-					fff as unknown as {
-						CursorStore?: new () => { stats?(): { fileCount?: number }; rescan?(cwd: string): Promise<void> };
-					}
-				).CursorStore()
-			: null;
+		const cursor = (fff as any).CursorStore ? new (fff as any).CursorStore() : null;
 		const stats = cursor?.stats?.() ?? {};
 		return {
-			fileCount: stats.fileCount,
-			indexed: true,
-			message: `FFF index healthy — ${stats.fileCount ?? "unknown"} files indexed`,
 			ok: true,
+			message: `FFF index healthy — ${stats.fileCount ?? "unknown"} files indexed`,
+			indexed: true,
+			fileCount: stats.fileCount,
 		};
 	} catch {
 		return {
-			indexed: false,
-			message: "FFF index not initialized or module unavailable",
 			ok: false,
+			message: "FFF index not initialized or module unavailable",
+			indexed: false,
 		};
 	}
 }
@@ -54,35 +44,25 @@ export async function rescan(): Promise<FffStatus> {
 	try {
 		ensureFffDir();
 		const fff = await import("@ff-labs/fff-node");
-		const cursor = (
-			fff as unknown as {
-				CursorStore?: new () => { stats?(): { fileCount?: number }; rescan?(cwd: string): Promise<void> };
-			}
-		).CursorStore
-			? new (
-					fff as unknown as {
-						CursorStore?: new () => { stats?(): { fileCount?: number }; rescan?(cwd: string): Promise<void> };
-					}
-				).CursorStore()
-			: null;
+		const cursor = (fff as any).CursorStore ? new (fff as any).CursorStore() : null;
 		if (cursor?.rescan) {
 			await cursor.rescan(process.cwd());
 			return {
-				indexed: true,
-				message: `Rescan complete for ${process.cwd()}`,
 				ok: true,
+				message: `Rescan complete for ${process.cwd()}`,
+				indexed: true,
 			};
 		}
 		return {
-			indexed: true,
-			message: "Index initialized (no rescan method available)",
 			ok: true,
+			message: "Index initialized (no rescan method available)",
+			indexed: true,
 		};
 	} catch {
 		return {
-			indexed: false,
-			message: "Failed to rescan — FFF module unavailable",
 			ok: false,
+			message: "Failed to rescan — FFF module unavailable",
+			indexed: false,
 		};
 	}
 }

@@ -6,8 +6,8 @@ const NODE_PTY_MODULE = "node-pty";
 
 export interface PtyLike {
 	pid: number;
-	on: (event: "data" | "exit", handler: (...args: unknown[]) => void) => void;
-	off?: (event: "data" | "exit", handler: (...args: unknown[]) => void) => void;
+	on: <TArgs extends unknown[]>(event: "data" | "exit", handler: (...args: TArgs) => void) => void;
+	off?: <TArgs extends unknown[]>(event: "data" | "exit", handler: (...args: TArgs) => void) => void;
 	write: (data: string) => void;
 	resize: (columns: number, rows: number) => void;
 	kill: (signal?: string) => void;
@@ -47,7 +47,7 @@ export interface PtyProcessHandle {
 }
 
 declare global {
-	// Biome-ignore lint/style/noVar: Tests inject a mock PTY loader through the global object.
+	// biome-ignore lint/style/noVar: Tests inject a mock PTY loader through the global object.
 	var __PI_REMOTE_TAILSCALE_PTY_LOADER__: (() => Promise<PtyModule>) | undefined;
 }
 
@@ -65,6 +65,7 @@ export function buildPiCommand(value = process.env.PI_REMOTE_TAILSCALE_PI_BIN): 
 
 export function adaptPty(pty: PtyLike): PtyProcessHandle {
 	return {
+		pid: pty.pid,
 		kill: (signal) => {
 			pty.kill(signal);
 		},
@@ -83,7 +84,6 @@ export function adaptPty(pty: PtyLike): PtyProcessHandle {
 				pty.off?.("exit", wrapped);
 			};
 		},
-		pid: pty.pid,
 		resize: (columns, rows) => {
 			pty.resize(columns, rows);
 		},
@@ -100,10 +100,10 @@ export async function createPtyProcess(
 	const loadModule = deps.loadModule ?? loadNodePtyModule;
 	const nodePty = await loadModule();
 	const pty = nodePty.spawn(options.command, options.args ?? [], {
-		cols: options.columns ?? DEFAULT_PTY_COLUMNS,
 		cwd: options.cwd,
 		env: options.env,
 		name: options.name ?? "xterm-color",
+		cols: options.columns ?? DEFAULT_PTY_COLUMNS,
 		rows: options.rows ?? DEFAULT_PTY_ROWS,
 	});
 	return adaptPty(pty);

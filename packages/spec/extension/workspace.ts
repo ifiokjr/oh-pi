@@ -89,7 +89,7 @@ export function listFeatureDirs(repoRoot: string): string[] {
 			const fullPath = path.join(specsDir, entry);
 			return existsSync(fullPath) && statSync(fullPath).isDirectory();
 		})
-		.toSorted((a, b) => a.localeCompare(b));
+		.sort((a: string, b: string) => a.localeCompare(b));
 }
 
 export function getLatestFeatureDir(repoRoot: string): string | undefined {

@@ -1,31 +1,37 @@
 import { EventEmitter } from "node:events";
 
 export function createExtensionHarness() {
-	const handlers = new Map<string, ((...args: unknown[]) => unknown)[]>();
-	const tools = new Map<string, unknown>();
-	const commands = new Map<string, unknown>();
-	const flags = new Map<string, unknown>();
-	const messages: unknown[] = [];
+	const handlers = new Map<string, Array<(...args: unknown[]) => unknown>>();
 	const userMessages: string[] = [];
-	const notifications: { msg: string; type: string }[] = [];
+	const notifications: Array<{ msg: string; type: string }> = [];
 	const statusMap = new Map<string, unknown>();
-	const shortcuts = new Map<string, unknown>();
 	let editorText = "";
 	let editorComponentFactory: unknown;
-	const messageRenderers = new Map<string, unknown>();
-	const providers = new Map<string, unknown>();
-	const eventBus = new EventEmitter();
+	const eventBusListeners = new Map<string, Array<(...args: unknown[]) => unknown>>();
+	const eventBus = {
+		emit(event: string, ...args: unknown[]) {
+			for (const listener of eventBusListeners.get(event) ?? []) {
+				listener(...args);
+			}
+		},
+		on(event: string, listener: (...args: unknown[]) => unknown) {
+			if (!eventBusListeners.has(event)) {
+				eventBusListeners.set(event, []);
+			}
+			eventBusListeners.get(event)!.push(listener);
+		},
+	};
 	let sessionName = "";
 
 	let currentThinking = "low";
 	const pi = {
 		appendEntry() {},
 		events: {
-			emit(event: string, ...args: unknown[]) {
+			emit<TArgs extends unknown[]>(event: string, ...args: TArgs) {
 				eventBus.emit(event, ...args);
 			},
-			on(event: string, handler: (...args: unknown[]) => unknown) {
-				eventBus.on(event, handler);
+			on<TArgs extends unknown[]>(event: string, handler: (...args: TArgs) => unknown) {
+				eventBus.on(event, handler as unknown as (...args: unknown[]) => unknown);
 			},
 		},
 		exec: async () => ({ stdout: "", stderr: "", exitCode: 0 }),
@@ -44,16 +50,18 @@ export function createExtensionHarness() {
 		getThinkingLevel() {
 			return currentThinking;
 		},
-		on(event: string, handler: (...args: unknown[]) => unknown) {
+		on<TArgs extends unknown[]>(event: string, handler: (...args: TArgs) => unknown) {
 			if (!handlers.has(event)) {
 				handlers.set(event, []);
 			}
-			handlers.get(event)!.push(handler);
+			handlers.get(event)!.push(handler as unknown as (...args: unknown[]) => unknown);
 		},
-		registerCommand(name: string, spec: unknown) {
+		// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+		registerCommand(name: string, spec: any) {
 			commands.set(name, spec);
 		},
-		registerFlag(name: string, spec: unknown) {
+		// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+		registerFlag(name: string, spec: any) {
 			flags.set(name, spec);
 		},
 		registerMessageRenderer(name: string, renderer: unknown) {
@@ -65,11 +73,13 @@ export function createExtensionHarness() {
 		registerShortcut(name: string, spec: unknown) {
 			shortcuts.set(name, spec);
 		},
-		registerTool(tool: unknown) {
+		// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+		registerTool(tool: any) {
 			tools.set(tool.name, tool);
 		},
 		sendMessage(message: unknown) {
-			messages.push(message);
+			// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+			messages.push(message as any);
 		},
 		sendUserMessage(message: string) {
 			userMessages.push(message);
@@ -97,7 +107,7 @@ export function createExtensionHarness() {
 		hasPendingMessages: () => false,
 		hasUI: true,
 		isIdle: () => true,
-		model: undefined,
+		model: undefined as unknown,
 		modelRegistry: {
 			getAvailable: () => [],
 		},
@@ -143,6 +153,27 @@ export function createExtensionHarness() {
 		waitForIdle: async () => {},
 	};
 
+	class NonNullMap<K, V> extends Map<K, V> {
+		get(key: K): V {
+			return super.get(key)!;
+		}
+	}
+
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+	const commands = new NonNullMap<string, any>();
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+	const tools = new NonNullMap<string, any>();
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+	const flags = new NonNullMap<string, any>();
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+	const messages: any[] = [];
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+	const shortcuts = new NonNullMap<string, any>();
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+	const messageRenderers = new NonNullMap<string, any>();
+	// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+	const providers = new NonNullMap<string, any>();
+
 	return {
 		commands,
 		ctx,
@@ -157,12 +188,12 @@ export function createExtensionHarness() {
 				editorText = value;
 			},
 		},
-		emit(event: string, ...args: unknown[]) {
+		emit<TArgs extends unknown[]>(event: string, ...args: TArgs) {
 			for (const handler of handlers.get(event) ?? []) {
 				handler(...args);
 			}
 		},
-		async emitAsync(event: string, ...args: unknown[]) {
+		async emitAsync<TArgs extends unknown[]>(event: string, ...args: TArgs) {
 			const results = [];
 			for (const handler of handlers.get(event) ?? []) {
 				results.push(await handler(...args));

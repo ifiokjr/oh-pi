@@ -53,8 +53,8 @@ function nextStepsFor(paths: WorkflowPaths, initialized: boolean): string[] {
 
 	const steps: string[] = [];
 	const specExists = existsSync(paths.featureSpec);
-	const planExists = Boolean(paths.planFile) && existsSync(paths.planFile);
-	const tasksExist = Boolean(paths.tasksFile) && existsSync(paths.tasksFile);
+	const planExists = !!paths.planFile && existsSync(paths.planFile);
+	const tasksExist = !!paths.tasksFile && existsSync(paths.tasksFile);
 	const checklists = summarizeChecklists(paths.checklistsDir);
 	const hasIncompleteChecklist = checklists.some((checklist) => checklist.incomplete > 0);
 
