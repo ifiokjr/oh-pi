@@ -96,6 +96,14 @@ const FALLBACK_OLLAMA_CLOUD_MODELS: OllamaProviderModel[] = [
 		source: "cloud",
 	}),
 	toOllamaModel({
+		contextWindow: 1_048_576,
+		id: "deepseek-v4-flash",
+		input: ["text"],
+		maxTokens: 65_536,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
 		contextWindow: 262_144,
 		id: "devstral-2:123b",
 		input: ["text"],
