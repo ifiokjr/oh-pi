@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SPAWN_HELPER_BASENAME = process.platform === "win32" ? "spawn-helper.exe" : "spawn-helper";
+const NODE_PTY_PREBUILD_DIR = `${process.platform}-${process.arch}`;
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_DIR = path.resolve(MODULE_DIR, "..");
 
@@ -27,13 +28,20 @@ function uniquePaths(candidates: Array<string | undefined>): string[] {
 	return deduped;
 }
 
+function getNodePtySpawnHelperCandidates(nodePtyPackageDir: string): string[] {
+	return [
+		path.join(nodePtyPackageDir, "prebuilds", NODE_PTY_PREBUILD_DIR, SPAWN_HELPER_BASENAME),
+		path.join(nodePtyPackageDir, "build", "Release", SPAWN_HELPER_BASENAME),
+	];
+}
+
 export function getSpawnHelperCandidates(explicitPath?: string): string[] {
 	return uniquePaths([
 		explicitPath,
 		process.env.NODE_PTY_SPAWN_HELPER,
-		path.join(PACKAGE_DIR, "node_modules", "node-pty", "build", "Release", SPAWN_HELPER_BASENAME),
-		path.join(PACKAGE_DIR, "..", "node_modules", "node-pty", "build", "Release", SPAWN_HELPER_BASENAME),
-		path.join(PACKAGE_DIR, "..", "..", "node_modules", "node-pty", "build", "Release", SPAWN_HELPER_BASENAME),
+		...getNodePtySpawnHelperCandidates(path.join(PACKAGE_DIR, "node_modules", "node-pty")),
+		...getNodePtySpawnHelperCandidates(path.join(PACKAGE_DIR, "..", "node_modules", "node-pty")),
+		...getNodePtySpawnHelperCandidates(path.join(PACKAGE_DIR, "..", "..", "node_modules", "node-pty")),
 		path.join(PACKAGE_DIR, "build", "Release", SPAWN_HELPER_BASENAME),
 	]);
 }
