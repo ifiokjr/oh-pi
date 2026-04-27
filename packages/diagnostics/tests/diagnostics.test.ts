@@ -355,6 +355,57 @@ describe("diagnostics extension", () => {
 		expect(appendEntry).not.toHaveBeenCalled();
 	});
 
+	it("keeps the footer running while a tool is active after an errored completion", () => {
+		const harness = createExtensionHarness();
+		const setWidget = vi.fn();
+		harness.ctx.ui.setWidget = setWidget;
+		harness.ctx.sessionManager.getBranch = () =>
+			[
+				{
+					type: "custom_message",
+					customType: "pi-diagnostics:prompt",
+					details: makeCompletion({ status: "error", statusLabel: "errored", stopReason: "error" }),
+				},
+			] as any;
+		diagnosticsExtension(harness.pi as never);
+
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+		const widgetFactory = setWidget.mock.calls.at(-1)?.[1] as
+			| ((
+					tui: { requestRender: () => void },
+					theme: ThemeStub,
+			  ) => { dispose: () => void; render: (width: number) => string[] })
+			| undefined;
+		expect(widgetFactory).toBeTypeOf("function");
+
+		const requestRender = vi.fn();
+		const widget = widgetFactory?.({ requestRender }, theme);
+		expect(widget).toBeDefined();
+		expect(renderText(widget!)).toContain("errored");
+
+		requestRender.mockClear();
+		harness.emit(
+			"tool_execution_start",
+			{ type: "tool_execution_start", toolCallId: "tool-1", toolName: "bash", args: { command: "pnpm test" } },
+			harness.ctx,
+		);
+
+		const activeFooter = renderText(widget!);
+		expect(activeFooter).toContain("running");
+		expect(activeFooter).toContain("1 tool running (bash)");
+		expect(activeFooter).not.toContain("errored");
+		expect(requestRender).toHaveBeenCalled();
+
+		harness.emit(
+			"tool_execution_end",
+			{ type: "tool_execution_end", toolCallId: "tool-1", toolName: "bash", result: "ok" },
+			harness.ctx,
+		);
+		expect(renderText(widget!)).toContain("errored");
+
+		widget?.dispose();
+	});
+
 	it("restores session state, handles command flows, and clears the widget when disabled", async () => {
 		const harness = createExtensionHarness();
 		const setWidget = vi.fn();
