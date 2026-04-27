@@ -354,6 +354,7 @@ oh-pi repo
 │   ├── provider-catalog
 │   ├── provider-cursor
 │   ├── provider-ollama
+│   ├── analytics-extension
 │   ├── pi-remote-tailscale
 │   ├── pi-bash-live-view
 │   └── pi-pretty
@@ -362,7 +363,10 @@ oh-pi repo
     ├── cli
     ├── shared-qna
     ├── web-client
-    └── web-server
+    ├── web-server
+    ├── analytics-db
+    ├── analytics-dashboard
+    └── docs
 ```
 
 <!-- {/repoArchitectureAtAGlanceDocs} -->
@@ -393,6 +397,7 @@ Opt-in packages that stay separate from the default installer bundle:
 - `@ifi/pi-provider-catalog`
 - `@ifi/pi-provider-cursor`
 - `@ifi/pi-provider-ollama`
+- `@ifi/pi-analytics-extension`
 - `@ifi/pi-remote-tailscale`
 - `@ifi/pi-bash-live-view`
 - `@ifi/pi-pretty`
@@ -458,6 +463,7 @@ Managed local switching covers these packages:
 - `@ifi/pi-provider-catalog`
 - `@ifi/pi-provider-cursor`
 - `@ifi/pi-provider-ollama`
+- `@ifi/pi-analytics-extension`
 
 <!-- {/repoPiLocalManagedPackagesDocs} -->
 

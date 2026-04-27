@@ -123,6 +123,7 @@ oh-pi repo
 │   ├── provider-catalog
 │   ├── provider-cursor
 │   ├── provider-ollama
+│   ├── analytics-extension
 │   ├── pi-remote-tailscale
 │   ├── pi-bash-live-view
 │   └── pi-pretty
@@ -131,7 +132,10 @@ oh-pi repo
     ├── cli
     ├── shared-qna
     ├── web-client
-    └── web-server
+    ├── web-server
+    ├── analytics-db
+    ├── analytics-dashboard
+    └── docs
 ```
 
 <!-- {/repoArchitectureAtAGlanceDocs} -->

@@ -76,6 +76,10 @@ packages/
   spec/                   → @ifi/pi-spec (raw .ts spec-driven workflow package)
   cursor/                 → @ifi/pi-provider-cursor (raw .ts experimental Cursor provider package)
   ollama/                 → @ifi/pi-provider-ollama (raw .ts experimental Ollama local + cloud provider package)
+  analytics-db/           → @ifi/pi-analytics-db (SQLite schema and Drizzle ORM client for analytics data)
+  analytics-dashboard/    → @ifi/pi-analytics-dashboard (private React dashboard for visualizing AI usage)
+  analytics-extension/    → @ifi/pi-analytics-extension (raw .ts analytics tracking extension for pi)
+  docs/                   → @ifi/oh-pi-docs (private documentation site for oh-pi)
   oh-pi/                  → @ifi/oh-pi (installer CLI: `npx @ifi/oh-pi`)
 ```
 

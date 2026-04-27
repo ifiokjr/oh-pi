@@ -57,6 +57,10 @@ pi install npm:@ifi/pi-plan
 pi install npm:@ifi/pi-spec
 pi install npm:@ifi/pi-provider-cursor
 pi install npm:@ifi/pi-provider-ollama
+pi install npm:@ifi/pi-analytics-extension
+pi install npm:@ifi/pi-remote-tailscale
+pi install npm:@ifi/pi-bash-live-view
+pi install npm:@ifi/pi-pretty
 ```
 
 Do not use `bundledDependencies` in `@ifi/oh-pi`.

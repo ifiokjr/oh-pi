@@ -49,6 +49,7 @@ oh-pi repo
 │   ├── provider-catalog
 │   ├── provider-cursor
 │   ├── provider-ollama
+│   ├── analytics-extension
 │   ├── pi-remote-tailscale
 │   ├── pi-bash-live-view
 │   └── pi-pretty
@@ -57,7 +58,10 @@ oh-pi repo
     ├── cli
     ├── shared-qna
     ├── web-client
-    └── web-server
+    ├── web-server
+    ├── analytics-db
+    ├── analytics-dashboard
+    └── docs
 ```
 
 <!-- {/repoArchitectureAtAGlanceDocs} -->
@@ -106,6 +110,7 @@ Opt-in packages that stay separate from the default installer bundle:
 - `@ifi/pi-provider-catalog`
 - `@ifi/pi-provider-cursor`
 - `@ifi/pi-provider-ollama`
+- `@ifi/pi-analytics-extension`
 - `@ifi/pi-remote-tailscale`
 - `@ifi/pi-bash-live-view`
 - `@ifi/pi-pretty`
@@ -148,6 +153,7 @@ so build those when you are working on them directly.
 | [`@ifi/pi-provider-catalog`](../packages/providers)                  | No                  | `/providers*`                                                                           | Multi-provider catalog and lazy API-key login backed by `models.dev`                                                                     |
 | [`@ifi/pi-provider-cursor`](../packages/cursor)                      | No                  | `/login cursor`, `/cursor*`                                                             | Experimental Cursor OAuth provider with model discovery and direct AgentService streaming                                                |
 | [`@ifi/pi-provider-ollama`](../packages/ollama)                      | No                  | `/login ollama-cloud`, `/ollama*`, `/model`                                             | Experimental Ollama local + cloud provider integration                                                                                   |
+| [`@ifi/pi-analytics-extension`](../packages/analytics-extension)     | No                  | `/analytics`, `/analytics-dashboard`                                                     | Analytics tracking extension with SQLite persistence and browser dashboard                                                             |
 | [`@ifi/pi-remote-tailscale`](../packages/pi-remote-tailscale)        | No                  | `/remote`, `/remote:widget`, `/remote:stop`                                             | Secure remote session sharing via Tailscale HTTPS with PTY, WebSocket, QR codes, and token auth                                          |
 | [`@ifi/pi-bash-live-view`](../packages/pi-bash-live-view)            | No                  | `/bash-pty`, `bash_live_view` tool with `usePTY`                                        | PTY-backed live terminal viewing with real-time widget and `/xterm/headless` ANSI rendering                                              |
 | [`@ifi/pi-pretty`](../packages/pi-pretty)                            | No                  | wrapped `read`, `bash_pretty`, `ls`, `find`, `grep` tools                               | Syntax highlighting via Shiki, Nerd Font icons, tree-view listings, colored bash summaries, FFF search                                   |
@@ -483,6 +489,34 @@ Primary commands:
 - `/ollama:pull <model>`
 - `/login ollama-cloud`
 
+## Analytics stack
+
+### `@ifi/pi-analytics-extension`
+
+Purpose:
+
+- Tracks session-level and turn-level analytics (models, tokens, costs, codebases)
+- Persists data to SQLite via `@ifi/pi-analytics-db`
+- Provides `/analytics` for quick terminal stats
+- Provides `/analytics-dashboard` to open the browser dashboard
+
+### `@ifi/pi-analytics-db`
+
+Purpose:
+
+- SQLite database layer with Drizzle ORM schema
+- Stores sessions, turns, models, providers, codebases, and time-bucketed aggregations
+- Includes migrations and typed query helpers
+
+### `@ifi/pi-analytics-dashboard`
+
+Purpose:
+
+- React 19 + Vite 8 SPA for visualizing AI usage
+- Pages: Overview, Models, Codebases, Insights (emotions, words, misspellings)
+- Mock data mode for development, real API mode via Express server
+- Private package — run `pnpm dev` inside `packages/analytics-dashboard/`
+
 ## Content packs
 
 ## `@ifi/oh-pi-prompts`
@@ -561,6 +595,9 @@ The AGENTS template pack currently ships 5 templates.
 | [`@ifi/pi-shared-qna`](../packages/shared-qna) | Reusable TUI Q&A helpers and shared `pi-tui` loading logic                                             |
 | [`@ifi/pi-web-client`](../packages/web-client) | Platform-agnostic TypeScript client for custom remote session UIs                                      |
 | [`@ifi/pi-web-server`](../packages/web-server) | Embeddable HTTP + WebSocket remote session server                                                      |
+| [`@ifi/pi-analytics-db`](../packages/analytics-db) | SQLite schema and Drizzle ORM client for analytics data                                                |
+| [`@ifi/pi-analytics-dashboard`](../packages/analytics-dashboard) | React dashboard for visualizing AI usage (private package)                                               |
+| [`@ifi/oh-pi-docs`](../packages/docs) | Documentation site for oh-pi (private package)                                                         |
 
 ## Which feature should I reach for?
 
@@ -578,6 +615,7 @@ The AGENTS template pack currently ships 5 templates.
 - **Automatic or explainable model routing** → `@ifi/pi-extension-adaptive-routing`
 - **Extra API-key providers** → `@ifi/pi-provider-catalog`
 - **Cursor integration** → `@ifi/pi-provider-cursor`
+- **Usage analytics and browser dashboard for your AI sessions** → `@ifi/pi-analytics-extension`
 - **Ollama local/cloud integration** → `@ifi/pi-provider-ollama`
 
 For the local development loop that points a real pi install at this checkout, see the root
