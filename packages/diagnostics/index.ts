@@ -77,7 +77,7 @@ const SHORTCUT = "ctrl+shift+d";
 const DIAGNOSTICS_MESSAGE_TYPE = "pi-diagnostics:prompt";
 const DIAGNOSTICS_STATE_TYPE = "pi-diagnostics:state";
 const WIDGET_KEY = "diagnostics";
-const WIDGET_REFRESH_MS = 1000;
+const WIDGET_REFRESH_MS = 5000;
 const PROMPT_PREVIEW_MAX_LENGTH = 96;
 const RESPONSE_PREVIEW_MAX_LENGTH = 88;
 
@@ -345,30 +345,30 @@ function getBranchEntries(ctx: ExtensionContext): SessionEntryLike[] {
 }
 
 function restoreEnabledState(entries: SessionEntryLike[]): boolean | undefined {
-	let next: boolean | undefined;
-	for (const entry of entries) {
-		if (entry.type !== "custom" || entry.customType !== DIAGNOSTICS_STATE_TYPE) {
+	for (let index = entries.length - 1; index >= 0; index -= 1) {
+		const entry = entries[index];
+		if (entry?.type !== "custom" || entry.customType !== DIAGNOSTICS_STATE_TYPE) {
 			continue;
 		}
 		if (isDiagnosticsStateEntry(entry.data)) {
-			next = entry.data.enabled;
+			return entry.data.enabled;
 		}
 	}
-	return next;
+	return undefined;
 }
 
 function restoreLastCompletion(entries: SessionEntryLike[]): PromptCompletionDiagnostics | null {
-	let last: PromptCompletionDiagnostics | null = null;
-	for (const entry of entries) {
-		if (getMessageCustomType(entry) !== DIAGNOSTICS_MESSAGE_TYPE) {
+	for (let index = entries.length - 1; index >= 0; index -= 1) {
+		const entry = entries[index];
+		if (!entry || getMessageCustomType(entry) !== DIAGNOSTICS_MESSAGE_TYPE) {
 			continue;
 		}
 		const details = getMessageDetails(entry);
 		if (isPromptCompletionDiagnostics(details)) {
-			last = details;
+			return details;
 		}
 	}
-	return last;
+	return null;
 }
 
 export default function diagnosticsExtension(pi: ExtensionAPI): void {
