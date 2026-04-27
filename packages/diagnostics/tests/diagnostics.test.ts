@@ -280,8 +280,12 @@ describe("diagnostics extension", () => {
 			harness.ctx,
 		);
 		expect(widget?.render(200).join("\n")).toContain("running");
+		requestRender.mockClear();
 
-		await vi.advanceTimersByTimeAsync(1_000);
+		await vi.advanceTimersByTimeAsync(4_999);
+		expect(requestRender).not.toHaveBeenCalled();
+
+		await vi.advanceTimersByTimeAsync(1);
 		expect(requestRender).toHaveBeenCalled();
 
 		await vi.advanceTimersByTimeAsync(250);
@@ -337,12 +341,12 @@ describe("diagnostics extension", () => {
 		};
 		expect(message.customType).toBe("pi-diagnostics:prompt");
 		expect(message.content).toContain("Prompt completed");
-		expect(message.content).toContain("duration 7.3s");
+		expect(message.content).toContain("duration 11s");
 		expect(message.details.promptPreview).toContain("Investigate the flaky test timeout");
-		expect(message.details.durationMs).toBe(7_250);
+		expect(message.details.durationMs).toBe(11_250);
 		expect(message.details.turnCount).toBe(2);
 		expect(message.details.toolCount).toBe(1);
-		expect(message.details.turns[0]?.completedAtLabel).toMatch(/2026-04-16 \d{2}:00:0[12]/);
+		expect(message.details.turns[0]?.completedAtLabel).toMatch(/2026-04-16 \d{2}:00:0[67]/);
 		expect(message.details.turns[0]?.toolCount).toBe(1);
 		expect(message.details.turns[1]?.responsePreview).toContain("Done.");
 		expect(widget?.render(200).join("\n")).toContain("completed");
