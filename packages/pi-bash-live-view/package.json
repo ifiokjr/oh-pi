@@ -32,7 +32,8 @@
 	"scripts": {
 		"build": "pnpm run typecheck && pnpm run test:worktree",
 		"typecheck": "tsgo --project ./tsconfig.json --noEmit",
-		"test:worktree": "vitest run --config ./vitest.config.ts --coverage"
+		"test:coverage": "vitest run --config ./vitest.config.ts --coverage",
+		"test:worktree": "vitest run --config ./vitest.config.ts"
 	},
 	"dependencies": {
 		"@xterm/headless": "^6.0.0",

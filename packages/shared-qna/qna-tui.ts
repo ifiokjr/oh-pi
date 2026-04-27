@@ -653,7 +653,9 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 		const horizontalLine = (count: number) => "─".repeat(count);
 
 		const boxLine = (content: string, leftPad: number = 2): string => {
-			const paddedContent = " ".repeat(leftPad) + content;
+			const safeLeftPad = Math.max(0, Math.min(leftPad, boxWidth - 2));
+			const clippedContent = truncateToWidth(content, Math.max(0, boxWidth - safeLeftPad - 2));
+			const paddedContent = " ".repeat(safeLeftPad) + clippedContent;
 			const contentLen = visibleWidth(paddedContent);
 			const rightPad = Math.max(0, boxWidth - contentLen - 2);
 			return this.dim("│") + paddedContent + " ".repeat(rightPad) + this.dim("│");

@@ -267,6 +267,31 @@ describe("QnATuiComponent", () => {
 		expect(rendered).toContain("A: Bun");
 	});
 
+	it("keeps long selected answers within narrow terminal width", () => {
+		const component = new QnATuiComponent(
+			[
+				{
+					question: "Choose release behavior",
+					options: [
+						{ label: "Fail on any weird partial state", description: "Stop immediately." },
+						{
+							label: "Allow already-published packages and continue",
+							description: "Proceed if already-published packages are consistent.",
+						},
+					],
+				},
+			],
+			createTui(),
+			vi.fn(),
+			{ initialResponses: [{ selectedOptionIndex: 1, selectionTouched: true, committed: true }] },
+		);
+
+		const width = 51;
+		for (const line of component.render(width)) {
+			expect(line.length).toBeLessThanOrEqual(width);
+		}
+	});
+
 	it("renders recommended options with bold '(recommended)' postfix", () => {
 		const done = vi.fn();
 		const component = new QnATuiComponent(
