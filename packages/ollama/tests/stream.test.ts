@@ -189,7 +189,7 @@ describe("ollama glm cloud streaming", () => {
 	it("keeps cloud glm requests on the cloud path even when the local provider registers last", async () => {
 		const backend = await createReasoningAwareChatBackend();
 		const harness = createExtensionHarness();
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 
 		const cloudProvider = harness.providers.get("ollama-cloud");
 		const localProvider = harness.providers.get("ollama");

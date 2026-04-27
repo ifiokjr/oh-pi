@@ -85,10 +85,10 @@ afterEach(async () => {
 });
 
 describe("ollama provider smoke tests", () => {
-	it("registers local + cloud ollama providers and commands without crashing", () => {
+	it("registers local + cloud ollama providers and commands without crashing", async () => {
 		const harness = createExtensionHarness();
 		harnesses.push(harness);
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 
 		expect(harness.commands.has("ollama")).toBe(true);
 		expect(harness.commands.has("ollama:status")).toBe(true);
@@ -117,7 +117,7 @@ describe("ollama provider smoke tests", () => {
 				set() {},
 			},
 		};
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 
 		await expect(harness.emitAsync("session_start", { type: "session_start" }, harness.ctx)).resolves.toBeDefined();
 		await backend.close();
@@ -132,7 +132,7 @@ describe("ollama provider smoke tests", () => {
 
 		const harness = createExtensionHarness();
 		harnesses.push(harness);
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 
 		const startedAt = Date.now();
 		await expect(harness.emitAsync("session_start", { type: "session_start" }, harness.ctx)).resolves.toBeDefined();
@@ -150,7 +150,7 @@ describe("ollama provider smoke tests", () => {
 
 		const harness = createExtensionHarness();
 		harnesses.push(harness);
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 
 		const initialModels = harness.providers.get("ollama-cloud")?.models as Array<{ id: string }> | undefined;
 		expect(initialModels?.some((model) => model.id === "glm-5.1")).toBe(true);
@@ -171,7 +171,7 @@ describe("ollama provider smoke tests", () => {
 
 		const harness = createExtensionHarness();
 		harnesses.push(harness);
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 
 		for (let attempt = 0; attempt < 80; attempt += 1) {
 			const models = harness.providers.get("ollama-cloud")?.models as Array<{ id: string }> | undefined;
@@ -184,7 +184,7 @@ describe("ollama provider smoke tests", () => {
 		expect(
 			(harness.providers.get("ollama-cloud")?.models as Array<{ id: string }> | undefined)?.map((model) => model.id),
 		).toEqual(["glm-5.1", "kimi-k2.5"]);
-		expect(backend.getAuthHeaders()).toEqual(["", "", ""]);
+		expect(backend.getAuthHeaders()).toEqual(["", "", "", ""]);
 		await backend.close();
 	});
 
@@ -198,7 +198,7 @@ describe("ollama provider smoke tests", () => {
 				set: vi.fn(),
 			},
 		};
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 
 		await harness.commands.get("ollama:pull")?.handler?.("", harness.ctx as never);
 		expect(harness.notifications.at(-1)?.msg).toContain("Usage: /ollama:pull <model>");
@@ -221,7 +221,7 @@ describe("ollama provider smoke tests", () => {
 		vi.spyOn(modelsModule, "discoverOllamaLocalModels").mockResolvedValue([]);
 		const harness = createExtensionHarness();
 		harnesses.push(harness);
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 
 		await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
 		await new Promise((resolve) => setTimeout(resolve, 300));

@@ -399,6 +399,19 @@ export async function discoverOllamaLocalModels(
 	});
 }
 
+export async function discoverOllamaCloudModelList(
+	apiKey?: string,
+	options: { signal?: AbortSignal } = {},
+): Promise<OllamaProviderModel[] | null> {
+	const config = getOllamaCloudRuntimeConfig();
+	const fallbackModels = getFallbackOllamaCloudModels();
+	const modelIds = await discoverOllamaModelIds(config, { apiKey, signal: options.signal });
+	if (modelIds.length === 0) return null;
+	return modelIds
+		.map((id) => normalizeDiscoveredModel(id, null, "cloud", fallbackModels))
+		.filter((model) => model !== null);
+}
+
 export async function discoverOllamaCloudModels(
 	apiKey?: string,
 	options: { signal?: AbortSignal } = {},
@@ -501,6 +514,22 @@ export function toOllamaModel(
 
 export const toOllamaCloudModel = toOllamaModel;
 
+async function discoverOllamaModelIds(
+	config: OllamaRuntimeConfig,
+	options: { apiKey?: string; signal?: AbortSignal },
+): Promise<string[]> {
+	const listed = await fetchJson<{ data?: OllamaListedModel[] }>(config.modelsUrl, {
+		headers: createDiscoveryHeaders(options.apiKey),
+		signal: options.signal,
+	});
+	return Array.isArray(listed.data)
+		? listed.data
+				.map((entry) => (typeof entry?.id === "string" ? entry.id.trim() : ""))
+				.filter(Boolean)
+				.toSorted((left, right) => left.localeCompare(right))
+		: [];
+}
+
 async function discoverOllamaModels(
 	config: OllamaRuntimeConfig,
 	options: {
@@ -510,16 +539,7 @@ async function discoverOllamaModels(
 		signal?: AbortSignal;
 	},
 ): Promise<OllamaProviderModel[] | null> {
-	const listed = await fetchJson<{ data?: OllamaListedModel[] }>(config.modelsUrl, {
-		headers: createDiscoveryHeaders(options.apiKey),
-		signal: options.signal,
-	});
-	const modelIds = Array.isArray(listed.data)
-		? listed.data
-				.map((entry) => (typeof entry?.id === "string" ? entry.id.trim() : ""))
-				.filter(Boolean)
-				.toSorted((left, right) => left.localeCompare(right))
-		: [];
+	const modelIds = await discoverOllamaModelIds(config, options);
 	if (modelIds.length === 0) {
 		return null;
 	}

@@ -66,7 +66,7 @@ describe("ollama local downloads", () => {
 
 		const { default: ollamaProviderExtension } = await import("../index.js");
 		const harness = createExtensionHarness();
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 
 		await waitFor(
 			() => ((harness.providers.get("ollama")?.models as Array<{ id: string }> | undefined)?.length ?? 0) === 2,
@@ -128,7 +128,7 @@ describe("ollama local downloads", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.ui.confirm = vi.fn(async () => true);
 		(harness.ctx.modelRegistry as { refresh?: ReturnType<typeof vi.fn> }).refresh = vi.fn();
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 
 		await waitFor(
 			() => ((harness.providers.get("ollama")?.models as Array<{ id: string }> | undefined)?.length ?? 0) === 1,
@@ -176,7 +176,7 @@ describe("ollama local downloads", () => {
 
 		const { default: ollamaProviderExtension } = await import("../index.js");
 		const harness = createExtensionHarness();
-		ollamaProviderExtension(harness.pi as never);
+		await ollamaProviderExtension(harness.pi as never);
 		expect(execFileMock).not.toHaveBeenCalled();
 
 		const sessionStart = harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);

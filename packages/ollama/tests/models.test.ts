@@ -1,5 +1,10 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { loadCachedOllamaCloudModels, saveCachedOllamaCloudModels } from "../cache.js";
 import {
+	discoverOllamaCloudModelList,
 	discoverOllamaCloudModels,
 	discoverOllamaLocalModels,
 	getCredentialModels,
@@ -56,6 +61,32 @@ describe("ollama models", () => {
 		expect(compat?.supportsReasoningEffort).toBe(false);
 		expect(compat?.thinkingFormat).toBe("zai");
 		expect(compat?.zaiToolStream).toBe(true);
+	});
+
+	it("discovers cloud model ids before metadata enrichment", async () => {
+		const backend = await createTestOllamaBackend();
+		backend.setModels([{ id: "brand-new-cloud-model" }, { id: "gpt-oss:120b" }]);
+		backend.setRejectedModelShows(["brand-new-cloud-model", "gpt-oss:120b"]);
+		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
+		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
+		process.env.PI_OLLAMA_CLOUD_SHOW_URL = `${backend.origin}/api/show`;
+		const models = await discoverOllamaCloudModelList("test-key");
+		expect(models?.map((model) => model.id)).toEqual(["brand-new-cloud-model", "gpt-oss:120b"]);
+		expect(models?.[0]?.source).toBe("cloud");
+		expect(backend.getAuthHeaders()).toEqual(["Bearer test-key"]);
+		await backend.close();
+	});
+
+	it("loads cloud models from the startup cache", async () => {
+		const cacheDir = await mkdtemp(join(tmpdir(), "pi-ollama-cache-"));
+		process.env.PI_OLLAMA_CLOUD_CACHE_PATH = join(cacheDir, "models.json");
+		await saveCachedOllamaCloudModels([
+			toOllamaModel({ id: "brand-new-cloud-model", reasoning: true, source: "cloud" }),
+		]);
+		const models = loadCachedOllamaCloudModels();
+		expect(models.map((model) => model.id)).toEqual(["brand-new-cloud-model"]);
+		expect(models[0]?.reasoning).toBe(true);
+		await rm(cacheDir, { force: true, recursive: true });
 	});
 
 	it("discovers cloud models with bearer auth", async () => {

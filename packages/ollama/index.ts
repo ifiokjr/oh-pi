@@ -14,6 +14,7 @@ import {
 	refreshOllamaCloudCredential,
 	refreshOllamaCloudCredentialModels,
 } from "./auth.js";
+import { loadCachedOllamaCloudModels, saveCachedOllamaCloudModels } from "./cache.js";
 import {
 	OLLAMA_API,
 	OLLAMA_CLOUD_API_KEY_ENV,
@@ -25,6 +26,7 @@ import {
 } from "./config.js";
 import { clearOllamaCliStatusCache, getOllamaCliStatus, pullOllamaModel, type OllamaCliStatus } from "./local.js";
 import {
+	discoverOllamaCloudModelList,
 	discoverOllamaCloudModels,
 	discoverOllamaLocalModels,
 	getCredentialModels,
@@ -69,6 +71,26 @@ type CollectedOllamaModel = OllamaProviderModel & {
 	baseUrl: string;
 };
 
+function getInitialOllamaCloudModels(): OllamaProviderModel[] {
+	return mergeOllamaModelCatalogs(loadCachedOllamaCloudModels(), getFallbackOllamaCloudModels());
+}
+
+function mergeOllamaModelCatalogs(
+	primaryModels: readonly OllamaProviderModel[],
+	secondaryModels: readonly OllamaProviderModel[],
+): OllamaProviderModel[] {
+	const models = new Map<string, OllamaProviderModel>();
+	for (const model of secondaryModels) models.set(model.id, model);
+	for (const model of primaryModels) models.set(model.id, model);
+	return [...models.values()].toSorted((left, right) => left.id.localeCompare(right.id));
+}
+
+function saveOllamaCloudModelCache(models: readonly OllamaProviderModel[]): void {
+	void saveCachedOllamaCloudModels(models).catch(() => {
+		// Cache persistence must never make provider registration fail.
+	});
+}
+
 const localDiscoveryState: RuntimeDiscoveryState = {
 	models: [],
 	lastRefresh: null,
@@ -76,7 +98,7 @@ const localDiscoveryState: RuntimeDiscoveryState = {
 };
 
 const cloudEnvDiscoveryState: RuntimeDiscoveryState = {
-	models: getFallbackOllamaCloudModels(),
+	models: getInitialOllamaCloudModels(),
 	lastRefresh: null,
 	lastError: null,
 };
@@ -85,6 +107,7 @@ const activeLocalPulls = new Map<string, Promise<boolean>>();
 const PULL_STATUS_KEY = "ollama.pull";
 const OLLAMA_STARTUP_CLI_REFRESH_DELAY_MS = 250;
 const OLLAMA_STARTUP_CLOUD_REFRESH_DELAY_MS = 250;
+const OLLAMA_STARTUP_CLOUD_DISCOVERY_TIMEOUT_MS = 5_000;
 
 let ollamaCliStatus: OllamaCliStatus | null = null;
 let missingCliWarningShown = false;
@@ -140,10 +163,12 @@ async function refreshRegisteredCloudEnvModels(pi: ExtensionAPI): Promise<Ollama
 	const apiKey = process.env[OLLAMA_CLOUD_API_KEY_ENV]?.trim();
 
 	try {
-		cloudEnvDiscoveryState.models = (await discoverOllamaCloudModels(apiKey)) ?? getFallbackOllamaCloudModels();
+		const discoveredModels = await discoverOllamaCloudModels(apiKey);
+		cloudEnvDiscoveryState.models = discoveredModels ?? getInitialOllamaCloudModels();
+		if (discoveredModels) saveOllamaCloudModelCache(discoveredModels);
 		cloudEnvDiscoveryState.lastError = null;
 	} catch (error) {
-		cloudEnvDiscoveryState.models = getFallbackOllamaCloudModels();
+		cloudEnvDiscoveryState.models = getInitialOllamaCloudModels();
 		cloudEnvDiscoveryState.lastError = error instanceof Error ? error.message : String(error);
 	}
 
@@ -879,6 +904,25 @@ function createOllamaProcessEnv(): NodeJS.ProcessEnv {
 	return env;
 }
 
+async function primeOllamaCloudModelsBeforeRegistration(): Promise<void> {
+	const abortController = new AbortController();
+	const timeout = setTimeout(() => abortController.abort(), OLLAMA_STARTUP_CLOUD_DISCOVERY_TIMEOUT_MS);
+	timeout.unref?.();
+	try {
+		const apiKey = process.env[OLLAMA_CLOUD_API_KEY_ENV]?.trim();
+		const discoveredModels = await discoverOllamaCloudModelList(apiKey, { signal: abortController.signal });
+		if (!discoveredModels) return;
+		cloudEnvDiscoveryState.models = mergeOllamaModelCatalogs(discoveredModels, getInitialOllamaCloudModels());
+		cloudEnvDiscoveryState.lastError = null;
+		cloudEnvDiscoveryState.lastRefresh = Date.now();
+		saveOllamaCloudModelCache(cloudEnvDiscoveryState.models);
+	} catch (error) {
+		cloudEnvDiscoveryState.lastError = error instanceof Error ? error.message : String(error);
+	} finally {
+		clearTimeout(timeout);
+	}
+}
+
 function bootstrapOllamaProviders(
 	pi: ExtensionAPI,
 	scheduleRefreshes: { scheduleCloudBootstrapRefresh: () => void; scheduleLocalBootstrapRefresh: () => void },
@@ -891,6 +935,7 @@ function bootstrapOllamaProviders(
 
 export {
 	createOllamaCloudOAuthProvider,
+	discoverOllamaCloudModelList,
 	discoverOllamaCloudModels,
 	discoverOllamaLocalModels,
 	getCredentialModels,
@@ -901,7 +946,8 @@ export {
 };
 export { toOllamaModel, toOllamaCloudModel, type OllamaCloudCredentials, type OllamaProviderModel } from "./models.js";
 
-export default function ollamaProviderExtension(pi: ExtensionAPI): void {
+export default async function ollamaProviderExtension(pi: ExtensionAPI): Promise<void> {
+	await primeOllamaCloudModelsBeforeRegistration();
 	const registerLifecycle = registerOllamaLifecycle(pi);
 	bootstrapOllamaProviders(pi, registerLifecycle);
 	registerOllamaCommands(pi);
