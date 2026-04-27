@@ -8,6 +8,7 @@ export default defineConfig({
 	platform: "node",
 	dts: {
 		sourcemap: true,
+		tsgo: true,
 	},
 	outExtensions() {
 		return { js: ".js", dts: ".d.ts" };
