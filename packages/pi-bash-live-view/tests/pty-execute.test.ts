@@ -1,3 +1,4 @@
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { executePtyCommand, ptyExecuteInternals, toAgentToolResult, toUserBashResult } from "../src/pty-execute.js";
 import { resetHeadlessModuleLoader, setHeadlessModuleLoader } from "../src/terminal-emulator.js";
@@ -432,6 +433,11 @@ describe("PTY execution", () => {
 
 		const candidates = getSpawnHelperCandidates("/tmp/chmod-me");
 		expect(candidates[0]).toBe("/tmp/chmod-me");
+		expect(
+			candidates.some((candidate) =>
+				candidate.includes(path.join("node-pty", "prebuilds", `${process.platform}-${process.arch}`, "spawn-helper")),
+			),
+		).toBe(true);
 		expect(spawnHelperInternals.uniquePaths(["a", "a", "b"])).toEqual(["a", "b"]);
 		expect(
 			await ensureSpawnHelperExecutable({
