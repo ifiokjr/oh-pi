@@ -41,6 +41,17 @@ interface ActivePromptRun {
 	turns: PromptTurnDiagnostics[];
 }
 
+interface ActiveToolRun {
+	promptPreview: string;
+	startedAt: number;
+	toolName: string;
+}
+
+interface ToolExecutionEventLike {
+	toolCallId?: unknown;
+	toolName?: unknown;
+}
+
 interface SessionEntryLike {
 	type?: string;
 	customType?: string;
@@ -161,6 +172,50 @@ function summarizeResponsePreview(content: unknown, toolCount: number, stopReaso
 	}
 
 	return "(no visible response text)";
+}
+
+function getToolCallId(event: ToolExecutionEventLike): string | null {
+	return typeof event.toolCallId === "string" && event.toolCallId.length > 0 ? event.toolCallId : null;
+}
+
+function getToolName(event: ToolExecutionEventLike): string {
+	if (typeof event.toolName === "string" && event.toolName.length > 0) {
+		return event.toolName;
+	}
+
+	return "tool";
+}
+
+function getActiveToolSummary(activeToolRuns: Map<string, ActiveToolRun>): {
+	earliestStartedAt: number;
+	promptPreview: string;
+	toolNames: string;
+} | null {
+	let earliestStartedAt = Number.POSITIVE_INFINITY;
+	let promptPreview = "";
+	let toolCount = 0;
+	let toolNames = "";
+
+	for (const tool of activeToolRuns.values()) {
+		if (tool.startedAt < earliestStartedAt) {
+			earliestStartedAt = tool.startedAt;
+			promptPreview = tool.promptPreview;
+		}
+		if (toolCount < 3) {
+			toolNames = toolNames ? `${toolNames}, ${tool.toolName}` : tool.toolName;
+		}
+		toolCount += 1;
+	}
+
+	if (toolCount === 0) {
+		return null;
+	}
+
+	return {
+		earliestStartedAt,
+		promptPreview: promptPreview || "(unknown prompt)",
+		toolNames,
+	};
 }
 
 function findLastAssistantMessage(messages: unknown): AgentMessageLike | null {
@@ -322,6 +377,7 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 	let currentPrompt: ActivePromptRun | null = null;
 	let lastCompletion: PromptCompletionDiagnostics | null = null;
 	let requestWidgetRender: (() => void) | null = null;
+	const activeToolRuns = new Map<string, ActiveToolRun>();
 
 	const persistEnabledState = () => {
 		pi.appendEntry(DIAGNOSTICS_STATE_TYPE, {
@@ -331,10 +387,18 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 	};
 
 	const renderWidgetLines = (theme: ThemeLike): string[] => {
-		if (currentPrompt) {
+		const activeToolSummary = getActiveToolSummary(activeToolRuns);
+		if (currentPrompt || activeToolSummary) {
+			const startedAt = currentPrompt?.startedAt ?? activeToolSummary?.earliestStartedAt ?? Date.now();
+			const startedAtLabel = currentPrompt?.startedAtLabel ?? formatTimestamp(startedAt);
+			const promptPreview = currentPrompt?.promptPreview ?? activeToolSummary?.promptPreview ?? "(unknown prompt)";
+			const recordedTurns = currentPrompt ? ` · ${pluralize(currentPrompt.turns.length, "turn")} recorded` : "";
+			const runningTools = activeToolSummary
+				? ` · ${pluralize(activeToolRuns.size, "tool")} running (${activeToolSummary.toolNames})`
+				: "";
 			return [
-				`${theme.fg("accent", theme.bold("⏱ Diagnostics"))} ${theme.fg("success", "running")} · ${currentPrompt.startedAtLabel} · ${formatDuration(Date.now() - currentPrompt.startedAt)} elapsed`,
-				`${theme.fg("muted", currentPrompt.promptPreview)} · ${pluralize(currentPrompt.turns.length, "turn")} recorded`,
+				`${theme.fg("accent", theme.bold("⏱ Diagnostics"))} ${theme.fg("success", "running")} · ${startedAtLabel} · ${formatDuration(Date.now() - startedAt)} elapsed`,
+				`${theme.fg("muted", promptPreview)}${recordedTurns}${runningTools}`,
 			];
 		}
 
@@ -379,7 +443,7 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 				};
 
 				const syncTimer = () => {
-					if (!currentPrompt) {
+					if (!currentPrompt && activeToolRuns.size === 0) {
 						stopTimer();
 						return;
 					}
@@ -419,6 +483,7 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		}
 		lastCompletion = restoreLastCompletion(entries);
 		currentPrompt = null;
+		activeToolRuns.clear();
 		syncWidget(ctx);
 		requestWidgetRender?.();
 	};
@@ -478,6 +543,34 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		requestWidgetRender?.();
 	});
 
+	pi.on("tool_execution_start", (event, ctx) => {
+		activeCtx = ctx;
+		if (!enabled) {
+			return;
+		}
+
+		const toolCallId = getToolCallId(event);
+		if (!toolCallId) {
+			return;
+		}
+
+		activeToolRuns.set(toolCallId, {
+			promptPreview: currentPrompt?.promptPreview ?? "(unknown prompt)",
+			startedAt: Date.now(),
+			toolName: getToolName(event),
+		});
+		requestWidgetRender?.();
+	});
+
+	pi.on("tool_execution_end", (event, ctx) => {
+		activeCtx = ctx;
+		const toolCallId = getToolCallId(event);
+		if (toolCallId) {
+			activeToolRuns.delete(toolCallId);
+			requestWidgetRender?.();
+		}
+	});
+
 	pi.on("turn_end", (event, ctx) => {
 		activeCtx = ctx;
 		if (!(enabled && currentPrompt && event.message?.role === "assistant")) {
@@ -530,6 +623,7 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 
 	pi.on("session_shutdown", () => {
 		currentPrompt = null;
+		activeToolRuns.clear();
 		requestWidgetRender = null;
 	});
 
@@ -589,7 +683,10 @@ export const diagnosticsInternals = {
 	countToolResults,
 	findLastAssistantMessage,
 	findPromptPreviewFromMessages,
+	getActiveToolSummary,
 	getBranchEntries,
+	getToolCallId,
+	getToolName,
 	getMessageCustomType,
 	getMessageDetails,
 	isDiagnosticsStateEntry,
