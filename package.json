@@ -80,14 +80,7 @@
 			"protobufjs": "7.5.5",
 			"esbuild@<=0.24.2": ">=0.25.0",
 			"drizzle-orm@<0.45.2": ">=0.45.2",
-			"hono@<4.12.14": ">=4.12.14",
-			"@ifi/pi-analytics-db": "workspace:*",
-			"@ifi/pi-background-tasks": "workspace:*",
-			"@ifi/pi-shared-qna": "workspace:*",
-			"@mariozechner/pi-agent-core": "0.56.1",
-			"@mariozechner/pi-ai": "0.56.1",
-			"@mariozechner/pi-coding-agent": "0.56.1",
-			"@mariozechner/pi-tui": "0.56.1"
+			"hono@<4.12.14": ">=4.12.14"
 		}
 	},
 	"pi": {

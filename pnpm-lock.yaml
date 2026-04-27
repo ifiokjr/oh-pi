@@ -23,13 +23,6 @@ overrides:
   esbuild@<=0.24.2: '>=0.25.0'
   drizzle-orm@<0.45.2: '>=0.45.2'
   hono@<4.12.14: '>=4.12.14'
-  '@ifi/pi-analytics-db': workspace:*
-  '@ifi/pi-background-tasks': workspace:*
-  '@ifi/pi-shared-qna': workspace:*
-  '@mariozechner/pi-agent-core': 0.56.1
-  '@mariozechner/pi-ai': 0.56.1
-  '@mariozechner/pi-coding-agent': 0.56.1
-  '@mariozechner/pi-tui': 0.56.1
 
 importers:
 
@@ -82,18 +75,18 @@ importers:
     dependencies:
       '@ifi/oh-pi-core':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../core
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -104,7 +97,7 @@ importers:
   packages/analytics-dashboard:
     dependencies:
       '@ifi/pi-analytics-db':
-        specifier: workspace:*
+        specifier: ^0.4.4
         version: link:../analytics-db
       '@tanstack/react-query':
         specifier: ^5.74.0
@@ -229,19 +222,19 @@ importers:
   packages/analytics-extension:
     dependencies:
       '@ifi/pi-analytics-db':
-        specifier: workspace:*
+        specifier: ^0.4.4
         version: link:../analytics-db
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -251,18 +244,18 @@ importers:
     dependencies:
       '@ifi/oh-pi-core':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../core
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -271,16 +264,16 @@ importers:
   packages/background-tasks:
     dependencies:
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -293,37 +286,37 @@ importers:
         version: 1.2.0
       '@ifi/oh-pi-agents':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../agents
       '@ifi/oh-pi-ant-colony':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../ant-colony
       '@ifi/oh-pi-core':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../core
       '@ifi/oh-pi-extensions':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../extensions
       '@ifi/oh-pi-prompts':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../prompts
       '@ifi/oh-pi-skills':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../skills
       '@ifi/oh-pi-themes':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../themes
       '@ifi/pi-extension-subagents':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../subagents
       '@ifi/pi-plan':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../plan
       '@ifi/pi-shared-qna':
-        specifier: workspace:*
+        specifier: 0.4.4
         version: link:../shared-qna
       '@ifi/pi-spec':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../spec
       chalk:
         specifier: ^5.6.2
         version: 5.6.2
@@ -343,16 +336,16 @@ importers:
         specifier: ^2.12.0
         version: 2.12.0
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -361,16 +354,16 @@ importers:
   packages/diagnostics:
     dependencies:
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -426,24 +419,24 @@ importers:
     dependencies:
       '@ifi/oh-pi-core':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../core
       '@ifi/pi-background-tasks':
-        specifier: workspace:*
+        specifier: 0.4.4
         version: link:../background-tasks
       '@ifi/pi-shared-qna':
-        specifier: workspace:*
+        specifier: 0.4.4
         version: link:../shared-qna
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -456,45 +449,45 @@ importers:
     dependencies:
       '@ifi/oh-pi-agents':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../agents
       '@ifi/oh-pi-ant-colony':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../ant-colony
       '@ifi/oh-pi-extensions':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../extensions
       '@ifi/oh-pi-prompts':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../prompts
       '@ifi/oh-pi-skills':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../skills
       '@ifi/oh-pi-themes':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../themes
       '@ifi/pi-extension-subagents':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../subagents
       '@ifi/pi-plan':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../plan
       '@ifi/pi-spec':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../spec
 
   packages/ollama:
     dependencies:
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -503,16 +496,16 @@ importers:
   packages/pi-bash-live-view:
     dependencies:
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -527,10 +520,10 @@ importers:
   packages/pi-pretty:
     dependencies:
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@shikijs/cli':
         specifier: ^4.0.2
@@ -551,18 +544,18 @@ importers:
     dependencies:
       '@ifi/pi-web-server':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))
+        version: link:../web-server
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -579,21 +572,21 @@ importers:
     dependencies:
       '@ifi/pi-extension-subagents':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
+        version: link:../subagents
       '@ifi/pi-shared-qna':
-        specifier: workspace:*
+        specifier: 0.4.4
         version: link:../shared-qna
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -604,19 +597,19 @@ importers:
   packages/providers:
     dependencies:
       '@ifi/pi-shared-qna':
-        specifier: workspace:*
+        specifier: 0.4.4
         version: link:../shared-qna
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -625,7 +618,7 @@ importers:
   packages/shared-qna:
     dependencies:
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '*'
         version: 0.56.1
 
   packages/skills: {}
@@ -633,16 +626,16 @@ importers:
   packages/spec:
     dependencies:
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -652,18 +645,18 @@ importers:
     dependencies:
       '@ifi/oh-pi-core':
         specifier: 0.4.4
-        version: 0.4.4
+        version: link:../core
       '@mariozechner/pi-agent-core':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-ai':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@mariozechner/pi-tui':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1
       '@sinclair/typebox':
         specifier: '*'
@@ -677,9 +670,9 @@ importers:
     dependencies:
       '@ifi/pi-web-server':
         specifier: 0.4.4
-        version: 0.4.4(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))
+        version: link:../web-server
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       '@sinclair/typebox':
         specifier: '*'
@@ -691,7 +684,7 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0(hono@4.12.15)
       '@mariozechner/pi-coding-agent':
-        specifier: 0.56.1
+        specifier: '>=0.56.1'
         version: 0.56.1(ws@8.20.0)(zod@3.25.76)
       hono:
         specifier: ^4.12.15
@@ -1414,76 +1407,6 @@ packages:
     resolution: {integrity: sha512-kQQo4xPUdnvPNXvfaPXBcy+1yFxv1LhjM8vGaUGlq4BOy2wyD4QcXrKDReqcUJbk6Yg5lNffxrbKLKrnB11djw==}
     engines: {node: '>=18'}
     hasBin: true
-
-  '@ifi/oh-pi-agents@0.4.4':
-    resolution: {integrity: sha512-lrBL1EzuWhZxQ/YX7LZrJLQBfCt0qRxTkNr1s8Y2o8/lQiUiEAsH6V80XnFXtkDZw/Yp8wCwolLuSbTR8O9KTQ==}
-
-  '@ifi/oh-pi-ant-colony@0.4.4':
-    resolution: {integrity: sha512-nio0C6uT7w22nK4IUr7LCUnnaaYrb1fd0RTFD0KcjdDccxVmQQA5Se3owvzGxf28uT6dj3S5nyhK/fy7/96+cg==}
-    peerDependencies:
-      '@mariozechner/pi-agent-core': 0.56.1
-      '@mariozechner/pi-ai': 0.56.1
-      '@mariozechner/pi-coding-agent': 0.56.1
-      '@mariozechner/pi-tui': 0.56.1
-      '@sinclair/typebox': '*'
-
-  '@ifi/oh-pi-core@0.4.4':
-    resolution: {integrity: sha512-i9yh+P++mYV75LWl31MukT6tASHYbi7Qhnhv1lMMBZLazK/A7e5OJNh3uUlw0fykSVTiFXGpvOnqMc2pwvRZEw==}
-    engines: {node: '>=20.0.0'}
-
-  '@ifi/oh-pi-extensions@0.4.4':
-    resolution: {integrity: sha512-tx97zKymuK47oGisEzRh9VkY/bkBec76BVomM+dO4ty/tqX8wCDUmP1RJVkVk9szITucPHpnGFTRC6lPaZEjkQ==}
-    peerDependencies:
-      '@mariozechner/pi-agent-core': 0.56.1
-      '@mariozechner/pi-ai': 0.56.1
-      '@mariozechner/pi-coding-agent': 0.56.1
-      '@mariozechner/pi-tui': 0.56.1
-      '@sinclair/typebox': '*'
-
-  '@ifi/oh-pi-prompts@0.4.4':
-    resolution: {integrity: sha512-bMhN9ltlLkz1DwD6Dk37s+7Mvp+4X1BTIs57xWLq0Ljr4O7NqJou3j5M7p+aRjmoWpz6BLfk19vdC1jQY4rqyQ==}
-
-  '@ifi/oh-pi-skills@0.4.4':
-    resolution: {integrity: sha512-TGDMYvAf8IxcPQBO+8GeBv+Po2FgRpRO7GfLG++qzyr+W6TVb1IIXaTuFA3aPTfO1apg0YQl4uQFiUnQxrg8XA==}
-
-  '@ifi/oh-pi-themes@0.4.4':
-    resolution: {integrity: sha512-pm/JKFqnr0I/NJrfT0KVkg1C/rEtHx+HSiDhKG5BQAyaX+1gbY2Doh9kLUijABWpeNgkuRwzpCm6F2+Lv8QYzA==}
-
-  '@ifi/pi-extension-subagents@0.4.4':
-    resolution: {integrity: sha512-uGpzhZxWyPseT5srhT14h9fXBPe9l/wmExg8ufr4PTi+vJx9PW8lqvlhUxIWsqw/5PORRuZiD1ZtzK3MTHCKdg==}
-    hasBin: true
-    peerDependencies:
-      '@mariozechner/pi-agent-core': 0.56.1
-      '@mariozechner/pi-ai': 0.56.1
-      '@mariozechner/pi-coding-agent': 0.56.1
-      '@mariozechner/pi-tui': 0.56.1
-      '@sinclair/typebox': '*'
-
-  '@ifi/pi-plan@0.4.4':
-    resolution: {integrity: sha512-m8VqVod1bp3s3KyLZU/DE5fDuO03dVUdyMxQoB9dY8YLUYH1cspJVxpa6K4dO1evYB6B/6pI41U2IrEm6f65/g==}
-    hasBin: true
-    peerDependencies:
-      '@mariozechner/pi-agent-core': 0.56.1
-      '@mariozechner/pi-ai': 0.56.1
-      '@mariozechner/pi-coding-agent': 0.56.1
-      '@mariozechner/pi-tui': 0.56.1
-      '@sinclair/typebox': '*'
-
-  '@ifi/pi-spec@0.4.4':
-    resolution: {integrity: sha512-BOSklndS4VOdBcf33n4jHbIygia0oe3V2w4L8TCh0LEBnOqCzUJzYC/6L/xr4qXyGK5w0RdJxa/qMm0l7RGFmg==}
-    peerDependencies:
-      '@mariozechner/pi-agent-core': 0.56.1
-      '@mariozechner/pi-ai': 0.56.1
-      '@mariozechner/pi-coding-agent': 0.56.1
-      '@mariozechner/pi-tui': 0.56.1
-      '@sinclair/typebox': '*'
-
-  '@ifi/pi-web-server@0.4.4':
-    resolution: {integrity: sha512-BxyDz6gE8hJdp4Z4SIhRoh88dlI14XDzR3k/732lsH0frqUT14VUoYrktF9BHor5XCIH9zopvGFFVV8Qd0WUzw==}
-    engines: {node: '>=20.0.0'}
-    hasBin: true
-    peerDependencies:
-      '@mariozechner/pi-coding-agent': 0.56.1
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -6099,74 +6022,6 @@ snapshots:
       '@ifi/mdt-linux-x64-musl': 0.7.0
       '@ifi/mdt-win32-arm64-msvc': 0.7.0
       '@ifi/mdt-win32-x64-msvc': 0.7.0
-
-  '@ifi/oh-pi-agents@0.4.4': {}
-
-  '@ifi/oh-pi-ant-colony@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)':
-    dependencies:
-      '@ifi/oh-pi-core': 0.4.4
-      '@mariozechner/pi-agent-core': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-ai': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-tui': 0.56.1
-      '@sinclair/typebox': 0.34.49
-
-  '@ifi/oh-pi-core@0.4.4':
-    dependencies:
-      '@clack/prompts': 1.2.0
-      chalk: 5.6.2
-
-  '@ifi/oh-pi-extensions@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)':
-    dependencies:
-      '@mariozechner/pi-agent-core': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-ai': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-tui': 0.56.1
-      '@sinclair/typebox': 0.34.49
-      croner: 10.0.1
-
-  '@ifi/oh-pi-prompts@0.4.4': {}
-
-  '@ifi/oh-pi-skills@0.4.4': {}
-
-  '@ifi/oh-pi-themes@0.4.4': {}
-
-  '@ifi/pi-extension-subagents@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)':
-    dependencies:
-      '@ifi/oh-pi-core': 0.4.4
-      '@mariozechner/pi-agent-core': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-ai': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-tui': 0.56.1
-      '@sinclair/typebox': 0.34.49
-
-  '@ifi/pi-plan@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)':
-    dependencies:
-      '@ifi/pi-extension-subagents': 0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)
-      '@ifi/pi-shared-qna': link:packages/shared-qna
-      '@mariozechner/pi-agent-core': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-ai': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-tui': 0.56.1
-      '@sinclair/typebox': 0.34.49
-
-  '@ifi/pi-spec@0.4.4(@mariozechner/pi-agent-core@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-ai@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))(@mariozechner/pi-tui@0.56.1)(@sinclair/typebox@0.34.49)':
-    dependencies:
-      '@mariozechner/pi-agent-core': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-ai': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-tui': 0.56.1
-      '@sinclair/typebox': 0.34.49
-
-  '@ifi/pi-web-server@0.4.4(@mariozechner/pi-coding-agent@0.56.1(ws@8.20.0)(zod@3.25.76))':
-    dependencies:
-      '@hono/node-server': 2.0.0(hono@4.12.15)
-      '@mariozechner/pi-coding-agent': 0.56.1(ws@8.20.0)(zod@3.25.76)
-      hono: 4.12.15
-      ws: 8.20.0
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

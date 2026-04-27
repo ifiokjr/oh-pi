@@ -5,7 +5,7 @@
 	"type": "module",
 	"main": "./index.ts",
 	"dependencies": {
-		"@ifi/pi-analytics-db": "0.4.4"
+		"@ifi/pi-analytics-db": "^0.4.4"
 	},
 	"peerDependencies": {
 		"@mariozechner/pi-agent-core": ">=0.56.1",
