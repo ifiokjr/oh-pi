@@ -1,7 +1,7 @@
 /* C8 ignore file */
-import { TrendingDown, TrendingUp } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from "@/lib/utils";
+import { TrendingDown, TrendingUp } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface MetricCardProps {
 	title: string;
@@ -45,7 +45,7 @@ export function MetricCard({
 
 	// Simple sparkline
 	const Sparkline = ({ data, positive }: { data: number[]; positive: boolean }) => {
-		if (data.length < 2) {return null;}
+		if (data.length < 2) return null;
 
 		const min = Math.min(...data);
 		const max = Math.max(...data);

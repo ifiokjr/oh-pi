@@ -234,7 +234,10 @@ describe("subagent session churn", () => {
 	it("loads subagent config lazily on tool execution", async () => {
 		const pi = createMockPi();
 		const ctx = createCtx();
-		mockLoadSubagentConfig.mockReturnValue({ asyncByDefault: true, defaultSessionDir: "/tmp/custom-session-root" });
+		mockLoadSubagentConfig.mockReturnValue({
+			asyncByDefault: true,
+			defaultSessionDir: "/tmp/custom-session-root",
+		});
 
 		registerSubagentExtension(pi as any);
 		const tool = pi._tools.get("subagent");
@@ -295,7 +298,11 @@ describe("subagent session churn", () => {
 		await pi._emit("session_start", {}, ctx);
 
 		for (let i = 0; i < 25; i++) {
-			pi._emitEvent("subagent:started", { id: `job-${i}`, asyncDir: `/tmp/job-${i}`, agent: "scout" });
+			pi._emitEvent("subagent:started", {
+				id: `job-${i}`,
+				asyncDir: `/tmp/job-${i}`,
+				agent: "scout",
+			});
 		}
 
 		expect(setIntervalSpy).toHaveBeenCalledTimes(1);
@@ -319,8 +326,16 @@ describe("subagent session churn", () => {
 			await pi._emit("session_start", {}, ctx);
 			for (let i = 0; i < 3; i++) {
 				const id = `cycle-${cycle}-job-${i}`;
-				pi._emitEvent("subagent:started", { id, asyncDir: `/tmp/${id}`, agent: "scout" });
-				pi._emitEvent("subagent:complete", { id, success: true, asyncDir: `/tmp/${id}` });
+				pi._emitEvent("subagent:started", {
+					id,
+					asyncDir: `/tmp/${id}`,
+					agent: "scout",
+				});
+				pi._emitEvent("subagent:complete", {
+					id,
+					success: true,
+					asyncDir: `/tmp/${id}`,
+				});
 			}
 			await pi._emit("session_switch", {}, ctx);
 			await vi.advanceTimersByTimeAsync(250);

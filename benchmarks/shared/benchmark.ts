@@ -135,7 +135,11 @@ export async function runBenchmark(definition: BenchmarkDefinition): Promise<Ben
 	const meanMs = round(mean(samplesMs));
 	const medianMs = round(percentile(samplesMs, 0.5));
 	const p95Ms = round(percentile(samplesMs, 0.95));
-	const budgetFailures = evaluateBudget({ budget: definition.budget, medianMs, p95Ms });
+	const budgetFailures = evaluateBudget({
+		budget: definition.budget,
+		medianMs,
+		p95Ms,
+	});
 
 	for (let i = 0; i < samplesMs.length; i++) {
 		samplesMs[i] = round(samplesMs[i]);
@@ -190,7 +194,9 @@ function toMarkdown(report: BenchmarkSuiteReport): string {
 				? `${result.minSampleTimeMs.toFixed(0)}ms floor · ${result.avgLoopsPerSample.toFixed(1)} loops/sample`
 				: "—";
 		lines.push(
-			`| ${result.label} | ${result.group} | ${result.medianMs.toFixed(2)}ms | ${result.p95Ms.toFixed(2)}ms | ${result.meanMs.toFixed(2)}ms | ${sampleFloor} | ${budget} | ${status} |`,
+			`| ${result.label} | ${result.group} | ${result.medianMs.toFixed(
+				2,
+			)}ms | ${result.p95Ms.toFixed(2)}ms | ${result.meanMs.toFixed(2)}ms | ${sampleFloor} | ${budget} | ${status} |`,
 		);
 
 		if (result.note) {

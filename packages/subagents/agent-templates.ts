@@ -60,5 +60,9 @@ export const TEMPLATE_ITEMS: TemplateItem[] = [
 		type: "agent",
 	},
 	{ label: "Chains", type: "separator" },
-	{ description: "Empty chain to configure", name: "Blank Chain", type: "chain" },
+	{
+		description: "Empty chain to configure",
+		name: "Blank Chain",
+		type: "chain",
+	},
 ];

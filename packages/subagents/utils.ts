@@ -2,10 +2,10 @@
  * General utility functions for the subagent extension
  */
 
+import type { Message } from "@mariozechner/pi-ai";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { Message } from "@mariozechner/pi-ai";
 import type { AsyncStatus, DisplayItem, ErrorInfo } from "./types.js";
 
 // ============================================================================
@@ -75,7 +75,11 @@ export function getOutputTail(outputFile: string | undefined, maxLines: number =
 		const lines = allLines.slice(-maxLines).map((l) => l.slice(0, 120) + (l.length > 120 ? "..." : ""));
 
 		// Cache the result
-		outputTailCache.set(outputFile, { lines, mtime: stat.mtimeMs, size: stat.size });
+		outputTailCache.set(outputFile, {
+			lines,
+			mtime: stat.mtimeMs,
+			size: stat.size,
+		});
 		// Limit cache size
 		if (outputTailCache.size > 20) {
 			const firstKey = outputTailCache.keys().next().value;
@@ -267,7 +271,12 @@ export function detectSubagentError(messages: Message[]): ErrorInfo {
 		if (exitMatch) {
 			const code = Number.parseInt(exitMatch[1], 10);
 			if (code !== 0) {
-				return { details: output.slice(0, 200), errorType: "bash", exitCode: code, hasError: true };
+				return {
+					details: output.slice(0, 200),
+					errorType: "bash",
+					exitCode: code,
+					hasError: true,
+				};
 			}
 		}
 
@@ -286,7 +295,12 @@ export function detectSubagentError(messages: Message[]): ErrorInfo {
 		];
 		for (const pattern of fatalPatterns) {
 			if (pattern.test(output)) {
-				return { details: output.slice(0, 200), errorType: "bash", exitCode: 1, hasError: true };
+				return {
+					details: output.slice(0, 200),
+					errorType: "bash",
+					exitCode: 1,
+					hasError: true,
+				};
 			}
 		}
 	}
@@ -344,15 +358,13 @@ export function extractTextFromContent(content: unknown): string {
 			// Handle { type: "text", text: "..." }
 			if ("type" in part && part.type === "text" && "text" in part) {
 				texts.push(String(part.text));
-			}
-			// Handle { type: "tool_result", content: "..." }
+			} // Handle { type: "tool_result", content: "..." }
 			else if ("type" in part && part.type === "tool_result" && "content" in part) {
 				const inner = extractTextFromContent(part.content);
 				if (inner) {
 					texts.push(inner);
 				}
-			}
-			// Handle { text: "..." } without type
+			} // Handle { text: "..." } without type
 			else if ("text" in part) {
 				texts.push(String(part.text));
 			}

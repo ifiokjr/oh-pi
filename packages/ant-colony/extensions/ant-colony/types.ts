@@ -22,9 +22,24 @@ export interface AntConfig {
 
 export const DEFAULT_ANT_CONFIGS: Record<AntCaste, Omit<AntConfig, "systemPrompt">> = {
 	drone: { caste: "drone", maxTurns: 1, model: "", tools: ["bash"] },
-	scout: { caste: "scout", maxTurns: 8, model: "", tools: ["read", "bash", "grep", "find", "ls"] },
-	soldier: { caste: "soldier", maxTurns: 8, model: "", tools: ["read", "bash", "grep", "find", "ls"] },
-	worker: { caste: "worker", maxTurns: 15, model: "", tools: ["read", "bash", "edit", "write", "grep", "find", "ls"] },
+	scout: {
+		caste: "scout",
+		maxTurns: 8,
+		model: "",
+		tools: ["read", "bash", "grep", "find", "ls"],
+	},
+	soldier: {
+		caste: "soldier",
+		maxTurns: 8,
+		model: "",
+		tools: ["read", "bash", "grep", "find", "ls"],
+	},
+	worker: {
+		caste: "worker",
+		maxTurns: 15,
+		model: "",
+		tools: ["read", "bash", "edit", "write", "grep", "find", "ls"],
+	},
 };
 
 export type WorkerClass = "design" | "multimodal" | "backend" | "review";

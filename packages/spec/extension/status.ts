@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import type { ChecklistSummary, WorkflowPaths, WorkflowStatus } from "./types.js";
 import { getLatestFeatureDir, listFeatureDirs } from "./workspace.js";
@@ -102,7 +102,11 @@ export function buildWorkflowStatus(options: {
 			label: "constitution.md",
 			path: options.paths.constitutionFile,
 		},
-		{ exists: existsSync(options.paths.agentContextFile), label: "pi-agent.md", path: options.paths.agentContextFile },
+		{
+			exists: existsSync(options.paths.agentContextFile),
+			label: "pi-agent.md",
+			path: options.paths.agentContextFile,
+		},
 		{
 			exists: existsSync(options.paths.extensionsConfigFile),
 			label: "extensions.yml",
@@ -119,11 +123,19 @@ export function buildWorkflowStatus(options: {
 	}
 
 	if (options.paths.planFile) {
-		artifacts.push({ exists: existsSync(options.paths.planFile), label: "plan.md", path: options.paths.planFile });
+		artifacts.push({
+			exists: existsSync(options.paths.planFile),
+			label: "plan.md",
+			path: options.paths.planFile,
+		});
 	}
 
 	if (options.paths.tasksFile) {
-		artifacts.push({ exists: existsSync(options.paths.tasksFile), label: "tasks.md", path: options.paths.tasksFile });
+		artifacts.push({
+			exists: existsSync(options.paths.tasksFile),
+			label: "tasks.md",
+			path: options.paths.tasksFile,
+		});
 	}
 
 	if (options.paths.researchFile) {
@@ -194,7 +206,9 @@ export function formatWorkflowStatus(status: WorkflowStatus): string {
 	} else {
 		for (const checklist of status.checklists) {
 			lines.push(
-				`- ${checklist.status === "pass" ? "[ok]" : "[!]"} ${checklist.name}: ${checklist.completed}/${checklist.total} complete (${checklist.incomplete} incomplete)`,
+				`- ${
+					checklist.status === "pass" ? "[ok]" : "[!]"
+				} ${checklist.name}: ${checklist.completed}/${checklist.total} complete (${checklist.incomplete} incomplete)`,
 			);
 		}
 	}

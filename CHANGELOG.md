@@ -115,11 +115,13 @@ Document the packages that have been created since the last tagged release (`v0.
 #### Add Pi Analytics Dashboard with SQLite persistence, real-time activity stream, and fun insights tracking.
 
 New packages:
+
 - `@ifi/pi-analytics-db`: Drizzle ORM schema + SQLite client for analytics data
 - `@ifi/pi-analytics-dashboard`: React 19 + Vite 8 dashboard with Overview, Models, Codebases, and Insights pages
 - `@ifi/pi-analytics-extension`: Pi extension that captures session/turn data and opens the dashboard
 
 Features:
+
 - 4 dashboard pages: Overview, Models, Codebases, Insights (emotions, words, misspellings)
 - Express API server for real data mode (VITE_API_MODE=api)
 - Mock data mode for development (VITE_API_MODE=mock, default)
@@ -153,27 +155,13 @@ npx oh-pi --yes
 
 #### Consolidate worktree registry into `@ifi/oh-pi-core` and add `worktree` tool
 
-- **Consolidate duplicated worktree implementations**: The worktree registry logic that was
-  duplicated across `packages/extensions/extensions/worktree-shared.ts` and
-  `packages/ant-colony/extensions/ant-colony/worktree-registry.ts` is now consolidated into
-  `@ifi/oh-pi-core`. Both files are now thin re-exports from `@ifi/oh-pi-core`, eliminating
-  code duplication and ensuring a single source of truth for worktree management.
+- **Consolidate duplicated worktree implementations**: The worktree registry logic that was duplicated across `packages/extensions/extensions/worktree-shared.ts` and `packages/ant-colony/extensions/ant-colony/worktree-registry.ts` is now consolidated into `@ifi/oh-pi-core`. Both files are now thin re-exports from `@ifi/oh-pi-core`, eliminating code duplication and ensuring a single source of truth for worktree management.
 
-- **Add `RepoWorktreeContext` and caching to core**: The lightweight context probe
-  (which uses only `git rev-parse` without `git worktree list --porcelain`) and the async
-  cache-based refresh functions (`getRepoWorktreeContext`, `getCachedRepoWorktreeContext`,
-  `refreshRepoWorktreeContext`, etc.) are now available in `@ifi/oh-pi-core`, matching the
-  full feature set previously only in the extensions package.
+- **Add `RepoWorktreeContext` and caching to core**: The lightweight context probe (which uses only `git rev-parse` without `git worktree list --porcelain`) and the async cache-based refresh functions (`getRepoWorktreeContext`, `getCachedRepoWorktreeContext`, `refreshRepoWorktreeContext`, etc.) are now available in `@ifi/oh-pi-core`, matching the full feature set previously only in the extensions package.
 
-- **Add `worktree` tool**: Register a `worktree` tool alongside the existing `/worktree`
-  command. The AI agent can now programmatically create, list, check status, and clean up
-  pi-owned worktrees without needing to use the slash command. This addresses the problem
-  where the `ant_colony` tool bypassed `/worktree` because commands are TUI-only.
-  The tool supports `create`, `status`, `list`, and `cleanup` actions.
+- **Add `worktree` tool**: Register a `worktree` tool alongside the existing `/worktree` command. The AI agent can now programmatically create, list, check status, and clean up pi-owned worktrees without needing to use the slash command. This addresses the problem where the `ant_colony` tool bypassed `/worktree` because commands are TUI-only. The tool supports `create`, `status`, `list`, and `cleanup` actions.
 
-- **Fix `touchManagedWorktreeSeen` throttling**: The `saveWorktreeRegistry` function now
-  clears the worktree snapshot cache after writes, and `touchManagedWorktreeSeen` now
-  throttles updates to avoid excessive I/O (5-minute interval).
+- **Fix `touchManagedWorktreeSeen` throttling**: The `saveWorktreeRegistry` function now clears the worktree snapshot cache after writes, and `touchManagedWorktreeSeen` now throttles updates to avoid excessive I/O (5-minute interval).
 
 #### Add option to disable emoji icons and use plain ASCII fallbacks.
 
@@ -195,9 +183,7 @@ Closes #24.
 
 #### Upgrade Vite from 7.3.2 to 8.0.9 across the monorepo. Also upgrade
 
-@vitejs/plugin-react from v4 to v6 for Vite 8 compatibility. Convert
-analytics-dashboard's manualChunks from object to function form
-(required by Rolldown/Vite 8).
+@vitejs/plugin-react from v4 to v6 for Vite 8 compatibility. Convert analytics-dashboard's manualChunks from object to function form (required by Rolldown/Vite 8).
 
 ### Fixes
 
@@ -365,17 +351,13 @@ analytics-dashboard's manualChunks from object to function form
 - add `packages/skills/skills/devenv/SKILL.md` with activation rules, core commands, and script conventions
 - add `packages/skills/skills/devenv/REFERENCE.md` with the recommended devenv.nix layout, script options, git hooks, processes, and troubleshooting
 
-#### Add docs:sync script to derive MDX content from docs/*.md source files.
+#### Add docs:sync script to derive MDX content from docs/\*.md source files.
 
-Content now uses MDT markers and stays in sync with the repo's MDT
-documentation reuse system.
+Content now uses MDT markers and stays in sync with the repo's MDT documentation reuse system.
 
 #### Add missing extension packages to the `pi:local` source switcher.
 
-`@ifi/pi-bash-live-view`, `@ifi/pi-pretty`, `@ifi/pi-remote-tailscale`, and
-`@ifi/pi-analytics-extension` are now included in `SWITCHER_PACKAGES` so that
-`pnpm pi:local` points them at the local workspace sources along with every
-other oh-pi extension.
+`@ifi/pi-bash-live-view`, `@ifi/pi-pretty`, `@ifi/pi-remote-tailscale`, and `@ifi/pi-analytics-extension` are now included in `SWITCHER_PACKAGES` so that `pnpm pi:local` points them at the local workspace sources along with every other oh-pi extension.
 
 #### Add repo-wide coverage reporting with Vitest + Codecov, publish a coverage badge in the README,
 
@@ -391,20 +373,17 @@ and post patch coverage details on pull requests.
 
 #### Add Ctrl+O context expansion popup for QnA questions.
 
-When a question has a longer original formulation, pressing Ctrl+O opens a
-popup inside the QnA overlay showing the full question text, context, and all
-option descriptions. Escape, Enter, or Ctrl+O again closes the popup.
+When a question has a longer original formulation, pressing Ctrl+O opens a popup inside the QnA overlay showing the full question text, context, and all option descriptions. Escape, Enter, or Ctrl+O again closes the popup.
 
-- Added `fullContext` field to `QnAQuestion` for preserving the verbatim
-  original text alongside the concise `question` summary.
-- LLM extraction prompt now instructs preserving `fullContext` when the
-  question is summarized from a longer original.
+- Added `fullContext` field to `QnAQuestion` for preserving the verbatim original text alongside the concise `question` summary.
+- LLM extraction prompt now instructs preserving `fullContext` when the question is summarized from a longer original.
 - `QnATuiComponent` toggles a context popup with Ctrl+O.
 - `normalizeExtractedQuestions` passes through `fullContext`.
 
 #### Improve answer extension question extraction to find the most complete formulation with options.
 
 The LLM extraction prompt was updated to:
+
 - Look for the most complete formulation of each question instead of just extracting from a summary at the end
 - Keep `question` concise while extracting all explicit choices as `options`
 - Support a new `header` field for markdown headings (e.g. "### 2. ...")
@@ -417,19 +396,23 @@ The LLM extraction prompt was updated to:
 The QnA TUI now renders recommended options with bold text and a `(recommended)` postfix so the user's preferred choice stands out visually.
 
 LLM extraction prompt changes:
+
 - Instructs the model to mark clearly recommended options with `recommended: true`
 - When there is a recommendation without multiple explicit choices, the model creates a single synthetic recommended option; the TUI already presents an `Other` choice so the user can describe what they actually want.
 - Added example showing single-recommendation extraction
 
 Shared QnA component (`qna-tui.ts`):
+
 - Added `recommended?: boolean` to `QnAOption` interface
 - Render loop appends `(recommended)` postfix and applies bold styling when `recommended` is true
 
 Answer extension (`answer.ts`):
+
 - Updated `ExtractedQuestion` option type to carry `recommended`
 - `normalizeExtractedQuestions` passes through the flag and synthesizes a recommended option from a `recommendation` string when no explicit options exist
 
 Tests:
+
 - Added coverage for recommended flag extraction, defaulting to false, synthesis from recommendation string, and preference for explicit options
 - Updated prompt assertion tests for new recommendation guidelines
 
@@ -464,44 +447,28 @@ Tests:
 
 #### Avoid `bash` tool conflicts between `@ifi/pi-bash-live-view` and `@ifi/pi-pretty`.
 
-Both extensions were registering a tool named `bash`, which made them conflict when
-loaded together via `pnpm pi:local`. They now expose explicit alternative tools
-instead:
+Both extensions were registering a tool named `bash`, which made them conflict when loaded together via `pnpm pi:local`. They now expose explicit alternative tools instead:
 
 - `bash_live_view` for PTY-backed terminal rendering
 - `bash_pretty` for formatted command output summaries
 
-The built-in `bash` tool is left untouched, and regression tests now verify these
-extensions can be loaded together without duplicate tool registrations.
+The built-in `bash` tool is left untouched, and regression tests now verify these extensions can be loaded together without duplicate tool registrations.
 
 #### Fix tool name conflict between bg-process and background-tasks extensions.
 
-The bg-process extension in the extensions package re-exports the same
-extension from @ifi/pi-background-tasks, causing "Tool bash conflicts with
-bg-process" errors. Replaced the redundant bg-process.ts entry in the root
-pi.extensions config with a direct reference to the background-tasks package,
-eliminating the double-loading conflict.
+The bg-process extension in the extensions package re-exports the same extension from @ifi/pi-background-tasks, causing "Tool bash conflicts with bg-process" errors. Replaced the redundant bg-process.ts entry in the root pi.extensions config with a direct reference to the background-tasks package, eliminating the double-loading conflict.
 
 #### Remove auto-backgrounding from the `bash` tool override in `@ifi/pi-background-tasks`.
 
-The extension no longer intercepts ordinary `bash` calls to promote them into
-background tasks after a timeout. Instead, the `bash` tool passes through to
-pi's built-in execution flow so output stays visible in the foreground.
+The extension no longer intercepts ordinary `bash` calls to promote them into background tasks after a timeout. Instead, the `bash` tool passes through to pi's built-in execution flow so output stays visible in the foreground.
 
-Background task management remains available through `bg_task`, `bg_status`,
-`/bg`, and `Ctrl+Shift+B` for commands that should explicitly run in the
-background (e.g. dev servers, file watchers, log tails).
+Background task management remains available through `bg_task`, `bg_status`, `/bg`, and `Ctrl+Shift+B` for commands that should explicitly run in the background (e.g. dev servers, file watchers, log tails).
 
 #### Remove conflicting `bash` passthrough tool from `@ifi/pi-background-tasks`.
 
-The background-tasks extension was incorrectly registering a `bash` tool as a thin
-passthrough, which conflicted with the actual `bash` tool registered by other
-extensions like `@ifi/pi-bash-live-view` and `@ifi/pi-pretty`. The background tasks
-package should only register `bg_task` and `bg_status` tools.
+The background-tasks extension was incorrectly registering a `bash` tool as a thin passthrough, which conflicted with the actual `bash` tool registered by other extensions like `@ifi/pi-bash-live-view` and `@ifi/pi-pretty`. The background tasks package should only register `bg_task` and `bg_status` tools.
 
-Also updates the runtime benchmark test to gracefully handle filtered extension
-sets (`OH_PI_BENCH_EXTENSION_FILTER`) so it no longer fails when only a subset
-of extensions is benchmarked.
+Also updates the runtime benchmark test to gracefully handle filtered extension sets (`OH_PI_BENCH_EXTENSION_FILTER`) so it no longer fails when only a subset of extensions is benchmarked.
 
 #### fix(extensions): guard `ctx.model` getter in compact-header and custom-footer render paths
 
@@ -513,53 +480,27 @@ The bash live-view extension now checks the active `node-pty/prebuilds/<platform
 
 #### Fix Ollama cloud models showing stale data after refresh and surface discovery errors
 
-The `/ollama:refresh-models` command and `/ollama:status` display always read
-cloud models from the stored OAuth credential when one exists, even after a
-successful discovery that updated the runtime state. This meant newly available
-models (like kimi-k2.6) would not appear until the credential was re-stored,
-and the "last refreshed" timestamp shown in status was the credential's
-`lastModelRefresh` — often hours or days stale.
+The `/ollama:refresh-models` command and `/ollama:status` display always read cloud models from the stored OAuth credential when one exists, even after a successful discovery that updated the runtime state. This meant newly available models (like kimi-k2.6) would not appear until the credential was re-stored, and the "last refreshed" timestamp shown in status was the credential's `lastModelRefresh` — often hours or days stale.
 
 Changes:
 
-- Cloud model display now prefers the runtime discovery state
-  (`cloudEnvDiscoveryState.models`) over the stored credential. The credential
-  models are only used as fallback when the runtime state is empty (e.g. before
-  first discovery).
-- The "last refreshed" age shown in status now uses
-  `cloudEnvDiscoveryState.lastRefresh` (always set to `Date.now()` during
-  refresh) instead of the credential's `lastModelRefresh`.
-- Discovery errors are now surfaced in `/ollama:refresh-models`,
-  `/ollama:status`, and `/ollama-cloud status` output, making it obvious when
-  the cloud catalog couldn't be reached instead of silently falling back to
-  stale data.
+- Cloud model display now prefers the runtime discovery state (`cloudEnvDiscoveryState.models`) over the stored credential. The credential models are only used as fallback when the runtime state is empty (e.g. before first discovery).
+- The "last refreshed" age shown in status now uses `cloudEnvDiscoveryState.lastRefresh` (always set to `Date.now()` during refresh) instead of the credential's `lastModelRefresh`.
+- Discovery errors are now surfaced in `/ollama:refresh-models`, `/ollama:status`, and `/ollama-cloud status` output, making it obvious when the cloud catalog couldn't be reached instead of silently falling back to stale data.
 
 #### Fix Ollama cloud models not appearing in /scoped-models after refresh
 
-The `modifyModels` OAuth callback in `createOllamaCloudOAuthProvider` always
-used `getCredentialModels(credentials)` — the stale models stored with the
-login credential — over the freshly discovered runtime state. This meant that
-even after `/ollama:refresh-models` successfully re-discovered all models, the
-model registry (used by `/scoped-models`) would overwrite them with the old
-credential models on the next registry refresh.
+The `modifyModels` OAuth callback in `createOllamaCloudOAuthProvider` always used `getCredentialModels(credentials)` — the stale models stored with the login credential — over the freshly discovered runtime state. This meant that even after `/ollama:refresh-models` successfully re-discovered all models, the model registry (used by `/scoped-models`) would overwrite them with the old credential models on the next registry refresh.
 
-Now `modifyModels` prefers `cloudEnvDiscoveryState.models` (the runtime
-discovery state that is always updated during refresh) and only falls back to
-credential models when the runtime state is empty (e.g. before first
-discovery).
+Now `modifyModels` prefers `cloudEnvDiscoveryState.models` (the runtime discovery state that is always updated during refresh) and only falls back to credential models when the runtime state is empty (e.g. before first discovery).
 
 #### Fix stale ExtensionAPI crash in provider catalog after session replacement.
 
-The `@mariozechner/pi-coding-agent` extension loader invalidates the `ExtensionAPI`
-instance (`pi`) after a session reload or replacement. The provider catalog extension
-was calling `pi.registerProvider()` from `session_start` handlers and command
-handlers that captured the original `pi`, which threw:
+The `@mariozechner/pi-coding-agent` extension loader invalidates the `ExtensionAPI` instance (`pi`) after a session reload or replacement. The provider catalog extension was calling `pi.registerProvider()` from `session_start` handlers and command handlers that captured the original `pi`, which threw:
 
-  "This extension instance is stale after session replacement or reload."
+"This extension instance is stale after session replacement or reload."
 
-All `registerProvider` calls in event and command handlers now use the fresh
-`ctx.modelRegistry` passed to each handler instead. `bootstrapProviders` still
-uses the initial `pi` (which is valid at extension load time).
+All `registerProvider` calls in event and command handlers now use the fresh `ctx.modelRegistry` passed to each handler instead. `bootstrapProviders` still uses the initial `pi` (which is valid at extension load time).
 
 #### Prevent the shared QnA TUI used by `/answers` from rendering lines wider than the terminal when selected answer text is long in narrow terminals.
 
@@ -575,9 +516,7 @@ This also tightens the runtime-churn benchmark so the isolated scheduler scenari
 
 #### Fix worktree tool renderCall/renderResult returning strings instead of Widget instances
 
-The worktree tool's `renderCall` and `renderResult` returned plain strings
-instead of TUI `Widget` instances. `Box.render` calls `child.render()` on
-every child, so a bare string caused `TypeError: child.render is not a function`.
+The worktree tool's `renderCall` and `renderResult` returned plain strings instead of TUI `Widget` instances. `Box.render` calls `child.render()` on every child, so a bare string caused `TypeError: child.render is not a function`.
 
 #### Fix subagent project agent discovery to cascade through parent workspaces.
 
@@ -632,6 +571,7 @@ Explicit skills now resolve relative to the subagent task directory instead of t
 #### Improve error reporting and robustness for ant colony and subagent swarms.
 
 **Ant Colony:**
+
 - Fix nest lock file crash (`ENOENT`) when colony storage directory is cleaned up mid-run — the lock now recreates the directory instead of crashing
 - Expand error messages from 80–120 chars to 200–500+ chars across queen, spawner, index, and ui
 - Include full stack traces in colony crash reports and task failure records
@@ -643,6 +583,7 @@ Explicit skills now resolve relative to the subagent task directory instead of t
 - Session dispose errors are logged instead of silently swallowed
 
 **Subagent Swarms:**
+
 - Add fallback error messages for subagent processes that exit non-zero with no stderr
 - Capture `stderr` from `runPiStreaming` and include it in failure output
 - Track `aborted` flag on results when tasks are killed via signal
@@ -969,8 +910,7 @@ Based on https://github.com/dbachelder/pi-btw by Dan Bachelder (MIT).
 
 #### Add `bin` installer so `npx @ifi/oh-pi` registers all sub-packages with pi.
 
-Supports `--version <ver>` to pin a specific version, `--local` for project-scoped
-installs, and `--remove` to uninstall all oh-pi packages from pi.
+Supports `--version <ver>` to pin a specific version, `--local` for project-scoped installs, and `--remove` to uninstall all oh-pi packages from pi.
 
 #### Add `@ifi/pi-extension-subagents`, a full-featured subagent orchestration package built on top of
 
@@ -996,16 +936,11 @@ library in the monorepo.
 
 shell-script wrappers.
 
-- publish a new `@ifi/pi-spec` package that registers a single `/spec` command with status, init,
-  constitution, specify, clarify, checklist, plan, tasks, analyze, implement, list, and next flows
-- vendor spec-kit-inspired workflow templates into the package and scaffold them into `.specify/`
-  for per-repository customization
-- implement native repo detection, feature numbering, branch naming, git branch creation, checklist
-  summaries, and prompt handoff entirely in TypeScript
-- add comprehensive Vitest coverage for workspace helpers, scaffold creation, prompt generation, and
-  command behavior
-- integrate the new package into the oh-pi installer, CLI resource copying, extension registry, and
-  repo documentation
+- publish a new `@ifi/pi-spec` package that registers a single `/spec` command with status, init, constitution, specify, clarify, checklist, plan, tasks, analyze, implement, list, and next flows
+- vendor spec-kit-inspired workflow templates into the package and scaffold them into `.specify/` for per-repository customization
+- implement native repo detection, feature numbering, branch naming, git branch creation, checklist summaries, and prompt handoff entirely in TypeScript
+- add comprehensive Vitest coverage for workspace helpers, scaffold creation, prompt generation, and command behavior
+- integrate the new package into the oh-pi installer, CLI resource copying, extension registry, and repo documentation
 
 #### Add a new `rust-workspace-bootstrap` skill that scaffolds a Rust workspace template inspired by `mdt` and `pina`, including:
 
@@ -1087,18 +1022,11 @@ Based on pi-scheduler by @manojlds (MIT).
 
 #### Drop `bundledDependencies` and the `pi` resource manifest from the meta-package.
 
-Pi loads each package with its own module root, so extensions nested inside a
-meta-package's `node_modules/` cannot resolve peer-dep imports
-(`@mariozechner/pi-coding-agent`, etc.). This caused commands like `/colony` and
-`/loop` to silently fail to register.
+Pi loads each package with its own module root, so extensions nested inside a meta-package's `node_modules/` cannot resolve peer-dep imports (`@mariozechner/pi-coding-agent`, etc.). This caused commands like `/colony` and `/loop` to silently fail to register.
 
-Each sub-package (`@ifi/oh-pi-extensions`, `@ifi/oh-pi-ant-colony`, etc.) is
-already a fully self-contained pi package with its own `pi` field. Users should
-install them directly via `pi install npm:@ifi/oh-pi-<name>` so pi can load
-extensions with correct module resolution.
+Each sub-package (`@ifi/oh-pi-extensions`, `@ifi/oh-pi-ant-colony`, etc.) is already a fully self-contained pi package with its own `pi` field. Users should install them directly via `pi install npm:@ifi/oh-pi-<name>` so pi can load extensions with correct module resolution.
 
-The `@ifi/oh-pi` npm package remains as a convenience dependency that pulls all
-sub-packages, but no longer declares pi resources itself.
+The `@ifi/oh-pi` npm package remains as a convenience dependency that pulls all sub-packages, but no longer declares pi resources itself.
 
 #### Harden release safety with security gates:
 
@@ -1201,8 +1129,7 @@ preset, updating preset copy/docs, and adding a regression test for preset exten
 Fixed colony failures in environments where `pi.events.off` is not implemented.
 
 - `ColonyEventBus.off` is now optional.
-- Added `createUsageLimitsTracker()` to safely query usage-tracker limits with
-  support for both `on/emit/off` and `on/emit` event buses.
+- Added `createUsageLimitsTracker()` to safely query usage-tracker limits with support for both `on/emit/off` and `on/emit` event buses.
 - Prevents `TypeError: opts.eventBus.off is not a function` during colony runs.
 - Added regression tests for event buses with and without `off()`.
 
@@ -1214,9 +1141,7 @@ Fixed colony failures in environments where `pi.events.off` is not implemented.
 
 #### Support multiple concurrent colonies
 
-The ant colony extension now supports running multiple colonies simultaneously.
-Each colony gets a short ID (`c1`, `c2`, ...) shown in all status output, signals,
-and the details panel.
+The ant colony extension now supports running multiple colonies simultaneously. Each colony gets a short ID (`c1`, `c2`, ...) shown in all status output, signals, and the details panel.
 
 **New commands:**
 
@@ -1251,9 +1176,7 @@ and the details panel.
 
 #### Add `/colony` slash command
 
-The ant colony can now be launched directly with `/colony <goal>` instead of
-relying solely on the LLM-callable `ant_colony` tool. The command appears in
-autocomplete alongside `/colony-status`, `/colony-stop`, and `/colony-resume`.
+The ant colony can now be launched directly with `/colony <goal>` instead of relying solely on the LLM-callable `ant_colony` tool. The command appears in autocomplete alongside `/colony-status`, `/colony-stop`, and `/colony-resume`.
 
 Usage: `/colony refactor the auth module to use JWT tokens`
 
@@ -1265,13 +1188,9 @@ Usage: `/colony refactor the auth module to use JWT tokens`
 
 #### Fix usage dashboard truncation cutting through ANSI escape codes
 
-The `/usage` overlay and `Ctrl+U` dashboard now use ANSI-aware line truncation.
-Previously, lines were sliced by raw string length which could cut through ANSI
-escape sequences mid-code, causing garbled colors and broken terminal rendering.
+The `/usage` overlay and `Ctrl+U` dashboard now use ANSI-aware line truncation. Previously, lines were sliced by raw string length which could cut through ANSI escape sequences mid-code, causing garbled colors and broken terminal rendering.
 
-The new `truncateAnsi()` helper walks the string character by character, skipping
-ANSI sequences when counting visible width, and appends a reset (`\x1b[0m`) if
-the line is trimmed inside a styled region.
+The new `truncateAnsi()` helper walks the string character by character, skipping ANSI sequences when counting visible width, and appends a reset (`\x1b[0m`) if the line is trimmed inside a styled region.
 
 ## 0.2.4 (2026-03-08)
 
@@ -1285,9 +1204,7 @@ the line is trimmed inside a styled region.
 
 #### Usage-aware budget planner for ant colony
 
-The ant colony now queries the usage-tracker extension for real-time provider rate limits
-(Claude session/weekly %, Codex 5h/weekly %) and session cost data to intelligently allocate
-resources across scout, worker, and soldier castes.
+The ant colony now queries the usage-tracker extension for real-time provider rate limits (Claude session/weekly %, Codex 5h/weekly %) and session cost data to intelligently allocate resources across scout, worker, and soldier castes.
 
 **New module: `budget-planner.ts`**
 
@@ -1312,9 +1229,7 @@ resources across scout, worker, and soldier castes.
 
 #### Fixed: usage-tracker shortcut conflict
 
-`Ctrl+U` is kept as the usage dashboard shortcut. The extension now auto-configures
-`~/.pi/agent/keybindings.json` on first load to unbind `deleteToLineStart` from `ctrl+u`,
-eliminating the conflict warning without requiring manual user configuration.
+`Ctrl+U` is kept as the usage dashboard shortcut. The extension now auto-configures `~/.pi/agent/keybindings.json` on first load to unbind `deleteToLineStart` from `ctrl+u`, eliminating the conflict warning without requiring manual user configuration.
 
 ### Fixes
 
@@ -1341,8 +1256,7 @@ eliminating the conflict warning without requiring manual user configuration.
 
 #### Reverted npm scope back to `@ifi`
 
-The scope was incorrectly changed to `@ifiokjr` due to a misdiagnosed npm auth issue.
-The real problem was token permissions, not the scope name. All packages are back to `@ifi/*`.
+The scope was incorrectly changed to `@ifiokjr` due to a misdiagnosed npm auth issue. The real problem was token permissions, not the scope name. All packages are back to `@ifi/*`.
 
 ## 0.2.2 (2026-03-08)
 
@@ -1360,8 +1274,7 @@ The real problem was token permissions, not the scope name. All packages are bac
 
 #### Renamed npm scope from `@ifi` to `@ifiokjr`
 
-The `@ifi` scope didn't exist as an npm organization. All packages are now published under
-`@ifi/*` which matches the npm username and works without org setup.
+The `@ifi` scope didn't exist as an npm organization. All packages are now published under `@ifi/*` which matches the npm username and works without org setup.
 
 - `@ifi/oh-pi` → `@ifi/oh-pi`
 - `@ifi/oh-pi-core` → `@ifi/oh-pi-core`
@@ -1385,12 +1298,9 @@ The `@ifi` scope didn't exist as an npm organization. All packages are now publi
 
 5 AGENTS.md templates providing role-specific AI guidelines.
 
-- **General Developer** — Universal coding guidelines covering code style, testing, documentation,
-  and PR etiquette
-- **Full-Stack Developer** — Frontend, backend, and database conventions with framework-specific
-  guidance
-- **Security Researcher** — Penetration testing, vulnerability assessment, and OWASP audit
-  methodology
+- **General Developer** — Universal coding guidelines covering code style, testing, documentation, and PR etiquette
+- **Full-Stack Developer** — Frontend, backend, and database conventions with framework-specific guidance
+- **Security Researcher** — Penetration testing, vulnerability assessment, and OWASP audit methodology
 - **Data & AI Engineer** — MLOps pipelines, data processing, model training, and experiment tracking
 - **Colony Operator** — Multi-agent orchestration guidelines for the ant-colony swarm system
 
@@ -1400,113 +1310,74 @@ Each template is a markdown file placed at `~/.pi/agent/AGENTS.md` to guide the 
 
 Multi-agent swarm extension modeled after real ant ecology.
 
-- **Colony lifecycle**: SCOUTING → PLANNING_RECOVERY → WORKING → REVIEWING → DONE with automatic
-  phase transitions
-- **Three ant castes**: Scouts (fast/cheap models for exploration), Workers (capable models for code
-  changes), Soldiers (thorough models for review)
-- **In-process agents**: Each ant is an `AgentSession` via pi SDK — zero startup overhead, shared
-  auth and model registry
-- **Pheromone communication**: `.ant-colony/pheromone.jsonl` shared discovery log with 10-minute
-  half-life decay
-- **Adaptive concurrency**: Auto-tunes parallelism based on throughput, CPU load (>85% reduction),
-  and 429 rate limit backoff (2s→5s→10s cap)
+- **Colony lifecycle**: SCOUTING → PLANNING_RECOVERY → WORKING → REVIEWING → DONE with automatic phase transitions
+- **Three ant castes**: Scouts (fast/cheap models for exploration), Workers (capable models for code changes), Soldiers (thorough models for review)
+- **In-process agents**: Each ant is an `AgentSession` via pi SDK — zero startup overhead, shared auth and model registry
+- **Pheromone communication**: `.ant-colony/pheromone.jsonl` shared discovery log with 10-minute half-life decay
+- **Adaptive concurrency**: Auto-tunes parallelism based on throughput, CPU load (>85% reduction), and 429 rate limit backoff (2s→5s→10s cap)
 - **File locking**: One ant per file — conflicting tasks are blocked and resume when locks release
-- **Planning recovery**: When scouts return unstructured intel, colony enters `planning_recovery`
-  instead of failing
-- **Plan validation gate**: Tasks are validated (title/description/caste/priority) before workers
-  start
+- **Planning recovery**: When scouts return unstructured intel, colony enters `planning_recovery` instead of failing
+- **Plan validation gate**: Tasks are validated (title/description/caste/priority) before workers start
 - **Scout quorum**: Multi-step goals default to ≥2 scouts for better planning reliability
-- **Real-time UI**: Status bar with task progress, active ants, tool calls, cost; `Ctrl+Shift+A`
-  overlay panel; `/colony-stop` abort command
-- **Signal protocol**: Structured `COLONY_SIGNAL:*` messages pushed to main conversation (LAUNCHED,
-  SCOUTING, WORKING, REVIEWING, COMPLETE, FAILED, BUDGET_EXCEEDED)
+- **Real-time UI**: Status bar with task progress, active ants, tool calls, cost; `Ctrl+Shift+A` overlay panel; `/colony-stop` abort command
+- **Signal protocol**: Structured `COLONY_SIGNAL:*` messages pushed to main conversation (LAUNCHED, SCOUTING, WORKING, REVIEWING, COMPLETE, FAILED, BUDGET_EXCEEDED)
 - **Turn budgets**: Scout: 8, Worker: 15, Soldier: 8 — prevents runaway execution
-- **Auto-trigger**: LLM deploys colony when ≥3 files need changes or parallel workstreams are
-  possible
+- **Auto-trigger**: LLM deploys colony when ≥3 files need changes or parallel workstreams are possible
 
 #### `@ifi/oh-pi-cli` — Initial release
 
 Interactive TUI configurator that sets up `~/.pi/agent/` in under a minute.
 
-- **Three setup modes**: Quick (3 steps), Preset (2 steps), Custom (6 steps) — each tailored to
-  different experience levels
-- **Provider auto-detection**: Scans environment variables for API keys from 7 providers (Anthropic,
-  OpenAI, Google Gemini, Groq, OpenRouter, xAI, Mistral) and pre-fills configuration
-- **TUI components**: Built on `@clack/prompts` with styled selection menus for providers,
-  extensions, themes, keybindings, skills, and AGENTS.md templates
-- **File writers**: Generates `auth.json` (0600 permissions), `settings.json`, `keybindings.json`,
-  `AGENTS.md`, and copies extension/theme/prompt/skill files into `~/.pi/agent/`
-- **Backup detection**: Warns when existing configuration exists and offers timestamped backup
-  before overwriting
+- **Three setup modes**: Quick (3 steps), Preset (2 steps), Custom (6 steps) — each tailored to different experience levels
+- **Provider auto-detection**: Scans environment variables for API keys from 7 providers (Anthropic, OpenAI, Google Gemini, Groq, OpenRouter, xAI, Mistral) and pre-fills configuration
+- **TUI components**: Built on `@clack/prompts` with styled selection menus for providers, extensions, themes, keybindings, skills, and AGENTS.md templates
+- **File writers**: Generates `auth.json` (0600 permissions), `settings.json`, `keybindings.json`, `AGENTS.md`, and copies extension/theme/prompt/skill files into `~/.pi/agent/`
+- **Backup detection**: Warns when existing configuration exists and offers timestamped backup before overwriting
 - **Binary entry point**: Ships as `oh-pi` CLI via `npx @ifi/oh-pi-cli`
 
 #### `@ifi/oh-pi-core` — Initial release
 
 Shared foundation library for all oh-pi packages.
 
-- **Type system**: Full TypeScript type definitions for `OhPConfig`, `ProviderConfig`,
-  `WizardBaseConfig`, `Preset`, and all extension/theme/skill/prompt registries
-- **Extension registry**: Declarative `EXTENSIONS` array with metadata (name, description, file
-  path, default-on/off, category) for all 9 extensions including the new `usage-tracker`
-- **Theme registry**: 6 theme definitions (oh-pi Dark, Cyberpunk, Nord, Catppuccin Mocha, Tokyo
-  Night, Gruvbox Dark) with file paths and emoji indicators
-- **Prompt registry**: 10 prompt template registrations (`/review`, `/fix`, `/explain`, `/refactor`,
-  `/test`, `/commit`, `/pr`, `/security`, `/optimize`, `/document`)
+- **Type system**: Full TypeScript type definitions for `OhPConfig`, `ProviderConfig`, `WizardBaseConfig`, `Preset`, and all extension/theme/skill/prompt registries
+- **Extension registry**: Declarative `EXTENSIONS` array with metadata (name, description, file path, default-on/off, category) for all 9 extensions including the new `usage-tracker`
+- **Theme registry**: 6 theme definitions (oh-pi Dark, Cyberpunk, Nord, Catppuccin Mocha, Tokyo Night, Gruvbox Dark) with file paths and emoji indicators
+- **Prompt registry**: 10 prompt template registrations (`/review`, `/fix`, `/explain`, `/refactor`, `/test`, `/commit`, `/pr`, `/security`, `/optimize`, `/document`)
 - **Skill registry**: 10 skill definitions across tool, UI-design, and workflow categories
-- **i18n module**: Bilingual (English/Chinese) translation system with locale detection and `t()`
-  helper function
-- **Preset system**: Pre-configured profiles (Full Power, Clean, Colony Only) mapping to curated
-  extension/theme/thinking-level combinations
+- **i18n module**: Bilingual (English/Chinese) translation system with locale detection and `t()` helper function
+- **Preset system**: Pre-configured profiles (Full Power, Clean, Colony Only) mapping to curated extension/theme/thinking-level combinations
 
 #### `@ifi/oh-pi-extensions` — Initial release
 
 9 pi extensions that hook into the pi SDK event system.
 
-- **safe-guard** (default: on) — Intercepts destructive commands (`rm -rf`, `git push --force`,
-  `DROP TABLE`, `chmod 777`) and protected path writes. Prompts for confirmation or blocks outright
-  via `tool_call` event hooks
-- **git-guard** (default: on) — Auto-creates `git stash` checkpoints on session start when repo is
-  dirty. Tracks changed files from write/edit tool results
-- **auto-session-name** (default: on) — Extracts a short title from the first user message on
-  `turn_end` and calls `pi.setSessionName()`
-- **custom-footer** (default: on) — Rich status bar showing model, input/output tokens, cost,
-  context %, elapsed time, working directory, and git branch. Auto-refreshes every 30 seconds
+- **safe-guard** (default: on) — Intercepts destructive commands (`rm -rf`, `git push --force`, `DROP TABLE`, `chmod 777`) and protected path writes. Prompts for confirmation or blocks outright via `tool_call` event hooks
+- **git-guard** (default: on) — Auto-creates `git stash` checkpoints on session start when repo is dirty. Tracks changed files from write/edit tool results
+- **auto-session-name** (default: on) — Extracts a short title from the first user message on `turn_end` and calls `pi.setSessionName()`
+- **custom-footer** (default: on) — Rich status bar showing model, input/output tokens, cost, context %, elapsed time, working directory, and git branch. Auto-refreshes every 30 seconds
 - **compact-header** (default: on) — Dense one-liner startup header replacing the verbose default
-- **auto-update** (default: on) — Async npm version check on `session_start` via `pi.exec()` with
-  semver comparison and upgrade notification
-- **bg-process** (default: off) — Overrides the built-in `bash` tool to auto-background commands
-  exceeding 10 seconds. Provides `bg_status` tool for listing, viewing logs, and stopping background
-  processes
-- **usage-tracker** (default: off) — CodexBar-inspired rate limit and cost monitor. Probes `claude`
-  and `codex` CLIs for provider-level quota percentages and reset countdowns. Live widget, `/usage`
-  overlay with `Ctrl+U`, `/usage-toggle`, `/usage-refresh` commands, and LLM-callable `usage_report`
-  tool. Tracks per-model token usage with cost threshold alerts at $0.50/$1/$2/$5/$10/$25/$50
+- **auto-update** (default: on) — Async npm version check on `session_start` via `pi.exec()` with semver comparison and upgrade notification
+- **bg-process** (default: off) — Overrides the built-in `bash` tool to auto-background commands exceeding 10 seconds. Provides `bg_status` tool for listing, viewing logs, and stopping background processes
+- **usage-tracker** (default: off) — CodexBar-inspired rate limit and cost monitor. Probes `claude` and `codex` CLIs for provider-level quota percentages and reset countdowns. Live widget, `/usage` overlay with `Ctrl+U`, `/usage-toggle`, `/usage-refresh` commands, and LLM-callable `usage_report` tool. Tracks per-model token usage with cost threshold alerts at $0.50/$1/$2/$5/$10/$25/$50
 
 #### Infrastructure and tooling
 
 - **Monorepo**: pnpm workspace with 9 packages under `@ifi/*` npm scope
 - **Biome**: Strict linting and formatting (tabs, 120 char width, double quotes, organized imports)
 - **tsgo**: `@typescript/native-preview` (official TypeScript 7.0 Go port) for fast type checking
-- **GitHub Actions CI**: lint → typecheck → test (Node 20 + 22) → build pipeline with changeset
-  enforcement on PRs
-- **Knope**: Automated changelog generation, version bumping (lockstep across all packages), git
-  tagging, and GitHub releases
+- **GitHub Actions CI**: lint → typecheck → test (Node 20 + 22) → build pipeline with changeset enforcement on PRs
+- **Knope**: Automated changelog generation, version bumping (lockstep across all packages), git tagging, and GitHub releases
 - **Vitest**: 254 tests across 21 test files with fake timers for fast execution
-- **All documentation translated to English**: 8 main docs, supplementary docs, benchmarks,
-  ant-colony README, and 16+ source file comments
+- **All documentation translated to English**: 8 main docs, supplementary docs, benchmarks, ant-colony README, and 16+ source file comments
 
 #### `@ifi/oh-pi` — Initial release
 
 Meta-package that bundles all oh-pi packages for one-command installation.
 
-- **Single install**: `pi install npm:@ifi/oh-pi` adds all extensions, themes, prompts, skills, and
-  agents templates
-- **Bundled dependencies**: All sub-packages are listed as `bundledDependencies` so pi gets
-  everything in one `npm install`
-- **Pi package manifest**: Declares extension, theme, prompt, and skill paths via the `pi` field so
-  pi auto-discovers all resources
-- **Transitive packages**: Pulls in `@ifi/oh-pi-extensions`, `@ifi/oh-pi-ant-colony`,
-  `@ifi/oh-pi-themes`, `@ifi/oh-pi-prompts`, `@ifi/oh-pi-skills`, and `@ifi/oh-pi-agents`
+- **Single install**: `pi install npm:@ifi/oh-pi` adds all extensions, themes, prompts, skills, and agents templates
+- **Bundled dependencies**: All sub-packages are listed as `bundledDependencies` so pi gets everything in one `npm install`
+- **Pi package manifest**: Declares extension, theme, prompt, and skill paths via the `pi` field so pi auto-discovers all resources
+- **Transitive packages**: Pulls in `@ifi/oh-pi-extensions`, `@ifi/oh-pi-ant-colony`, `@ifi/oh-pi-themes`, `@ifi/oh-pi-prompts`, `@ifi/oh-pi-skills`, and `@ifi/oh-pi-agents`
 
 #### `@ifi/oh-pi-prompts` — Initial release
 
@@ -1523,8 +1394,7 @@ Meta-package that bundles all oh-pi packages for one-command installation.
 - `/optimize` — Performance optimization with profiling guidance
 - `/document` — Generate inline documentation and README sections
 
-Each template is a markdown file that pi loads as a slash command. Install via
-`pi install npm:@ifi/oh-pi-prompts`.
+Each template is a markdown file that pi loads as a slash command. Install via `pi install npm:@ifi/oh-pi-prompts`.
 
 #### `@ifi/oh-pi-skills` — Initial release
 
@@ -1549,8 +1419,7 @@ Each template is a markdown file that pi loads as a slash command. Install via
 - `debug-helper` — Error analysis, log interpretation, and profiling
 - `git-workflow` — Branching, commits, PRs, and conflict resolution
 
-Each skill directory contains a `SKILL.md` manifest and supporting files. Install via
-`pi install npm:@ifi/oh-pi-skills`.
+Each skill directory contains a `SKILL.md` manifest and supporting files. Install via `pi install npm:@ifi/oh-pi-skills`.
 
 #### `@ifi/oh-pi-themes` — Initial release
 
@@ -1563,8 +1432,7 @@ Each skill directory contains a `SKILL.md` manifest and supporting files. Instal
 - **Tokyo Night** — Blue and purple twilight hues inspired by Tokyo at night
 - **Gruvbox Dark** — Warm retro tones from the classic Gruvbox color scheme
 
-All themes are JSON files compatible with pi's `settings.json` theme configuration. Install via
-`pi install npm:@ifi/oh-pi-themes`.
+All themes are JSON files compatible with pi's `settings.json` theme configuration. Install via `pi install npm:@ifi/oh-pi-themes`.
 
 ### Fixes
 

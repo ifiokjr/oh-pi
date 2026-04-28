@@ -43,7 +43,11 @@ function createMockServer(overrides: Partial<Record<string, unknown>> = {}) {
 		setTunnel: vi.fn(),
 		start: vi.fn(async () => {
 			running = true;
-			return { instanceId: "instance-42", token: "test-token", url: "http://localhost:3100" };
+			return {
+				instanceId: "instance-42",
+				token: "test-token",
+				url: "http://localhost:3100",
+			};
 		}),
 		stop: vi.fn(async () => {
 			running = false;
@@ -89,16 +93,21 @@ describe("remote session server helpers", () => {
 				token: "abc",
 			}),
 		).toBe("http://192.168.1.10:3100/?t=abc");
-		expect(buildBestConnectUrl({ localUrl: "http://localhost:3100/?t=abc", token: "abc" })).toBe(
-			"http://localhost:3100/?t=abc",
-		);
+		expect(
+			buildBestConnectUrl({
+				localUrl: "http://localhost:3100/?t=abc",
+				token: "abc",
+			}),
+		).toBe("http://localhost:3100/?t=abc");
 		expect(parsePortFromServerUrl("http://localhost:3100")).toBe(3100);
 		expect(() => parsePortFromServerUrl("http://localhost")).toThrow("Unable to determine the remote server port.");
 
 		process.env.PI_REMOTE_TAILSCALE_MODE = "remote";
 		expect(isRemoteSessionEnv()).toBe(true);
 		expect(buildRemoteModeEnv({ FOO: "bar" }).PI_REMOTE_TAILSCALE_MODE).toBe("remote");
-		expect(createAuthHeaders("secret")).toEqual({ Authorization: "Bearer secret" });
+		expect(createAuthHeaders("secret")).toEqual({
+			Authorization: "Bearer secret",
+		});
 		expect(hasValidToken(undefined, "secret")).toBe(false);
 		expect(hasValidToken("secret", "secret")).toBe(true);
 		expect(webServerModule.validateToken).toHaveBeenCalledWith("secret", "secret");
@@ -143,9 +152,15 @@ describe("startRemoteSessionServer", () => {
 			token: undefined,
 		});
 		expect(server.attachSession).toHaveBeenCalledWith(session);
-		expect(tailscaleModule.startTailscaleServe).toHaveBeenCalledWith({ instanceId: "instance-42", port: 3100 });
+		expect(tailscaleModule.startTailscaleServe).toHaveBeenCalledWith({
+			instanceId: "instance-42",
+			port: 3100,
+		});
 		expect(server.setTunnel).toHaveBeenCalledWith(
-			expect.objectContaining({ publicUrl: "https://pi.tailnet.ts.net/pi/instance-42/", provider: "tailscale" }),
+			expect.objectContaining({
+				publicUrl: "https://pi.tailnet.ts.net/pi/instance-42/",
+				provider: "tailscale",
+			}),
 		);
 		expect(handle.localUrl).toBe("http://localhost:3100/?t=test-token");
 		expect(handle.lanUrl).toBe("http://192.168.1.20:3100/?t=test-token");
@@ -177,12 +192,18 @@ describe("startRemoteSessionServer", () => {
 		expect(tailscaleFailureServer.setTunnel).not.toHaveBeenCalled();
 
 		const noTunnelServer = createMockServer({
-			start: vi.fn(async () => ({ instanceId: "instance-2", token: "local-token", url: "http://localhost:4100" })),
+			start: vi.fn(async () => ({
+				instanceId: "instance-2",
+				token: "local-token",
+				url: "http://localhost:4100",
+			})),
 		});
 		webServerModule.createPiWebServer.mockReturnValueOnce(noTunnelServer);
 		webServerModule.getLanIp.mockReturnValueOnce(undefined);
 
-		const localHandle = await startRemoteSessionServer({ enableTailscale: false });
+		const localHandle = await startRemoteSessionServer({
+			enableTailscale: false,
+		});
 		expect(localHandle.connectUrl).toBe("http://localhost:4100/?t=local-token");
 		expect(tailscaleModule.startTailscaleServe).toHaveBeenCalledTimes(1);
 	});

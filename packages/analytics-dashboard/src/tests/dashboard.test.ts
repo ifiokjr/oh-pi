@@ -2,7 +2,7 @@
  * Dashboard Store Tests
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { useDashboardStore } from "../stores/dashboard";
 
 describe("useDashboardStore", () => {
@@ -91,14 +91,19 @@ describe("useDashboardStore", () => {
 
 		it("should preserve existing filters when updating", () => {
 			useDashboardStore.getState().updateFilters({ providers: ["anthropic"] });
-			useDashboardStore.getState().updateFilters({ models: ["claude-sonnet-4"] });
+			useDashboardStore.getState().updateFilters({
+				models: ["claude-sonnet-4"],
+			});
 			const { filters } = useDashboardStore.getState();
 			expect(filters.providers).toEqual(["anthropic"]);
 			expect(filters.models).toEqual(["claude-sonnet-4"]);
 		});
 
 		it("should reset filters", () => {
-			useDashboardStore.getState().updateFilters({ providers: ["anthropic"], models: ["gpt-4"] });
+			useDashboardStore.getState().updateFilters({
+				providers: ["anthropic"],
+				models: ["gpt-4"],
+			});
 			useDashboardStore.getState().resetFilters();
 			const { filters } = useDashboardStore.getState();
 			expect(filters.providers).toEqual([]);

@@ -4,8 +4,8 @@
  *
  * Main application wrapper with routing.
  */
-import { Codebases, Insights, Models, Overview } from "@/pages";
 import { SidebarLayout } from "@/components/SidebarLayout";
+import { Codebases, Insights, Models, Overview } from "@/pages";
 import useDashboardStore from "@/stores/dashboard";
 import type { ViewType } from "@/types";
 

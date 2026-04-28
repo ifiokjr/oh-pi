@@ -2,33 +2,33 @@
  * Chain execution logic for subagent tool
  */
 
-import * as fs from "node:fs";
-import * as path from "node:path";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import type { AgentConfig } from "./agents.js";
 import { ChainClarifyComponent } from "./chain-clarify.js";
-import type { ChainClarifyResult, BehaviorOverride, ModelInfo } from "./chain-clarify.js";
-import {
-	resolveChainTemplates,
-	createChainDir,
-	removeChainDir,
-	resolveStepBehavior,
-	resolveParallelBehaviors,
-	buildChainInstructions,
-	createParallelDirs,
-	aggregateParallelOutputs,
-	isParallelStep,
-} from "./settings.js";
-import type { StepOverrides, ChainStep, SequentialStep, ParallelTaskResult, ResolvedTemplates } from "./settings.js";
-import { discoverAvailableSkills, normalizeSkillInput } from "./skills.js";
+import type { BehaviorOverride, ChainClarifyResult, ModelInfo } from "./chain-clarify.js";
 import { runSync } from "./execution.js";
 import { buildChainSummary } from "./formatters.js";
-import { getFinalOutput, mapConcurrent } from "./utils.js";
-import { recordRun } from "./run-history.js";
 import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
+import { recordRun } from "./run-history.js";
+import {
+	aggregateParallelOutputs,
+	buildChainInstructions,
+	createChainDir,
+	createParallelDirs,
+	isParallelStep,
+	removeChainDir,
+	resolveChainTemplates,
+	resolveParallelBehaviors,
+	resolveStepBehavior,
+} from "./settings.js";
+import type { ChainStep, ParallelTaskResult, ResolvedTemplates, SequentialStep, StepOverrides } from "./settings.js";
+import { discoverAvailableSkills, normalizeSkillInput } from "./skills.js";
 import { MAX_CONCURRENCY } from "./types.js";
 import type { AgentProgress, ArtifactConfig, ArtifactPaths, Details, SingleResult } from "./types.js";
+import { getFinalOutput, mapConcurrent } from "./utils.js";
 
 /** Resolve a model name to its full provider/model format */
 function resolveModelFullId(modelName: string | undefined, availableModels: ModelInfo[]): string | undefined {
@@ -292,7 +292,14 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 						exitCode: -1,
 						messages: [],
 						task: "(skipped)",
-						usage: { cacheRead: 0, cacheWrite: 0, cost: 0, input: 0, output: 0, turns: 0 },
+						usage: {
+							cacheRead: 0,
+							cacheWrite: 0,
+							cost: 0,
+							input: 0,
+							output: 0,
+							turns: 0,
+						},
 					} as SingleResult;
 				}
 

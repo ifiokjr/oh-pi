@@ -1,7 +1,6 @@
 # PheromoneStore Interface Draft (Phase B)
 
-> Goal: Extract pheromone read/write from `nest.ts` JSONL implementation details. Define a stable
-> interface first, then implement swappable Jsonl/SQLite storage.
+> Goal: Extract pheromone read/write from `nest.ts` JSONL implementation details. Define a stable interface first, then implement swappable Jsonl/SQLite storage.
 
 ## 1. Design Goals
 
@@ -87,11 +86,9 @@ Migration strategy:
 
 - Swapping storage implementation doesn't affect queen scheduling results.
 - `planning_recovery` flow behavior is identical in regression tests.
-- No data corruption or significant performance degradation under long sessions (high-frequency
-  writes).
+- No data corruption or significant performance degradation under long sessions (high-frequency writes).
 
 ## 7. Risks & Rollback
 
 - Risk: Incomplete interface abstraction causes `Nest` to leak implementation details.
-- Rollback: Keep JSONL legacy path switch (`PHEROMONE_STORE=jsonl-legacy`) during a transition
-  period.
+- Rollback: Keep JSONL legacy path switch (`PHEROMONE_STORE=jsonl-legacy`) during a transition period.

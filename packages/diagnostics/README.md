@@ -33,8 +33,7 @@ This extension adds prompt-level completion timing so you can tell exactly:
 
 ## Relationship to tool-metadata
 
-`@ifi/pi-diagnostics` also exports shared timestamp and duration helpers used by
-`tool-metadata`, so prompt-level and tool-level timing stay consistent.
+`@ifi/pi-diagnostics` also exports shared timestamp and duration helpers used by `tool-metadata`, so prompt-level and tool-level timing stay consistent.
 
 ## Notes
 

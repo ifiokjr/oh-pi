@@ -1,5 +1,4 @@
-[PLAN MODE ACTIVE]
-Create a concrete implementation plan only.
+[PLAN MODE ACTIVE] Create a concrete implementation plan only.
 
 Guidance:
 

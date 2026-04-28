@@ -158,7 +158,7 @@ function main() {
 	const coreCrate = `${cratePrefix}_core`;
 	const cliCrate = `${cratePrefix}_cli`;
 	const targetDir = path.resolve(options.dir || projectName);
-	const {owner} = options;
+	const { owner } = options;
 	const repo = options.repo || projectName;
 	const description = options.description || `${projectTitle} Rust workspace`;
 

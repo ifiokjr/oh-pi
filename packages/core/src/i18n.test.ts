@@ -28,7 +28,11 @@ describe("t", () => {
 	});
 
 	it("interpolates multiple vars", () => {
-		const result = t("welcome.envInfo", { terminal: "xterm", os: "linux", node: "v20" });
+		const result = t("welcome.envInfo", {
+			terminal: "xterm",
+			os: "linux",
+			node: "v20",
+		});
 		expect(result).toContain("xterm");
 		expect(result).toContain("linux");
 	});

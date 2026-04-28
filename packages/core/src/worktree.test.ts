@@ -88,10 +88,22 @@ describe("worktree helpers", () => {
 
 		const owner = createOwnerMetadata({ instanceId: "pai-1", cwd: tempRoot });
 		expect(() =>
-			createManagedWorktree({ cwd: tempRoot, branch: "", purpose: "Coverage", owner, sharedRoot: tempRoot }),
+			createManagedWorktree({
+				cwd: tempRoot,
+				branch: "",
+				purpose: "Coverage",
+				owner,
+				sharedRoot: tempRoot,
+			}),
 		).toThrow("Branch name is required.");
 		expect(() =>
-			createManagedWorktree({ cwd: tempRoot, branch: "test/coverage", purpose: "", owner, sharedRoot: tempRoot }),
+			createManagedWorktree({
+				cwd: tempRoot,
+				branch: "test/coverage",
+				purpose: "",
+				owner,
+				sharedRoot: tempRoot,
+			}),
 		).toThrow("Purpose is required.");
 	});
 

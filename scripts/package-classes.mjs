@@ -7,7 +7,10 @@ export const compiledPackages = [
 
 export const publishedPackages = [
 	...compiledPackages,
-	{ dir: "packages/adaptive-routing", name: "@ifi/pi-extension-adaptive-routing" },
+	{
+		dir: "packages/adaptive-routing",
+		name: "@ifi/pi-extension-adaptive-routing",
+	},
 	{ dir: "packages/agents", name: "@ifi/oh-pi-agents" },
 	{ dir: "packages/analytics-db", name: "@ifi/pi-analytics-db" },
 	{ dir: "packages/analytics-extension", name: "@ifi/pi-analytics-extension" },

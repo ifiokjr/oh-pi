@@ -4,8 +4,7 @@ Embeddable HTTP + WebSocket server for remote pi session management.
 
 ## What it does
 
-`@ifi/pi-web-server` provides the server-side building blocks for exposing a pi session over HTTP
-and WebSocket transports.
+`@ifi/pi-web-server` provides the server-side building blocks for exposing a pi session over HTTP and WebSocket transports.
 
 It includes support for:
 
@@ -22,8 +21,7 @@ pnpm add @ifi/pi-web-server
 
 ## Use case
 
-Use this package if you want to embed remote pi access into your own app or service, or if you are
-building on top of the oh-pi remote workflow.
+Use this package if you want to embed remote pi access into your own app or service, or if you are building on top of the oh-pi remote workflow.
 
 ## Related packages
 

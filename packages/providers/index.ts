@@ -162,8 +162,16 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 	pi.registerCommand("providers", providersCommand);
 
 	const aliases: { name: string; subcommand: string; description: string }[] = [
-		{ description: "Show multi-provider catalog status.", name: "providers:status", subcommand: "status" },
-		{ description: "List supported providers and environment variables.", name: "providers:list", subcommand: "list" },
+		{
+			description: "Show multi-provider catalog status.",
+			name: "providers:status",
+			subcommand: "status",
+		},
+		{
+			description: "List supported providers and environment variables.",
+			name: "providers:list",
+			subcommand: "list",
+		},
 		{
 			description: "Open the provider picker and log in with an API key.",
 			name: "providers:login",
@@ -223,12 +231,19 @@ async function refreshProviders(
 				const refreshed = isExpired
 					? await refreshProviderCredential(provider, credential)
 					: await refreshProviderCredentialModels(provider, credential);
-				ctx.modelRegistry.authStorage.set(provider.id, { type: "oauth", ...refreshed });
+				ctx.modelRegistry.authStorage.set(provider.id, {
+					type: "oauth",
+					...refreshed,
+				});
 				runtimeState.models.set(provider.id, getCredentialModels(refreshed));
 				runtimeState.lastRefresh.set(provider.id, refreshed.lastModelRefresh ?? Date.now());
 				runtimeState.lastError.set(provider.id, null);
 				registerProvider(registrar, provider);
-				results.push({ models: getCredentialModels(refreshed).length, provider, status: "refreshed" });
+				results.push({
+					models: getCredentialModels(refreshed).length,
+					provider,
+					status: "refreshed",
+				});
 				continue;
 			} catch (error) {
 				results.push({
@@ -243,7 +258,11 @@ async function refreshProviders(
 
 		const apiKey = getEnvApiKey(provider);
 		if (!apiKey) {
-			results.push({ models: runtimeState.models.get(provider.id)?.length ?? 0, provider, status: "skipped" });
+			results.push({
+				models: runtimeState.models.get(provider.id)?.length ?? 0,
+				provider,
+				status: "skipped",
+			});
 			continue;
 		}
 
@@ -291,7 +310,9 @@ function renderStatus(ctx: ProviderStatusContext): string {
 		const error = credential ? null : runtimeState.lastError.get(provider.id);
 		const refreshedAt = credential?.lastModelRefresh ?? runtimeState.lastRefresh.get(provider.id);
 		lines.push(
-			`- ${provider.id} — ${provider.name} (${source}, ${models.length} models${formatRefreshAge(refreshedAt)})${error ? ` — last error: ${error}` : ""}`,
+			`- ${provider.id} — ${provider.name} (${source}, ${models.length} models${formatRefreshAge(
+				refreshedAt,
+			)})${error ? ` — last error: ${error}` : ""}`,
 		);
 	}
 
@@ -350,7 +371,9 @@ async function renderProviderModels(
 			const badges = [model.reasoning ? "reasoning" : undefined, model.input.includes("image") ? "vision" : undefined]
 				.filter(Boolean)
 				.join(" · ");
-			return `  - ${model.id} — ${model.name}${badges ? ` [${badges}]` : ""} · ${model.contextWindow.toLocaleString()} ctx`;
+			return `  - ${model.id} — ${model.name}${
+				badges ? ` [${badges}]` : ""
+			} · ${model.contextWindow.toLocaleString()} ctx`;
 		}),
 		...(models.length > 80 ? [`  …and ${models.length - 80} more`] : []),
 	].join("\n");
@@ -541,14 +564,19 @@ async function loginProviderFromCommand(
 				return await promptProviderInput(ctx, `Log in to ${provider.name}`, `${params.message}\n${provider.authUrl}`);
 			},
 		});
-		ctx.modelRegistry.authStorage.set(provider.id, { type: "oauth", ...credential });
+		ctx.modelRegistry.authStorage.set(provider.id, {
+			type: "oauth",
+			...credential,
+		});
 		runtimeState.models.set(provider.id, getCredentialModels(credential));
 		runtimeState.lastRefresh.set(provider.id, credential.lastModelRefresh ?? Date.now());
 		runtimeState.lastError.set(provider.id, null);
 		registerProvider(registrar, provider);
 		ctx.modelRegistry.refresh?.();
 		ctx.ui.notify(
-			`Logged in to ${provider.name}. ${getCredentialModels(credential).length} model${getCredentialModels(credential).length === 1 ? "" : "s"} available.`,
+			`Logged in to ${provider.name}. ${getCredentialModels(credential).length} model${
+				getCredentialModels(credential).length === 1 ? "" : "s"
+			} available.`,
 			"info",
 		);
 	} catch (error) {

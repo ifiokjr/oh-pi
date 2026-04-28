@@ -57,19 +57,34 @@ describe("external-editor extension", () => {
 		const harness = createExtensionHarness();
 		externalEditorExtension(harness.pi as never);
 		harness.editorState.text = "before";
-		harness.ctx.ui.custom = vi.fn(async () => ({ kind: "saved", text: "after" }));
+		harness.ctx.ui.custom = vi.fn(async () => ({
+			kind: "saved",
+			text: "after",
+		}));
 		const originalStdinTty = process.stdin.isTTY;
 		const originalStdoutTty = process.stdout.isTTY;
 		const originalVisual = process.env.VISUAL;
-		Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true });
-		Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
+		Object.defineProperty(process.stdin, "isTTY", {
+			value: true,
+			configurable: true,
+		});
+		Object.defineProperty(process.stdout, "isTTY", {
+			value: true,
+			configurable: true,
+		});
 		process.env.VISUAL = "hx";
 
 		try {
 			await harness.commands.get("external-editor").handler("", harness.ctx);
 		} finally {
-			Object.defineProperty(process.stdin, "isTTY", { value: originalStdinTty, configurable: true });
-			Object.defineProperty(process.stdout, "isTTY", { value: originalStdoutTty, configurable: true });
+			Object.defineProperty(process.stdin, "isTTY", {
+				value: originalStdinTty,
+				configurable: true,
+			});
+			Object.defineProperty(process.stdout, "isTTY", {
+				value: originalStdoutTty,
+				configurable: true,
+			});
 			process.env.VISUAL = originalVisual;
 		}
 
@@ -80,19 +95,34 @@ describe("external-editor extension", () => {
 		const harness = createExtensionHarness();
 		externalEditorExtension(harness.pi as never);
 		harness.editorState.text = "before";
-		harness.ctx.ui.custom = vi.fn(async () => ({ kind: "saved", text: "after shortcut" }));
+		harness.ctx.ui.custom = vi.fn(async () => ({
+			kind: "saved",
+			text: "after shortcut",
+		}));
 		const originalStdinTty = process.stdin.isTTY;
 		const originalStdoutTty = process.stdout.isTTY;
 		const originalEditor = process.env.EDITOR;
-		Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true });
-		Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
+		Object.defineProperty(process.stdin, "isTTY", {
+			value: true,
+			configurable: true,
+		});
+		Object.defineProperty(process.stdout, "isTTY", {
+			value: true,
+			configurable: true,
+		});
 		process.env.EDITOR = "vim";
 
 		try {
 			await harness.shortcuts.get("ctrl+shift+e").handler(harness.ctx);
 		} finally {
-			Object.defineProperty(process.stdin, "isTTY", { value: originalStdinTty, configurable: true });
-			Object.defineProperty(process.stdout, "isTTY", { value: originalStdoutTty, configurable: true });
+			Object.defineProperty(process.stdin, "isTTY", {
+				value: originalStdinTty,
+				configurable: true,
+			});
+			Object.defineProperty(process.stdout, "isTTY", {
+				value: originalStdoutTty,
+				configurable: true,
+			});
 			process.env.EDITOR = originalEditor;
 		}
 

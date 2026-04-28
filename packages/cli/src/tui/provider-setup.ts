@@ -144,7 +144,9 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
 			signal: AbortSignal.timeout(8000),
 		});
 		if (res.ok) {
-			const json = (await res.json()) as { data?: AnthropicModelResponseItem[] };
+			const json = (await res.json()) as {
+				data?: AnthropicModelResponseItem[];
+			};
 			const data = json.data ?? [];
 			if (data.length > 0 && data[0].owned_by === "anthropic") {
 				return {
@@ -174,7 +176,9 @@ async function fetchModels(provider: string, baseUrl: string, apiKey: string): P
 				signal: AbortSignal.timeout(8000),
 			});
 			if (res.ok) {
-				const json = (await res.json()) as { models?: GoogleModelResponseItem[] };
+				const json = (await res.json()) as {
+					models?: GoogleModelResponseItem[];
+				};
 				const data = (json.models ?? []).filter((m) => m.name?.includes("gemini"));
 				if (data.length > 0) {
 					return {
@@ -244,9 +248,21 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 		const action = await p.select({
 			message: t("provider.detected", { list: detected.join(", ") }),
 			options: [
-				{ hint: t("provider.detectedKeepHint"), label: t("provider.detectedKeep"), value: "keep" },
-				{ hint: t("provider.detectedReplaceHint"), label: t("provider.detectedReplace"), value: "replace" },
-				{ hint: t("provider.detectedAddHint"), label: t("provider.detectedAdd"), value: "add" },
+				{
+					hint: t("provider.detectedKeepHint"),
+					label: t("provider.detectedKeep"),
+					value: "keep",
+				},
+				{
+					hint: t("provider.detectedReplaceHint"),
+					label: t("provider.detectedReplace"),
+					value: "replace",
+				},
+				{
+					hint: t("provider.detectedAddHint"),
+					label: t("provider.detectedAdd"),
+					value: "add",
+				},
 			],
 		});
 		if (p.isCancel(action)) {
@@ -270,10 +286,20 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 			const options = [
 				...entries
 					.filter(([key]) => !selected.has(key))
-					.map(([key, info]) => ({ hint: info.env, label: info.label, value: key })),
+					.map(([key, info]) => ({
+						hint: info.env,
+						label: info.label,
+						value: key,
+					})),
 				...(selected.has("_custom")
 					? []
-					: [{ hint: t("provider.customHint"), label: t("provider.custom"), value: "_custom" }]),
+					: [
+							{
+								hint: t("provider.customHint"),
+								label: t("provider.custom"),
+								value: "_custom",
+							},
+						]),
 			];
 			if (options.length === 0) {
 				break;
@@ -315,8 +341,16 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 	const firstChoice = await p.select({
 		message: t("provider.selectPrimary"),
 		options: [
-			...entries.map(([key, info]) => ({ hint: info.env, label: info.label, value: key })),
-			{ hint: t("provider.customHint"), label: t("provider.custom"), value: "_custom" },
+			...entries.map(([key, info]) => ({
+				hint: info.env,
+				label: info.label,
+				value: key,
+			})),
+			{
+				hint: t("provider.customHint"),
+				label: t("provider.custom"),
+				value: "_custom",
+			},
 		],
 	});
 	if (p.isCancel(firstChoice)) {
@@ -335,10 +369,20 @@ export async function setupProviders(env?: EnvInfo): Promise<ProviderSetupResult
 		const options = [
 			...entries
 				.filter(([key]) => !selected.has(key))
-				.map(([key, info]) => ({ hint: info.env, label: info.label, value: key })),
+				.map(([key, info]) => ({
+					hint: info.env,
+					label: info.label,
+					value: key,
+				})),
 			...(selected.has("_custom")
 				? []
-				: [{ hint: t("provider.customHint"), label: t("provider.custom"), value: "_custom" }]),
+				: [
+						{
+							hint: t("provider.customHint"),
+							label: t("provider.custom"),
+							value: "_custom",
+						},
+					]),
 		];
 		if (options.length === 0) {
 			break;
@@ -419,7 +463,9 @@ async function setupProviderChoice(choice: string): Promise<ProviderConfig | nul
 
 	let apiKey: string;
 	if (envVal && !baseUrl) {
-		const useEnv = await p.confirm({ message: t("provider.foundEnv", { env: chalk.cyan(info.env) }) });
+		const useEnv = await p.confirm({
+			message: t("provider.foundEnv", { env: chalk.cyan(info.env) }),
+		});
 		if (p.isCancel(useEnv)) {
 			p.cancel(t("cancelled"));
 			process.exit(0);
@@ -444,7 +490,14 @@ async function setupProviderChoice(choice: string): Promise<ProviderConfig | nul
 	}
 
 	p.log.success(t("provider.configured", { label: info.label }));
-	return { api: finalApi, apiKey, baseUrl, defaultModel, discoveredModels, name };
+	return {
+		api: finalApi,
+		apiKey,
+		baseUrl,
+		defaultModel,
+		discoveredModels,
+		name,
+	};
 }
 
 async function selectOpenAIApiMode(
@@ -454,8 +507,16 @@ async function selectOpenAIApiMode(
 	const selected = await p.select({
 		message: t("provider.apiMode", { label }),
 		options: [
-			{ hint: t("provider.apiModeAutoHint", { model: defaultModel }), label: t("provider.apiModeAuto"), value: "auto" },
-			{ hint: t("provider.apiModeResponsesHint"), label: t("provider.apiModeResponses"), value: "openai-responses" },
+			{
+				hint: t("provider.apiModeAutoHint", { model: defaultModel }),
+				label: t("provider.apiModeAuto"),
+				value: "auto",
+			},
+			{
+				hint: t("provider.apiModeResponsesHint"),
+				label: t("provider.apiModeResponses"),
+				value: "openai-responses",
+			},
 			{
 				hint: t("provider.apiModeCompletionsHint"),
 				label: t("provider.apiModeCompletions"),
@@ -508,7 +569,10 @@ async function setupCustomProvider(): Promise<ProviderConfig | null> {
 		process.exit(0);
 	}
 
-	const needsKey = await p.confirm({ initialValue: false, message: t("provider.needsKey") });
+	const needsKey = await p.confirm({
+		initialValue: false,
+		message: t("provider.needsKey"),
+	});
 	if (p.isCancel(needsKey)) {
 		p.cancel(t("cancelled"));
 		process.exit(0);
@@ -524,7 +588,14 @@ async function setupCustomProvider(): Promise<ProviderConfig | null> {
 
 	p.log.success(t("provider.customConfigured", { name, url: baseUrl }));
 
-	return { api: finalApi, apiKey, baseUrl, defaultModel, discoveredModels, name };
+	return {
+		api: finalApi,
+		apiKey,
+		baseUrl,
+		defaultModel,
+		discoveredModels,
+		name,
+	};
 }
 
 interface SelectResult {

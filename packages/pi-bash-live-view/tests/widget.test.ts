@@ -78,8 +78,15 @@ describe("PTY live widget", () => {
 		expect(setWidget).toHaveBeenCalledTimes(1);
 		const widgetFactory = setWidget.mock.calls[0][1] as (
 			tui: { requestRender: () => void },
-			themeArg: { fg: (color: string, text: string) => string; bold: (text: string) => string },
-		) => { dispose: () => void; invalidate: () => void; render: () => string[] };
+			themeArg: {
+				fg: (color: string, text: string) => string;
+				bold: (text: string) => string;
+			},
+		) => {
+			dispose: () => void;
+			invalidate: () => void;
+			render: () => string[];
+		};
 		const requestRender = vi.fn();
 		const widget = widgetFactory({ requestRender }, theme);
 
@@ -113,7 +120,12 @@ describe("PTY live widget", () => {
 	});
 
 	it("becomes a no-op when the context has no UI", () => {
-		const controller = new PtyLiveWidgetController({ hasUI: false }, { key: "no-ui" });
+		const controller = new PtyLiveWidgetController(
+			{ hasUI: false },
+			{
+				key: "no-ui",
+			},
+		);
 		controller.update({
 			command: "echo hi",
 			startedAt: Date.now(),
@@ -125,7 +137,10 @@ describe("PTY live widget", () => {
 		controller.dispose();
 
 		const setWidget = vi.fn();
-		const controllerWithDefaultKey = new PtyLiveWidgetController({ hasUI: true, ui: { setWidget } });
+		const controllerWithDefaultKey = new PtyLiveWidgetController({
+			hasUI: true,
+			ui: { setWidget },
+		});
 		controllerWithDefaultKey.update({
 			command: "echo hi",
 			startedAt: Date.now(),

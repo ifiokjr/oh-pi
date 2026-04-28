@@ -1,6 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import type { SchedulerRuntime } from "./scheduler.js";
 import {
 	formatDurationShort,
 	normalizeDuration,
@@ -16,6 +15,7 @@ import {
 	MAX_TASKS,
 } from "./scheduler-shared.js";
 import type { ScheduleScope, TaskKind } from "./scheduler-shared.js";
+import type { SchedulerRuntime } from "./scheduler.js";
 
 const STARTUP_OWNERSHIP_DELAY_MS = 250;
 
@@ -62,10 +62,20 @@ const SchedulePromptToolParams = Type.Object({
 			description: "Optional recurring task expiry like 30m, 1h, or 1 day. Defaults to 1 day and is capped at 1 day.",
 		}),
 	),
-	id: Type.Optional(Type.String({ description: "Task id for delete/enable/disable/adopt/release action" })),
-	kind: Type.Optional(Type.Union([Type.Literal("recurring"), Type.Literal("once")], { description: "Task kind" })),
+	id: Type.Optional(
+		Type.String({
+			description: "Task id for delete/enable/disable/adopt/release action",
+		}),
+	),
+	kind: Type.Optional(
+		Type.Union([Type.Literal("recurring"), Type.Literal("once")], {
+			description: "Task kind",
+		}),
+	),
 	maxAttempts: Type.Optional(
-		Type.Number({ description: "Optional maximum number of runs when continueUntilComplete is enabled." }),
+		Type.Number({
+			description: "Optional maximum number of runs when continueUntilComplete is enabled.",
+		}),
 	),
 	prompt: Type.Optional(Type.String({ description: "Prompt text to run when the task fires" })),
 	retryInterval: Type.Optional(
@@ -178,7 +188,9 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 					return;
 				}
 				ctx.ui.notify(
-					`Scheduled cron ${task.cronExpression} (id: ${task.id}). Expires in ${formatDurationShort(task.expiresAt! - task.createdAt)}. Scope: ${task.scope ?? "instance"}.`,
+					`Scheduled cron ${task.cronExpression} (id: ${task.id}). Expires in ${formatDurationShort(
+						task.expiresAt! - task.createdAt,
+					)}. Scope: ${task.scope ?? "instance"}.`,
 					"info",
 				);
 				if (parsed.recurring.note) {
@@ -196,7 +208,11 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				scope: parsedFlags.scope,
 			});
 			ctx.ui.notify(
-				`Scheduled every ${formatDurationShort(parsed.recurring.durationMs)} (id: ${task.id}). Expires in ${formatDurationShort(task.expiresAt! - task.createdAt)}. Scope: ${task.scope ?? "instance"}.`,
+				`Scheduled every ${formatDurationShort(
+					parsed.recurring.durationMs,
+				)} (id: ${task.id}). Expires in ${formatDurationShort(
+					task.expiresAt! - task.createdAt,
+				)}. Scope: ${task.scope ?? "instance"}.`,
 				"info",
 			);
 			if (parsed.recurring.note) {
@@ -231,9 +247,13 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				return;
 			}
 
-			const task = runtime.addOneShotTask(parsed.prompt, parsed.durationMs, { scope: parsedFlags.scope });
+			const task = runtime.addOneShotTask(parsed.prompt, parsed.durationMs, {
+				scope: parsedFlags.scope,
+			});
 			ctx.ui.notify(
-				`Reminder set for ${runtime.formatRelativeTime(task.nextRunAt)} (id: ${task.id}, scope: ${task.scope ?? "instance"}).`,
+				`Reminder set for ${runtime.formatRelativeTime(
+					task.nextRunAt,
+				)} (id: ${task.id}, scope: ${task.scope ?? "instance"}).`,
 				"info",
 			);
 			if (parsed.note) {
@@ -359,21 +379,61 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 
 	pi.registerCommand("schedule", scheduleCommand);
 
-	const scheduleAliases: { name: string; subcommand: string; description: string }[] = [
-		{ description: "Open the scheduler TUI manager.", name: "schedule:tui", subcommand: "tui" },
-		{ description: "Show all scheduled prompts in the message stream.", name: "schedule:list", subcommand: "list" },
-		{ description: "Enable one scheduled prompt.", name: "schedule:enable", subcommand: "enable" },
-		{ description: "Disable one scheduled prompt.", name: "schedule:disable", subcommand: "disable" },
-		{ description: "Delete one scheduled prompt.", name: "schedule:delete", subcommand: "delete" },
-		{ description: "Alias for /schedule:delete.", name: "schedule:remove", subcommand: "remove" },
-		{ description: "Alias for /schedule:delete.", name: "schedule:rm", subcommand: "rm" },
-		{ description: "Delete every scheduled prompt.", name: "schedule:clear", subcommand: "clear" },
+	const scheduleAliases: {
+		name: string;
+		subcommand: string;
+		description: string;
+	}[] = [
+		{
+			description: "Open the scheduler TUI manager.",
+			name: "schedule:tui",
+			subcommand: "tui",
+		},
+		{
+			description: "Show all scheduled prompts in the message stream.",
+			name: "schedule:list",
+			subcommand: "list",
+		},
+		{
+			description: "Enable one scheduled prompt.",
+			name: "schedule:enable",
+			subcommand: "enable",
+		},
+		{
+			description: "Disable one scheduled prompt.",
+			name: "schedule:disable",
+			subcommand: "disable",
+		},
+		{
+			description: "Delete one scheduled prompt.",
+			name: "schedule:delete",
+			subcommand: "delete",
+		},
+		{
+			description: "Alias for /schedule:delete.",
+			name: "schedule:remove",
+			subcommand: "remove",
+		},
+		{
+			description: "Alias for /schedule:delete.",
+			name: "schedule:rm",
+			subcommand: "rm",
+		},
+		{
+			description: "Delete every scheduled prompt.",
+			name: "schedule:clear",
+			subcommand: "clear",
+		},
 		{
 			description: "Delete tasks not created in this instance.",
 			name: "schedule:clear-other",
 			subcommand: "clear-other",
 		},
-		{ description: "Adopt one task or all tasks for this instance.", name: "schedule:adopt", subcommand: "adopt" },
+		{
+			description: "Adopt one task or all tasks for this instance.",
+			name: "schedule:adopt",
+			subcommand: "adopt",
+		},
 		{
 			description: "Release one task or all tasks from this instance.",
 			name: "schedule:release",
@@ -431,7 +491,10 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 				retryInterval?: string;
 				maxAttempts?: number;
 			},
-		): Promise<{ content: { type: "text"; text: string }[]; details: Record<string, unknown> }> => {
+		): Promise<{
+			content: { type: "text"; text: string }[];
+			details: Record<string, unknown>;
+		}> => {
 			const { action } = params;
 
 			if (action === "list") {
@@ -463,7 +526,12 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			}
 
 			return {
-				content: [{ type: "text", text: `Error: unsupported action '${String(action)}'.` }],
+				content: [
+					{
+						type: "text",
+						text: `Error: unsupported action '${String(action)}'.`,
+					},
+				],
 				details: { action, error: "unsupported_action" },
 			};
 		},
@@ -487,7 +555,10 @@ export function registerTools(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 function handleToolList(runtime: SchedulerRuntime): ToolResult {
 	const list = runtime.getSortedTasks();
 	if (list.length === 0) {
-		return { content: [{ text: "No scheduled tasks.", type: "text" }], details: { action: "list", tasks: [] } };
+		return {
+			content: [{ text: "No scheduled tasks.", type: "text" }],
+			details: { action: "list", tasks: [] },
+		};
 	}
 
 	const lines = list.map((task) => {
@@ -500,12 +571,18 @@ function handleToolList(runtime: SchedulerRuntime): ToolResult {
 		const state = task.resumeRequired ? `due:${task.resumeReason ?? "unknown"}` : task.enabled ? "on" : "off";
 		const status = task.resumeRequired ? "resume_required" : (task.lastStatus ?? "pending");
 		const last = task.lastRunAt ? runtime.formatRelativeTime(task.lastRunAt) : "never";
-		return `${task.id}\t${creator}\t${state}\t${task.kind}\t${task.scope ?? "instance"}\t${schedule}\t${runtime.formatRelativeTime(task.nextRunAt)}\t${task.runCount}\t${last}\t${status}\t${task.prompt}`;
+		return `${task.id}\t${creator}\t${state}\t${task.kind}\t${
+			task.scope ?? "instance"
+		}\t${schedule}\t${runtime.formatRelativeTime(
+			task.nextRunAt,
+		)}\t${task.runCount}\t${last}\t${status}\t${task.prompt}`;
 	});
 	return {
 		content: [
 			{
-				text: `Scheduled tasks (id\tcreator\tstate\tkind\tscope\tschedule\tnext\truns\tlast\tstatus\tprompt):\n${lines.join("\n")}`,
+				text: `Scheduled tasks (id\tcreator\tstate\tkind\tscope\tschedule\tnext\truns\tlast\tstatus\tprompt):\n${lines.join(
+					"\n",
+				)}`,
 				type: "text",
 			},
 		],
@@ -516,7 +593,12 @@ function handleToolList(runtime: SchedulerRuntime): ToolResult {
 function handleToolClear(runtime: SchedulerRuntime): ToolResult {
 	const count = runtime.clearTasks();
 	return {
-		content: [{ text: `Cleared ${count} scheduled task${count === 1 ? "" : "s"}.`, type: "text" }],
+		content: [
+			{
+				text: `Cleared ${count} scheduled task${count === 1 ? "" : "s"}.`,
+				type: "text",
+			},
+		],
 		details: { action: "clear", cleared: count },
 	};
 }
@@ -525,7 +607,12 @@ function handleToolDelete(params: { id?: string }, runtime: SchedulerRuntime): T
 	const id = params.id?.trim();
 	if (!id) {
 		return {
-			content: [{ text: "Error: id is required for delete action.", type: "text" }],
+			content: [
+				{
+					text: "Error: id is required for delete action.",
+					type: "text",
+				},
+			],
 			details: { action: "delete", error: "missing_id" },
 		};
 	}
@@ -547,7 +634,12 @@ function handleToolToggle(params: { action: string; id?: string }, runtime: Sche
 	const id = params.id?.trim();
 	if (!id) {
 		return {
-			content: [{ text: `Error: id is required for ${action} action.`, type: "text" }],
+			content: [
+				{
+					text: `Error: id is required for ${action} action.`,
+					type: "text",
+				},
+			],
 			details: { action, error: "missing_id" },
 		};
 	}
@@ -560,7 +652,12 @@ function handleToolToggle(params: { action: string; id?: string }, runtime: Sche
 		};
 	}
 	return {
-		content: [{ text: `${enabled ? "Enabled" : "Disabled"} scheduled task ${id}.`, type: "text" }],
+		content: [
+			{
+				text: `${enabled ? "Enabled" : "Disabled"} scheduled task ${id}.`,
+				type: "text",
+			},
+		],
 		details: { action, enabled, id, updated: true },
 	};
 }
@@ -575,7 +672,12 @@ function handleToolAdopt(params: { id?: string }, runtime: SchedulerRuntime): To
 		};
 	}
 	return {
-		content: [{ text: `Adopted ${result.count} scheduled task${result.count === 1 ? "" : "s"}.`, type: "text" }],
+		content: [
+			{
+				text: `Adopted ${result.count} scheduled task${result.count === 1 ? "" : "s"}.`,
+				type: "text",
+			},
+		],
 		details: { action: "adopt", adopted: result.count, target },
 	};
 }
@@ -590,7 +692,12 @@ function handleToolRelease(params: { id?: string }, runtime: SchedulerRuntime): 
 		};
 	}
 	return {
-		content: [{ text: `Released ${result.count} scheduled task${result.count === 1 ? "" : "s"}.`, type: "text" }],
+		content: [
+			{
+				text: `Released ${result.count} scheduled task${result.count === 1 ? "" : "s"}.`,
+				type: "text",
+			},
+		],
 		details: { action: "release", released: result.count, target },
 	};
 }
@@ -599,7 +706,10 @@ function handleToolClearForeign(runtime: SchedulerRuntime): ToolResult {
 	const result = runtime.clearForeignTasks();
 	return {
 		content: [
-			{ text: `Cleared ${result.count} foreign scheduled task${result.count === 1 ? "" : "s"}.`, type: "text" },
+			{
+				text: `Cleared ${result.count} foreign scheduled task${result.count === 1 ? "" : "s"}.`,
+				type: "text",
+			},
 		],
 		details: { action: "clear_foreign", cleared: result.count },
 	};
@@ -646,9 +756,12 @@ function validationErrorMessage(error: string): string {
 	}
 }
 
-function resolveRecurringExpiryOptions(
-	expires: string | undefined,
-): { ok: true; expiresInMs: number; note?: string } | { ok: false; error: string } {
+function resolveRecurringExpiryOptions(expires: string | undefined):
+	| { ok: true; expiresInMs: number; note?: string }
+	| {
+			ok: false;
+			error: string;
+	  } {
 	if (!expires?.trim()) {
 		return { expiresInMs: DEFAULT_RECURRING_EXPIRY_MS, ok: true };
 	}
@@ -749,14 +862,24 @@ function handleToolAdd(
 	const prompt = params.prompt?.trim();
 	if (!prompt) {
 		return {
-			content: [{ text: "Error: prompt is required for add action.", type: "text" }],
+			content: [
+				{
+					text: "Error: prompt is required for add action.",
+					type: "text",
+				},
+			],
 			details: { action: "add", error: "missing_prompt" },
 		};
 	}
 
 	if (runtime.taskCount >= MAX_TASKS) {
 		return {
-			content: [{ text: `Task limit reached (${MAX_TASKS}). Delete one first.`, type: "text" }],
+			content: [
+				{
+					text: `Task limit reached (${MAX_TASKS}). Delete one first.`,
+					type: "text",
+				},
+			],
 			details: { action: "add", error: "task_limit" },
 		};
 	}
@@ -789,7 +912,12 @@ function handleToolAdd(
 	});
 	if (!validated.ok) {
 		return {
-			content: [{ text: validationErrorMessage(validated.error), type: "text" }],
+			content: [
+				{
+					text: validationErrorMessage(validated.error),
+					type: "text",
+				},
+			],
 			details: { action: "add", error: validated.error },
 		};
 	}
@@ -797,7 +925,12 @@ function handleToolAdd(
 	const recurringExpiry = resolveRecurringExpiryOptions(params.expires);
 	if (!recurringExpiry.ok) {
 		return {
-			content: [{ text: "Error: expires must be a duration like 30m, 1h, or 1 day.", type: "text" }],
+			content: [
+				{
+					text: "Error: expires must be a duration like 30m, 1h, or 1 day.",
+					type: "text",
+				},
+			],
 			details: { action: "add", error: recurringExpiry.error },
 		};
 	}
@@ -810,11 +943,11 @@ function handleToolAdd(
 		return {
 			content: [
 				{
-					text: `Reminder scheduled (id: ${task.id}) for ${runtime.formatRelativeTime(task.nextRunAt)} as ${task.scope ?? "instance"}-scoped.${
-						validated.plan.note ? ` ${validated.plan.note}` : ""
-					}${completion.options.continueUntilComplete ? " Will retry until marked complete." : ""}${
-						completion.note ? ` ${completion.note}` : ""
-					}`,
+					text: `Reminder scheduled (id: ${task.id}) for ${runtime.formatRelativeTime(
+						task.nextRunAt,
+					)} as ${task.scope ?? "instance"}-scoped.${validated.plan.note ? ` ${validated.plan.note}` : ""}${
+						completion.options.continueUntilComplete ? " Will retry until marked complete." : ""
+					}${completion.note ? ` ${completion.note}` : ""}`,
 					type: "text",
 				},
 			],
@@ -831,7 +964,10 @@ function handleToolAdd(
 		if (!task) {
 			return {
 				content: [
-					{ text: "Error: invalid cron expression or cadence is too frequent (minimum is 1 minute).", type: "text" },
+					{
+						text: "Error: invalid cron expression or cadence is too frequent (minimum is 1 minute).",
+						type: "text",
+					},
 				],
 				details: { action: "add", error: "cron_next_run_failed" },
 			};
@@ -839,11 +975,13 @@ function handleToolAdd(
 		return {
 			content: [
 				{
-					text: `Recurring cron task scheduled (id: ${task.id}) with '${task.cronExpression}' as ${task.scope ?? "instance"}-scoped. Expires in ${formatDurationShort(recurringExpiry.expiresInMs)}.${
-						validated.plan.note ? ` ${validated.plan.note}` : ""
-					}${completion.options.continueUntilComplete ? " Will retry until marked complete." : ""}${
-						completion.note ? ` ${completion.note}` : ""
-					}${recurringExpiry.note ? ` ${recurringExpiry.note}` : ""}`,
+					text: `Recurring cron task scheduled (id: ${task.id}) with '${task.cronExpression}' as ${
+						task.scope ?? "instance"
+					}-scoped. Expires in ${formatDurationShort(
+						recurringExpiry.expiresInMs,
+					)}.${validated.plan.note ? ` ${validated.plan.note}` : ""}${
+						completion.options.continueUntilComplete ? " Will retry until marked complete." : ""
+					}${completion.note ? ` ${completion.note}` : ""}${recurringExpiry.note ? ` ${recurringExpiry.note}` : ""}`,
 					type: "text",
 				},
 			],
@@ -859,11 +997,13 @@ function handleToolAdd(
 	return {
 		content: [
 			{
-				text: `Recurring task scheduled (id: ${task.id}) every ${formatDurationShort(validated.plan.durationMs)} as ${task.scope ?? "instance"}-scoped. Expires in ${formatDurationShort(recurringExpiry.expiresInMs)}.${
-					validated.plan.note ? ` ${validated.plan.note}` : ""
-				}${completion.options.continueUntilComplete ? " Will retry until marked complete." : ""}${
-					completion.note ? ` ${completion.note}` : ""
-				}${recurringExpiry.note ? ` ${recurringExpiry.note}` : ""}`,
+				text: `Recurring task scheduled (id: ${task.id}) every ${formatDurationShort(
+					validated.plan.durationMs,
+				)} as ${task.scope ?? "instance"}-scoped. Expires in ${formatDurationShort(
+					recurringExpiry.expiresInMs,
+				)}.${validated.plan.note ? ` ${validated.plan.note}` : ""}${
+					completion.options.continueUntilComplete ? " Will retry until marked complete." : ""
+				}${completion.note ? ` ${completion.note}` : ""}${recurringExpiry.note ? ` ${recurringExpiry.note}` : ""}`,
 				type: "text",
 			},
 		],

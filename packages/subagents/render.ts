@@ -15,9 +15,9 @@ import {
 	wrapTextWithAnsi,
 } from "@mariozechner/pi-tui";
 import type { Widget } from "@mariozechner/pi-tui";
+import { formatDuration, formatTokens, formatToolCall, formatUsage, shortenPath } from "./formatters.js";
 import { MAX_WIDGET_JOBS, WIDGET_KEY } from "./types.js";
 import type { AsyncJobState, Details } from "./types.js";
-import { formatDuration, formatTokens, formatToolCall, formatUsage, shortenPath } from "./formatters.js";
 import { getDisplayItems, getFinalOutput, getLastActivity, getOutputTail } from "./utils.js";
 
 type Theme = ExtensionContext["ui"]["theme"];
@@ -230,9 +230,13 @@ export function renderSubagentResult(
 
 		const progressInfo =
 			isRunning && r.progress
-				? ` | ${r.progress.toolCount} tools, ${formatTokens(r.progress.tokens)} tok, ${formatDuration(r.progress.durationMs)}`
+				? ` | ${r.progress.toolCount} tools, ${formatTokens(
+						r.progress.tokens,
+					)} tok, ${formatDuration(r.progress.durationMs)}`
 				: r.progressSummary
-					? ` | ${r.progressSummary.toolCount} tools, ${formatTokens(r.progressSummary.tokens)} tok, ${formatDuration(r.progressSummary.durationMs)}`
+					? ` | ${r.progressSummary.toolCount} tools, ${formatTokens(
+							r.progressSummary.tokens,
+						)} tok, ${formatDuration(r.progressSummary.durationMs)}`
 					: "";
 
 		const w = getTermWidth() - 4;
@@ -315,7 +319,9 @@ export function renderSubagentResult(
 
 	const summaryStr =
 		totalSummary.toolCount || totalSummary.tokens
-			? ` | ${totalSummary.toolCount} tools, ${formatTokens(totalSummary.tokens)} tok, ${formatDuration(totalSummary.durationMs)}`
+			? ` | ${totalSummary.toolCount} tools, ${formatTokens(
+					totalSummary.tokens,
+				)} tok, ${formatDuration(totalSummary.durationMs)}`
 			: "";
 
 	const modeLabel = d.mode;

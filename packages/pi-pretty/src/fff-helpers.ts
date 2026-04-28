@@ -1,6 +1,6 @@
-import { mkdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
+import { join } from "node:path";
 
 interface FffModule {
 	CursorStore?: new () => {

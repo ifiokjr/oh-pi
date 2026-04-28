@@ -381,7 +381,13 @@ export default function answerExtension(pi: ExtensionAPI) {
 
 	/** Handle auto-detect after agent turn. Exported for direct test coverage. */
 	function handleAutoDetect(
-		event: { messages: { role: string; stopReason?: string; content: Array<{ type: string; text?: string }> }[] },
+		event: {
+			messages: {
+				role: string;
+				stopReason?: string;
+				content: Array<{ type: string; text?: string }>;
+			}[];
+		},
 		ctx: ExtensionContext | ExtensionCommandContext,
 	) {
 		if (!autoDetectEnabled || inProgressRef.value) {

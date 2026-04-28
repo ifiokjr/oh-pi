@@ -6,8 +6,8 @@
  */
 
 import { defineConfig } from "drizzle-kit";
-import { join } from "node:path";
 import { homedir } from "node:os";
+import { join } from "node:path";
 
 function getDatabasePath(): string {
 	return join(homedir(), ".pi", "agent", "analytics", "analytics.db");

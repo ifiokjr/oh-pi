@@ -51,10 +51,18 @@ describe("tailscale helpers", () => {
 	it("detects tailscale availability and resolves the hostname", async () => {
 		const availableRunner = vi.fn(async (command: string, args: string[]) => {
 			if (command === "which") {
-				return { exitCode: 0, stderr: "", stdout: "/usr/local/bin/tailscale\n" };
+				return {
+					exitCode: 0,
+					stderr: "",
+					stdout: "/usr/local/bin/tailscale\n",
+				};
 			}
 			if (command === "tailscale" && args[0] === "status") {
-				return { exitCode: 0, stderr: "", stdout: '{"Self":{"DNSName":"pi.tailnet.ts.net."}}' };
+				return {
+					exitCode: 0,
+					stderr: "",
+					stdout: '{"Self":{"DNSName":"pi.tailnet.ts.net."}}',
+				};
 			}
 			throw new Error("unexpected command");
 		});
@@ -62,7 +70,11 @@ describe("tailscale helpers", () => {
 		expect(await isTailscaleAvailable(availableRunner)).toBe(true);
 		expect(await getTailscaleHostname(availableRunner)).toBe("pi.tailnet.ts.net");
 		await expect(
-			getTailscaleHostname(async () => ({ exitCode: 0, stderr: "", stdout: '{"Self":{}}' })),
+			getTailscaleHostname(async () => ({
+				exitCode: 0,
+				stderr: "",
+				stdout: '{"Self":{}}',
+			})),
 		).rejects.toThrow("Unable to determine the Tailscale hostname.");
 	});
 
@@ -77,15 +89,27 @@ describe("tailscale helpers", () => {
 	it("starts a tailscale serve session and stops it idempotently", async () => {
 		const runner = vi.fn(async (command: string, args: string[]) => {
 			if (command === "which") {
-				return { exitCode: 0, stderr: "", stdout: "/usr/local/bin/tailscale\n" };
+				return {
+					exitCode: 0,
+					stderr: "",
+					stdout: "/usr/local/bin/tailscale\n",
+				};
 			}
 			if (command === "tailscale" && args[0] === "status") {
-				return { exitCode: 0, stderr: "", stdout: '{"Self":{"DNSName":"pi.tailnet.ts.net."}}' };
+				return {
+					exitCode: 0,
+					stderr: "",
+					stdout: '{"Self":{"DNSName":"pi.tailnet.ts.net."}}',
+				};
 			}
 			return { exitCode: 0, stderr: "", stdout: "" };
 		});
 
-		const session = await startTailscaleServe({ instanceId: "session-42", port: 3100, runner });
+		const session = await startTailscaleServe({
+			instanceId: "session-42",
+			port: 3100,
+			runner,
+		});
 		await session.stop();
 		await session.stop();
 
@@ -101,7 +125,11 @@ describe("tailscale helpers", () => {
 	it("supports custom hostnames and custom serve paths", async () => {
 		const runner = vi.fn(async (command: string) => {
 			if (command === "which") {
-				return { exitCode: 0, stderr: "", stdout: "/usr/local/bin/tailscale\n" };
+				return {
+					exitCode: 0,
+					stderr: "",
+					stdout: "/usr/local/bin/tailscale\n",
+				};
 			}
 			return { exitCode: 0, stderr: "", stdout: "" };
 		});

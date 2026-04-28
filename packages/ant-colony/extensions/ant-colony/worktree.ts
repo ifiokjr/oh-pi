@@ -192,9 +192,7 @@ export function worktreeEnabledByDefault(): boolean {
 /**
 <!-- {=antColonyPrepareColonyWorkspaceDocs} -->
 
-Prepare the execution workspace for a colony run. When worktree isolation is enabled and git
-supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch; otherwise it
-falls back to the shared working directory and records the reason.
+Prepare the execution workspace for a colony run. When worktree isolation is enabled and git supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch; otherwise it falls back to the shared working directory and records the reason.
 
 <!-- {/antColonyPrepareColonyWorkspaceDocs} -->
 */

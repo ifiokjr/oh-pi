@@ -114,7 +114,10 @@ describe("model intelligence", () => {
 		expect(result.selectedModel).toBe("openai/gpt-5.4");
 		expect(result.rejected).toEqual(
 			expect.arrayContaining([
-				expect.objectContaining({ model: "google/gemini-2.5-flash", reason: "provider-blocked" }),
+				expect.objectContaining({
+					model: "google/gemini-2.5-flash",
+					reason: "provider-blocked",
+				}),
 				expect.objectContaining({
 					model: "groq/llama-3.3-70b-versatile",
 					reason: expect.stringContaining("context-too-small"),

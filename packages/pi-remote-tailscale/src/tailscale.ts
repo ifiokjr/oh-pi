@@ -62,18 +62,25 @@ export async function runCommand(
 	options: { timeoutMs?: number } = {},
 ): Promise<CommandResult> {
 	return new Promise((resolve, reject) => {
-		execFile(command, args, { timeout: options.timeoutMs ?? TAILSCALE_TIMEOUT_MS }, (error, stdout, stderr) => {
-			if (error) {
-				reject(error);
-				return;
-			}
+		execFile(
+			command,
+			args,
+			{
+				timeout: options.timeoutMs ?? TAILSCALE_TIMEOUT_MS,
+			},
+			(error, stdout, stderr) => {
+				if (error) {
+					reject(error);
+					return;
+				}
 
-			resolve({
-				exitCode: 0,
-				stderr: stderr.toString(),
-				stdout: stdout.toString(),
-			});
-		});
+				resolve({
+					exitCode: 0,
+					stderr: stderr.toString(),
+					stdout: stdout.toString(),
+				});
+			},
+		);
 	});
 }
 

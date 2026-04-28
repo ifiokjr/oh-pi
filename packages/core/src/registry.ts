@@ -4,23 +4,78 @@ import type { ModelCapabilities } from "./types.js";
 /** Model capability lookup table — maps model IDs to their context window, output limits, and features. */
 export const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
 	// Anthropic
-	"claude-sonnet-4-20250514": { contextWindow: 200000, input: ["text", "image"], maxTokens: 16384, reasoning: true },
-	"claude-opus-4-0520": { contextWindow: 200000, input: ["text", "image"], maxTokens: 16384, reasoning: true },
+	"claude-sonnet-4-20250514": {
+		contextWindow: 200000,
+		input: ["text", "image"],
+		maxTokens: 16384,
+		reasoning: true,
+	},
+	"claude-opus-4-0520": {
+		contextWindow: 200000,
+		input: ["text", "image"],
+		maxTokens: 16384,
+		reasoning: true,
+	},
 	// OpenAI
-	"gpt-4o": { contextWindow: 128000, input: ["text", "image"], maxTokens: 16384, reasoning: false },
-	"o3-mini": { contextWindow: 128000, input: ["text"], maxTokens: 65536, reasoning: true },
+	"gpt-4o": {
+		contextWindow: 128000,
+		input: ["text", "image"],
+		maxTokens: 16384,
+		reasoning: false,
+	},
+	"o3-mini": {
+		contextWindow: 128000,
+		input: ["text"],
+		maxTokens: 65536,
+		reasoning: true,
+	},
 	// Google
-	"gemini-2.5-pro": { contextWindow: 1048576, input: ["text", "image"], maxTokens: 65536, reasoning: true },
-	"gemini-2.5-flash": { contextWindow: 1048576, input: ["text", "image"], maxTokens: 65536, reasoning: true },
+	"gemini-2.5-pro": {
+		contextWindow: 1048576,
+		input: ["text", "image"],
+		maxTokens: 65536,
+		reasoning: true,
+	},
+	"gemini-2.5-flash": {
+		contextWindow: 1048576,
+		input: ["text", "image"],
+		maxTokens: 65536,
+		reasoning: true,
+	},
 	// Groq
-	"llama-3.3-70b-versatile": { contextWindow: 128000, input: ["text"], maxTokens: 32768, reasoning: false },
+	"llama-3.3-70b-versatile": {
+		contextWindow: 128000,
+		input: ["text"],
+		maxTokens: 32768,
+		reasoning: false,
+	},
 	// OpenRouter
-	"anthropic/claude-sonnet-4": { contextWindow: 200000, input: ["text", "image"], maxTokens: 16384, reasoning: true },
-	"openai/gpt-4o": { contextWindow: 128000, input: ["text", "image"], maxTokens: 16384, reasoning: false },
+	"anthropic/claude-sonnet-4": {
+		contextWindow: 200000,
+		input: ["text", "image"],
+		maxTokens: 16384,
+		reasoning: true,
+	},
+	"openai/gpt-4o": {
+		contextWindow: 128000,
+		input: ["text", "image"],
+		maxTokens: 16384,
+		reasoning: false,
+	},
 	// XAI
-	"grok-3": { contextWindow: 131072, input: ["text", "image"], maxTokens: 16384, reasoning: false },
+	"grok-3": {
+		contextWindow: 131072,
+		input: ["text", "image"],
+		maxTokens: 16384,
+		reasoning: false,
+	},
 	// Mistral
-	"mistral-large-latest": { contextWindow: 128000, input: ["text"], maxTokens: 8192, reasoning: false },
+	"mistral-large-latest": {
+		contextWindow: 128000,
+		input: ["text"],
+		maxTokens: 8192,
+		reasoning: false,
+	},
 };
 
 /** Provider registry — maps provider names to their env var, label, and available models. */
@@ -35,10 +90,26 @@ export const PROVIDERS: Record<string, { env: string; label: string; models: str
 			"claude-haiku-4-5-20251001",
 		],
 	},
-	google: { env: "GEMINI_API_KEY", label: "Google Gemini", models: ["gemini-2.5-pro", "gemini-2.5-flash"] },
-	groq: { env: "GROQ_API_KEY", label: "Groq (Free, Fast)", models: ["llama-3.3-70b-versatile"] },
-	mistral: { env: "MISTRAL_API_KEY", label: "Mistral", models: ["mistral-large-latest"] },
-	openai: { env: "OPENAI_API_KEY", label: "OpenAI (GPT)", models: ["gpt-4o", "o3-mini"] },
+	google: {
+		env: "GEMINI_API_KEY",
+		label: "Google Gemini",
+		models: ["gemini-2.5-pro", "gemini-2.5-flash"],
+	},
+	groq: {
+		env: "GROQ_API_KEY",
+		label: "Groq (Free, Fast)",
+		models: ["llama-3.3-70b-versatile"],
+	},
+	mistral: {
+		env: "MISTRAL_API_KEY",
+		label: "Mistral",
+		models: ["mistral-large-latest"],
+	},
+	openai: {
+		env: "OPENAI_API_KEY",
+		label: "OpenAI (GPT)",
+		models: ["gpt-4o", "o3-mini"],
+	},
 	openrouter: {
 		env: "OPENROUTER_API_KEY",
 		label: "OpenRouter (Multi)",
@@ -53,7 +124,11 @@ export const THEMES = [
 	{ label: "oh-pi Dark (Cyan+Purple)", name: "oh-p-dark", style: "dark" },
 	{ label: "Cyberpunk (Neon)", name: "cyberpunk", style: "dark" },
 	{ label: "Nord (Arctic)", name: "nord", style: "dark" },
-	{ label: "Catppuccin Mocha (Pastel)", name: "catppuccin-mocha", style: "dark" },
+	{
+		label: "Catppuccin Mocha (Pastel)",
+		name: "catppuccin-mocha",
+		style: "dark",
+	},
 	{ label: "Tokyo Night (Blue+Purple)", name: "tokyo-night", style: "dark" },
 	{ label: "Gruvbox Dark (Warm)", name: "gruvbox-dark", style: "dark" },
 	{ label: "Pi Default Light", name: "light", style: "light" },
@@ -85,7 +160,9 @@ export const EXTENSIONS = [
 	{
 		default: true,
 		get label() {
-			return `${icon("clock")} Tool Metadata — Add completion timestamps, durations, and context snapshots to tool results`;
+			return `${icon(
+				"clock",
+			)} Tool Metadata — Add completion timestamps, durations, and context snapshots to tool results`;
 		},
 		name: "tool-metadata",
 	},

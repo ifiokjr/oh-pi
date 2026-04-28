@@ -58,7 +58,7 @@ because it can keep previously loaded package modules alive.
 */
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -575,7 +575,10 @@ function findPi(): string {
 			return false;
 		}
 
-		const result = spawnSync(candidate, ["--version"], { shell: IS_WINDOWS, stdio: "ignore" });
+		const result = spawnSync(candidate, ["--version"], {
+			shell: IS_WINDOWS,
+			stdio: "ignore",
+		});
 		if (!result.error) {
 			return true;
 		}
@@ -823,7 +826,11 @@ function updatePiSources(
 	for (const operation of planPackageSyncOperations(currentSources, desiredSources)) {
 		process.stdout.write(`  ${operation.packageName} (${operation.action}) ... `);
 		try {
-			execFileSync(pi, [operation.action, operation.source], { shell: IS_WINDOWS, stdio: "pipe", timeout: 120_000 });
+			execFileSync(pi, [operation.action, operation.source], {
+				shell: IS_WINDOWS,
+				stdio: "pipe",
+				timeout: 120_000,
+			});
 			console.log("✓");
 		} catch (error) {
 			const stderr = error instanceof Error && "stderr" in error ? String(error.stderr ?? "").trim() : "";

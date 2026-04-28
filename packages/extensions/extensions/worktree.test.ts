@@ -90,7 +90,11 @@ describe("worktree extension", () => {
 			createdBranch: true,
 			metadata: {
 				purpose: "Implement footer context",
-				owner: { instanceId: "pi-test-instance", sessionId: "session-1", sessionName: null },
+				owner: {
+					instanceId: "pi-test-instance",
+					sessionId: "session-1",
+					sessionName: null,
+				},
 			},
 		});
 
@@ -128,7 +132,10 @@ describe("worktree extension", () => {
 					isMain: false,
 					isCurrent: true,
 					isManaged: true,
-					metadata: { purpose: "Build worktree UX", owner: { instanceId: "pi-test-instance" } },
+					metadata: {
+						purpose: "Build worktree UX",
+						owner: { instanceId: "pi-test-instance" },
+					},
 				},
 			}),
 		);
@@ -148,7 +155,10 @@ describe("worktree extension", () => {
 					isMain: false,
 					isCurrent: true,
 					isManaged: true,
-					metadata: { purpose: "Build worktree UX", owner: { instanceId: "pi-test-instance" } },
+					metadata: {
+						purpose: "Build worktree UX",
+						owner: { instanceId: "pi-test-instance" },
+					},
 				},
 			}),
 		);
@@ -178,7 +188,10 @@ describe("worktree extension", () => {
 					isMain: false,
 					isCurrent: true,
 					isManaged: true,
-					metadata: { purpose: "Build worktree UX", owner: { instanceId: "pi-test-instance" } },
+					metadata: {
+						purpose: "Build worktree UX",
+						owner: { instanceId: "pi-test-instance" },
+					},
 				},
 			}),
 		);
@@ -198,7 +211,10 @@ describe("worktree extension", () => {
 					isMain: false,
 					isCurrent: true,
 					isManaged: true,
-					metadata: { purpose: "Build worktree UX", owner: { instanceId: "pi-test-instance" } },
+					metadata: {
+						purpose: "Build worktree UX",
+						owner: { instanceId: "pi-test-instance" },
+					},
 				},
 				worktrees: [
 					{
@@ -225,12 +241,19 @@ describe("worktree extension", () => {
 						isMain: false,
 						isCurrent: true,
 						isManaged: true,
-						metadata: { purpose: "Build worktree UX", owner: { instanceId: "pi-test-instance" } },
+						metadata: {
+							purpose: "Build worktree UX",
+							owner: { instanceId: "pi-test-instance" },
+						},
 					},
 				],
 			}),
 		);
-		harness.pi.exec = vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 }));
+		harness.pi.exec = vi.fn(async () => ({
+			stdout: "",
+			stderr: "",
+			exitCode: 0,
+		}));
 
 		worktreeExtension(harness.pi as never);
 		await harness.commands.get("worktree").handler("open feat/footer-context", harness.ctx);

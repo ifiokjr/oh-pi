@@ -199,15 +199,12 @@ Try temporarily: `pi -e npm:@foo/bar`
 }
 ```
 
-Without a `pi` manifest, `extensions/`, `skills/`, `prompts/`, `themes/` directories are
-auto-discovered.
+Without a `pi` manifest, `extensions/`, `skills/`, `prompts/`, `themes/` directories are auto-discovered.
 
 ### Dependency Handling
 
 - Runtime deps go in `dependencies`
-- Pi core packages go in `peerDependencies` with `"*"` range: `@mariozechner/pi-ai`,
-  `@mariozechner/pi-agent-core`, `@mariozechner/pi-coding-agent`, `@mariozechner/pi-tui`,
-  `@sinclair/typebox`
+- Pi core packages go in `peerDependencies` with `"*"` range: `@mariozechner/pi-ai`, `@mariozechner/pi-agent-core`, `@mariozechner/pi-coding-agent`, `@mariozechner/pi-tui`, `@sinclair/typebox`
 - Other pi packages must be bundled: put in `dependencies` + `bundledDependencies`
 
 ### Package Filtering

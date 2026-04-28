@@ -4,7 +4,10 @@ import { compiledPackages } from "./package-classes.mjs";
 for (const pkg of compiledPackages) {
 	console.log(`Verifying tarball for ${pkg.name}...`);
 	execFileSync("pnpm", ["run", "build"], { cwd: pkg.dir, stdio: "ignore" });
-	const output = execFileSync("pnpm", ["pack", "--dry-run"], { cwd: pkg.dir, encoding: "utf8" });
+	const output = execFileSync("pnpm", ["pack", "--dry-run"], {
+		cwd: pkg.dir,
+		encoding: "utf8",
+	});
 
 	const leakedTestArtifact = output
 		.split(/\r?\n/)

@@ -19,8 +19,8 @@ import {
 	upsertProvider,
 } from "@ifi/pi-analytics-db";
 import type { NewCodebase, NewSession, NewTurn } from "@ifi/pi-analytics-db";
-import { createHash } from "node:crypto";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { createHash } from "node:crypto";
 
 interface ActiveSessionInfo {
 	id: string;

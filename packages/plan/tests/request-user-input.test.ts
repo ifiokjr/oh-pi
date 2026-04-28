@@ -88,7 +88,14 @@ describe("summary helpers", () => {
 
 	test("builds readable summary lines", () => {
 		const details = {
-			questions: [{ id: "runtime", header: "Runtime", question: "Which runtime?", options: [] }],
+			questions: [
+				{
+					id: "runtime",
+					header: "Runtime",
+					question: "Which runtime?",
+					options: [],
+				},
+			],
 			response: {
 				answers: {
 					runtime: { answers: ["user_note: Bun for startup"] },

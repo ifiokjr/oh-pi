@@ -12,9 +12,7 @@
 
 ### Positioning
 
-Pi is a **minimalist terminal coding agent harness**. Core philosophy: "adapts to your workflow, not
-the other way around." Extends via TypeScript Extensions, Skills, Prompt Templates, and Themes — no
-need to fork or modify internals.
+Pi is a **minimalist terminal coding agent harness**. Core philosophy: "adapts to your workflow, not the other way around." Extends via TypeScript Extensions, Skills, Prompt Templates, and Themes — no need to fork or modify internals.
 
 ### Design Philosophy
 

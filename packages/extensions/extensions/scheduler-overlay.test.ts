@@ -29,7 +29,10 @@ describe("scheduler overlay picker", () => {
 
 		const picker = pickerFactory(
 			{ requestRender: vi.fn() },
-			{ fg: (_color: string, text: string) => text, bold: (text: string) => text },
+			{
+				fg: (_color: string, text: string) => text,
+				bold: (text: string) => text,
+			},
 			{},
 			() => undefined,
 		);

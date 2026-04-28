@@ -1,5 +1,5 @@
-import * as path from "node:path";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import * as path from "node:path";
 
 export const MAX_TASKS = 50;
 export const ONE_MINUTE = 60_000;

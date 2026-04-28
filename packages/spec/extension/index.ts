@@ -38,7 +38,10 @@ function tokenize(input: string): { subcommand: SpecSubcommand | null; remainder
 	const [raw, ...rest] = trimmed.split(/\s+/);
 	const normalized = raw.toLowerCase();
 	if ((SPEC_SUBCOMMANDS as readonly string[]).includes(normalized)) {
-		return { remainder: rest.join(" ").trim(), subcommand: normalized as SpecSubcommand };
+		return {
+			remainder: rest.join(" ").trim(),
+			subcommand: normalized as SpecSubcommand,
+		};
 	}
 	return { remainder: trimmed, subcommand: null };
 }

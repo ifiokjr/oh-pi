@@ -1,8 +1,8 @@
+import { getMirroredWorkspacePathSegments, resolvePiAgentDir } from "@ifi/oh-pi-core";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import { hostname } from "node:os";
 import * as path from "node:path";
-import { getMirroredWorkspacePathSegments, resolvePiAgentDir } from "@ifi/oh-pi-core";
 
 export interface ManagedWorktreeOwner {
 	instanceId: string;

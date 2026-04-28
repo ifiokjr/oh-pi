@@ -72,15 +72,28 @@ describe("diagnostics extension", () => {
 
 	describe("internals", () => {
 		it("classifies stop reasons and prompt state entries", () => {
-			expect(diagnosticsInternals.classifyStopReason("aborted")).toMatchObject({ status: "aborted", color: "warning" });
-			expect(diagnosticsInternals.classifyStopReason("error")).toMatchObject({ status: "error", color: "error" });
+			expect(diagnosticsInternals.classifyStopReason("aborted")).toMatchObject({
+				status: "aborted",
+				color: "warning",
+			});
+			expect(diagnosticsInternals.classifyStopReason("error")).toMatchObject({
+				status: "error",
+				color: "error",
+			});
 			expect(diagnosticsInternals.classifyStopReason("length")).toMatchObject({
 				status: "completed",
 				color: "success",
 			});
-			expect(diagnosticsInternals.classifyStopReason("toolUse")).toMatchObject({ status: "unknown", color: "muted" });
+			expect(diagnosticsInternals.classifyStopReason("toolUse")).toMatchObject({
+				status: "unknown",
+				color: "muted",
+			});
 			expect(diagnosticsInternals.isPromptCompletionDiagnostics(makeCompletion())).toBe(true);
-			expect(diagnosticsInternals.isPromptCompletionDiagnostics({ completedAt: "later" })).toBe(false);
+			expect(
+				diagnosticsInternals.isPromptCompletionDiagnostics({
+					completedAt: "later",
+				}),
+			).toBe(false);
 			expect(diagnosticsInternals.isDiagnosticsStateEntry({ enabled: true })).toBe(true);
 			expect(diagnosticsInternals.isDiagnosticsStateEntry({ enabled: "yes" })).toBe(false);
 		});
@@ -96,7 +109,9 @@ describe("diagnostics extension", () => {
 				message: {
 					role: "custom",
 					customType: "pi-diagnostics:prompt",
-					details: makeCompletion({ promptPreview: "Restored from legacy entry" }),
+					details: makeCompletion({
+						promptPreview: "Restored from legacy entry",
+					}),
 				},
 			};
 
@@ -132,7 +147,14 @@ describe("diagnostics extension", () => {
 					{ role: "assistant", stopReason: "stop", content: "Done" },
 				]),
 			).toMatchObject({ role: "assistant", stopReason: "stop" });
-			expect(diagnosticsInternals.findLastAssistantMessage([{ role: "user", content: "Hi" }])).toBeNull();
+			expect(
+				diagnosticsInternals.findLastAssistantMessage([
+					{
+						role: "user",
+						content: "Hi",
+					},
+				]),
+			).toBeNull();
 			expect(diagnosticsInternals.findLastAssistantMessage(undefined)).toBeNull();
 
 			expect(
@@ -141,9 +163,14 @@ describe("diagnostics extension", () => {
 					{ role: "user", content: [{ type: "text", text: "User prompt" }] },
 				]),
 			).toBe("User prompt");
-			expect(diagnosticsInternals.findPromptPreviewFromMessages([{ role: "assistant", content: "ignore" }])).toBe(
-				"(empty prompt)",
-			);
+			expect(
+				diagnosticsInternals.findPromptPreviewFromMessages([
+					{
+						role: "assistant",
+						content: "ignore",
+					},
+				]),
+			).toBe("(empty prompt)");
 			expect(diagnosticsInternals.findPromptPreviewFromMessages(undefined)).toBe("(empty prompt)");
 		});
 
@@ -158,8 +185,20 @@ describe("diagnostics extension", () => {
 			const completion = diagnosticsInternals.buildPromptCompletion(
 				run,
 				[
-					{ role: "user", content: [{ type: "text", text: "Investigate the flaky test timeout in CI." }] },
-					{ role: "assistant", stopReason: "error", content: [{ type: "text", text: "Failed." }] },
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "Investigate the flaky test timeout in CI.",
+							},
+						],
+					},
+					{
+						role: "assistant",
+						stopReason: "error",
+						content: [{ type: "text", text: "Failed." }],
+					},
 				],
 				Date.UTC(2026, 3, 16, 11, 0, 7),
 			);
@@ -183,20 +222,41 @@ describe("diagnostics extension", () => {
 			).toEqual([]);
 			expect(
 				diagnosticsInternals.restoreEnabledState([
-					{ type: "custom", customType: "pi-diagnostics:state", data: { enabled: false } },
-					{ type: "custom", customType: "pi-diagnostics:state", data: { enabled: true } },
+					{
+						type: "custom",
+						customType: "pi-diagnostics:state",
+						data: { enabled: false },
+					},
+					{
+						type: "custom",
+						customType: "pi-diagnostics:state",
+						data: { enabled: true },
+					},
 				]),
 			).toBe(true);
-			expect(diagnosticsInternals.restoreEnabledState([{ type: "message", customType: "other" }])).toBeUndefined();
+			expect(
+				diagnosticsInternals.restoreEnabledState([
+					{
+						type: "message",
+						customType: "other",
+					},
+				]),
+			).toBeUndefined();
 			expect(
 				diagnosticsInternals.restoreLastCompletion([
-					{ type: "custom_message", customType: "pi-diagnostics:prompt", details: makeCompletion() },
+					{
+						type: "custom_message",
+						customType: "pi-diagnostics:prompt",
+						details: makeCompletion(),
+					},
 					{
 						type: "message",
 						message: {
 							role: "custom",
 							customType: "pi-diagnostics:prompt",
-							details: makeCompletion({ promptPreview: "Most recent completion" }),
+							details: makeCompletion({
+								promptPreview: "Most recent completion",
+							}),
 						},
 					},
 				]),
@@ -245,7 +305,9 @@ describe("diagnostics extension", () => {
 			expect(renderText(collapsed)).toContain("Expand to inspect per-turn completion timestamps.");
 
 			const expandedWithNoTurns = diagnosticsInternals.renderPromptCompletionMessage(
-				{ details: makeCompletion({ turnCount: 0, toolCount: 0, turns: [] }) },
+				{
+					details: makeCompletion({ turnCount: 0, toolCount: 0, turns: [] }),
+				},
 				true,
 				theme as never,
 			);
@@ -295,24 +357,60 @@ describe("diagnostics extension", () => {
 		});
 
 		it("collects and renders prompt diagnostics history", () => {
-			const first = makeCompletion({ completedAt: 1, promptPreview: "First run" });
-			const second = makeCompletion({ completedAt: 2, promptPreview: "Second run" });
+			const first = makeCompletion({
+				completedAt: 1,
+				promptPreview: "First run",
+			});
+			const second = makeCompletion({
+				completedAt: 2,
+				promptPreview: "Second run",
+			});
 			const entries = [
-				{ type: "custom_message", customType: "pi-diagnostics:prompt", details: first },
-				{ type: "custom_message", customType: "other", details: makeCompletion({ promptPreview: "Ignored" }) },
-				{ type: "message", message: { role: "custom", customType: "pi-diagnostics:prompt", details: second } },
+				{
+					type: "custom_message",
+					customType: "pi-diagnostics:prompt",
+					details: first,
+				},
+				{
+					type: "custom_message",
+					customType: "other",
+					details: makeCompletion({ promptPreview: "Ignored" }),
+				},
+				{
+					type: "message",
+					message: {
+						role: "custom",
+						customType: "pi-diagnostics:prompt",
+						details: second,
+					},
+				},
 			];
 
 			expect(diagnosticsInternals.parseHistoryCount(undefined)).toBe(10);
 			expect(diagnosticsInternals.parseHistoryCount("0")).toBe(10);
 			expect(diagnosticsInternals.parseHistoryCount("100")).toBe(50);
-			expect(diagnosticsInternals.parseCommandArgs("")).toEqual({ action: "status", countArg: undefined });
-			expect(diagnosticsInternals.parseCommandArgs("history 3")).toEqual({ action: "history", countArg: "3" });
-			expect(diagnosticsInternals.isPromptHistoryDiagnostics({ displayedCount: 1, items: [] })).toBe(true);
+			expect(diagnosticsInternals.parseCommandArgs("")).toEqual({
+				action: "status",
+				countArg: undefined,
+			});
+			expect(diagnosticsInternals.parseCommandArgs("history 3")).toEqual({
+				action: "history",
+				countArg: "3",
+			});
+			expect(
+				diagnosticsInternals.isPromptHistoryDiagnostics({
+					displayedCount: 1,
+					items: [],
+				}),
+			).toBe(true);
 			expect(diagnosticsInternals.isPromptHistoryDiagnostics({ items: [] })).toBe(false);
 
 			const history = diagnosticsInternals.collectPromptHistory(entries, 1);
-			expect(history).toMatchObject({ displayedCount: 1, requestedCount: 1, totalCount: 2 });
+			expect(history).toMatchObject({
+				displayedCount: 1,
+				requestedCount: 1,
+				totalCount: 2,
+			});
 			expect(history.items[0]?.promptPreview).toBe("Second run");
 
 			const collapsed = diagnosticsInternals.renderPromptHistoryMessage({ details: history }, false, theme as never);
@@ -377,12 +475,21 @@ describe("diagnostics extension", () => {
 
 		harness.emit(
 			"input",
-			{ type: "input", text: "Investigate the flaky test timeout in CI.", images: [], source: "interactive" },
+			{
+				type: "input",
+				text: "Investigate the flaky test timeout in CI.",
+				images: [],
+				source: "interactive",
+			},
 			harness.ctx,
 		);
 		harness.emit(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Investigate the flaky test timeout in CI.", images: [] },
+			{
+				type: "before_agent_start",
+				prompt: "Investigate the flaky test timeout in CI.",
+				images: [],
+			},
 			harness.ctx,
 		);
 		expect(widget?.render(200).join("\n")).toContain("running");
@@ -403,7 +510,12 @@ describe("diagnostics extension", () => {
 				message: {
 					role: "assistant",
 					stopReason: "toolUse",
-					content: [{ type: "text", text: "I’m checking the failing tests and CI logs now." }],
+					content: [
+						{
+							type: "text",
+							text: "I’m checking the failing tests and CI logs now.",
+						},
+					],
 				},
 				toolResults: [{ toolName: "read" }],
 			},
@@ -419,7 +531,12 @@ describe("diagnostics extension", () => {
 				message: {
 					role: "assistant",
 					stopReason: "stop",
-					content: [{ type: "text", text: "Done. The timeout came from an unmocked fetch call." }],
+					content: [
+						{
+							type: "text",
+							text: "Done. The timeout came from an unmocked fetch call.",
+						},
+					],
 				},
 				toolResults: [],
 			},
@@ -432,8 +549,20 @@ describe("diagnostics extension", () => {
 			{
 				type: "agent_end",
 				messages: [
-					{ role: "user", content: [{ type: "text", text: "Investigate the flaky test timeout in CI." }] },
-					{ role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Done." }] },
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "Investigate the flaky test timeout in CI.",
+							},
+						],
+					},
+					{
+						role: "assistant",
+						stopReason: "stop",
+						content: [{ type: "text", text: "Done." }],
+					},
 				],
 			},
 			harness.ctx,
@@ -474,7 +603,11 @@ describe("diagnostics extension", () => {
 				{
 					type: "custom_message",
 					customType: "pi-diagnostics:prompt",
-					details: makeCompletion({ status: "error", statusLabel: "errored", stopReason: "error" }),
+					details: makeCompletion({
+						status: "error",
+						statusLabel: "errored",
+						stopReason: "error",
+					}),
 				},
 			] as any;
 		diagnosticsExtension(harness.pi as never);
@@ -496,17 +629,31 @@ describe("diagnostics extension", () => {
 		requestRender.mockClear();
 		harness.emit(
 			"input",
-			{ type: "input", text: "Run the failing tests.", images: [], source: "interactive" },
+			{
+				type: "input",
+				text: "Run the failing tests.",
+				images: [],
+				source: "interactive",
+			},
 			harness.ctx,
 		);
 		harness.emit(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Run the failing tests.", images: [] },
+			{
+				type: "before_agent_start",
+				prompt: "Run the failing tests.",
+				images: [],
+			},
 			harness.ctx,
 		);
 		harness.emit(
 			"tool_execution_start",
-			{ type: "tool_execution_start", toolCallId: "tool-1", toolName: "bash", args: { command: "pnpm test" } },
+			{
+				type: "tool_execution_start",
+				toolCallId: "tool-1",
+				toolName: "bash",
+				args: { command: "pnpm test" },
+			},
 			harness.ctx,
 		);
 
@@ -518,7 +665,12 @@ describe("diagnostics extension", () => {
 
 		harness.emit(
 			"tool_execution_end",
-			{ type: "tool_execution_end", toolCallId: "tool-1", toolName: "bash", result: "ok" },
+			{
+				type: "tool_execution_end",
+				toolCallId: "tool-1",
+				toolName: "bash",
+				result: "ok",
+			},
 			harness.ctx,
 		);
 		expect(renderText(widget!)).toContain("running");
@@ -532,8 +684,16 @@ describe("diagnostics extension", () => {
 		harness.ctx.ui.setWidget = setWidget;
 		harness.ctx.sessionManager.getBranch = () =>
 			[
-				{ type: "custom", customType: "pi-diagnostics:state", data: { enabled: true } },
-				{ type: "custom_message", customType: "pi-diagnostics:prompt", details: makeCompletion() },
+				{
+					type: "custom",
+					customType: "pi-diagnostics:state",
+					data: { enabled: true },
+				},
+				{
+					type: "custom_message",
+					customType: "pi-diagnostics:prompt",
+					details: makeCompletion(),
+				},
 			] as any;
 		harness.pi.appendEntry = vi.fn();
 		diagnosticsExtension(harness.pi as never);
@@ -555,7 +715,10 @@ describe("diagnostics extension", () => {
 		expect(harness.notifications.at(-1)?.msg).toContain("Last completed");
 
 		await command.handler("history 2", harness.ctx);
-		expect(harness.messages.at(-1)).toMatchObject({ customType: "pi-diagnostics:history", display: true });
+		expect(harness.messages.at(-1)).toMatchObject({
+			customType: "pi-diagnostics:history",
+			display: true,
+		});
 
 		const freshHarness = createExtensionHarness();
 		freshHarness.ctx.ui.setWidget = vi.fn();
@@ -570,7 +733,11 @@ describe("diagnostics extension", () => {
 		expect(setWidget).toHaveBeenLastCalledWith("diagnostics", undefined);
 		harness.emit(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Should not start while disabled", images: [] },
+			{
+				type: "before_agent_start",
+				prompt: "Should not start while disabled",
+				images: [],
+			},
 			harness.ctx,
 		);
 
@@ -597,15 +764,44 @@ describe("diagnostics extension", () => {
 		diagnosticsExtension(harness.pi as never);
 		harness.emit("session_start", { type: "session_start" }, harness.ctx);
 
-		harness.emit("input", { type: "input", text: "", images: [], source: "extension" }, harness.ctx);
-		harness.emit("before_agent_start", { type: "before_agent_start", prompt: "", images: [] }, harness.ctx);
+		harness.emit(
+			"input",
+			{
+				type: "input",
+				text: "",
+				images: [],
+				source: "extension",
+			},
+			harness.ctx,
+		);
+		harness.emit(
+			"before_agent_start",
+			{
+				type: "before_agent_start",
+				prompt: "",
+				images: [],
+			},
+			harness.ctx,
+		);
 		harness.emit(
 			"agent_end",
-			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			{
+				type: "agent_end",
+				messages: [{ role: "assistant", stopReason: "stop", content: [] }],
+			},
 			harness.ctx,
 		);
 
-		harness.emit("input", { type: "input", text: "Scheduled follow-up", images: [], source: "extension" }, harness.ctx);
+		harness.emit(
+			"input",
+			{
+				type: "input",
+				text: "Scheduled follow-up",
+				images: [],
+				source: "extension",
+			},
+			harness.ctx,
+		);
 		harness.emit(
 			"before_agent_start",
 			{ type: "before_agent_start", prompt: "Scheduled follow-up", images: [] },
@@ -615,7 +811,13 @@ describe("diagnostics extension", () => {
 			"agent_end",
 			{
 				type: "agent_end",
-				messages: [{ role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Done" }] }],
+				messages: [
+					{
+						role: "assistant",
+						stopReason: "stop",
+						content: [{ type: "text", text: "Done" }],
+					},
+				],
 			},
 			harness.ctx,
 		);
@@ -634,17 +836,32 @@ describe("diagnostics extension", () => {
 
 		harness.emit(
 			"input",
-			{ type: "input", text: "Implement the feature", images: [], source: "interactive" },
+			{
+				type: "input",
+				text: "Implement the feature",
+				images: [],
+				source: "interactive",
+			},
 			harness.ctx,
 		);
 		harness.emit(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Implement the feature", images: [] },
+			{
+				type: "before_agent_start",
+				prompt: "Implement the feature",
+				images: [],
+			},
 			harness.ctx,
 		);
 		harness.emit(
 			"message_start",
-			{ type: "message_start", message: { role: "user", content: [{ type: "text", text: "Implement the feature" }] } },
+			{
+				type: "message_start",
+				message: {
+					role: "user",
+					content: [{ type: "text", text: "Implement the feature" }],
+				},
+			},
 			harness.ctx,
 		);
 		harness.emit(
@@ -652,7 +869,11 @@ describe("diagnostics extension", () => {
 			{
 				type: "turn_end",
 				turnIndex: 0,
-				message: { role: "assistant", stopReason: "toolUse", content: [{ type: "text", text: "Starting work." }] },
+				message: {
+					role: "assistant",
+					stopReason: "toolUse",
+					content: [{ type: "text", text: "Starting work." }],
+				},
 				toolResults: [{ toolName: "read" }],
 			},
 			harness.ctx,
@@ -660,14 +881,22 @@ describe("diagnostics extension", () => {
 
 		harness.emit(
 			"input",
-			{ type: "input", text: "Actually prioritize tests", images: [], source: "interactive" },
+			{
+				type: "input",
+				text: "Actually prioritize tests",
+				images: [],
+				source: "interactive",
+			},
 			harness.ctx,
 		);
 		harness.emit(
 			"message_start",
 			{
 				type: "message_start",
-				message: { role: "user", content: [{ type: "text", text: "Actually prioritize tests" }] },
+				message: {
+					role: "user",
+					content: [{ type: "text", text: "Actually prioritize tests" }],
+				},
 			},
 			harness.ctx,
 		);
@@ -676,7 +905,11 @@ describe("diagnostics extension", () => {
 			{
 				type: "turn_end",
 				turnIndex: 1,
-				message: { role: "assistant", stopReason: "toolUse", content: [{ type: "text", text: "Tests first." }] },
+				message: {
+					role: "assistant",
+					stopReason: "toolUse",
+					content: [{ type: "text", text: "Tests first." }],
+				},
 				toolResults: [{ toolName: "bash" }],
 			},
 			harness.ctx,
@@ -686,7 +919,11 @@ describe("diagnostics extension", () => {
 			{
 				type: "turn_end",
 				turnIndex: 2,
-				message: { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Feature done." }] },
+				message: {
+					role: "assistant",
+					stopReason: "stop",
+					content: [{ type: "text", text: "Feature done." }],
+				},
 				toolResults: [],
 			},
 			harness.ctx,
@@ -695,13 +932,22 @@ describe("diagnostics extension", () => {
 			"agent_end",
 			{
 				type: "agent_end",
-				messages: [{ role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Feature done." }] }],
+				messages: [
+					{
+						role: "assistant",
+						stopReason: "stop",
+						content: [{ type: "text", text: "Feature done." }],
+					},
+				],
 			},
 			harness.ctx,
 		);
 
 		expect(harness.messages).toHaveLength(1);
-		const message = harness.messages[0] as { content: string; details: PromptCompletionDiagnostics };
+		const message = harness.messages[0] as {
+			content: string;
+			details: PromptCompletionDiagnostics;
+		};
 		const completion = message.details;
 		expect(message.content).toContain("1 nested prompt");
 		expect(completion.promptPreview).toBe("Implement the feature");
@@ -720,7 +966,12 @@ describe("diagnostics extension", () => {
 
 		harness.emit(
 			"input",
-			{ type: "input", text: "/skill:debug-helper diagnose CI", images: [], source: "interactive" },
+			{
+				type: "input",
+				text: "/skill:debug-helper diagnose CI",
+				images: [],
+				source: "interactive",
+			},
 			harness.ctx,
 		);
 		harness.emit(
@@ -737,14 +988,21 @@ describe("diagnostics extension", () => {
 			{
 				type: "turn_end",
 				turnIndex: 0,
-				message: { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Done." }] },
+				message: {
+					role: "assistant",
+					stopReason: "stop",
+					content: [{ type: "text", text: "Done." }],
+				},
 				toolResults: [],
 			},
 			harness.ctx,
 		);
 		harness.emit(
 			"agent_end",
-			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			{
+				type: "agent_end",
+				messages: [{ role: "assistant", stopReason: "stop", content: [] }],
+			},
 			harness.ctx,
 		);
 
@@ -758,7 +1016,16 @@ describe("diagnostics extension", () => {
 		staleHarness.ctx.ui.setWidget = vi.fn();
 		diagnosticsExtension(staleHarness.pi as never);
 		staleHarness.emit("session_start", { type: "session_start" }, staleHarness.ctx);
-		staleHarness.emit("input", { type: "input", text: "Old prompt", images: [], source: "rpc" }, staleHarness.ctx);
+		staleHarness.emit(
+			"input",
+			{
+				type: "input",
+				text: "Old prompt",
+				images: [],
+				source: "rpc",
+			},
+			staleHarness.ctx,
+		);
 		await vi.advanceTimersByTimeAsync(30 * 60_000 + 1);
 		staleHarness.emit(
 			"before_agent_start",
@@ -767,7 +1034,10 @@ describe("diagnostics extension", () => {
 		);
 		staleHarness.emit(
 			"agent_end",
-			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			{
+				type: "agent_end",
+				messages: [{ role: "assistant", stopReason: "stop", content: [] }],
+			},
 			staleHarness.ctx,
 		);
 		expect(staleHarness.messages).toHaveLength(0);
@@ -790,7 +1060,10 @@ describe("diagnostics extension", () => {
 		);
 		boundedHarness.emit(
 			"agent_end",
-			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			{
+				type: "agent_end",
+				messages: [{ role: "assistant", stopReason: "stop", content: [] }],
+			},
 			boundedHarness.ctx,
 		);
 		expect(boundedHarness.messages).toHaveLength(0);
@@ -805,14 +1078,21 @@ describe("diagnostics extension", () => {
 			{
 				type: "turn_end",
 				turnIndex: 0,
-				message: { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Done." }] },
+				message: {
+					role: "assistant",
+					stopReason: "stop",
+					content: [{ type: "text", text: "Done." }],
+				},
 				toolResults: [],
 			},
 			boundedHarness.ctx,
 		);
 		boundedHarness.emit(
 			"agent_end",
-			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			{
+				type: "agent_end",
+				messages: [{ role: "assistant", stopReason: "stop", content: [] }],
+			},
 			boundedHarness.ctx,
 		);
 		expect(boundedHarness.messages).toHaveLength(1);
@@ -826,9 +1106,35 @@ describe("diagnostics extension", () => {
 		diagnosticsExtension(harness.pi as never);
 		harness.emit("session_start", { type: "session_start" }, harness.ctx);
 
-		harness.emit("input", { type: "input", text: "User task", images: [], source: "interactive" }, harness.ctx);
-		harness.emit("before_agent_start", { type: "before_agent_start", prompt: "User task", images: [] }, harness.ctx);
-		harness.emit("input", { type: "input", text: "Scheduled task", images: [], source: "extension" }, harness.ctx);
+		harness.emit(
+			"input",
+			{
+				type: "input",
+				text: "User task",
+				images: [],
+				source: "interactive",
+			},
+			harness.ctx,
+		);
+		harness.emit(
+			"before_agent_start",
+			{
+				type: "before_agent_start",
+				prompt: "User task",
+				images: [],
+			},
+			harness.ctx,
+		);
+		harness.emit(
+			"input",
+			{
+				type: "input",
+				text: "Scheduled task",
+				images: [],
+				source: "extension",
+			},
+			harness.ctx,
+		);
 		harness.emit(
 			"before_agent_start",
 			{ type: "before_agent_start", prompt: "Scheduled task", images: [] },
@@ -836,7 +1142,10 @@ describe("diagnostics extension", () => {
 		);
 		harness.emit(
 			"agent_end",
-			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			{
+				type: "agent_end",
+				messages: [{ role: "assistant", stopReason: "stop", content: [] }],
+			},
 			harness.ctx,
 		);
 		expect(harness.messages).toHaveLength(0);
@@ -846,14 +1155,21 @@ describe("diagnostics extension", () => {
 			{
 				type: "turn_end",
 				turnIndex: 0,
-				message: { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Done." }] },
+				message: {
+					role: "assistant",
+					stopReason: "stop",
+					content: [{ type: "text", text: "Done." }],
+				},
 				toolResults: [],
 			},
 			harness.ctx,
 		);
 		harness.emit(
 			"agent_end",
-			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			{
+				type: "agent_end",
+				messages: [{ role: "assistant", stopReason: "stop", content: [] }],
+			},
 			harness.ctx,
 		);
 		expect(harness.messages).toHaveLength(1);
@@ -872,7 +1188,10 @@ describe("diagnostics extension", () => {
 			{
 				type: "agent_end",
 				messages: [
-					{ role: "user", content: [{ type: "text", text: "Summarize the release plan." }] },
+					{
+						role: "user",
+						content: [{ type: "text", text: "Summarize the release plan." }],
+					},
 					{ role: "assistant", stopReason: "aborted", content: [] },
 				],
 			},
@@ -888,15 +1207,35 @@ describe("diagnostics extension", () => {
 		diagnosticsExtension(harness.pi as never);
 		harness.emit("session_start", { type: "session_start" }, harness.ctx);
 
-		harness.emit("input", { type: "input", text: "", images: ["img"], source: "interactive" }, harness.ctx);
-		harness.emit("before_agent_start", { type: "before_agent_start", prompt: undefined, images: ["img"] }, harness.ctx);
+		harness.emit(
+			"input",
+			{
+				type: "input",
+				text: "",
+				images: ["img"],
+				source: "interactive",
+			},
+			harness.ctx,
+		);
+		harness.emit(
+			"before_agent_start",
+			{
+				type: "before_agent_start",
+				prompt: undefined,
+				images: ["img"],
+			},
+			harness.ctx,
+		);
 		await harness.commands.get("diagnostics")?.handler("status", harness.ctx);
 		expect(harness.notifications.at(-1)?.msg).toContain("Running: 1 image prompt");
 		harness.emit(
 			"turn_end",
 			{
 				type: "turn_end",
-				message: { role: "user", content: [{ type: "text", text: "Not an assistant turn." }] },
+				message: {
+					role: "user",
+					content: [{ type: "text", text: "Not an assistant turn." }],
+				},
 				toolResults: [],
 			},
 			harness.ctx,
@@ -909,7 +1248,13 @@ describe("diagnostics extension", () => {
 			"agent_end",
 			{
 				type: "agent_end",
-				messages: [{ role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Done." }] }],
+				messages: [
+					{
+						role: "assistant",
+						stopReason: "stop",
+						content: [{ type: "text", text: "Done." }],
+					},
+				],
 			},
 			harness.ctx,
 		);

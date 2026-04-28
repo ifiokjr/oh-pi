@@ -27,7 +27,12 @@ class MockWebSocket {
 					data: JSON.stringify({
 						type: "auth_ok",
 						instanceId: "test-fox-42",
-						session: { sessionId: "s1", isStreaming: false, model: null, thinkingLevel: "off" },
+						session: {
+							sessionId: "s1",
+							isStreaming: false,
+							model: null,
+							thinkingLevel: "off",
+						},
 					}),
 				});
 			}, 0);

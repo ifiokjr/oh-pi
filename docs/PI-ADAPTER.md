@@ -1,19 +1,13 @@
 # PiAdapter Interface Draft (Phase C)
 
-> Goal: Introduce an anti-corruption layer between `spawner.ts` and the pi SDK — unifying session
-> creation, tool injection, streaming callbacks, and interrupt/timeout handling to isolate SDK
-> change impact.
+> Goal: Introduce an anti-corruption layer between `spawner.ts` and the pi SDK — unifying session creation, tool injection, streaming callbacks, and interrupt/timeout handling to isolate SDK change impact.
 
 ## 1. Design Goals
 
-- **Boundary convergence**: Centralize scattered SDK calls into `PiAdapter`; business logic should
-  not depend on low-level API details.
-- **Upgrade isolation**: When the SDK upgrades, absorb differences in the adapter layer first; don't
-  propagate changes to scheduling and task orchestration.
-- **Behavior preservation**: Only constrain call boundaries; don't change queen/spawner business
-  semantics or task flow.
-- **Testability**: Interface injection enables mock/fake for repeatable testing of timeouts,
-  cancellation, and streaming events.
+- **Boundary convergence**: Centralize scattered SDK calls into `PiAdapter`; business logic should not depend on low-level API details.
+- **Upgrade isolation**: When the SDK upgrades, absorb differences in the adapter layer first; don't propagate changes to scheduling and task orchestration.
+- **Behavior preservation**: Only constrain call boundaries; don't change queen/spawner business semantics or task flow.
+- **Testability**: Interface injection enables mock/fake for repeatable testing of timeouts, cancellation, and streaming events.
 
 ## 2. Interface Draft (TypeScript)
 
@@ -70,10 +64,8 @@ export interface PiAdapter {
 
 ### 2.1 Capability Mapping
 
-- **Session creation**: `createSession` wraps model, initial instructions, metadata, and default
-  timeout.
-- **Tool injection**: `RunOptions.tools` is the single entry point; business logic doesn't splice
-  SDK-specific fields.
+- **Session creation**: `createSession` wraps model, initial instructions, metadata, and default timeout.
+- **Tool injection**: `RunOptions.tools` is the single entry point; business logic doesn't splice SDK-specific fields.
 - **Streaming callbacks**: `onToken`/`onEvent` expose a stable event model to upper layers.
 - **Interrupt/timeout**: `AbortSignal` + `timeoutMs` + `interrupt()` unify cancellation semantics.
 
@@ -92,14 +84,12 @@ export interface PiAdapter {
 ### Step 3: Timeout/Interrupt Unification
 
 - Consolidate scattered timeout and cancellation handling into the adapter layer.
-- Add exception classification (timeout, user cancel, SDK error) while keeping upper-layer error
-  semantics stable.
+- Add exception classification (timeout, user cancel, SDK error) while keeping upper-layer error semantics stable.
 
 ### Step 4: Upgrade Rehearsal & Rollback
 
 - Rehearse an SDK upgrade without changing scheduling logic.
-- If issues arise, allow temporary fallback to old call path (short-term toggle), then iterate the
-  adapter.
+- If issues arise, allow temporary fallback to old call path (short-term toggle), then iterate the adapter.
 
 ## 4. Non-Goals (Current Phase)
 

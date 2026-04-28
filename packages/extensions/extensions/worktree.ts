@@ -1,9 +1,9 @@
 /* C8 ignore file */
-import path from "node:path";
-import process from "node:process";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
+import path from "node:path";
+import process from "node:process";
 import { recordRuntimeSample } from "./watchdog-runtime-diagnostics";
 import {
 	buildPaiInstanceId,
@@ -75,7 +75,9 @@ function appendInventory(lines: string[], snapshot: RepoWorktreeSnapshot): void 
 	lines.push("## Inventory");
 	lines.push(`- Total worktrees: ${snapshot.worktrees.length}`);
 	lines.push(
-		`- pi-owned: ${snapshot.worktrees.filter((entry) => entry.isManaged).length + snapshot.staleManagedWorktrees.length}`,
+		`- pi-owned: ${
+			snapshot.worktrees.filter((entry) => entry.isManaged).length + snapshot.staleManagedWorktrees.length
+		}`,
 	);
 	lines.push(`- External/manual: ${snapshot.worktrees.filter((entry) => !(entry.isManaged || entry.isMain)).length}`);
 	lines.push("");
@@ -108,7 +110,9 @@ function buildStatusReport(snapshot: RepoWorktreeSnapshot): string {
 	lines.push(`- Current worktree root: ${snapshot.currentWorktreeRoot}`);
 	lines.push(`- Branch: ${snapshot.currentBranch ?? "(detached)"}`);
 	lines.push(
-		`- Kind: ${snapshot.isLinkedWorktree ? formatWorktreeKind(current ?? { isMain: false, isManaged: false }) : "main"}`,
+		`- Kind: ${
+			snapshot.isLinkedWorktree ? formatWorktreeKind(current ?? { isMain: false, isManaged: false }) : "main"
+		}`,
 	);
 	lines.push(`- Git common dir: ${snapshot.commonDir}`);
 	lines.push(`- Git dir: ${snapshot.gitDir}`);
@@ -578,7 +582,9 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 		lines.push(`- Current worktree root: ${context.currentWorktreeRoot}`);
 		lines.push(`- Branch: ${context.currentBranch ?? "(detached)"}`);
 		lines.push(
-			`- Kind: ${context.isLinkedWorktree ? formatWorktreeKind(context.current ?? { isMain: false, isManaged: false }) : "main"}`,
+			`- Kind: ${
+				context.isLinkedWorktree ? formatWorktreeKind(context.current ?? { isMain: false, isManaged: false }) : "main"
+			}`,
 		);
 		if (context.current?.isManaged && context.current.metadata) {
 			lines.push("- Owned by pi: yes");
@@ -643,10 +649,26 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 				Type.Literal("list"),
 				Type.Literal("cleanup"),
 			]),
-			baseRef: Type.Optional(Type.String({ description: "Base ref for the new branch (default: HEAD)" })),
-			branch: Type.Optional(Type.String({ description: "Branch name for the worktree (required for create)" })),
-			purpose: Type.Optional(Type.String({ description: "Why this worktree exists (required for create)" })),
-			target: Type.Optional(Type.String({ description: "Branch name, path, or worktree id for cleanup" })),
+			baseRef: Type.Optional(
+				Type.String({
+					description: "Base ref for the new branch (default: HEAD)",
+				}),
+			),
+			branch: Type.Optional(
+				Type.String({
+					description: "Branch name for the worktree (required for create)",
+				}),
+			),
+			purpose: Type.Optional(
+				Type.String({
+					description: "Why this worktree exists (required for create)",
+				}),
+			),
+			target: Type.Optional(
+				Type.String({
+					description: "Branch name, path, or worktree id for cleanup",
+				}),
+			),
 		}),
 		// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: tool handler dispatching to sub-functions
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
@@ -657,13 +679,23 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 				const purpose = params.purpose?.trim();
 				if (!branch) {
 					return {
-						content: [{ text: "Error: branch is required for create action.", type: "text" as const }],
+						content: [
+							{
+								text: "Error: branch is required for create action.",
+								type: "text" as const,
+							},
+						],
 						isError: true,
 					};
 				}
 				if (!purpose) {
 					return {
-						content: [{ text: "Error: purpose is required for create action.", type: "text" as const }],
+						content: [
+							{
+								text: "Error: purpose is required for create action.",
+								type: "text" as const,
+							},
+						],
 						isError: true,
 					};
 				}
@@ -683,7 +715,14 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 						purpose,
 					});
 					toolRefreshStatus(ctx);
-					return { content: [{ text: formatToolCreateResult(result), type: "text" as const }] };
+					return {
+						content: [
+							{
+								text: formatToolCreateResult(result),
+								type: "text" as const,
+							},
+						],
+					};
 				} catch (error) {
 					return {
 						content: [
@@ -700,18 +739,38 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 			if (action === "status") {
 				const context = toolRefreshStatus(ctx);
 				if (!context) {
-					return { content: [{ text: "Not inside a git repository.", type: "text" as const }], isError: true };
+					return {
+						content: [
+							{
+								text: "Not inside a git repository.",
+								type: "text" as const,
+							},
+						],
+						isError: true,
+					};
 				}
-				return { content: [{ text: formatToolStatus(context), type: "text" as const }] };
+				return {
+					content: [{ text: formatToolStatus(context), type: "text" as const }],
+				};
 			}
 
 			if (action === "list") {
 				toolRefreshStatus(ctx);
 				const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
 				if (!snapshot) {
-					return { content: [{ text: "Not inside a git repository.", type: "text" as const }], isError: true };
+					return {
+						content: [
+							{
+								text: "Not inside a git repository.",
+								type: "text" as const,
+							},
+						],
+						isError: true,
+					};
 				}
-				return { content: [{ text: formatToolList(snapshot), type: "text" as const }] };
+				return {
+					content: [{ text: formatToolList(snapshot), type: "text" as const }],
+				};
 			}
 
 			if (action === "cleanup") {
@@ -731,7 +790,15 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 				toolRefreshStatus(ctx);
 				const snapshot = getRepoWorktreeSnapshot(ctx.cwd);
 				if (!snapshot) {
-					return { content: [{ text: "Not inside a git repository.", type: "text" as const }], isError: true };
+					return {
+						content: [
+							{
+								text: "Not inside a git repository.",
+								type: "text" as const,
+							},
+						],
+						isError: true,
+					};
 				}
 
 				const managedTargets = findManagedTargets(snapshot, target);
@@ -749,7 +816,12 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 						};
 					}
 					return {
-						content: [{ text: `No pi-owned worktree matched: ${target}`, type: "text" as const }],
+						content: [
+							{
+								text: `No pi-owned worktree matched: ${target}`,
+								type: "text" as const,
+							},
+						],
 						isError: true,
 					};
 				}
@@ -784,7 +856,9 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 						lines.push(`  path: ${result.metadata.worktreePath}`);
 						lines.push(`  purpose: ${result.metadata.purpose}`);
 					}
-					return { content: [{ text: lines.join("\n"), type: "text" as const }] };
+					return {
+						content: [{ text: lines.join("\n"), type: "text" as const }],
+					};
 				} catch (error) {
 					return {
 						content: [
@@ -799,7 +873,12 @@ function registerWorktreeTool(pi: ExtensionAPI) {
 			}
 
 			return {
-				content: [{ text: "Unknown action. Use: create, status, list, or cleanup.", type: "text" as const }],
+				content: [
+					{
+						text: "Unknown action. Use: create, status, list, or cleanup.",
+						type: "text" as const,
+					},
+				],
 				isError: true,
 			};
 		},

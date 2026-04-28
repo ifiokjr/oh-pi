@@ -1,27 +1,21 @@
 /**
 <!-- {=extensionsWatchdogConfigOverview} -->
 
-The watchdog extension reads optional runtime protection settings from a JSON config file in the pi
-agent directory. That config controls whether sampling is enabled, how frequently samples run, and
-which CPU, memory, and event-loop thresholds trigger alerts or safe-mode escalation.
+The watchdog extension reads optional runtime protection settings from a JSON config file in the pi agent directory. That config controls whether sampling is enabled, how frequently samples run, and which CPU, memory, and event-loop thresholds trigger alerts or safe-mode escalation.
 
 <!-- {/extensionsWatchdogConfigOverview} -->
 
 <!-- {=extensionsWatchdogAlertBehaviorDocs} -->
 
-The watchdog samples CPU, memory, and event-loop lag on an interval, records recent samples and
-alerts, and can escalate into safe mode automatically when repeated alerts indicate sustained UI
-churn or lag. Toast notifications are intentionally capped per session; ongoing watchdog state is
-kept visible in the status bar and the `/watchdog` overlay instead of repeatedly spamming the
-terminal.
+The watchdog samples CPU, memory, and event-loop lag on an interval, records recent samples and alerts, and can escalate into safe mode automatically when repeated alerts indicate sustained UI churn or lag. Toast notifications are intentionally capped per session; ongoing watchdog state is kept visible in the status bar and the `/watchdog` overlay instead of repeatedly spamming the terminal.
 
 <!-- {/extensionsWatchdogAlertBehaviorDocs} -->
 */
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import * as fs from "node:fs";
 import { cpus, homedir } from "node:os";
 import * as path from "node:path";
 import { monitorEventLoopDelay } from "node:perf_hooks";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { getSafeModeState, setSafeModeState, subscribeSafeMode } from "./runtime-mode";
 import type { SafeModeSource, SafeModeState } from "./runtime-mode";
 import { createStatusBarState } from "./ui-status-cache.js";
@@ -52,8 +46,7 @@ const STARTUP_WARMUP_SAMPLE_COUNT = 1;
 /**
 <!-- {=extensionsWatchdogConfigPathDocs} -->
 
-Path to the optional watchdog JSON config file under the pi agent directory. This is the default
-location used for watchdog sampling, threshold overrides, and enable/disable settings.
+Path to the optional watchdog JSON config file under the pi agent directory. This is the default location used for watchdog sampling, threshold overrides, and enable/disable settings.
 
 <!-- {/extensionsWatchdogConfigPathDocs} -->
 */
@@ -159,8 +152,7 @@ function formatSafeModeStatusHint(state: SafeModeState): string | undefined {
 /**
 <!-- {=extensionsLoadWatchdogConfigDocs} -->
 
-Load watchdog config from disk and return a safe object. Missing files, invalid JSON, or malformed
-values all fall back to an empty config so runtime monitoring can continue safely.
+Load watchdog config from disk and return a safe object. Missing files, invalid JSON, or malformed values all fall back to an empty config so runtime monitoring can continue safely.
 
 <!-- {/extensionsLoadWatchdogConfigDocs} -->
 */
@@ -179,8 +171,7 @@ export function loadWatchdogConfig(configPath = WATCHDOG_CONFIG_PATH): WatchdogC
 /**
 <!-- {=extensionsResolveWatchdogThresholdsDocs} -->
 
-Resolve the effective watchdog thresholds by merging optional config overrides onto the built-in
-default thresholds.
+Resolve the effective watchdog thresholds by merging optional config overrides onto the built-in default thresholds.
 
 <!-- {/extensionsResolveWatchdogThresholdsDocs} -->
 */
@@ -194,8 +185,7 @@ export function resolveWatchdogThresholds(config: WatchdogConfig = {}): Watchdog
 /**
 <!-- {=extensionsResolveWatchdogSampleIntervalMsDocs} -->
 
-Resolve the watchdog sampling interval in milliseconds, clamping configured values into the
-supported range and falling back to the default interval when no valid override is provided.
+Resolve the watchdog sampling interval in milliseconds, clamping configured values into the supported range and falling back to the default interval when no valid override is provided.
 
 <!-- {/extensionsResolveWatchdogSampleIntervalMsDocs} -->
 */
@@ -288,7 +278,9 @@ export function formatWatchdogStatus(sample: WatchdogSample | null): string {
 }
 
 export function formatWatchdogAlert(alert: WatchdogAlert): string {
-	return `Performance watchdog ${alert.severity}: ${alert.reasons.join(", ")}. Run /watchdog:status or /safe-mode on if input feels laggy.`;
+	return `Performance watchdog ${alert.severity}: ${alert.reasons.join(
+		", ",
+	)}. Run /watchdog:status or /safe-mode on if input feels laggy.`;
 }
 
 export function applySafeMode(
@@ -326,7 +318,10 @@ function formatLikelyCulpritSummary(diagnostic: ExtensionDiagnostic | undefined)
 }
 
 function buildOverlayLines(
-	theme: { fg: (color: string, text: string) => string; bold?: (text: string) => string },
+	theme: {
+		fg: (color: string, text: string) => string;
+		bold?: (text: string) => string;
+	},
 	input: {
 		enabled: boolean;
 		latestSample: WatchdogSample | null;
@@ -358,7 +353,9 @@ function buildOverlayLines(
 		for (const alert of input.alertHistory.slice(-6).toReversed()) {
 			const color = alert.severity === "critical" ? "error" : "warning";
 			lines.push(
-				`${theme.fg(color, alert.severity.toUpperCase())} · ${alert.reasons.join(", ")} · ${theme.fg("dim", formatRelativeAge(alert.sample.timestamp, now))}`,
+				`${theme.fg(color, alert.severity.toUpperCase())} · ${alert.reasons.join(
+					", ",
+				)} · ${theme.fg("dim", formatRelativeAge(alert.sample.timestamp, now))}`,
 			);
 		}
 	}
@@ -369,7 +366,11 @@ function buildOverlayLines(
 	} else {
 		for (const sample of input.sampleHistory.slice(-8).toReversed()) {
 			lines.push(
-				`${theme.fg("dim", formatRelativeAge(sample.timestamp, now))} · cpu ${sample.cpuPercent.toFixed(0)}% · rss ${sample.rssMb.toFixed(0)}MB · p99 ${sample.eventLoopP99Ms.toFixed(0)}ms · max ${sample.eventLoopMaxMs.toFixed(0)}ms`,
+				`${theme.fg("dim", formatRelativeAge(sample.timestamp, now))} · cpu ${sample.cpuPercent.toFixed(
+					0,
+				)}% · rss ${sample.rssMb.toFixed(0)}MB · p99 ${sample.eventLoopP99Ms.toFixed(
+					0,
+				)}ms · max ${sample.eventLoopMaxMs.toFixed(0)}ms`,
 			);
 		}
 	}
@@ -391,11 +392,7 @@ function buildOverlayLines(
 /**
 <!-- {=extensionsWatchdogAlertBehaviorDocs} -->
 
-The watchdog samples CPU, memory, and event-loop lag on an interval, records recent samples and
-alerts, and can escalate into safe mode automatically when repeated alerts indicate sustained UI
-churn or lag. Toast notifications are intentionally capped per session; ongoing watchdog state is
-kept visible in the status bar and the `/watchdog` overlay instead of repeatedly spamming the
-terminal.
+The watchdog samples CPU, memory, and event-loop lag on an interval, records recent samples and alerts, and can escalate into safe mode automatically when repeated alerts indicate sustained UI churn or lag. Toast notifications are intentionally capped per session; ongoing watchdog state is kept visible in the status bar and the `/watchdog` overlay instead of repeatedly spamming the terminal.
 
 <!-- {/extensionsWatchdogAlertBehaviorDocs} -->
 */
@@ -403,7 +400,9 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	installRuntimeDiagnostics(pi);
 	let thresholds = DEFAULT_WATCHDOG_THRESHOLDS;
 	let sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_MS;
-	const histogram = monitorEventLoopDelay({ resolution: HISTOGRAM_RESOLUTION_MS });
+	const histogram = monitorEventLoopDelay({
+		resolution: HISTOGRAM_RESOLUTION_MS,
+	});
 
 	const coreCount = Math.max(1, cpus().length || 1);
 	const sampleHistory: WatchdogSample[] = [];
@@ -612,7 +611,9 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		const culprit = getExtensionDiagnostics()[0];
 		const culpritSummary = formatLikelyCulpritSummary(culprit);
 		ctx.ui.notify(
-			`${formatWatchdogStatus(latestSample)} · ${formatThresholdSummary(thresholds)}${culpritSummary ? ` · ${culpritSummary}` : ""}`,
+			`${formatWatchdogStatus(latestSample)} · ${formatThresholdSummary(
+				thresholds,
+			)}${culpritSummary ? ` · ${culpritSummary}` : ""}`,
 			"info",
 		);
 	};
@@ -638,7 +639,10 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 
 		const totalLastStartupMs = diagnostics.reduce((total, diagnostic) => total + diagnostic.lastMs, 0);
 		ctx.ui.notify(
-			`Startup timings: total ${totalLastStartupMs.toFixed(1)}ms | ${diagnostics.slice(0, 5).map(formatStartupDiagnostic).join(" | ")}`,
+			`Startup timings: total ${totalLastStartupMs.toFixed(1)}ms | ${diagnostics
+				.slice(0, 5)
+				.map(formatStartupDiagnostic)
+				.join(" | ")}`,
 			"info",
 		);
 	};
@@ -646,7 +650,9 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	const notifyConfig = (ctx: ExtensionCommandContext | ExtensionContext) => {
 		loadConfigNow();
 		ctx.ui.notify(
-			`watchdog config: ${enabled ? "enabled" : "disabled"} · interval ${sampleIntervalMs}ms · ${formatThresholdSummary(thresholds)} · ${WATCHDOG_CONFIG_PATH}`,
+			`watchdog config: ${enabled ? "enabled" : "disabled"} · interval ${sampleIntervalMs}ms · ${formatThresholdSummary(
+				thresholds,
+			)} · ${WATCHDOG_CONFIG_PATH}`,
 			"info",
 		);
 	};
@@ -694,7 +700,14 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 				// Biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
 				dispose() {},
 			}),
-			{ overlay: true, overlayOptions: { anchor: "center", maxHeight: OVERLAY_MAX_HEIGHT, width: OVERLAY_WIDTH } },
+			{
+				overlay: true,
+				overlayOptions: {
+					anchor: "center",
+					maxHeight: OVERLAY_MAX_HEIGHT,
+					width: OVERLAY_WIDTH,
+				},
+			},
 		);
 	};
 
@@ -764,17 +777,61 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 
 	pi.registerCommand("watchdog", watchdogCommand);
 
-	const watchdogAliases: { name: string; subcommand: string; description: string }[] = [
-		{ description: "Show the current watchdog status.", name: "watchdog:status", subcommand: "status" },
-		{ description: "Show watchdog startup timings.", name: "watchdog:startup", subcommand: "startup" },
-		{ description: "Open the watchdog overlay.", name: "watchdog:overlay", subcommand: "overlay" },
-		{ description: "Open the watchdog dashboard overlay.", name: "watchdog:dashboard", subcommand: "dashboard" },
-		{ description: "Show the watchdog config file path and settings.", name: "watchdog:config", subcommand: "config" },
-		{ description: "Reset watchdog metrics and alert history.", name: "watchdog:reset", subcommand: "reset" },
-		{ description: "Enable the performance watchdog.", name: "watchdog:on", subcommand: "on" },
-		{ description: "Disable the performance watchdog.", name: "watchdog:off", subcommand: "off" },
-		{ description: "Capture a watchdog sample right now.", name: "watchdog:sample", subcommand: "sample" },
-		{ description: "Show the watchdog blame report.", name: "watchdog:blame", subcommand: "blame" },
+	const watchdogAliases: {
+		name: string;
+		subcommand: string;
+		description: string;
+	}[] = [
+		{
+			description: "Show the current watchdog status.",
+			name: "watchdog:status",
+			subcommand: "status",
+		},
+		{
+			description: "Show watchdog startup timings.",
+			name: "watchdog:startup",
+			subcommand: "startup",
+		},
+		{
+			description: "Open the watchdog overlay.",
+			name: "watchdog:overlay",
+			subcommand: "overlay",
+		},
+		{
+			description: "Open the watchdog dashboard overlay.",
+			name: "watchdog:dashboard",
+			subcommand: "dashboard",
+		},
+		{
+			description: "Show the watchdog config file path and settings.",
+			name: "watchdog:config",
+			subcommand: "config",
+		},
+		{
+			description: "Reset watchdog metrics and alert history.",
+			name: "watchdog:reset",
+			subcommand: "reset",
+		},
+		{
+			description: "Enable the performance watchdog.",
+			name: "watchdog:on",
+			subcommand: "on",
+		},
+		{
+			description: "Disable the performance watchdog.",
+			name: "watchdog:off",
+			subcommand: "off",
+		},
+		{
+			description: "Capture a watchdog sample right now.",
+			name: "watchdog:sample",
+			subcommand: "sample",
+		},
+		{
+			description: "Show the watchdog blame report.",
+			name: "watchdog:blame",
+			subcommand: "blame",
+		},
 	];
 
 	for (const alias of watchdogAliases) {
@@ -791,13 +848,21 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 			const command = args.trim().toLowerCase() || "status";
 			switch (command) {
 				case "on": {
-					const state = applySafeMode(pi, true, { auto: false, reason: "enabled by user", source: "manual" });
+					const state = applySafeMode(pi, true, {
+						auto: false,
+						reason: "enabled by user",
+						source: "manual",
+					});
 					setSafeModeStatus(state);
 					ctx.ui.notify(`Enabled ${shortSafeModeStatus(state)}.`, "warning");
 					return;
 				}
 				case "off": {
-					const state = applySafeMode(pi, false, { auto: false, reason: null, source: "manual" });
+					const state = applySafeMode(pi, false, {
+						auto: false,
+						reason: null,
+						source: "manual",
+					});
 					setSafeModeStatus(state);
 					ctx.ui.notify(`Disabled ${shortSafeModeStatus(state)}.`, "success");
 					setAlertStatus(undefined);

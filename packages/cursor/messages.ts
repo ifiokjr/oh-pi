@@ -1,8 +1,8 @@
-import { createHash, randomUUID } from "node:crypto";
 import { create, fromBinary, fromJson, toBinary, toJson } from "@bufbuild/protobuf";
 import type { JsonValue } from "@bufbuild/protobuf";
 import { ValueSchema } from "@bufbuild/protobuf/wkt";
 import type { Context, Message, ToolResultMessage } from "@mariozechner/pi-ai";
+import { createHash, randomUUID } from "node:crypto";
 import type { GetBlobArgs } from "./proto/agent_pb.js";
 import {
 	AgentClientMessageSchema,
@@ -12,8 +12,8 @@ import {
 	ClientHeartbeatSchema,
 	ConversationActionSchema,
 	ConversationStateStructureSchema,
-	ConversationTurnStructureSchema,
 	ConversationStepSchema,
+	ConversationTurnStructureSchema,
 	ExecClientMessageSchema,
 	GetBlobResultSchema,
 	KvClientMessageSchema,
@@ -28,8 +28,8 @@ import {
 	UserMessageActionSchema,
 	UserMessageSchema,
 } from "./proto/agent_pb.js";
-import { frameConnectMessage } from "./transport.js";
 import type { ConversationStateRecord } from "./runtime.js";
+import { frameConnectMessage } from "./transport.js";
 
 export interface ToolResultInfo {
 	toolCallId: string;
@@ -83,7 +83,10 @@ export function parseCursorConversation(context: Context): ParsedCursorConversat
 	for (const message of transcript) {
 		if (message.role === "user") {
 			if (pendingUser) {
-				turns.push({ assistantText: pendingAssistant.trim(), userText: pendingUser });
+				turns.push({
+					assistantText: pendingAssistant.trim(),
+					userText: pendingUser,
+				});
 				pendingAssistant = "";
 			}
 			pendingUser = flattenUserMessage(message);
@@ -102,13 +105,18 @@ export function parseCursorConversation(context: Context): ParsedCursorConversat
 	if (pendingUser) {
 		userText = pendingUser;
 		if (pendingAssistant.trim()) {
-			turns.push({ assistantText: pendingAssistant.trim(), userText: pendingUser });
+			turns.push({
+				assistantText: pendingAssistant.trim(),
+				userText: pendingUser,
+			});
 			userText = "";
 		}
 	}
 
 	const systemPrompt = context.systemPrompt?.trim() || "You are a helpful assistant.";
-	const seed = `${systemPrompt}\n${turns.map((turn) => `${turn.userText}\n${turn.assistantText}`).join("\n")}\n${userText}`;
+	const seed = `${systemPrompt}\n${turns
+		.map((turn) => `${turn.userText}\n${turn.assistantText}`)
+		.join("\n")}\n${userText}`;
 	return {
 		seed,
 		systemPrompt,
@@ -146,7 +154,10 @@ export function buildCursorRequestPayload(options: {
 	conversationState?: ConversationStateRecord;
 }): CursorRequestPayload {
 	const blobStore = new Map<string, Uint8Array>(options.conversationState?.blobStore ?? []);
-	const systemJson = JSON.stringify({ content: options.parsed.systemPrompt, role: "system" });
+	const systemJson = JSON.stringify({
+		content: options.parsed.systemPrompt,
+		role: "system",
+	});
 	const systemBytes = new TextEncoder().encode(systemJson);
 	const systemBlobId = new Uint8Array(createHash("sha256").update(systemBytes).digest());
 	blobStore.set(Buffer.from(systemBlobId).toString("hex"), systemBytes);
@@ -234,7 +245,10 @@ export function sendKvBlobResponse(
 		return;
 	}
 	if (messageCase === "setBlobArgs") {
-		const args = kvMessage.message.value as { blobId: Uint8Array; blobData: Uint8Array };
+		const args = kvMessage.message.value as {
+			blobId: Uint8Array;
+			blobData: Uint8Array;
+		};
 		blobStore.set(Buffer.from(args.blobId).toString("hex"), args.blobData);
 		sendKvResponse(kvMessage.id, "setBlobResult", create(SetBlobResultSchema, {}), sendFrame);
 	}

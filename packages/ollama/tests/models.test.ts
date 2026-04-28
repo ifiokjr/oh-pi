@@ -34,8 +34,18 @@ describe("ollama models", () => {
 	});
 
 	it("normalizes model defaults", () => {
-		const model = toOllamaModel({ id: "gpt-oss:120b", source: "cloud", reasoning: true, input: ["text"] });
-		const compat = model.compat as { supportsDeveloperRole?: boolean; maxTokensField?: string } | undefined;
+		const model = toOllamaModel({
+			id: "gpt-oss:120b",
+			source: "cloud",
+			reasoning: true,
+			input: ["text"],
+		});
+		const compat = model.compat as
+			| {
+					supportsDeveloperRole?: boolean;
+					maxTokensField?: string;
+			  }
+			| undefined;
 		expect(model.name).toContain("GPT");
 		expect(model.name).toContain("(Cloud)");
 		expect(compat?.supportsDeveloperRole).toBe(false);
@@ -65,7 +75,12 @@ describe("ollama models", () => {
 
 	it("discovers cloud model ids before metadata enrichment", async () => {
 		const backend = await createTestOllamaBackend();
-		backend.setModels([{ id: "brand-new-cloud-model" }, { id: "gpt-oss:120b" }]);
+		backend.setModels([
+			{ id: "brand-new-cloud-model" },
+			{
+				id: "gpt-oss:120b",
+			},
+		]);
 		backend.setRejectedModelShows(["brand-new-cloud-model", "gpt-oss:120b"]);
 		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
 		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
@@ -81,7 +96,11 @@ describe("ollama models", () => {
 		const cacheDir = await mkdtemp(join(tmpdir(), "pi-ollama-cache-"));
 		process.env.PI_OLLAMA_CLOUD_CACHE_PATH = join(cacheDir, "models.json");
 		await saveCachedOllamaCloudModels([
-			toOllamaModel({ id: "brand-new-cloud-model", reasoning: true, source: "cloud" }),
+			toOllamaModel({
+				id: "brand-new-cloud-model",
+				reasoning: true,
+				source: "cloud",
+			}),
 		]);
 		const models = loadCachedOllamaCloudModels();
 		expect(models.map((model) => model.id)).toEqual(["brand-new-cloud-model"]);
@@ -238,8 +257,16 @@ describe("ollama models", () => {
 	it("falls back per model when metadata discovery fails", async () => {
 		const backend = await createTestOllamaBackend();
 		backend.setModels([
-			{ id: "gpt-oss:120b", capabilities: ["completion", "tools", "thinking"], contextWindow: 131072 },
-			{ id: "qwen3-vl:235b", capabilities: ["completion", "tools", "thinking", "vision"], contextWindow: 262144 },
+			{
+				id: "gpt-oss:120b",
+				capabilities: ["completion", "tools", "thinking"],
+				contextWindow: 131072,
+			},
+			{
+				id: "qwen3-vl:235b",
+				capabilities: ["completion", "tools", "thinking", "vision"],
+				contextWindow: 262144,
+			},
 		]);
 		backend.setRejectedModelShows(["qwen3-vl:235b"]);
 		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;

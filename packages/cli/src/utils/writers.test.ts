@@ -184,7 +184,10 @@ describe("provider keep strategy", () => {
 		const originalModels = JSON.stringify(
 			{
 				providers: {
-					openai: { baseUrl: "https://api.openai.com", api: "openai-responses" },
+					openai: {
+						baseUrl: "https://api.openai.com",
+						api: "openai-responses",
+					},
 				},
 			},
 			null,
@@ -316,7 +319,13 @@ describe("provider keep strategy", () => {
 						apiKey: "OPENAI_API_KEY",
 						defaultModel: "gpt-4o",
 						discoveredModels: [
-							{ id: "gpt-4o", reasoning: false, input: ["text", "image"], contextWindow: 128000, maxTokens: 16384 },
+							{
+								id: "gpt-4o",
+								reasoning: false,
+								input: ["text", "image"],
+								contextWindow: 128000,
+								maxTokens: 16384,
+							},
 						],
 					},
 				],
@@ -342,7 +351,10 @@ describe("provider keep strategy", () => {
 			JSON.stringify(
 				{
 					providers: {
-						existing: { baseUrl: "https://example.com/v1", api: "openai-completions" },
+						existing: {
+							baseUrl: "https://example.com/v1",
+							api: "openai-completions",
+						},
 					},
 				},
 				null,

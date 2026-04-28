@@ -20,7 +20,9 @@ function createMockDeps(overrides: Partial<InstallerDeps> = {}): InstallerDeps {
 		applyConfig: () => {},
 		installPi: () => {},
 		backupConfig: () => "/tmp/.pi.bak",
-		stdout: { write: (c: string) => chunks.push(c) } as unknown as NodeJS.WriteStream,
+		stdout: {
+			write: (c: string) => chunks.push(c),
+		} as unknown as NodeJS.WriteStream,
 		...overrides,
 	};
 }

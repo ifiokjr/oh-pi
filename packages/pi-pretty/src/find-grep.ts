@@ -1,8 +1,8 @@
-import type { ExtensionAPI, AgentToolResult } from "@mariozechner/pi-coding-agent";
+import type { AgentToolResult, ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createFindTool, createGrepTool } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { FG_BLUE, FG_DIM, FG_MUTED, fillToolBackground, RST } from "./theme.js";
 import { getFileIcon } from "./icons.js";
+import { FG_BLUE, FG_DIM, FG_MUTED, fillToolBackground, RST } from "./theme.js";
 
 function groupResultsByDir(files: string[]): Record<string, string[]> {
 	const groups: Record<string, string[]> = {};
@@ -18,7 +18,9 @@ function groupResultsByDir(files: string[]): Record<string, string[]> {
 }
 
 function renderFindResults(files: string[]): string {
-	if (files.length === 0) return fillToolBackground(`${FG_DIM}No matches found.${RST}`);
+	if (files.length === 0) {
+		return fillToolBackground(`${FG_DIM}No matches found.${RST}`);
+	}
 	const groups = groupResultsByDir(files);
 	const lines: string[] = [];
 	for (const [dir, groupFiles] of Object.entries(groups)) {
@@ -33,7 +35,9 @@ function renderFindResults(files: string[]): string {
 }
 
 function renderGrepResults(files: Array<{ file: string; matches: Array<{ line: number; text: string }> }>): string {
-	if (files.length === 0) return fillToolBackground(`${FG_DIM}No matches found.${RST}`);
+	if (files.length === 0) {
+		return fillToolBackground(`${FG_DIM}No matches found.${RST}`);
+	}
 	const lines: string[] = [];
 	for (const { file, matches } of files) {
 		lines.push(`${FG_BLUE}▸ ${file}${RST}`);
@@ -101,7 +105,12 @@ export function enhanceGrepTool(pi: ExtensionAPI): void {
 					if (Array.isArray(parsed) && parsed[0]?.matches) {
 						return {
 							...result,
-							content: [{ type: "text" as const, text: renderGrepResults(parsed) }],
+							content: [
+								{
+									type: "text" as const,
+									text: renderGrepResults(parsed),
+								},
+							],
 						};
 					}
 				} catch {
@@ -115,7 +124,9 @@ export function enhanceGrepTool(pi: ExtensionAPI): void {
 }
 
 const multiGrepParams = Type.Object({
-	patterns: Type.Array(Type.String(), { description: "Multiple patterns to search for (OR logic)" }),
+	patterns: Type.Array(Type.String(), {
+		description: "Multiple patterns to search for (OR logic)",
+	}),
 	path: Type.Optional(Type.String({ description: "Base directory or file to search within" })),
 	glob: Type.Optional(Type.String({ description: "File glob constraint (e.g. *.ts)" })),
 });
@@ -145,7 +156,10 @@ interface MultiGrepResult {
 	ok: boolean;
 	message: string;
 	matches: number;
-	results: Array<{ file: string; matches: Array<{ line: number; text: string; pattern: string }> }>;
+	results: Array<{
+		file: string;
+		matches: Array<{ line: number; text: string; pattern: string }>;
+	}>;
 }
 
 function execMultiGrep(patterns: string[], glob: string, basePath: string): MultiGrepResult {
@@ -188,7 +202,12 @@ function execMultiGrep(patterns: string[], glob: string, basePath: string): Mult
 
 async function multiGrep(patterns: string[], glob: string, basePath: string): Promise<MultiGrepResult> {
 	if (patterns.length === 0) {
-		return { ok: false, message: "No patterns provided", matches: 0, results: [] };
+		return {
+			ok: false,
+			message: "No patterns provided",
+			matches: 0,
+			results: [],
+		};
 	}
 	try {
 		const { CursorStore } = await import("@ff-labs/fff-node");
@@ -204,7 +223,10 @@ async function multiGrep(patterns: string[], glob: string, basePath: string): Pr
 					// patch-coverage-ignore
 					existing.matches.push({ line: m.line, text: m.text, pattern }); // patch-coverage-ignore
 				} else {
-					results.push({ file: m.file, matches: [{ line: m.line, text: m.text, pattern }] });
+					results.push({
+						file: m.file,
+						matches: [{ line: m.line, text: m.text, pattern }],
+					});
 				}
 				totalMatches++;
 			}
@@ -221,4 +243,4 @@ async function multiGrep(patterns: string[], glob: string, basePath: string): Pr
 	}
 }
 
-export { multiGrep, execMultiGrep };
+export { execMultiGrep, multiGrep };

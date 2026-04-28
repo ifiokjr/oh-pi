@@ -1,7 +1,7 @@
+import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import http from "node:http";
 import http2 from "node:http2";
 import type { AddressInfo } from "node:net";
-import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import {
 	AgentClientMessageSchema,
 	AgentServerMessageSchema,
@@ -50,7 +50,10 @@ export async function createTestCursorBackend(): Promise<TestCursorBackend> {
 		}
 		res.writeHead(200, { "Content-Type": "application/json" });
 		res.end(
-			JSON.stringify({ accessToken: makeJwt(Math.floor(Date.now() / 1000) + 3600), refreshToken: "valid-refresh" }),
+			JSON.stringify({
+				accessToken: makeJwt(Math.floor(Date.now() / 1000) + 3600),
+				refreshToken: "valid-refresh",
+			}),
 		);
 	});
 	await new Promise<void>((resolve) => refreshServer.listen(0, "127.0.0.1", resolve));
@@ -85,7 +88,10 @@ export async function createTestCursorBackend(): Promise<TestCursorBackend> {
 			return;
 		}
 
-		stream.respond({ ":status": 200, "content-type": "application/connect+proto" });
+		stream.respond({
+			":status": 200,
+			"content-type": "application/connect+proto",
+		});
 		const messages: AgentClientMessage[] = [];
 		const waiters: {
 			predicate: (message: AgentClientMessage) => boolean;

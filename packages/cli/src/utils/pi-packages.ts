@@ -1,7 +1,7 @@
+import { resolvePiAgentDir } from "@ifi/oh-pi-core";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { resolvePiAgentDir } from "@ifi/oh-pi-core";
 
 const IS_WINDOWS = process.platform === "win32";
 
@@ -138,7 +138,11 @@ export function findPiCommand(run: ExecFileRunner = execFileSync): string {
 	const candidates = IS_WINDOWS ? ["pi.cmd", "pi"] : ["pi"];
 	for (const candidate of candidates) {
 		try {
-			run(candidate, ["--version"], { shell: IS_WINDOWS, stdio: "pipe", timeout: 3_000 });
+			run(candidate, ["--version"], {
+				shell: IS_WINDOWS,
+				stdio: "pipe",
+				timeout: 3_000,
+			});
 			return candidate;
 		} catch {
 			// Try next candidate
@@ -179,7 +183,9 @@ export function installPiPackages(
 				continue;
 			}
 			const details = stderr ? `: ${stderr.split("\n")[0]}` : ".";
-			throw new Error(`Failed to install ${packageName}${details}`, { cause: error });
+			throw new Error(`Failed to install ${packageName}${details}`, {
+				cause: error,
+			});
 		}
 	}
 }

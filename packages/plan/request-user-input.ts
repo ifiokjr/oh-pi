@@ -1,7 +1,7 @@
-import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { QnATuiComponent, requirePiTuiModule } from "@ifi/pi-shared-qna";
 import type { QnAResponse, QnAResult } from "@ifi/pi-shared-qna";
+import type { AgentToolResult } from "@mariozechner/pi-agent-core";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import type {
 	NormalizedRequestUserInputQuestion,
 	PlanModeState,
@@ -163,14 +163,24 @@ export function registerRequestUserInputTool(
 			if (!dependencies.getState().active) {
 				return {
 					isError: true,
-					content: [{ type: "text", text: "request_user_input is unavailable when plan mode is inactive" }],
+					content: [
+						{
+							type: "text",
+							text: "request_user_input is unavailable when plan mode is inactive",
+						},
+					],
 				};
 			}
 
 			if (!ctx.hasUI) {
 				return {
 					isError: true,
-					content: [{ type: "text", text: "request_user_input requires interactive mode" }],
+					content: [
+						{
+							type: "text",
+							text: "request_user_input requires interactive mode",
+						},
+					],
 				};
 			}
 
@@ -186,13 +196,26 @@ export function registerRequestUserInputTool(
 			if (!response) {
 				return {
 					isError: true,
-					content: [{ type: "text", text: "request_user_input was cancelled before receiving a response" }],
+					content: [
+						{
+							type: "text",
+							text: "request_user_input was cancelled before receiving a response",
+						},
+					],
 				};
 			}
 
-			const details: RequestUserInputDetails = { questions: normalized.questions, response };
+			const details: RequestUserInputDetails = {
+				questions: normalized.questions,
+				response,
+			};
 			return {
-				content: [{ type: "text", text: buildRequestUserInputSummary(details) }],
+				content: [
+					{
+						type: "text",
+						text: buildRequestUserInputSummary(details),
+					},
+				],
 				details,
 			};
 		},

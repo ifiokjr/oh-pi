@@ -67,7 +67,9 @@ export function fillToolBackground(text: string, bg = BG_BASE): string {
 }
 
 export function termW(): number {
-	const stderrWithColumns = process.stderr as NodeJS.WriteStream & { columns?: number };
+	const stderrWithColumns = process.stderr as NodeJS.WriteStream & {
+		columns?: number;
+	};
 	const raw =
 		process.stdout.columns || stderrWithColumns.columns || Number.parseInt(process.env.COLUMNS ?? "", 10) || 200;
 	return Math.max(80, Math.min(raw - 4, 210));

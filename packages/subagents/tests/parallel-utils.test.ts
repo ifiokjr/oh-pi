@@ -3,8 +3,8 @@ import {
 	aggregateParallelOutputs,
 	flattenSteps,
 	isParallelGroup,
-	MAX_PARALLEL_CONCURRENCY,
 	mapConcurrent,
+	MAX_PARALLEL_CONCURRENCY,
 	type ParallelStepGroup,
 	type RunnerStep,
 	type RunnerSubagentStep,
@@ -27,7 +27,11 @@ describe("isParallelGroup", () => {
 	});
 
 	it("returns false when parallel is not an array", () => {
-		const step = { parallel: "not-an-array", agent: "a", task: "x" } as unknown as RunnerStep;
+		const step = {
+			parallel: "not-an-array",
+			agent: "a",
+			task: "x",
+		} as unknown as RunnerStep;
 		expect(isParallelGroup(step)).toBe(false);
 	});
 });
@@ -65,7 +69,13 @@ describe("flattenSteps", () => {
 	});
 
 	it("handles empty parallel group", () => {
-		const steps: RunnerStep[] = [{ agent: "before", task: "x" }, { parallel: [] }, { agent: "after", task: "y" }];
+		const steps: RunnerStep[] = [
+			{ agent: "before", task: "x" },
+			{
+				parallel: [],
+			},
+			{ agent: "after", task: "y" },
+		];
 		const flat = flattenSteps(steps);
 		expect(flat).toHaveLength(2);
 		expect(flat.map((step) => step.agent)).toEqual(["before", "after"]);
@@ -188,17 +198,35 @@ describe("aggregateParallelOutputs", () => {
 	});
 
 	it("marks failed tasks", () => {
-		const result = aggregateParallelOutputs([{ agent: "agent-a", output: "partial output", exitCode: 1 }]);
+		const result = aggregateParallelOutputs([
+			{
+				agent: "agent-a",
+				output: "partial output",
+				exitCode: 1,
+			},
+		]);
 		expect(result).toContain("[!] FAILED (exit code 1)");
 	});
 
 	it("marks empty output", () => {
-		const result = aggregateParallelOutputs([{ agent: "agent-a", output: "", exitCode: 0 }]);
+		const result = aggregateParallelOutputs([
+			{
+				agent: "agent-a",
+				output: "",
+				exitCode: 0,
+			},
+		]);
 		expect(result).toContain("[!] EMPTY OUTPUT");
 	});
 
 	it("treats whitespace-only output as empty", () => {
-		const result = aggregateParallelOutputs([{ agent: "agent-a", output: "   \n  ", exitCode: 0 }]);
+		const result = aggregateParallelOutputs([
+			{
+				agent: "agent-a",
+				output: "   \n  ",
+				exitCode: 0,
+			},
+		]);
 		expect(result).toContain("[!] EMPTY OUTPUT");
 	});
 

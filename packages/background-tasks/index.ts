@@ -1,7 +1,6 @@
 /* C8 ignore file */
 
-import { spawn } from "node:child_process";
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { StringEnum } from "@mariozechner/pi-ai";
 import { getShellConfig } from "@mariozechner/pi-coding-agent";
 import type {
 	AgentToolResult,
@@ -10,9 +9,10 @@ import type {
 	ExtensionContext,
 	Theme,
 } from "@mariozechner/pi-coding-agent";
-import { StringEnum } from "@mariozechner/pi-ai";
-import { Text, matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import { matchesKey, Text, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
+import { spawn } from "node:child_process";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import {
 	BG_COMMAND,
 	BG_DASHBOARD_MAX_HEIGHT,
@@ -101,13 +101,21 @@ function buildTaskEventLines(details: BackgroundTaskEventDetails, theme: ThemeLi
 	const lines = [
 		heading,
 		`${theme.fg("muted", "Task")}: ${details.task.id} · ${taskDisplayName(details.task)}`,
-		`${theme.fg("muted", "Status")}: ${summarizeTaskStatus(details.task.status, details.task.exitCode)} · pid ${details.task.pid}`,
-		`${theme.fg("muted", "Started")}: ${formatRelativeTime(details.task.startedAt, details.eventAt)} · ${formatDuration(details.eventAt - details.task.startedAt)} elapsed`,
+		`${theme.fg("muted", "Status")}: ${summarizeTaskStatus(
+			details.task.status,
+			details.task.exitCode,
+		)} · pid ${details.task.pid}`,
+		`${theme.fg("muted", "Started")}: ${formatRelativeTime(
+			details.task.startedAt,
+			details.eventAt,
+		)} · ${formatDuration(details.eventAt - details.task.startedAt)} elapsed`,
 	];
 
 	if (details.task.expiresAt != null) {
 		lines.push(
-			`${theme.fg("muted", "Expiry")}: ${formatRelativeTime(details.task.expiresAt, details.eventAt)} (${formatDuration(details.task.expiresAt - details.eventAt)} remaining)`,
+			`${theme.fg("muted", "Expiry")}: ${formatRelativeTime(details.task.expiresAt, details.eventAt)} (${formatDuration(
+				details.task.expiresAt - details.eventAt,
+			)} remaining)`,
 		);
 	}
 
@@ -241,7 +249,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 		const running = getSortedTasks().filter((task) => task.status === "running");
 		const finished = tasks.size - running.length;
 		const latest = getSortedTasks()[0];
-		const summary = `${theme.fg("accent", theme.bold("⚙ Background tasks"))} ${theme.fg("muted", `${running.length} running · ${finished} finished`)}`;
+		const summary = `${theme.fg("accent", theme.bold("⚙ Background tasks"))} ${theme.fg(
+			"muted",
+			`${running.length} running · ${finished} finished`,
+		)}`;
 
 		if (!latest) {
 			return [summary];
@@ -250,7 +261,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 		const latestActivity = latest.lastOutputAt ?? latest.updatedAt;
 		return [
 			summary,
-			`${theme.fg("dim", `${latest.id} · ${taskDisplayName(latest)} · ${formatRelativeTime(latestActivity)}`)} · ${theme.fg("muted", `${BG_SHORTCUT} dashboard`)}`,
+			`${theme.fg(
+				"dim",
+				`${latest.id} · ${taskDisplayName(latest)} · ${formatRelativeTime(latestActivity)}`,
+			)} · ${theme.fg("muted", `${BG_SHORTCUT} dashboard`)}`,
 		];
 	};
 
@@ -405,11 +419,17 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 
 	const stopTask = (task: ManagedTask | null): { ok: boolean; message: string } => {
 		if (!task) {
-			return { message: "No background task matched that id or pid.", ok: false };
+			return {
+				message: "No background task matched that id or pid.",
+				ok: false,
+			};
 		}
 
 		if (task.status !== "running") {
-			return { message: `${task.id} is already ${summarizeTaskStatus(task.status, task.exitCode)}.`, ok: true };
+			return {
+				message: `${task.id} is already ${summarizeTaskStatus(task.status, task.exitCode)}.`,
+				ok: true,
+			};
 		}
 
 		task.stopRequested = true;
@@ -644,7 +664,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 					syncOutputScroll(selected);
 
 					const lines = [
-						`${theme.fg("accent", theme.bold("⚙ Background tasks"))} ${theme.fg("muted", `${runningCount} running · ${finishedCount} finished`)}`,
+						`${theme.fg("accent", theme.bold("⚙ Background tasks"))} ${theme.fg(
+							"muted",
+							`${runningCount} running · ${finishedCount} finished`,
+						)}`,
 						theme.fg(
 							"dim",
 							`[tab] switch pane · [↑↓] move · [shift+↑/↓] page · [f] follow · [s] stop · [c] clear · [q] close`,
@@ -668,7 +691,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 					const right: string[] = [];
 
 					left.push(
-						`${theme.fg(focusedPane === "tasks" ? "accent" : "muted", theme.bold("Tasks"))} ${theme.fg("dim", `(${sorted.length})`)}`,
+						`${theme.fg(
+							focusedPane === "tasks" ? "accent" : "muted",
+							theme.bold("Tasks"),
+						)} ${theme.fg("dim", `(${sorted.length})`)}`,
 					);
 					left.push(theme.fg("dim", `Focus: ${focusedPane === "tasks" ? "selection" : "watch pane"}`));
 					left.push("");
@@ -681,7 +707,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 						const marker = task.id === selected?.id ? theme.fg("accent", "→") : theme.fg("dim", "·");
 						const statusColor = task.status === "running" ? "success" : task.status === "failed" ? "error" : "muted";
 						left.push(
-							`${marker} ${theme.fg(statusColor, task.id)} ${theme.fg("dim", summarizeTaskStatus(task.status, task.exitCode))}`,
+							`${marker} ${theme.fg(statusColor, task.id)} ${theme.fg(
+								"dim",
+								summarizeTaskStatus(task.status, task.exitCode),
+							)}`,
 						);
 						left.push(`  ${taskDisplayName(task)}`);
 					}
@@ -698,24 +727,36 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 						const maxOutputScroll = Math.max(0, outputLines.length - DASHBOARD_OUTPUT_VIEWPORT);
 						const visibleOutput = outputLines.slice(outputScroll, outputScroll + DASHBOARD_OUTPUT_VIEWPORT);
 						right.push(
-							`${theme.fg(focusedPane === "output" ? "accent" : "muted", theme.bold(`Watch ${selected.id}`))} ${theme.fg("dim", followOutput ? "follow" : `line ${outputScroll + 1}`)}`,
+							`${theme.fg(
+								focusedPane === "output" ? "accent" : "muted",
+								theme.bold(`Watch ${selected.id}`),
+							)} ${theme.fg("dim", followOutput ? "follow" : `line ${outputScroll + 1}`)}`,
 						);
 						right.push(
-							`${theme.fg("muted", "Status")}: ${summarizeTaskStatus(selected.status, selected.exitCode)} · pid ${selected.pid}`,
+							`${theme.fg("muted", "Status")}: ${summarizeTaskStatus(
+								selected.status,
+								selected.exitCode,
+							)} · pid ${selected.pid}`,
 						);
 						right.push(
-							`${theme.fg("muted", "Started")}: ${formatRelativeTime(selected.startedAt)} · ${formatDuration(Date.now() - selected.startedAt)} elapsed`,
+							`${theme.fg("muted", "Started")}: ${formatRelativeTime(
+								selected.startedAt,
+							)} · ${formatDuration(Date.now() - selected.startedAt)} elapsed`,
 						);
 						if (selected.expiresAt != null) {
 							right.push(
-								`${theme.fg("muted", "Expiry")}: ${formatRelativeTime(selected.expiresAt)} (${formatDuration(selected.expiresAt - Date.now())} remaining)`,
+								`${theme.fg("muted", "Expiry")}: ${formatRelativeTime(selected.expiresAt)} (${formatDuration(
+									selected.expiresAt - Date.now(),
+								)} remaining)`,
 							);
 						}
 						right.push(`${theme.fg("muted", "Command")}: ${selected.command}`);
 						right.push(`${theme.fg("muted", "Cwd")}: ${selected.cwd}`);
 						right.push(`${theme.fg("muted", "Log")}: ${selected.logFile}`);
 						right.push(
-							`${theme.fg("muted", "Wakeups")}: ${selected.reactToOutput ? (selected.notifyPattern ?? "on output") : "exit only"}`,
+							`${theme.fg("muted", "Wakeups")}: ${
+								selected.reactToOutput ? (selected.notifyPattern ?? "on output") : "exit only"
+							}`,
 						);
 						right.push("");
 						right.push(theme.fg("accent", theme.bold("Output")));
@@ -731,7 +772,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 						right.push(
 							theme.fg(
 								"dim",
-								`Output ${outputScroll + 1}-${Math.min(outputLines.length, outputScroll + DASHBOARD_OUTPUT_VIEWPORT)} of ${outputLines.length} · max scroll ${maxOutputScroll}`,
+								`Output ${outputScroll + 1}-${Math.min(
+									outputLines.length,
+									outputScroll + DASHBOARD_OUTPUT_VIEWPORT,
+								)} of ${outputLines.length} · max scroll ${maxOutputScroll}`,
 							),
 						);
 					}
@@ -865,7 +909,11 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			},
 			{
 				overlay: true,
-				overlayOptions: { anchor: "center", maxHeight: BG_DASHBOARD_MAX_HEIGHT, width: BG_DASHBOARD_WIDTH },
+				overlayOptions: {
+					anchor: "center",
+					maxHeight: BG_DASHBOARD_MAX_HEIGHT,
+					width: BG_DASHBOARD_WIDTH,
+				},
 			},
 		);
 	};
@@ -945,7 +993,9 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 
 			const task = resolveTask(undefined, params.pid);
 			if (!task) {
-				return makeToolResult("No background task matched that pid.", { isError: true });
+				return makeToolResult("No background task matched that pid.", {
+					isError: true,
+				});
 			}
 
 			if (params.action === "log") {
@@ -954,7 +1004,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			}
 
 			const stopped = stopTask(task);
-			return makeToolResult(stopped.message, { details: { task: taskSnapshot(task) }, isError: !stopped.ok });
+			return makeToolResult(stopped.message, {
+				details: { task: taskSnapshot(task) },
+				isError: !stopped.ok,
+			});
 		},
 		label: "Background Process Status",
 		name: "bg_status",
@@ -985,7 +1038,9 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			if (action === "spawn") {
 				const command = params.command?.trim();
 				if (!command) {
-					return makeToolResult("Error: command is required for action=spawn", { isError: true });
+					return makeToolResult("Error: command is required for action=spawn", {
+						isError: true,
+					});
 				}
 
 				const task = spawnTask({
@@ -997,14 +1052,18 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 				});
 
 				return makeToolResult(
-					`Started ${task.id} (pid ${task.pid}) in the background.\nCommand: ${task.command}\nCwd: ${task.cwd}\nLog: ${task.logFile}\nExpiry: ${task.expiresAt != null ? formatRelativeTime(task.expiresAt) : "none"}\nWakeups: ${task.reactToOutput ? (task.notifyPattern ?? "on output") : "exit only"}`,
+					`Started ${task.id} (pid ${task.pid}) in the background.\nCommand: ${task.command}\nCwd: ${task.cwd}\nLog: ${task.logFile}\nExpiry: ${
+						task.expiresAt != null ? formatRelativeTime(task.expiresAt) : "none"
+					}\nWakeups: ${task.reactToOutput ? (task.notifyPattern ?? "on output") : "exit only"}`,
 					{ details: { task: taskSnapshot(task) } },
 				);
 			}
 
 			const task = resolveTask(params.id, params.pid);
 			if (!task) {
-				return makeToolResult("No background task matched that id or pid.", { isError: true });
+				return makeToolResult("No background task matched that id or pid.", {
+					isError: true,
+				});
 			}
 
 			if (action === "log") {
@@ -1013,7 +1072,10 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			}
 
 			const stopped = stopTask(task);
-			return makeToolResult(stopped.message, { details: { task: taskSnapshot(task) }, isError: !stopped.ok });
+			return makeToolResult(stopped.message, {
+				details: { task: taskSnapshot(task) },
+				isError: !stopped.ok,
+			});
 		},
 		label: "Background Task",
 		name: "bg_task",
@@ -1026,12 +1088,20 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			id: Type.Optional(Type.String({ description: "Task id for action=log or stop" })),
 			pid: Type.Optional(Type.Number({ description: "PID for action=log or stop" })),
 			title: Type.Optional(Type.String({ description: "Optional label for action=spawn" })),
-			cwd: Type.Optional(Type.String({ description: "Optional working directory for action=spawn" })),
+			cwd: Type.Optional(
+				Type.String({
+					description: "Optional working directory for action=spawn",
+				}),
+			),
 			reactToOutput: Type.Optional(
-				Type.Boolean({ description: "Wake the agent up when new output arrives. Defaults to true." }),
+				Type.Boolean({
+					description: "Wake the agent up when new output arrives. Defaults to true.",
+				}),
 			),
 			notifyPattern: Type.Optional(
-				Type.String({ description: "Optional substring or /regex/flags gate for output wakeups." }),
+				Type.String({
+					description: "Optional substring or /regex/flags gate for output wakeups.",
+				}),
 			),
 		}),
 	});
@@ -1044,17 +1114,41 @@ export default function backgroundTasksExtension(pi: ExtensionAPI): void {
 			const parts = trimmed.split(/\s+/).filter(Boolean);
 			if (parts.length <= 1) {
 				const options = [
-					{ description: "Open the background task dashboard", label: "dashboard", value: "dashboard" },
-					{ description: "Show a textual summary of tracked tasks", label: "list", value: "list" },
-					{ description: "Spawn a new background shell task", label: "run", value: "run " },
-					{ description: "Open the dashboard focused on a task", label: "watch", value: "watch " },
+					{
+						description: "Open the background task dashboard",
+						label: "dashboard",
+						value: "dashboard",
+					},
+					{
+						description: "Show a textual summary of tracked tasks",
+						label: "list",
+						value: "list",
+					},
+					{
+						description: "Spawn a new background shell task",
+						label: "run",
+						value: "run ",
+					},
+					{
+						description: "Open the dashboard focused on a task",
+						label: "watch",
+						value: "watch ",
+					},
 					{
 						description: "Open the output pane with follow-tail enabled",
 						label: "watch --follow",
 						value: "watch --follow ",
 					},
-					{ description: "Terminate a running task", label: "stop", value: "stop " },
-					{ description: "Remove finished tasks from the dashboard", label: "clear", value: "clear" },
+					{
+						description: "Terminate a running task",
+						label: "stop",
+						value: "stop ",
+					},
+					{
+						description: "Remove finished tasks from the dashboard",
+						label: "clear",
+						value: "clear",
+					},
 				];
 				const needle = trimmed.toLowerCase();
 				return options.filter((option) => option.value.trim().startsWith(needle));

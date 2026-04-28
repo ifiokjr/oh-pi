@@ -1,15 +1,15 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { executePtyCommand, ptyExecuteInternals, toAgentToolResult, toUserBashResult } from "../src/pty-execute.js";
-import { resetHeadlessModuleLoader, setHeadlessModuleLoader } from "../src/terminal-emulator.js";
 import {
-	PtySessionManager,
 	ptySessionInternals,
+	PtySessionManager,
 	resetNodePtyModuleLoader,
 	resolveShellLaunch,
 	setNodePtyModuleLoader,
 } from "../src/pty-session.js";
 import { ensureSpawnHelperExecutable, getSpawnHelperCandidates, spawnHelperInternals } from "../src/spawn-helper.js";
+import { resetHeadlessModuleLoader, setHeadlessModuleLoader } from "../src/terminal-emulator.js";
 import {
 	appendExitSummary,
 	formatExitSummaryLine,
@@ -88,7 +88,10 @@ describe("PTY execution", () => {
 		};
 
 		setNodePtyModuleLoader(async () => ({ spawn }));
-		const manager = new PtySessionManager({ ensureSpawnHelper, now: () => Date.now() });
+		const manager = new PtySessionManager({
+			ensureSpawnHelper,
+			now: () => Date.now(),
+		});
 		const executionPromise = executePtyCommand({
 			command: "echo hello",
 			cwd: "/workspace/project",
@@ -114,11 +117,18 @@ describe("PTY execution", () => {
 		expect(spawn).toHaveBeenCalledWith(
 			process.env.SHELL?.trim() || "/bin/bash",
 			["-lc", "echo hello"],
-			expect.objectContaining({ cwd: "/workspace/project", name: "xterm-256color" }),
+			expect.objectContaining({
+				cwd: "/workspace/project",
+				name: "xterm-256color",
+			}),
 		);
 		expect(ensureSpawnHelper).toHaveBeenCalledTimes(1);
 		expect(widget.update).toHaveBeenLastCalledWith(
-			expect.objectContaining({ status: "completed", exitCode: 0, ansiLines: ["hello\n"] }),
+			expect.objectContaining({
+				status: "completed",
+				exitCode: 0,
+				ansiLines: ["hello\n"],
+			}),
 		);
 		expect(widget.dispose).toHaveBeenCalledTimes(1);
 		expect(emulator.dispose).toHaveBeenCalledTimes(1);
@@ -130,8 +140,14 @@ describe("PTY execution", () => {
 			output: "hello\n",
 		});
 		expect(result.text).toContain("[Exit code: 0]");
-		expect(toAgentToolResult(result)).toMatchObject({ details: { pty: true, sessionId: result.sessionId } });
-		expect(toUserBashResult(result)).toMatchObject({ output: result.text, exitCode: 0, truncated: false });
+		expect(toAgentToolResult(result)).toMatchObject({
+			details: { pty: true, sessionId: result.sessionId },
+		});
+		expect(toUserBashResult(result)).toMatchObject({
+			output: result.text,
+			exitCode: 0,
+			truncated: false,
+		});
 	});
 
 	it("marks PTY executions as timed out or cancelled", async () => {
@@ -262,7 +278,9 @@ describe("PTY execution", () => {
 			resize() {}
 			dispose() {}
 		}
-		setHeadlessModuleLoader(async () => ({ Terminal: MinimalTerminal as never }));
+		setHeadlessModuleLoader(async () => ({
+			Terminal: MinimalTerminal as never,
+		}));
 
 		const defaultSession = {
 			id: "session-default",
@@ -324,8 +342,13 @@ describe("PTY execution", () => {
 		const spawn = vi.fn(() => pty);
 		setNodePtyModuleLoader(async () => ({ spawn }));
 
-		const manager = new PtySessionManager({ ensureSpawnHelper: async () => null });
-		const session = await manager.createSession({ command: "echo test", cwd: "/repo" });
+		const manager = new PtySessionManager({
+			ensureSpawnHelper: async () => null,
+		});
+		const session = await manager.createSession({
+			command: "echo test",
+			cwd: "/repo",
+		});
 		const observed: string[] = [];
 		const unsubscribe = session.onData((data) => observed.push(data));
 		const exited: Array<{ exitCode: number | null }> = [];
@@ -355,8 +378,15 @@ describe("PTY execution", () => {
 			file: "/usr/bin/zsh",
 			args: ["-lc", "pwd"],
 		});
-		expect(resolveShellLaunch("pwd", "linux", {})).toEqual({ file: "/bin/bash", args: ["-lc", "pwd"] });
-		expect(resolveShellLaunch("dir", "win32", { SHELL: "C:/Program Files/Git/bin/bash.exe" })).toEqual({
+		expect(resolveShellLaunch("pwd", "linux", {})).toEqual({
+			file: "/bin/bash",
+			args: ["-lc", "pwd"],
+		});
+		expect(
+			resolveShellLaunch("dir", "win32", {
+				SHELL: "C:/Program Files/Git/bin/bash.exe",
+			}),
+		).toEqual({
 			file: "C:/Program Files/Git/bin/bash.exe",
 			args: ["-lc", "dir"],
 		});
@@ -390,7 +420,10 @@ describe("PTY execution", () => {
 			{ text: "c", bytes: 1 },
 		]);
 
-		const truncated = truncateOutput("one\ntwo\nthree", { maxLines: 2, maxBytes: 100 });
+		const truncated = truncateOutput("one\ntwo\nthree", {
+			maxLines: 2,
+			maxBytes: 100,
+		});
 		expect(truncated.text).toContain("[output truncated");
 		expect(truncateOutput("", { maxLines: 1, maxBytes: 1 }).text).toBe("");
 		expect(truncateOutput("very-long-line", { maxLines: 1, maxBytes: 1 }).text).toContain("[output truncated");
@@ -465,11 +498,16 @@ describe("PTY execution", () => {
 		const originalPlatform = process.platform;
 		const originalHelper = process.env.NODE_PTY_SPAWN_HELPER;
 		vi.resetModules();
-		Object.defineProperty(process, "platform", { configurable: true, value: "win32" });
+		Object.defineProperty(process, "platform", {
+			configurable: true,
+			value: "win32",
+		});
 		const win32Module = await import("../src/spawn-helper.js");
-		expect(await win32Module.ensureSpawnHelperExecutable({ explicitPath: "C:/spawn-helper.exe" })).toBe(
-			"C:/spawn-helper.exe",
-		);
+		expect(
+			await win32Module.ensureSpawnHelperExecutable({
+				explicitPath: "C:/spawn-helper.exe",
+			}),
+		).toBe("C:/spawn-helper.exe");
 		process.env.NODE_PTY_SPAWN_HELPER = "C:/env-helper.exe";
 		expect(await win32Module.ensureSpawnHelperExecutable()).toBe("C:/env-helper.exe");
 		delete process.env.NODE_PTY_SPAWN_HELPER;
@@ -479,7 +517,10 @@ describe("PTY execution", () => {
 		} else {
 			delete process.env.NODE_PTY_SPAWN_HELPER;
 		}
-		Object.defineProperty(process, "platform", { configurable: true, value: originalPlatform });
+		Object.defineProperty(process, "platform", {
+			configurable: true,
+			value: originalPlatform,
+		});
 		vi.resetModules();
 	});
 });

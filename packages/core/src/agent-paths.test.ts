@@ -14,21 +14,30 @@ describe("agent path utilities", () => {
 	});
 
 	it("honors PI_CODING_AGENT_DIR overrides", () => {
-		expect(resolvePiAgentDir({ env: { PI_CODING_AGENT_DIR: "/tmp/custom-agent" }, homeDir: "/mock-home" })).toBe(
-			"/tmp/custom-agent",
-		);
+		expect(
+			resolvePiAgentDir({
+				env: { PI_CODING_AGENT_DIR: "/tmp/custom-agent" },
+				homeDir: "/mock-home",
+			}),
+		).toBe("/tmp/custom-agent");
 	});
 
 	it("expands ~ in PI_CODING_AGENT_DIR overrides", () => {
-		expect(resolvePiAgentDir({ env: { PI_CODING_AGENT_DIR: "~/agent-data" }, homeDir: "/mock-home" })).toBe(
-			path.join("/mock-home", "agent-data"),
-		);
+		expect(
+			resolvePiAgentDir({
+				env: { PI_CODING_AGENT_DIR: "~/agent-data" },
+				homeDir: "/mock-home",
+			}),
+		).toBe(path.join("/mock-home", "agent-data"));
 	});
 
 	it("builds extension config paths under the resolved agent dir", () => {
-		expect(getExtensionConfigPath("scheduler", "config.json", { env: {}, homeDir: "/mock-home" })).toBe(
-			path.join("/mock-home", ".pi", "agent", "extensions", "scheduler", "config.json"),
-		);
+		expect(
+			getExtensionConfigPath("scheduler", "config.json", {
+				env: {},
+				homeDir: "/mock-home",
+			}),
+		).toBe(path.join("/mock-home", ".pi", "agent", "extensions", "scheduler", "config.json"));
 	});
 
 	it("mirrors workspace paths for shared storage", () => {

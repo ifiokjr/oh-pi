@@ -54,10 +54,8 @@ Given that feature description, do this:
 3. Load `templates/spec-template.md` to understand required sections.
 
 4. Follow this execution flow:
-   1. Parse user description from Input
-      If empty: ERROR "No feature description provided"
-   2. Extract key concepts from description
-      Identify: actors, actions, data, constraints
+   1. Parse user description from Input If empty: ERROR "No feature description provided"
+   2. Extract key concepts from description Identify: actors, actions, data, constraints
    3. For unclear aspects:
       - Make informed guesses based on context and industry standards
       - Only mark with [NEEDS CLARIFICATION: specific question] if:
@@ -66,15 +64,9 @@ Given that feature description, do this:
         - No reasonable default exists
       - **LIMIT: Maximum 3 [NEEDS CLARIFICATION] markers total**
       - Prioritize clarifications by impact: scope > security/privacy > user experience > technical details
-   4. Fill User Scenarios & Testing section
-      If no clear user flow: ERROR "Cannot determine user scenarios"
-   5. Generate Functional Requirements
-      Each requirement must be testable
-      Use reasonable defaults for unspecified details (document assumptions in Assumptions section)
-   6. Define Success Criteria
-      Create measurable, technology-agnostic outcomes
-      Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion)
-      Each criterion must be verifiable without implementation details
+   4. Fill User Scenarios & Testing section If no clear user flow: ERROR "Cannot determine user scenarios"
+   5. Generate Functional Requirements Each requirement must be testable Use reasonable defaults for unspecified details (document assumptions in Assumptions section)
+   6. Define Success Criteria Create measurable, technology-agnostic outcomes Include both quantitative metrics (time, performance, volume) and qualitative measures (user satisfaction, task completion) Each criterion must be verifiable without implementation details
    7. Identify Key Entities (if data involved)
    8. Return: SUCCESS (spec ready for planning)
 
@@ -87,9 +79,7 @@ Given that feature description, do this:
    ```markdown
    # Specification Quality Checklist: [FEATURE NAME]
 
-   **Purpose**: Validate specification completeness and quality before proceeding to planning
-   **Created**: [DATE]
-   **Feature**: [Link to spec.md]
+   **Purpose**: Validate specification completeness and quality before proceeding to planning **Created**: [DATE] **Feature**: [Link to spec.md]
 
    ## Content Quality
 

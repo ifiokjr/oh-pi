@@ -71,7 +71,11 @@ afterEach(() => {
 describe.sequential("PiWebServer", () => {
 	it("starts, serves authenticated routes, and stops cleanly", async () => {
 		const session = createSession();
-		const server = createPiWebServer({ host: "127.0.0.1", port: await findFreePort(), token: "test-token" });
+		const server = createPiWebServer({
+			host: "127.0.0.1",
+			port: await findFreePort(),
+			token: "test-token",
+		});
 		server.attachSession(session);
 		const started = await server.start();
 
@@ -83,7 +87,10 @@ describe.sequential("PiWebServer", () => {
 
 			const health = await fetch(`${server.url}/api/health`);
 			expect(health.status).toBe(200);
-			expect(await health.json()).toEqual({ status: "ok", uptime: expect.any(Number) });
+			expect(await health.json()).toEqual({
+				status: "ok",
+				uptime: expect.any(Number),
+			});
 
 			const state = await fetch(`${server.url}/api/session/state`, {
 				headers: { Authorization: `Bearer ${server.token}` },
@@ -162,10 +169,18 @@ describe.sequential("PiWebServer", () => {
 
 	it("exposes tunnel metadata and closes connected clients during shutdown", async () => {
 		const session = createSession();
-		const server = createPiWebServer({ host: "127.0.0.1", port: await findFreePort(), token: "test-token" });
+		const server = createPiWebServer({
+			host: "127.0.0.1",
+			port: await findFreePort(),
+			token: "test-token",
+		});
 		server.attachSession(session);
 		const tunnelStop = vi.fn();
-		server.setTunnel({ publicUrl: "https://example.trycloudflare.com", provider: "cloudflared", stop: tunnelStop });
+		server.setTunnel({
+			publicUrl: "https://example.trycloudflare.com",
+			provider: "cloudflared",
+			stop: tunnelStop,
+		});
 		await server.start();
 
 		const { ws } = await openAuthedClient(server);

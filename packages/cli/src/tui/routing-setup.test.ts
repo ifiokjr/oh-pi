@@ -16,8 +16,16 @@ const dashboardMocks = vi.hoisted(() => ({
 	detectOptionalRoutingPackages: vi.fn(),
 	suggestOptionalRoutingPackages: vi.fn(),
 	ROUTING_CATEGORIES: [
-		{ name: "quick-discovery", label: "Quick discovery", recommended: ["groq", "openai"] },
-		{ name: "implementation-default", label: "Implementation", recommended: ["openai", "groq"] },
+		{
+			name: "quick-discovery",
+			label: "Quick discovery",
+			recommended: ["groq", "openai"],
+		},
+		{
+			name: "implementation-default",
+			label: "Implementation",
+			recommended: ["openai", "groq"],
+		},
 	],
 }));
 
@@ -59,7 +67,11 @@ import { setupAdaptiveRouting, summarizeAdaptiveRouting } from "./routing-setup.
 function makeProviders() {
 	return [
 		{ name: "openai", apiKey: "OPENAI_API_KEY", defaultModel: "gpt-4o" },
-		{ name: "groq", apiKey: "GROQ_API_KEY", defaultModel: "llama-3.3-70b-versatile" },
+		{
+			name: "groq",
+			apiKey: "GROQ_API_KEY",
+			defaultModel: "llama-3.3-70b-versatile",
+		},
 	];
 }
 
@@ -111,7 +123,9 @@ describe("setupAdaptiveRouting", () => {
 		promptState.multiselect.push(["@ifi/pi-provider-ollama"]);
 		promptState.select.push("project", "shadow", "groq", "openai");
 
-		const result = await setupAdaptiveRouting(makeProviders(), undefined, { piInstalled: true });
+		const result = await setupAdaptiveRouting(makeProviders(), undefined, {
+			piInstalled: true,
+		});
 
 		expect(result).toEqual({
 			mode: "shadow",
@@ -135,11 +149,16 @@ describe("setupAdaptiveRouting", () => {
 	});
 
 	it("shows a note instead of installing packages when pi is missing", async () => {
-		const currentConfig = { mode: "off" as const, categories: { "quick-discovery": ["openai"] } };
+		const currentConfig = {
+			mode: "off" as const,
+			categories: { "quick-discovery": ["openai"] },
+		};
 		dashboardMocks.detectOptionalRoutingPackages.mockReturnValue([missingPackage("@ifi/pi-provider-ollama")]);
 		promptState.confirm.push(false);
 
-		const result = await setupAdaptiveRouting(makeProviders(), currentConfig, { piInstalled: false });
+		const result = await setupAdaptiveRouting(makeProviders(), currentConfig, {
+			piInstalled: false,
+		});
 
 		expect(result).toBe(currentConfig);
 		expect(packageMocks.installPiPackages).not.toHaveBeenCalled();
@@ -147,12 +166,17 @@ describe("setupAdaptiveRouting", () => {
 	});
 
 	it("skips installation when the user declines and returns the current config when not reconfiguring", async () => {
-		const currentConfig = { mode: "shadow" as const, categories: { "quick-discovery": ["openai"] } };
+		const currentConfig = {
+			mode: "shadow" as const,
+			categories: { "quick-discovery": ["openai"] },
+		};
 		dashboardMocks.detectOptionalRoutingPackages.mockReturnValue([missingPackage("@ifi/pi-provider-ollama")]);
 		dashboardMocks.suggestOptionalRoutingPackages.mockReturnValue(["@ifi/pi-provider-ollama"]);
 		promptState.confirm.push(false, false);
 
-		const result = await setupAdaptiveRouting(makeProviders(), currentConfig, { piInstalled: true });
+		const result = await setupAdaptiveRouting(makeProviders(), currentConfig, {
+			piInstalled: true,
+		});
 
 		expect(result).toBe(currentConfig);
 		expect(packageMocks.installPiPackages).not.toHaveBeenCalled();
@@ -168,7 +192,9 @@ describe("setupAdaptiveRouting", () => {
 		promptState.multiselect.push(["@ifi/pi-provider-ollama"]);
 		promptState.select.push("user");
 
-		const result = await setupAdaptiveRouting(makeProviders(), undefined, { piInstalled: true });
+		const result = await setupAdaptiveRouting(makeProviders(), undefined, {
+			piInstalled: true,
+		});
 
 		expect(result).toBeUndefined();
 		expect(promptState.warns).toEqual(["Error: network unavailable"]);
@@ -181,7 +207,9 @@ describe("setupAdaptiveRouting", () => {
 		promptState.confirm.push(true, false);
 		promptState.multiselect.push([]);
 
-		const result = await setupAdaptiveRouting(makeProviders(), undefined, { piInstalled: true });
+		const result = await setupAdaptiveRouting(makeProviders(), undefined, {
+			piInstalled: true,
+		});
 
 		expect(result).toBeUndefined();
 		expect(packageMocks.installPiPackages).not.toHaveBeenCalled();
@@ -192,7 +220,13 @@ describe("setupAdaptiveRouting", () => {
 		promptState.confirm.push(true, false);
 		promptState.select.push("off", "custom-provider", "custom-provider");
 
-		const result = await setupAdaptiveRouting([{ name: "custom-provider", apiKey: "none", defaultModel: "model-a" }]);
+		const result = await setupAdaptiveRouting([
+			{
+				name: "custom-provider",
+				apiKey: "none",
+				defaultModel: "model-a",
+			},
+		]);
 
 		expect(result).toEqual({
 			mode: "off",
@@ -241,8 +275,11 @@ describe("setupAdaptiveRouting", () => {
 describe("summarizeAdaptiveRouting", () => {
 	it("summarizes configured and missing routing states", () => {
 		expect(summarizeAdaptiveRouting(undefined)).toBe("not configured");
-		expect(summarizeAdaptiveRouting({ mode: "auto", categories: { a: ["openai"], b: ["groq"] } })).toBe(
-			"auto · 2 categories",
-		);
+		expect(
+			summarizeAdaptiveRouting({
+				mode: "auto",
+				categories: { a: ["openai"], b: ["groq"] },
+			}),
+		).toBe("auto · 2 categories");
 	});
 });

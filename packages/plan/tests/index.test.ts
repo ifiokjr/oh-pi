@@ -38,7 +38,12 @@ describe("plan extension", () => {
 			harness.ctx,
 		);
 		expect(inactive.isError).toBe(true);
-		expect(inactive.content).toEqual([{ type: "text", text: "set_plan is only available while plan mode is active." }]);
+		expect(inactive.content).toEqual([
+			{
+				type: "text",
+				text: "set_plan is only available while plan mode is active.",
+			},
+		]);
 	});
 
 	it("rejects empty plans and writes the canonical plan file when active", async () => {
@@ -66,7 +71,12 @@ describe("plan extension", () => {
 
 		const empty = await setPlan.execute("tool-2", { plan: "   " }, new AbortController().signal, () => {}, harness.ctx);
 		expect(empty.isError).toBe(true);
-		expect(empty.content).toEqual([{ type: "text", text: "set_plan requires non-empty plan text." }]);
+		expect(empty.content).toEqual([
+			{
+				type: "text",
+				text: "set_plan requires non-empty plan text.",
+			},
+		]);
 
 		const result = await setPlan.execute(
 			"tool-3",

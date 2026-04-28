@@ -122,9 +122,13 @@ describe("subagent utils", () => {
 			{ type: "tool", name: "bash", args: { command: "ls" } },
 			{ type: "text", text: "Second" },
 		]);
-		expect(extractToolArgsPreview({ tool: "search", server: "docs", args: '{"q":"pi"}' })).toBe(
-			'docs/search {"q":"pi"}',
-		);
+		expect(
+			extractToolArgsPreview({
+				tool: "search",
+				server: "docs",
+				args: '{"q":"pi"}',
+			}),
+		).toBe('docs/search {"q":"pi"}');
 		expect(extractToolArgsPreview({ command: "x".repeat(70) })).toBe(`${"x".repeat(57)}...`);
 		expect(extractToolArgsPreview({ note: "brief detail" })).toBe("note=brief detail");
 		expect(extractToolArgsPreview({})).toBe("");
@@ -141,16 +145,33 @@ describe("subagent utils", () => {
 
 	it("detects recovered and unrecovered tool failures", () => {
 		const recovered = detectSubagentError([
-			{ role: "toolResult", toolName: "bash", content: [{ type: "text", text: "exit code 1" }], isError: true },
-			{ role: "assistant", content: [{ type: "text", text: "Recovered response" }] },
+			{
+				role: "toolResult",
+				toolName: "bash",
+				content: [{ type: "text", text: "exit code 1" }],
+				isError: true,
+			},
+			{
+				role: "assistant",
+				content: [{ type: "text", text: "Recovered response" }],
+			},
 		] as never);
 		expect(recovered).toEqual({ hasError: false });
 
 		const explicitError = detectSubagentError([
 			{ role: "assistant", content: [{ type: "text", text: "Started" }] },
-			{ role: "toolResult", toolName: "read", content: [{ type: "text", text: "permission denied" }], isError: true },
+			{
+				role: "toolResult",
+				toolName: "read",
+				content: [{ type: "text", text: "permission denied" }],
+				isError: true,
+			},
 		] as never);
-		expect(explicitError).toMatchObject({ hasError: true, exitCode: 1, errorType: "read" });
+		expect(explicitError).toMatchObject({
+			hasError: true,
+			exitCode: 1,
+			errorType: "read",
+		});
 
 		const bashExit = detectSubagentError([
 			{
@@ -171,11 +192,20 @@ describe("subagent utils", () => {
 			{
 				role: "toolResult",
 				toolName: "bash",
-				content: [{ type: "text", text: "Connection refused while contacting host" }],
+				content: [
+					{
+						type: "text",
+						text: "Connection refused while contacting host",
+					},
+				],
 				isError: false,
 			},
 		] as never);
-		expect(bashFatal).toMatchObject({ hasError: true, exitCode: 1, errorType: "bash" });
+		expect(bashFatal).toMatchObject({
+			hasError: true,
+			exitCode: 1,
+			errorType: "bash",
+		});
 	});
 
 	it("maps work with concurrency limits and optional staggering", async () => {

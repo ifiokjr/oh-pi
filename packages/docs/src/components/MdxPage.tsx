@@ -1,6 +1,6 @@
-import { Suspense, lazy } from "react";
-import { useParams } from "react-router";
 import type { MdxPageData } from "@/hooks/useMdxPages";
+import { lazy, Suspense } from "react";
+import { useParams } from "react-router";
 
 interface MdxPageProps {
 	page: MdxPageData;

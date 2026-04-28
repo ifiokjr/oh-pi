@@ -15,11 +15,11 @@ interface ActivityHeatmapProps {
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function getColorClass(value: number): string {
-	if (value === 0) {return "bg-zinc-900";}
-	if (value < 0.2) {return "bg-zinc-800";}
-	if (value < 0.4) {return "bg-indigo-900/80";}
-	if (value < 0.6) {return "bg-indigo-700";}
-	if (value < 0.8) {return "bg-indigo-500";}
+	if (value === 0) return "bg-zinc-900";
+	if (value < 0.2) return "bg-zinc-800";
+	if (value < 0.4) return "bg-indigo-900/80";
+	if (value < 0.6) return "bg-indigo-700";
+	if (value < 0.8) return "bg-indigo-500";
 	return "bg-indigo-400";
 }
 

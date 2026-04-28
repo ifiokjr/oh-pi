@@ -13,11 +13,11 @@
  * The scheduling loop models real ant colonies: ants leave nest → forage → return → leave again.
  */
 
+import type { DelegatedSelectionUsageSnapshot } from "@ifi/oh-pi-core";
+import type { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
-import type { DelegatedSelectionUsageSnapshot } from "@ifi/oh-pi-core";
-import type { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { applyConcurrencyCap, buildBudgetPromptSection, planBudget } from "./budget-planner.js";
 import type { BudgetPlan, UsageLimitsEvent } from "./budget-planner.js";
 import { adapt, defaultConcurrency, sampleSystem } from "./concurrency.js";
@@ -915,7 +915,11 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 							caste: "scout",
 							claimedBy: null,
 							createdAt: Date.now(),
-							description: `Multiple ants failed with ${pattern} errors on these files:\n${affectedFiles.map((f) => `- ${f}`).join("\n")}\n\nErrors:\n${entry.errors.map((e) => `- ${e}`).join("\n")}\n\nInvestigate root cause and generate fix tasks.`,
+							description: `Multiple ants failed with ${pattern} errors on these files:\n${affectedFiles
+								.map((f) => `- ${f}`)
+								.join("\n")}\n\nErrors:\n${entry.errors
+								.map((e) => `- ${e}`)
+								.join("\n")}\n\nInvestigate root cause and generate fix tasks.`,
 							error: null,
 							files: affectedFiles,
 							finishedAt: null,
@@ -1009,7 +1013,9 @@ async function runAntWave(opts: WaveOptions): Promise<"ok" | "budget"> {
 			consecutiveRateLimits++;
 			const cur = nest.getStateLight().concurrency;
 			const reduced = Math.max(cur.min, cur.current - 1); // Reduce by 1, don't halve
-			nest.updateState({ concurrency: { ...cur, current: reduced, lastRateLimitAt: Date.now() } });
+			nest.updateState({
+				concurrency: { ...cur, current: reduced, lastRateLimitAt: Date.now() },
+			});
 			backoffMs = Math.min(consecutiveRateLimits * 2000, 10_000);
 		} else {
 			consecutiveRateLimits = 0;
@@ -1076,7 +1082,15 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 		const m = state.metrics;
 		const active = state.ants.filter((a) => a.status === "working").length;
 		const progress = m.tasksTotal > 0 ? m.tasksDone / m.tasksTotal : 0;
-		callbacks.onSignal?.({ active, colonyId: state.id, cost: m.totalCost, message, phase, progress, ...extras });
+		callbacks.onSignal?.({
+			active,
+			colonyId: state.id,
+			cost: m.totalCost,
+			message,
+			phase,
+			progress,
+			...extras,
+		});
 	};
 
 	const waveBase: Omit<WaveOptions, "caste"> & { importGraph?: ImportGraph } = {
@@ -1174,7 +1188,10 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 			const intel = collectScoutIntelligence(nest, 2000);
 			const issueDetail = plan.issues.join(", ");
 			const warningDetail = plan.warnings.length > 0 ? ` | warnings: ${plan.warnings.join(", ")}` : "";
-			const failureContext = `No valid execution plan after ${recoveryRound} recovery rounds. Issues: ${issueDetail}${warningDetail}. Scout intel (${intel.length} chars): ${intel.slice(0, 300)}`;
+			const failureContext = `No valid execution plan after ${recoveryRound} recovery rounds. Issues: ${issueDetail}${warningDetail}. Scout intel (${intel.length} chars): ${intel.slice(
+				0,
+				300,
+			)}`;
 			nest.updateState({ finishedAt: Date.now(), status: "failed" });
 			const finalState = nest.getState();
 			callbacks.onComplete?.(finalState);
@@ -1233,7 +1250,9 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 				nest.updateState({ finishedAt: Date.now(), status: "budget_exceeded" });
 				emitSignal(
 					"budget_exceeded",
-					`Budget exhausted: ${updateMetrics(nest).tasksDone}/${updateMetrics(nest).tasksTotal} tasks completed before limit`,
+					`Budget exhausted: ${updateMetrics(nest).tasksDone}/${
+						updateMetrics(nest).tasksTotal
+					} tasks completed before limit`,
 				);
 				const budgetState = nest.getState();
 				callbacks.onComplete?.(budgetState);
@@ -1267,10 +1286,15 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 					emitSignal("working", `${newTasks.length} new tasks`);
 					const result = await runAntWave({ ...waveBase, caste: "worker" });
 					if (result === "budget") {
-						nest.updateState({ finishedAt: Date.now(), status: "budget_exceeded" });
+						nest.updateState({
+							finishedAt: Date.now(),
+							status: "budget_exceeded",
+						});
 						emitSignal(
 							"budget_exceeded",
-							`Budget exhausted: ${updateMetrics(nest).tasksDone}/${updateMetrics(nest).tasksTotal} tasks completed before limit`,
+							`Budget exhausted: ${updateMetrics(nest).tasksDone}/${
+								updateMetrics(nest).tasksTotal
+							} tasks completed before limit`,
 						);
 						const budgetState = nest.getState();
 						callbacks.onComplete?.(budgetState);
@@ -1307,7 +1331,11 @@ export async function runColony(opts: QueenOptions): Promise<ColonyState> {
 
 		// ═══ Phase 4: Complete ═══
 		const finalMetrics = updateMetrics(nest);
-		nest.updateState({ finishedAt: Date.now(), metrics: finalMetrics, status: "done" });
+		nest.updateState({
+			finishedAt: Date.now(),
+			metrics: finalMetrics,
+			status: "done",
+		});
 		const finalState = nest.getState();
 		callbacks.onComplete?.(finalState);
 		emitSignal("done", `${finalMetrics.tasksDone}/${finalMetrics.tasksTotal} tasks done`);
@@ -1354,10 +1382,20 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		const m = state.metrics;
 		const active = state.ants.filter((a) => a.status === "working").length;
 		const progress = m.tasksTotal > 0 ? m.tasksDone / m.tasksTotal : 0;
-		callbacks.onSignal?.({ active, colonyId: state.id, cost: m.totalCost, message, phase, progress, ...extras });
+		callbacks.onSignal?.({
+			active,
+			colonyId: state.id,
+			cost: m.totalCost,
+			message,
+			phase,
+			progress,
+			...extras,
+		});
 	};
 
-	const waveBase: Omit<WaveOptions, "caste"> & { budgetPlan?: BudgetPlan | null } = {
+	const waveBase: Omit<WaveOptions, "caste"> & {
+		budgetPlan?: BudgetPlan | null;
+	} = {
 		authStorage: opts.authStorage,
 		callbacks,
 		currentModel: opts.currentModel,
@@ -1399,7 +1437,9 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 				nest.updateState({ finishedAt: Date.now(), status: "budget_exceeded" });
 				emitSignal(
 					"budget_exceeded",
-					`Budget exhausted: ${updateMetrics(nest).tasksDone}/${updateMetrics(nest).tasksTotal} tasks completed before limit`,
+					`Budget exhausted: ${updateMetrics(nest).tasksDone}/${
+						updateMetrics(nest).tasksTotal
+					} tasks completed before limit`,
 				);
 				const s = nest.getState();
 				callbacks.onComplete?.(s);
@@ -1425,7 +1465,11 @@ export async function resumeColony(opts: QueenOptions): Promise<ColonyState> {
 		}
 
 		const finalMetrics = updateMetrics(nest);
-		nest.updateState({ finishedAt: Date.now(), metrics: finalMetrics, status: "done" });
+		nest.updateState({
+			finishedAt: Date.now(),
+			metrics: finalMetrics,
+			status: "done",
+		});
 		const finalState = nest.getState();
 		callbacks.onComplete?.(finalState);
 		emitSignal("done", `Resumed: ${finalMetrics.tasksDone}/${finalMetrics.tasksTotal} tasks done`);

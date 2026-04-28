@@ -1,30 +1,30 @@
-import type { AuthCredential, ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import {
+	type Api,
 	type AssistantMessageEventStream,
 	type Context,
-	type Api,
 	type Model,
 	type SimpleStreamOptions,
 	streamSimpleOpenAICompletions,
 } from "@mariozechner/pi-ai";
+import type { AuthCredential, ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import {
-	createOllamaCloudOAuthProvider,
 	type CloudModelsGetter,
+	createOllamaCloudOAuthProvider,
 	loginOllamaCloud,
 	refreshOllamaCloudCredential,
 	refreshOllamaCloudCredentialModels,
 } from "./auth.js";
 import { loadCachedOllamaCloudModels, saveCachedOllamaCloudModels } from "./cache.js";
 import {
+	getOllamaCloudRuntimeConfig,
+	getOllamaLocalRuntimeConfig,
 	OLLAMA_API,
 	OLLAMA_CLOUD_API_KEY_ENV,
 	OLLAMA_CLOUD_PROVIDER,
 	OLLAMA_LOCAL_API_KEY_LITERAL,
 	OLLAMA_LOCAL_PROVIDER,
-	getOllamaCloudRuntimeConfig,
-	getOllamaLocalRuntimeConfig,
 } from "./config.js";
-import { clearOllamaCliStatusCache, getOllamaCliStatus, pullOllamaModel, type OllamaCliStatus } from "./local.js";
+import { clearOllamaCliStatusCache, getOllamaCliStatus, type OllamaCliStatus, pullOllamaModel } from "./local.js";
 import {
 	discoverOllamaCloudModelList,
 	discoverOllamaCloudModels,
@@ -32,10 +32,10 @@ import {
 	getCredentialModels,
 	getFallbackOllamaCloudModels,
 	mergeOllamaLocalCatalog,
-	toDownloadableOllamaLocalModel,
-	toProviderModels,
 	type OllamaCloudCredentials,
 	type OllamaProviderModel,
+	toDownloadableOllamaLocalModel,
+	toProviderModels,
 } from "./models.js";
 
 type RuntimeDiscoveryState = {
@@ -190,7 +190,9 @@ function registerOllamaCommands(pi: ExtensionAPI): void {
 
 			if (action === "refresh-models") {
 				clearOllamaCliStatusCache();
-				const localModels = await refreshRegisteredLocalModels(pi, { forceCli: true });
+				const localModels = await refreshRegisteredLocalModels(pi, {
+					forceCli: true,
+				});
 				const cloudModels = await refreshCloudModels(pi, ctx, credential);
 				ctx.modelRegistry.refresh?.();
 				const cloudStatus = hasCloudAuth(credential)
@@ -256,15 +258,31 @@ function registerOllamaCommands(pi: ExtensionAPI): void {
 	pi.registerCommand("ollama", ollamaCommand);
 
 	const ollamaAliases: Array<{ name: string; subcommand: string; description: string }> = [
-		{ name: "ollama:status", subcommand: "status", description: "Show local and cloud Ollama status." },
+		{
+			name: "ollama:status",
+			subcommand: "status",
+			description: "Show local and cloud Ollama status.",
+		},
 		{
 			name: "ollama:refresh-models",
 			subcommand: "refresh-models",
 			description: "Refresh local and cloud Ollama models.",
 		},
-		{ name: "ollama:models", subcommand: "models", description: "List local and cloud Ollama models." },
-		{ name: "ollama:info", subcommand: "info", description: "Show detailed metadata for one Ollama model." },
-		{ name: "ollama:pull", subcommand: "pull", description: "Download a local Ollama model via the CLI." },
+		{
+			name: "ollama:models",
+			subcommand: "models",
+			description: "List local and cloud Ollama models.",
+		},
+		{
+			name: "ollama:info",
+			subcommand: "info",
+			description: "Show detailed metadata for one Ollama model.",
+		},
+		{
+			name: "ollama:pull",
+			subcommand: "pull",
+			description: "Download a local Ollama model via the CLI.",
+		},
 	];
 
 	for (const alias of ollamaAliases) {
@@ -631,7 +649,11 @@ function collectOllamaModels(credential: OllamaCloudCredentials | null): Collect
 	const cloudConfig = getOllamaCloudRuntimeConfig();
 	const cloudModels = getCloudModels(credential);
 	return [
-		...cloudModels.map((model) => ({ ...model, provider: OLLAMA_CLOUD_PROVIDER, baseUrl: cloudConfig.apiUrl })),
+		...cloudModels.map((model) => ({
+			...model,
+			provider: OLLAMA_CLOUD_PROVIDER,
+			baseUrl: cloudConfig.apiUrl,
+		})),
 		...getRegisteredLocalModels().map((model) => ({
 			...model,
 			provider: OLLAMA_LOCAL_PROVIDER,
@@ -738,7 +760,9 @@ function renderModelList(models: CollectedOllamaModel[]): string {
 					.sort((left, right) => sortCollectedModels(left, right))
 					.map(
 						(model) =>
-							`  ${sourceIcon(model.provider)} ${model.provider}/${model.id} — ${model.name}${renderModelBadges(model)} · ${model.contextWindow.toLocaleString()} ctx`,
+							`  ${sourceIcon(model.provider)} ${model.provider}/${model.id} — ${model.name}${renderModelBadges(
+								model,
+							)} · ${model.contextWindow.toLocaleString()} ctx`,
 					),
 			].join("\n"),
 		)
@@ -910,7 +934,9 @@ async function primeOllamaCloudModelsBeforeRegistration(): Promise<void> {
 	timeout.unref?.();
 	try {
 		const apiKey = process.env[OLLAMA_CLOUD_API_KEY_ENV]?.trim();
-		const discoveredModels = await discoverOllamaCloudModelList(apiKey, { signal: abortController.signal });
+		const discoveredModels = await discoverOllamaCloudModelList(apiKey, {
+			signal: abortController.signal,
+		});
 		if (!discoveredModels) return;
 		cloudEnvDiscoveryState.models = mergeOllamaModelCatalogs(discoveredModels, getInitialOllamaCloudModels());
 		cloudEnvDiscoveryState.lastError = null;
@@ -925,7 +951,10 @@ async function primeOllamaCloudModelsBeforeRegistration(): Promise<void> {
 
 function bootstrapOllamaProviders(
 	pi: ExtensionAPI,
-	scheduleRefreshes: { scheduleCloudBootstrapRefresh: () => void; scheduleLocalBootstrapRefresh: () => void },
+	scheduleRefreshes: {
+		scheduleCloudBootstrapRefresh: () => void;
+		scheduleLocalBootstrapRefresh: () => void;
+	},
 ): void {
 	registerOllamaCloudProvider(pi);
 	registerOllamaLocalProvider(pi);
@@ -934,6 +963,7 @@ function bootstrapOllamaProviders(
 }
 
 export {
+	type CloudModelsGetter,
 	createOllamaCloudOAuthProvider,
 	discoverOllamaCloudModelList,
 	discoverOllamaCloudModels,
@@ -942,9 +972,8 @@ export {
 	getFallbackOllamaCloudModels,
 	loginOllamaCloud,
 	refreshOllamaCloudCredential,
-	type CloudModelsGetter,
 };
-export { toOllamaModel, toOllamaCloudModel, type OllamaCloudCredentials, type OllamaProviderModel } from "./models.js";
+export { type OllamaCloudCredentials, type OllamaProviderModel, toOllamaCloudModel, toOllamaModel } from "./models.js";
 
 export default async function ollamaProviderExtension(pi: ExtensionAPI): Promise<void> {
 	await primeOllamaCloudModelsBeforeRegistration();

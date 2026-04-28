@@ -3,17 +3,36 @@ import { buildCompletionKey, getGlobalSeenMap, markSeenWithTtl } from "../comple
 
 describe("buildCompletionKey", () => {
 	it("uses id as canonical key when present", () => {
-		const key = buildCompletionKey({ id: "run-123", agent: "reviewer", timestamp: 123 }, "fallback");
+		const key = buildCompletionKey(
+			{
+				id: "run-123",
+				agent: "reviewer",
+				timestamp: 123,
+			},
+			"fallback",
+		);
 		expect(key).toBe("id:run-123");
 	});
 
 	it("builds deterministic fallback key when id is missing", () => {
 		const a = buildCompletionKey(
-			{ agent: "reviewer", timestamp: 123, taskIndex: 1, totalTasks: 2, success: true },
+			{
+				agent: "reviewer",
+				timestamp: 123,
+				taskIndex: 1,
+				totalTasks: 2,
+				success: true,
+			},
 			"x",
 		);
 		const b = buildCompletionKey(
-			{ agent: "reviewer", timestamp: 123, taskIndex: 1, totalTasks: 2, success: true },
+			{
+				agent: "reviewer",
+				timestamp: 123,
+				taskIndex: 1,
+				totalTasks: 2,
+				success: true,
+			},
 			"x",
 		);
 		expect(a).toBe(b);

@@ -17,7 +17,11 @@ describe("ollama cloud auth", () => {
 	it("opens the keys page and exchanges a pasted API key for a static credential with discovered models", async () => {
 		const backend = await createTestOllamaBackend();
 		backend.setModels([
-			{ id: "gpt-oss:120b", capabilities: ["completion", "tools", "thinking"], contextWindow: 131072 },
+			{
+				id: "gpt-oss:120b",
+				capabilities: ["completion", "tools", "thinking"],
+				contextWindow: 131072,
+			},
 		]);
 		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
 		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;

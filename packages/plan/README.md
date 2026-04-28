@@ -2,9 +2,7 @@
 
 Planning mode extension for pi.
 
-Built on top of the planning workflow from
-[`sids/pi-extensions/plan-md`](https://github.com/sids/pi-extensions/tree/main/plan-md) and adapted for
-oh-pi.
+Built on top of the planning workflow from [`sids/pi-extensions/plan-md`](https://github.com/sids/pi-extensions/tree/main/plan-md) and adapted for oh-pi.
 
 ## Installation
 

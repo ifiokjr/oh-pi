@@ -102,7 +102,13 @@ export function handleWebSocketConnection(ws: WebSocket, options: WsHandlerOptio
 		const agentSession = options.getSession();
 
 		if (!agentSession) {
-			send({ command: msg.type, error: "No session attached", id: msg.id, success: false, type: "response" });
+			send({
+				command: msg.type,
+				error: "No session attached",
+				id: msg.id,
+				success: false,
+				type: "response",
+			});
 			return;
 		}
 
@@ -223,7 +229,11 @@ async function dispatchCommand(
 		}
 
 		default: {
-			respond({ command: msg.type as string, error: `Unknown command: ${msg.type}`, success: false });
+			respond({
+				command: msg.type as string,
+				error: `Unknown command: ${msg.type}`,
+				success: false,
+			});
 		}
 	}
 }

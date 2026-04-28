@@ -1,5 +1,5 @@
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { requirePiTuiModule } from "@ifi/pi-shared-qna";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { resolveActivePlanFilePath } from "./plan-files";
 import type { PlanModeState } from "./types";
 import { createInactivePlanModeState, isPlanModeState } from "./utils";
@@ -90,7 +90,9 @@ export function createPlanModeStateManager(pi: ExtensionAPI) {
 		}
 
 		if (!state.active) {
-			ctx.ui.setWidget(BANNER_WIDGET_KEY, undefined, { placement: "aboveEditor" });
+			ctx.ui.setWidget(BANNER_WIDGET_KEY, undefined, {
+				placement: "aboveEditor",
+			});
 			return;
 		}
 
@@ -104,7 +106,10 @@ export function createPlanModeStateManager(pi: ExtensionAPI) {
 					const activePlanFilePath = resolveActivePlanFilePath(ctx, state.planFilePath);
 					const lines = [
 						truncateToWidth(
-							`${theme.fg("warning", theme.bold(" Plan mode active"))}${theme.fg("muted", "; `/plan` to exit. `/plan <location>` to move plan file.")}`,
+							`${theme.fg("warning", theme.bold(" Plan mode active"))}${theme.fg(
+								"muted",
+								"; `/plan` to exit. `/plan <location>` to move plan file.",
+							)}`,
 							safeWidth,
 						),
 						...wrapTextWithAnsi(theme.fg("dim", ` Plan file: ${activePlanFilePath}`), safeWidth),

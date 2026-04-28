@@ -11,6 +11,7 @@
  * - "api" → real data from the server
  */
 
+import { stringToColor } from "@/lib/utils";
 import type {
 	AggregationLevel,
 	CodebaseContribution,
@@ -19,12 +20,11 @@ import type {
 	ModelUsageData,
 	ProviderComparisonData,
 	RateLimitTrend,
-	TimeRange,
 	TimelineData,
+	TimeRange,
 	TopModelStat,
 	UsageInsight,
 } from "@/types";
-import { stringToColor } from "@/lib/utils";
 
 // ─── API Mode ─────────────────────────────────────────────────────────────────
 
@@ -52,8 +52,18 @@ async function fetchApi<T>(path: string, params?: Record<string, string>): Promi
 const MOCK_DATA = {
 	codebases: [
 		{ id: "cb1", name: "oh-pi", path: "/dev/projects/oh-pi", totalCost: 45.32 },
-		{ id: "cb2", name: "e-com", path: "/dev/projects/e-commerce", totalCost: 23.15 },
-		{ id: "cb3", name: "api", path: "/dev/projects/api-service", totalCost: 12.89 },
+		{
+			id: "cb2",
+			name: "e-com",
+			path: "/dev/projects/e-commerce",
+			totalCost: 23.15,
+		},
+		{
+			id: "cb3",
+			name: "api",
+			path: "/dev/projects/api-service",
+			totalCost: 12.89,
+		},
 		{ id: "cb4", name: "docs", path: "/dev/projects/docs", totalCost: 5.44 },
 	],
 	models: [
@@ -417,11 +427,19 @@ const mockApi = {
 
 const realApi = {
 	async exportData(format: "json" | "csv", timeRange: TimeRange) {
-		const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", all: "365" }[timeRange];
+		const days = {
+			"7d": "7",
+			"30d": "30",
+			"90d": "90",
+			"1y": "365",
+			all: "365",
+		}[timeRange];
 		const data = await fetchApi("/api/overview", { days });
 
 		if (format === "json") {
-			const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+			const blob = new Blob([JSON.stringify(data, null, 2)], {
+				type: "application/json",
+			});
 			return URL.createObjectURL(blob);
 		}
 
@@ -442,7 +460,13 @@ const realApi = {
 	},
 
 	async getCodebaseContributions(timeRange: TimeRange): Promise<CodebaseContribution[]> {
-		const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", all: "365" }[timeRange];
+		const days = {
+			"7d": "7",
+			"30d": "30",
+			"90d": "90",
+			"1y": "365",
+			all: "365",
+		}[timeRange];
 		const data = await fetchApi<{
 			codebases: Array<{
 				id: string;
@@ -503,9 +527,19 @@ const realApi = {
 	},
 
 	async getMisspellings(timeRange: TimeRange) {
-		const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", all: "365" }[timeRange];
+		const days = {
+			"7d": "7",
+			"30d": "30",
+			"90d": "90",
+			"1y": "365",
+			all: "365",
+		}[timeRange];
 		const data = await fetchApi<{
-			misspellings: Array<{ misspelledWord: string; correctedWord: string; occurrenceCount: number }>;
+			misspellings: Array<{
+				misspelledWord: string;
+				correctedWord: string;
+				occurrenceCount: number;
+			}>;
 		}>("/api/misspellings", { days });
 		return (data.misspellings ?? []).map((m) => ({
 			misspelled: m.misspelledWord,
@@ -515,7 +549,13 @@ const realApi = {
 	},
 
 	async getModelUsage(timeRange: TimeRange): Promise<ModelUsageData[]> {
-		const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", all: "365" }[timeRange];
+		const days = {
+			"7d": "7",
+			"30d": "30",
+			"90d": "90",
+			"1y": "365",
+			all: "365",
+		}[timeRange];
 		const data = await fetchApi<{
 			models: Array<{
 				id: string;
@@ -576,7 +616,13 @@ const realApi = {
 	},
 
 	async getSummaryForRange(timeRange: TimeRange) {
-		const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", all: "365" }[timeRange];
+		const days = {
+			"7d": "7",
+			"30d": "30",
+			"90d": "90",
+			"1y": "365",
+			all: "365",
+		}[timeRange];
 		return fetchApi("/api/overview", { days });
 	},
 
@@ -591,7 +637,13 @@ const realApi = {
 	},
 
 	async getTimelineData(timeRange: TimeRange, _aggregation: AggregationLevel = "day") {
-		const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", all: "365" }[timeRange];
+		const days = {
+			"7d": "7",
+			"30d": "30",
+			"90d": "90",
+			"1y": "365",
+			all: "365",
+		}[timeRange];
 		const data = await fetchApi<{
 			dailyStats: Array<{
 				dayBucket: string;
@@ -628,7 +680,13 @@ const realApi = {
 	},
 
 	async getTopWords(modelId: string | undefined, timeRange: TimeRange) {
-		const days = { "7d": "7", "30d": "30", "90d": "90", "1y": "365", all: "365" }[timeRange];
+		const days = {
+			"7d": "7",
+			"30d": "30",
+			"90d": "90",
+			"1y": "365",
+			all: "365",
+		}[timeRange];
 		const params: Record<string, string> = { days };
 		if (modelId) params.model_id = modelId;
 		const data = await fetchApi<{ words: Array<{ word: string; count: number }> }>("/api/words", params);

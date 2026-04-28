@@ -16,7 +16,11 @@ describe("discovery service", () => {
 	it("registers, updates, lists, and unregisters records", async () => {
 		let now = 1_000;
 		const directory = await createTempDir();
-		const service = createDiscoveryService({ directory, now: () => now, ttlMs: 100 });
+		const service = createDiscoveryService({
+			directory,
+			now: () => now,
+			ttlMs: 100,
+		});
 
 		const first = await service.register({
 			connectUrl: "https://pi-remote.dev/?host=https%3A%2F%2Fpi.tailnet.ts.net%2Fpi%2Ffox-42%2F&t=redacted",
@@ -31,7 +35,9 @@ describe("discovery service", () => {
 		expect(first.startedAt).toBe(1_000);
 
 		now = 1_050;
-		const updated = await service.heartbeat(first.id, { cwd: "/workspace/two" });
+		const updated = await service.heartbeat(first.id, {
+			cwd: "/workspace/two",
+		});
 		expect(updated?.cwd).toBe("/workspace/two");
 		expect(updated?.startedAt).toBe(1_000);
 		expect(updated?.lastSeenAt).toBe(1_050);
@@ -59,8 +65,17 @@ describe("discovery service", () => {
 	it("ignores malformed discovery files and prunes stale records", async () => {
 		let now = 100;
 		const directory = await createTempDir();
-		const service = createDiscoveryService({ directory, now: () => now, ttlMs: 10 });
-		await service.register({ cwd: "/workspace", instanceId: "bear-20", localUrl: "http://localhost:3000", pid: 7 });
+		const service = createDiscoveryService({
+			directory,
+			now: () => now,
+			ttlMs: 10,
+		});
+		await service.register({
+			cwd: "/workspace",
+			instanceId: "bear-20",
+			localUrl: "http://localhost:3000",
+			pid: 7,
+		});
 		await writeFile(join(directory, "broken.json"), "{not json", "utf8");
 
 		now = 200;
@@ -131,7 +146,10 @@ describe("discovery rendering", () => {
 			],
 		};
 
-		const server = await startDiscoveryHttpServer(service as never, { host: "127.0.0.1", port: 0 });
+		const server = await startDiscoveryHttpServer(service as never, {
+			host: "127.0.0.1",
+			port: 0,
+		});
 		try {
 			const html = await fetch(`http://${server.host}:${server.port}/`);
 			expect(html.status).toBe(200);
@@ -144,18 +162,25 @@ describe("discovery rendering", () => {
 			await server.stop();
 		}
 
-		const defaultServer = await startDiscoveryHttpServer(service as never, { port: 0 });
+		const defaultServer = await startDiscoveryHttpServer(service as never, {
+			port: 0,
+		});
 		try {
 			const listener = defaultServer.server.listeners("request")[0] as (
 				request: { url?: string },
-				response: { writeHead: (status: number, headers: Record<string, string>) => void; end: (body: string) => void },
+				response: {
+					writeHead: (status: number, headers: Record<string, string>) => void;
+					end: (body: string) => void;
+				},
 			) => Promise<void>;
 			const response = {
 				end: vi.fn(),
 				writeHead: vi.fn(),
 			};
 			await listener({}, response);
-			expect(response.writeHead).toHaveBeenCalledWith(200, { "content-type": "text/html; charset=utf-8" });
+			expect(response.writeHead).toHaveBeenCalledWith(200, {
+				"content-type": "text/html; charset=utf-8",
+			});
 			expect(response.end).toHaveBeenCalledWith(expect.stringContaining("Active pi remote sessions"));
 		} finally {
 			await defaultServer.stop();

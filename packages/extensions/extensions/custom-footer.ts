@@ -12,10 +12,10 @@
  * The footer auto-refreshes every 30 seconds and on git branch changes.
  */
 
-import path from "node:path";
 import type { AssistantMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext, ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth } from "@mariozechner/pi-tui";
+import path from "node:path";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode";
 import { recordRuntimeSample } from "./watchdog-runtime-diagnostics";
 import {
@@ -240,7 +240,11 @@ export default function (pi: ExtensionAPI) {
 					return;
 				}
 				try {
-					const parsed = JSON.parse(stdout.trim()) as { number?: number; url?: string; headRefName?: string }[];
+					const parsed = JSON.parse(stdout.trim()) as {
+						number?: number;
+						url?: string;
+						headRefName?: string;
+					}[];
 					updateCachedPrs(parsed.filter((entry): entry is PrInfo => Boolean(entry.number) && Boolean(entry.url)));
 				} catch {
 					updateCachedPrs([]);
@@ -259,7 +263,10 @@ export default function (pi: ExtensionAPI) {
 		sessionStart = Date.now();
 		activeCtx = ctx;
 		scheduleUsageTotalsRefresh(ctx);
-		scheduleWorktreeContextRefresh(worktreeCwd, { delayMs: FOOTER_STARTUP_REFRESH_DELAY_MS, force: true });
+		scheduleWorktreeContextRefresh(worktreeCwd, {
+			delayMs: FOOTER_STARTUP_REFRESH_DELAY_MS,
+			force: true,
+		});
 
 		ctx.ui.setFooter((tui, theme, footerData) => {
 			activeFooterData = footerData;
@@ -273,7 +280,10 @@ export default function (pi: ExtensionAPI) {
 				tui.requestRender();
 			});
 			cachedWorktreeContext = getCachedRepoWorktreeContext(worktreeCwd);
-			scheduleWorktreeContextRefresh(worktreeCwd, { delayMs: FOOTER_STARTUP_REFRESH_DELAY_MS, force: true });
+			scheduleWorktreeContextRefresh(worktreeCwd, {
+				delayMs: FOOTER_STARTUP_REFRESH_DELAY_MS,
+				force: true,
+			});
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
 			const timer = setInterval(() => {
 				probeActivePrs();
@@ -318,7 +328,9 @@ export default function (pi: ExtensionAPI) {
 					const worktreeStr = worktreeContext?.isLinkedWorktree
 						? theme.fg(
 								worktreeContext.current?.isManaged ? "warning" : "muted",
-								`wt ${worktreeContext.current?.branch ?? path.basename(worktreeContext.currentWorktreeRoot)}${worktreeContext.current?.isManaged ? " pi" : ""}`,
+								`wt ${
+									worktreeContext.current?.branch ?? path.basename(worktreeContext.currentWorktreeRoot)
+								}${worktreeContext.current?.isManaged ? " pi" : ""}`,
 							)
 						: "";
 
@@ -424,10 +436,19 @@ export default function (pi: ExtensionAPI) {
 		lines.push(`  ${divider}`);
 		const elapsed = formatElapsed(Date.now() - sessionStart);
 		lines.push(
-			`  ${theme.fg("accent", "Session")}${sep}${elapsed}${sep}${theme.fg("warning", `$${usageTotals.cost.toFixed(2)}`)}`,
+			`  ${theme.fg("accent", "Session")}${sep}${elapsed}${sep}${theme.fg(
+				"warning",
+				`$${usageTotals.cost.toFixed(2)}`,
+			)}`,
 		);
 		lines.push(
-			`  ${theme.fg("accent", "Tokens")}${sep}${theme.fg("success", fmt(usageTotals.input))} in${sep}${theme.fg("warning", fmt(usageTotals.output))} out${sep}${theme.fg("dim", fmt(usageTotals.input + usageTotals.output))} total`,
+			`  ${theme.fg("accent", "Tokens")}${sep}${theme.fg(
+				"success",
+				fmt(usageTotals.input),
+			)} in${sep}${theme.fg("warning", fmt(usageTotals.output))} out${sep}${theme.fg(
+				"dim",
+				fmt(usageTotals.input + usageTotals.output),
+			)} total`,
 		);
 
 		// ── Context window ──
@@ -437,7 +458,10 @@ export default function (pi: ExtensionAPI) {
 			const pctColor = pct > 75 ? "error" : pct > 50 ? "warning" : "success";
 			const tokens = usage.tokens == null ? "?" : fmt(usage.tokens);
 			lines.push(
-				`  ${theme.fg("accent", "Context")}${sep}${theme.fg(pctColor, `${pct.toFixed(0)}% used`)}${sep}${tokens} / ${fmt(usage.contextWindow)} tokens`,
+				`  ${theme.fg("accent", "Context")}${sep}${theme.fg(
+					pctColor,
+					`${pct.toFixed(0)}% used`,
+				)}${sep}${tokens} / ${fmt(usage.contextWindow)} tokens`,
 			);
 		}
 		lines.push("");
@@ -451,7 +475,13 @@ export default function (pi: ExtensionAPI) {
 			lines.push(`  ${theme.fg("accent", "Repo Root")}${sep}${worktreeContext.repoRoot}`);
 			lines.push(`  ${theme.fg("accent", "Worktree Root")}${sep}${worktreeContext.currentWorktreeRoot}`);
 			lines.push(
-				`  ${theme.fg("accent", "Worktree Kind")}${sep}${worktreeContext.isLinkedWorktree ? (worktreeContext.current?.isManaged ? "pi-owned linked worktree" : "external linked worktree") : "main checkout"}`,
+				`  ${theme.fg("accent", "Worktree Kind")}${sep}${
+					worktreeContext.isLinkedWorktree
+						? worktreeContext.current?.isManaged
+							? "pi-owned linked worktree"
+							: "external linked worktree"
+						: "main checkout"
+				}`,
 			);
 			if (worktreeContext.current?.metadata) {
 				lines.push(`  ${theme.fg("accent", "Purpose")}${sep}${worktreeContext.current.metadata.purpose}`);
@@ -461,7 +491,11 @@ export default function (pi: ExtensionAPI) {
 
 		if (worktreeSnapshot) {
 			lines.push(
-				`  ${theme.fg("accent", "Worktrees")}${sep}${worktreeSnapshot.worktrees.length} total${worktreeSnapshot.staleManagedWorktrees.length > 0 ? `${sep}${worktreeSnapshot.staleManagedWorktrees.length} stale pi record(s)` : ""}`,
+				`  ${theme.fg("accent", "Worktrees")}${sep}${worktreeSnapshot.worktrees.length} total${
+					worktreeSnapshot.staleManagedWorktrees.length > 0
+						? `${sep}${worktreeSnapshot.staleManagedWorktrees.length} stale pi record(s)`
+						: ""
+				}`,
 			);
 		}
 
@@ -500,7 +534,9 @@ export default function (pi: ExtensionAPI) {
 			lines.push(`  ${divider}`);
 			const source = safeMode.auto ? "watchdog" : (safeMode.source ?? "manual");
 			lines.push(
-				`  ${theme.fg("warning", "⚠ Safe mode ON")}${sep}source: ${source}${safeMode.reason ? `${sep}${safeMode.reason}` : ""}`,
+				`  ${theme.fg("warning", "⚠ Safe mode ON")}${sep}source: ${source}${
+					safeMode.reason ? `${sep}${safeMode.reason}` : ""
+				}`,
 			);
 			lines.push("");
 		}

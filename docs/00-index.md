@@ -19,9 +19,7 @@
 
 ### What is Pi?
 
-A minimalist terminal coding agent tool. Gives the LLM four tools by default (read/bash/edit/write)
-and extends capabilities via Extensions, Skills, Prompt Templates, and Themes. Does not ship
-built-in sub-agents, plan mode, MCP, or permission popups — all implemented through extensions.
+A minimalist terminal coding agent tool. Gives the LLM four tools by default (read/bash/edit/write) and extends capabilities via Extensions, Skills, Prompt Templates, and Themes. Does not ship built-in sub-agents, plan mode, MCP, or permission popups — all implemented through extensions.
 
 ### Four-Layer Extension Architecture
 

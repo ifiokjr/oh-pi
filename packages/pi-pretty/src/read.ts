@@ -1,10 +1,10 @@
-import type { ExtensionAPI, AgentToolResult } from "@mariozechner/pi-coding-agent";
+import type { AgentToolResult, ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createReadTool } from "@mariozechner/pi-coding-agent";
 import { codeToANSI } from "@shikijs/cli";
-import type { BundledLanguage } from "shiki";
 import { basename, extname } from "node:path";
-import { envInt, lnum, fillToolBackground, FG_DIM } from "./theme.js";
+import type { BundledLanguage } from "shiki";
 import { detectImageProtocol } from "./image-inline.js";
+import { envInt, FG_DIM, fillToolBackground, lnum } from "./theme.js";
 
 const MAX_HL_CHARS = envInt("PRETTY_MAX_HL_CHARS", 80_000);
 

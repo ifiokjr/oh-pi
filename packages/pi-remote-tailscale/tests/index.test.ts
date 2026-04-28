@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createExtensionHarness } from "../../../test-utils/extension-runtime-harness.js";
 import { main, parseArgs } from "../src/cli.js";
-import { appendTokenQuery, createQrRenderer, renderTokenQr, splitQrOutput } from "../src/qr.js";
 import { buildPiCommand, buildRemotePtyEnv, createPtyProcess } from "../src/pty.js";
+import { appendTokenQuery, createQrRenderer, renderTokenQr, splitQrOutput } from "../src/qr.js";
 import { createRemoteWidgetController, formatStatusText, formatWidgetLines } from "../src/widget.js";
 
 const serverModule = vi.hoisted(() => ({
@@ -66,7 +66,9 @@ async function loadExtension() {
 beforeEach(() => {
 	vi.useFakeTimers();
 	(
-		globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_QR_LOADER__?: () => Promise<any> }
+		globalThis as typeof globalThis & {
+			__PI_REMOTE_TAILSCALE_QR_LOADER__?: () => Promise<any>;
+		}
 	).__PI_REMOTE_TAILSCALE_QR_LOADER__ = vi.fn(async () => ({
 		generate: (_url: string, _options?: { small?: boolean }, callback?: (output: string) => void) => {
 			callback?.("██\n██");
@@ -75,8 +77,11 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-	delete (globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_QR_LOADER__?: () => Promise<any> })
-		.__PI_REMOTE_TAILSCALE_QR_LOADER__;
+	delete (
+		globalThis as typeof globalThis & {
+			__PI_REMOTE_TAILSCALE_QR_LOADER__?: () => Promise<any>;
+		}
+	).__PI_REMOTE_TAILSCALE_QR_LOADER__;
 	vi.clearAllMocks();
 	vi.useRealTimers();
 	vi.resetModules();
@@ -118,8 +123,11 @@ describe("pi-remote-tailscale extension", () => {
 			expect.objectContaining({ placement: "belowEditor" }),
 		);
 
-		const qrLoader = (globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_QR_LOADER__?: any })
-			.__PI_REMOTE_TAILSCALE_QR_LOADER__ as ReturnType<typeof vi.fn>;
+		const qrLoader = (
+			globalThis as typeof globalThis & {
+				__PI_REMOTE_TAILSCALE_QR_LOADER__?: any;
+			}
+		).__PI_REMOTE_TAILSCALE_QR_LOADER__ as ReturnType<typeof vi.fn>;
 		expect(setWidget.mock.invocationCallOrder[0]).toBeLessThan(qrLoader.mock.invocationCallOrder[0]);
 
 		await harness.commands.get("remote").handler(undefined, harness.ctx);
@@ -282,7 +290,10 @@ describe("qr helpers", () => {
 			}),
 		};
 		const loadCallbackModule = vi.fn(async () => callbackModule) as unknown as () => Promise<any>;
-		const renderer = createQrRenderer({ loadModule: loadCallbackModule, maxCacheEntries: 2 });
+		const renderer = createQrRenderer({
+			loadModule: loadCallbackModule,
+			maxCacheEntries: 2,
+		});
 
 		expect(appendTokenQuery("http://localhost:3100", "secret")).toBe("http://localhost:3100/?t=secret");
 		expect(splitQrOutput("A\nB\n")).toEqual(["A", "B"]);
@@ -329,7 +340,13 @@ describe("pty helpers", () => {
 		expect(buildRemotePtyEnv({ FOO: "bar" }).PI_REMOTE_TAILSCALE_MODE).toBe("remote");
 
 		const handle = await createPtyProcess(
-			{ args: ["--session", "123"], command: "pi", columns: 80, cwd: "/tmp/demo", rows: 24 },
+			{
+				args: ["--session", "123"],
+				command: "pi",
+				columns: 80,
+				cwd: "/tmp/demo",
+				rows: 24,
+			},
 			{ loadModule },
 		);
 		const offData = handle.onData((data) => {
@@ -358,13 +375,18 @@ describe("pty helpers", () => {
 		expect(pty.off).toHaveBeenCalledTimes(2);
 
 		(
-			globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_PTY_LOADER__?: () => Promise<any> }
+			globalThis as typeof globalThis & {
+				__PI_REMOTE_TAILSCALE_PTY_LOADER__?: () => Promise<any>;
+			}
 		).__PI_REMOTE_TAILSCALE_PTY_LOADER__ = async () => ({
 			spawn: vi.fn(() => pty),
 		});
 		await createPtyProcess({ command: "pi" });
-		delete (globalThis as typeof globalThis & { __PI_REMOTE_TAILSCALE_PTY_LOADER__?: () => Promise<any> })
-			.__PI_REMOTE_TAILSCALE_PTY_LOADER__;
+		delete (
+			globalThis as typeof globalThis & {
+				__PI_REMOTE_TAILSCALE_PTY_LOADER__?: () => Promise<any>;
+			}
+		).__PI_REMOTE_TAILSCALE_PTY_LOADER__;
 	});
 });
 
@@ -409,7 +431,13 @@ describe("cli helpers", () => {
 		expect(log).toHaveBeenCalledWith(expect.stringContaining("PI_REMOTE_TAILSCALE_MODE"));
 
 		log.mockClear();
-		expect(await main(["node", "cli.js", "--cwd", "/tmp/demo"], { error, log, startPty })).toBe(0);
+		expect(
+			await main(["node", "cli.js", "--cwd", "/tmp/demo"], {
+				error,
+				log,
+				startPty,
+			}),
+		).toBe(0);
 		expect(startPty).toHaveBeenCalledWith(
 			expect.objectContaining({
 				command: "pi",

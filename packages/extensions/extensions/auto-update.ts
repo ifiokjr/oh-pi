@@ -5,13 +5,13 @@
  * If a newer version is found, shows a toast notification with upgrade instructions.
  * The check runs in a `setTimeout` to avoid blocking session startup.
  */
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { execFile } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 const IS_WINDOWS = process.platform === "win32";
 
@@ -77,7 +77,9 @@ async function getCurrentVersion(): Promise<string | null> {
 		const currentDir = import.meta.dirname;
 		const pkgPath = join(currentDir, "..", "..", "package.json");
 		if (existsSync(pkgPath)) {
-			const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: unknown };
+			const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
+				version?: unknown;
+			};
 			return typeof pkg.version === "string" ? pkg.version : null;
 		}
 	} catch {

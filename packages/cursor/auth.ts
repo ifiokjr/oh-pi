@@ -79,7 +79,9 @@ export async function refreshCursorToken(
 			expires: getTokenExpiry(data.accessToken),
 			refresh: data.refreshToken || credentials.refresh,
 		},
-		{ previous: options.preserveModels === false ? undefined : (credentials as CursorCredentials) },
+		{
+			previous: options.preserveModels === false ? undefined : (credentials as CursorCredentials),
+		},
 	);
 }
 
@@ -154,11 +156,17 @@ async function pollCursorAuth(
 				continue;
 			}
 			if (response.ok) {
-				const data = (await response.json()) as { accessToken?: string; refreshToken?: string };
+				const data = (await response.json()) as {
+					accessToken?: string;
+					refreshToken?: string;
+				};
 				if (!data.accessToken || !data.refreshToken) {
 					throw new Error("Cursor auth poll response was missing tokens.");
 				}
-				return { accessToken: data.accessToken, refreshToken: data.refreshToken };
+				return {
+					accessToken: data.accessToken,
+					refreshToken: data.refreshToken,
+				};
 			}
 			throw new Error(`Cursor auth polling failed with status ${response.status}.`);
 		} catch (error) {

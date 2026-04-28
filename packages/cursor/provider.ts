@@ -1,16 +1,28 @@
-import { randomUUID } from "node:crypto";
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import {
-	calculateCost,
-	createAssistantMessageEventStream,
-	getEnvApiKey,
 	type AssistantMessage,
 	type AssistantMessageEventStream,
+	calculateCost,
 	type Context,
+	createAssistantMessageEventStream,
+	getEnvApiKey,
 	type Model,
 	type SimpleStreamOptions,
 	type ToolCall,
 } from "@mariozechner/pi-ai";
+import { randomUUID } from "node:crypto";
+import { CURSOR_RUN_PATH } from "./config.js";
+import {
+	buildCursorRequestPayload,
+	decodeMcpArgsMap,
+	makeHeartbeatFrame,
+	parseCursorConversation,
+	type PendingExec,
+	sendExecResult,
+	sendKvBlobResponse,
+	sendRequestContextResult,
+	type ToolResultInfo,
+} from "./messages.js";
 import {
 	AgentServerMessageSchema,
 	BackgroundShellSpawnResultSchema,
@@ -18,6 +30,7 @@ import {
 	DeleteRejectedSchema,
 	DeleteResultSchema,
 	DiagnosticsResultSchema,
+	type ExecServerMessage,
 	FetchErrorSchema,
 	FetchResultSchema,
 	GrepErrorSchema,
@@ -35,21 +48,9 @@ import {
 	WriteResultSchema,
 	WriteShellStdinErrorSchema,
 	WriteShellStdinResultSchema,
-	type ExecServerMessage,
 } from "./proto/agent_pb.js";
 import {
-	buildCursorRequestPayload,
-	decodeMcpArgsMap,
-	makeHeartbeatFrame,
-	parseCursorConversation,
-	sendExecResult,
-	sendKvBlobResponse,
-	sendRequestContextResult,
-	type PendingExec,
-	type ToolResultInfo,
-} from "./messages.js";
-import { CURSOR_RUN_PATH } from "./config.js";
-import {
+	type ActiveCursorRun,
 	cleanupCursorRuntimeState,
 	deleteActiveRun,
 	deriveBridgeKey,
@@ -59,7 +60,6 @@ import {
 	getConversationState,
 	setActiveRun,
 	upsertConversationState,
-	type ActiveCursorRun,
 } from "./runtime.js";
 import {
 	createConnectFrameParser,
@@ -114,7 +114,14 @@ export const streamSimpleCursor = (
 			const activeRun = parsed.trailingToolResults.length > 0 ? getActiveRun(bridgeKey) : undefined;
 			if (activeRun) {
 				await resumeActiveRun(
-					{ bridgeKey, conversationKey, model, output, stream, signal: options?.signal },
+					{
+						bridgeKey,
+						conversationKey,
+						model,
+						output,
+						stream,
+						signal: options?.signal,
+					},
 					activeRun,
 					parsed.trailingToolResults,
 				);
@@ -134,7 +141,11 @@ export const streamSimpleCursor = (
 				tools: context.tools,
 				conversationState: stateRecord,
 			});
-			options?.onPayload?.({ model: model.id, conversationId, toolCount: payload.mcpTools.length });
+			options?.onPayload?.({
+				model: model.id,
+				conversationId,
+				toolCount: payload.mcpTools.length,
+			});
 			const connection = new CursorStreamingConnection({
 				accessToken: apiKey,
 				rpcPath: CURSOR_RUN_PATH,
@@ -144,7 +155,14 @@ export const streamSimpleCursor = (
 			connection.write(toFrame(payload.requestBytes));
 
 			await streamConnection(
-				{ bridgeKey, conversationKey, model, output, stream, signal: options?.signal },
+				{
+					bridgeKey,
+					conversationKey,
+					model,
+					output,
+					stream,
+					signal: options?.signal,
+				},
 				{
 					connection,
 					blobStore: payload.blobStore,
@@ -196,7 +214,9 @@ async function resumeActiveRun(
 				? create(McpResultSchema, {
 						result: {
 							case: "error",
-							value: create(McpErrorSchema, { error: toolResult.content || "Tool execution failed" }),
+							value: create(McpErrorSchema, {
+								error: toolResult.content || "Tool execution failed",
+							}),
 						},
 					})
 				: create(McpResultSchema, {
@@ -205,7 +225,12 @@ async function resumeActiveRun(
 							value: create(McpSuccessSchema, {
 								content: [
 									create(McpToolResultContentItemSchema, {
-										content: { case: "text", value: create(McpTextContentSchema, { text: toolResult.content }) },
+										content: {
+											case: "text",
+											value: create(McpTextContentSchema, {
+												text: toolResult.content,
+											}),
+										},
 									}),
 								],
 								isError: false,
@@ -213,7 +238,10 @@ async function resumeActiveRun(
 						},
 					})
 			: create(McpResultSchema, {
-					result: { case: "error", value: create(McpErrorSchema, { error: "Tool result not provided" }) },
+					result: {
+						case: "error",
+						value: create(McpErrorSchema, { error: "Tool result not provided" }),
+					},
 				});
 		sendExecResult(pendingExec.execId, pendingExec.execMsgId, "mcpResult", result, (data) =>
 			activeRun.connection.write(data),
@@ -224,7 +252,11 @@ async function resumeActiveRun(
 }
 
 async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): Promise<void> {
-	const state: StreamState = { outputTokens: 0, totalTokens: 0, pendingExecs: run.pendingExecs };
+	const state: StreamState = {
+		outputTokens: 0,
+		totalTokens: 0,
+		pendingExecs: run.pendingExecs,
+	};
 	const emitter = new CursorOutputEmitter(runtime.output, runtime.stream);
 	const thinkingFilter = createThinkingTagFilter();
 
@@ -301,7 +333,11 @@ async function streamConnection(runtime: RuntimeOptions, run: ActiveCursorRun): 
 				deleteActiveRun(runtime.bridgeKey);
 				emitter.finishStop();
 				finalizeUsage(runtime.model, runtime.output, state);
-				runtime.stream.push({ type: "done", reason: "stop", message: runtime.output });
+				runtime.stream.push({
+					type: "done",
+					reason: "stop",
+					message: runtime.output,
+				});
 				runtime.stream.end();
 				settle(resolve);
 			},
@@ -406,7 +442,10 @@ function handleExecServerMessage(
 			create(ReadResultSchema, {
 				result: {
 					case: "rejected",
-					value: create(ReadRejectedSchema, { path: execMessage.message.value.path, reason: REJECT_REASON }),
+					value: create(ReadRejectedSchema, {
+						path: execMessage.message.value.path,
+						reason: REJECT_REASON,
+					}),
 				},
 			}),
 			(data) => run.connection.write(data),
@@ -421,7 +460,10 @@ function handleExecServerMessage(
 			create(WriteResultSchema, {
 				result: {
 					case: "rejected",
-					value: create(WriteRejectedSchema, { path: execMessage.message.value.path, reason: REJECT_REASON }),
+					value: create(WriteRejectedSchema, {
+						path: execMessage.message.value.path,
+						reason: REJECT_REASON,
+					}),
 				},
 			}),
 			(data) => run.connection.write(data),
@@ -436,7 +478,10 @@ function handleExecServerMessage(
 			create(DeleteResultSchema, {
 				result: {
 					case: "rejected",
-					value: create(DeleteRejectedSchema, { path: execMessage.message.value.path, reason: REJECT_REASON }),
+					value: create(DeleteRejectedSchema, {
+						path: execMessage.message.value.path,
+						reason: REJECT_REASON,
+					}),
 				},
 			}),
 			(data) => run.connection.write(data),
@@ -448,7 +493,12 @@ function handleExecServerMessage(
 			execMessage.execId,
 			execMessage.id,
 			"grepResult",
-			create(GrepResultSchema, { result: { case: "error", value: create(GrepErrorSchema, { error: REJECT_REASON }) } }),
+			create(GrepResultSchema, {
+				result: {
+					case: "error",
+					value: create(GrepErrorSchema, { error: REJECT_REASON }),
+				},
+			}),
 			(data) => run.connection.write(data),
 		);
 		return;
@@ -461,7 +511,10 @@ function handleExecServerMessage(
 			create(FetchResultSchema, {
 				result: {
 					case: "error",
-					value: create(FetchErrorSchema, { url: execMessage.message.value.url ?? "", error: REJECT_REASON }),
+					value: create(FetchErrorSchema, {
+						url: execMessage.message.value.url ?? "",
+						error: REJECT_REASON,
+					}),
 				},
 			}),
 			(data) => run.connection.write(data),
@@ -514,7 +567,10 @@ function handleExecServerMessage(
 			execMessage.id,
 			"writeShellStdinResult",
 			create(WriteShellStdinResultSchema, {
-				result: { case: "error", value: create(WriteShellStdinErrorSchema, { error: REJECT_REASON }) },
+				result: {
+					case: "error",
+					value: create(WriteShellStdinErrorSchema, { error: REJECT_REASON }),
+				},
 			}),
 			(data) => run.connection.write(data),
 		);
@@ -568,14 +624,23 @@ class CursorOutputEmitter {
 			this.closeThinking();
 			this.output.content.push({ type: "text", text: "" });
 			this.textIndex = this.output.content.length - 1;
-			this.stream.push({ type: "text_start", contentIndex: this.textIndex, partial: this.output });
+			this.stream.push({
+				type: "text_start",
+				contentIndex: this.textIndex,
+				partial: this.output,
+			});
 		}
 		const block = this.output.content[this.textIndex];
 		if (block?.type !== "text") {
 			return;
 		}
 		block.text += text;
-		this.stream.push({ type: "text_delta", contentIndex: this.textIndex, delta: text, partial: this.output });
+		this.stream.push({
+			type: "text_delta",
+			contentIndex: this.textIndex,
+			delta: text,
+			partial: this.output,
+		});
 	}
 
 	appendThinking(thinking: string): void {
@@ -586,7 +651,11 @@ class CursorOutputEmitter {
 			this.closeText();
 			this.output.content.push({ type: "thinking", thinking: "" });
 			this.thinkingIndex = this.output.content.length - 1;
-			this.stream.push({ type: "thinking_start", contentIndex: this.thinkingIndex, partial: this.output });
+			this.stream.push({
+				type: "thinking_start",
+				contentIndex: this.thinkingIndex,
+				partial: this.output,
+			});
 		}
 		const block = this.output.content[this.thinkingIndex];
 		if (block?.type !== "thinking") {
@@ -606,11 +675,25 @@ class CursorOutputEmitter {
 		this.closeThinking();
 		this.output.content.push(toolCall);
 		const index = this.output.content.length - 1;
-		this.stream.push({ type: "toolcall_start", contentIndex: index, partial: this.output });
+		this.stream.push({
+			type: "toolcall_start",
+			contentIndex: index,
+			partial: this.output,
+		});
 		if (rawArguments) {
-			this.stream.push({ type: "toolcall_delta", contentIndex: index, delta: rawArguments, partial: this.output });
+			this.stream.push({
+				type: "toolcall_delta",
+				contentIndex: index,
+				delta: rawArguments,
+				partial: this.output,
+			});
 		}
-		this.stream.push({ type: "toolcall_end", contentIndex: index, toolCall, partial: this.output });
+		this.stream.push({
+			type: "toolcall_end",
+			contentIndex: index,
+			toolCall,
+			partial: this.output,
+		});
 	}
 
 	finishToolUse(): void {
@@ -633,7 +716,12 @@ class CursorOutputEmitter {
 		}
 		const block = this.output.content[this.textIndex];
 		if (block?.type === "text") {
-			this.stream.push({ type: "text_end", contentIndex: this.textIndex, content: block.text, partial: this.output });
+			this.stream.push({
+				type: "text_end",
+				contentIndex: this.textIndex,
+				content: block.text,
+				partial: this.output,
+			});
 		}
 		this.textIndex = undefined;
 	}

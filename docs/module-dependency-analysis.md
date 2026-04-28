@@ -1,7 +1,6 @@
 # Module Dependency Graph & Single Responsibility Analysis
 
-> Generated: 2026-02-16 | Updated after refactoring Based on commit 46c1d85 (refactor: single
-> responsibility refactoring)
+> Generated: 2026-02-16 | Updated after refactoring Based on commit 46c1d85 (refactor: single responsibility refactoring)
 
 ---
 
@@ -209,26 +208,24 @@ ant-colony/parser.ts
 ## 4. Two-Layer Decoupling Analysis
 
 ```
-  src/ layer (19 modules, ~1,732 lines)    ant-colony/ layer (10 modules, ~2,421 lines)
-  ┌─────────┐                              ┌──────────────┐
-  │ TUI      │ ══ Zero imports ═══════════ │ Multi-Agent  │
-  │ Config   │                              │ Swarm System │
-  └─────────┘                              └──────────────┘
-       │                                          │
-       │  install.ts copies                       │  pi Extension API
-       │  extension files to                      │  (registerTool,
-       │  ~/.pi/agent/extensions/                 │   registerCommand,
-       │                                          │   sendMessage, ...)
-       ▼                                          ▼
-  ┌─────────────────────────────────────────────────────┐
-  │          @mariozechner/pi-coding-agent               │
-  │                (runtime host)                         │
-  └─────────────────────────────────────────────────────┘
+src/ layer (19 modules, ~1,732 lines)    ant-colony/ layer (10 modules, ~2,421 lines)
+┌─────────┐                              ┌──────────────┐
+│ TUI      │ ══ Zero imports ═══════════ │ Multi-Agent  │
+│ Config   │                              │ Swarm System │
+└─────────┘                              └──────────────┘
+     │                                          │
+     │  install.ts copies                       │  pi Extension API
+     │  extension files to                      │  (registerTool,
+     │  ~/.pi/agent/extensions/                 │   registerCommand,
+     │                                          │   sendMessage, ...)
+     ▼                                          ▼
+┌─────────────────────────────────────────────────────┐
+│          @mariozechner/pi-coding-agent               │
+│                (runtime host)                         │
+└─────────────────────────────────────────────────────┘
 ```
 
-**Key finding**: src/ and ant-colony/ have **zero direct imports** — fully bridged via the pi
-Extension API. This is excellent architectural decoupling — both layers can evolve independently.
-The only coupling point is `install.ts` physically copying extension files to the user directory.
+**Key finding**: src/ and ant-colony/ have **zero direct imports** — fully bridged via the pi Extension API. This is excellent architectural decoupling — both layers can evolve independently. The only coupling point is `install.ts` physically copying extension files to the user directory.
 
 ---
 

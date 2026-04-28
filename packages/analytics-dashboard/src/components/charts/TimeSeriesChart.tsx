@@ -4,10 +4,10 @@
  *
  * A line/area chart for displaying usage over time.
  */
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { format, parseISO } from "date-fns";
 import { cn, formatNumber } from "@/lib/utils";
 import type { TimelineData } from "@/types";
+import { format, parseISO } from "date-fns";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface TimeSeriesChartProps {
 	data: TimelineData[];
@@ -58,7 +58,7 @@ export function TimeSeriesChart({ data, metric, showArea = true, className, heig
 		label?: string;
 	}) => {
 		if (active && payload && payload.length > 0) {
-			const {value} = payload[0];
+			const { value } = payload[0];
 			const date = label ? parseISO(label) : new Date();
 
 			return (
@@ -82,9 +82,9 @@ export function TimeSeriesChart({ data, metric, showArea = true, className, heig
 
 	// Format Y axis value
 	const formatYAxis = (value: number) => {
-		if (value === 0) {return "0";}
-		if (value >= 1_000_000) {return `${(value / 1000000).toFixed(1)}M`;}
-		if (value >= 1000) {return `${(value / 1000).toFixed(1)}k`;}
+		if (value === 0) return "0";
+		if (value >= 1_000_000) return `${(value / 1000000).toFixed(1)}M`;
+		if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
 		return value.toString();
 	};
 

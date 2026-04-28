@@ -1,6 +1,6 @@
-import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { KEYBINDING_SCHEMES, MODEL_CAPABILITIES, PROVIDERS } from "@ifi/oh-pi-core";
+import { copyFileSync, existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { AdaptiveRoutingSetupConfig, OhPConfigWithRouting } from "../types.js";
 import { ensureDir, syncDir } from "./install.js";
 import { resources } from "./resources.js";

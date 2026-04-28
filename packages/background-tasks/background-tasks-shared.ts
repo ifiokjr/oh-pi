@@ -1,6 +1,6 @@
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
 
 export const BG_COMMAND = "bg";
 export const BG_SHORTCUT = "ctrl+shift+b";
@@ -176,7 +176,10 @@ export function taskDisplayName(task: Pick<BackgroundTaskSnapshot, "title" | "co
 
 export function buildTaskSummaryLine(task: BackgroundTaskSnapshot, now: number = Date.now()): string {
 	const activityAt = task.lastOutputAt ?? task.updatedAt;
-	return `${task.id} · ${summarizeTaskStatus(task.status, task.exitCode)} · pid ${task.pid} · ${taskDisplayName(task)} · ${formatRelativeTime(activityAt, now)}`;
+	return `${task.id} · ${summarizeTaskStatus(
+		task.status,
+		task.exitCode,
+	)} · pid ${task.pid} · ${taskDisplayName(task)} · ${formatRelativeTime(activityAt, now)}`;
 }
 
 export function isBackgroundTaskEventDetails(value: unknown): value is BackgroundTaskEventDetails {

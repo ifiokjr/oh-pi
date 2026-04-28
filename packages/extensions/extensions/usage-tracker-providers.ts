@@ -1,6 +1,6 @@
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { clampPercent, fmtDuration, fmtTokens, upsertWindow } from "./usage-tracker-formatting.js";
 import { PROBE_TIMEOUT_MS } from "./usage-tracker-shared.js";
 import type { PiAuthEntry, ProviderKey, ProviderRateLimits } from "./usage-tracker-shared.js";
@@ -151,7 +151,12 @@ export async function ensureFreshToken(
 
 	if (authKey === "ollama-cloud") {
 		const token = entry.access || entry.refresh;
-		return token ? { entry: { ...entry, access: token, refresh: entry.refresh || token }, token } : null;
+		return token
+			? {
+					entry: { ...entry, access: token, refresh: entry.refresh || token },
+					token,
+				}
+			: null;
 	}
 
 	// Token expired — try refreshing via pi's OAuth module
@@ -187,7 +192,12 @@ function resetCountdown(isoOrDuration: string): string | null {
 	OPENAI_DURATION_RE.lastIndex = 0;
 	const matches = [...isoOrDuration.matchAll(OPENAI_DURATION_RE)];
 	if (matches.length > 0) {
-		const multipliers: Record<string, number> = { h: 3_600_000, m: 60_000, ms: 1, s: 1000 };
+		const multipliers: Record<string, number> = {
+			h: 3_600_000,
+			m: 60_000,
+			ms: 1,
+			s: 1000,
+		};
 		let totalMs = 0;
 		for (const match of matches) {
 			totalMs += Number.parseFloat(match[1]) * (multipliers[match[2]] ?? 1);
@@ -559,7 +569,10 @@ export async function probeOpenAIDirect(token: string): Promise<ProviderRateLimi
 
 		const { credits } = payload;
 		if (credits && typeof credits === "object") {
-			const typedCredits = credits as { unlimited?: unknown; balance?: unknown };
+			const typedCredits = credits as {
+				unlimited?: unknown;
+				balance?: unknown;
+			};
 			if (typedCredits.unlimited === true) {
 				result.note = appendNote(result.note, "Credits are unlimited.");
 			} else {
@@ -687,7 +700,13 @@ export async function probeGoogleDirect(token: string, authEntry?: PiAuthEntry):
 		}
 
 		const payload = (await response.json()) as Record<string, unknown>;
-		const currentTier = payload.currentTier as { id?: unknown; name?: unknown; description?: unknown } | undefined;
+		const currentTier = payload.currentTier as
+			| {
+					id?: unknown;
+					name?: unknown;
+					description?: unknown;
+			  }
+			| undefined;
 		const tierId = typeof currentTier?.id === "string" ? currentTier.id : null;
 		const tierName = typeof currentTier?.name === "string" ? currentTier.name : null;
 		const tierDescription = typeof currentTier?.description === "string" ? currentTier.description : null;

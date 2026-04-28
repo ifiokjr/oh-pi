@@ -1,16 +1,14 @@
 /**
 <!-- {=antColonySharedStorageOverview} -->
 
-Ant-colony stores runtime state outside the repository by default under the shared pi agent
-directory, mirroring the workspace path so each repo gets its own isolated storage root.
-Project-local `.ant-colony/` storage remains available as an explicit opt-in for legacy workflows.
+Ant-colony stores runtime state outside the repository by default under the shared pi agent directory, mirroring the workspace path so each repo gets its own isolated storage root. Project-local `.ant-colony/` storage remains available as an explicit opt-in for legacy workflows.
 
 <!-- {/antColonySharedStorageOverview} -->
 */
-import * as fs from "node:fs";
-import * as path from "node:path";
 import { expandHomeDir } from "@ifi/oh-pi-core";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { getManagedWorktreeParentDir } from "./worktree-registry.js";
 
 export type ColonyStorageMode = "shared" | "project";
@@ -60,9 +58,7 @@ export function loadAntColonyConfig(): AntColonyConfig {
 /**
 <!-- {=antColonyResolveStorageOptionsDocs} -->
 
-Resolve the effective ant-colony storage mode and shared root. Explicit options win, then
-environment variables, then extension config, and shared storage is the default when no override is
-provided.
+Resolve the effective ant-colony storage mode and shared root. Explicit options win, then environment variables, then extension config, and shared storage is the default when no override is provided.
 
 <!-- {/antColonyResolveStorageOptionsDocs} -->
 */
@@ -105,9 +101,7 @@ export function getSharedColonyWorkspaceRoot(cwd: string, options?: ColonyStorag
 /**
 <!-- {=antColonyGetColonyStateParentDirDocs} -->
 
-Resolve the parent directory for persisted colony state. Shared mode stores state under the
-workspace-mirrored shared root in `colonies/`, while project mode keeps using the legacy local
-`.ant-colony/` directory.
+Resolve the parent directory for persisted colony state. Shared mode stores state under the workspace-mirrored shared root in `colonies/`, while project mode keeps using the legacy local `.ant-colony/` directory.
 
 <!-- {/antColonyGetColonyStateParentDirDocs} -->
 */
@@ -122,9 +116,7 @@ export function getColonyStateParentDir(cwd: string, options?: ColonyStorageOpti
 /**
 <!-- {=antColonyGetColonyWorktreeParentDirDocs} -->
 
-Resolve the parent directory for isolated colony worktrees. Shared mode keeps them under the
-workspace-mirrored shared root in `worktrees/`, while project mode places them under the legacy
-project-local `.ant-colony/worktrees/` path.
+Resolve the parent directory for isolated colony worktrees. Shared mode keeps them under the workspace-mirrored shared root in `worktrees/`, while project mode places them under the legacy project-local `.ant-colony/worktrees/` path.
 
 <!-- {/antColonyGetColonyWorktreeParentDirDocs} -->
 */
@@ -143,9 +135,7 @@ export function shouldManageProjectGitignore(options?: ColonyStorageOptions): bo
 /**
 <!-- {=antColonyMigrateLegacyProjectColoniesDocs} -->
 
-Best-effort migration for legacy project-local colony state. When shared mode is active, existing
-`.ant-colony/{colony-id}/` directories are copied into the shared store so resumable colonies keep
-working without leaving runtime state in the repo.
+Best-effort migration for legacy project-local colony state. When shared mode is active, existing `.ant-colony/{colony-id}/` directories are copied into the shared store so resumable colonies keep working without leaving runtime state in the repo.
 
 <!-- {/antColonyMigrateLegacyProjectColoniesDocs} -->
 */

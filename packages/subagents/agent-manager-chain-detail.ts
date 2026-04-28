@@ -7,7 +7,12 @@ export interface ChainDetailState {
 	scrollOffset: number;
 }
 
-export type ChainDetailAction = { type: "back" } | { type: "launch" } | { type: "edit" };
+export type ChainDetailAction =
+	| { type: "back" }
+	| { type: "launch" }
+	| {
+			type: "edit";
+	  };
 
 const CHAIN_DETAIL_VIEWPORT_HEIGHT = 12;
 

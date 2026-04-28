@@ -1,10 +1,10 @@
 import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProviderInterface } from "@mariozechner/pi-ai";
 import {
+	getOllamaCloudRuntimeConfig,
 	OLLAMA_API,
 	OLLAMA_CLOUD_API_KEY_ENV,
 	OLLAMA_CLOUD_AUTH_DOCS_URL,
 	OLLAMA_CLOUD_PROVIDER,
-	getOllamaCloudRuntimeConfig,
 } from "./config.js";
 import { enrichOllamaCloudCredentials, getCredentialModels } from "./models.js";
 import type { OllamaCloudCredentials, OllamaProviderModel } from "./models.js";
@@ -31,7 +31,9 @@ export async function loginOllamaCloud(callbacks: OAuthLoginCallbacks): Promise<
 		);
 	}
 	callbacks.onProgress?.("Validating Ollama Cloud API key and discovering models...");
-	return enrichOllamaCloudCredentials(createStaticCredential(apiKey), { signal: callbacks.signal });
+	return enrichOllamaCloudCredentials(createStaticCredential(apiKey), {
+		signal: callbacks.signal,
+	});
 }
 
 export async function refreshOllamaCloudCredential(

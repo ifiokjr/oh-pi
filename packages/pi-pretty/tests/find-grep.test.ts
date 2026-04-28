@@ -1,11 +1,17 @@
-import { describe, it, expect, vi } from "vitest";
-import { multiGrep, execMultiGrep } from "../src/find-grep.js";
+import { describe, expect, it, vi } from "vitest";
+import { execMultiGrep, multiGrep } from "../src/find-grep.js";
 
 vi.mock("@ff-labs/fff-node", async (importOriginal) => {
 	return {
 		CursorStore: vi.fn().mockImplementation(() => ({
 			init: vi.fn().mockResolvedValue(undefined),
-			grep: vi.fn().mockResolvedValue([{ file: "src/index.ts", line: 10, text: "function foo()" }]),
+			grep: vi.fn().mockResolvedValue([
+				{
+					file: "src/index.ts",
+					line: 10,
+					text: "function foo()",
+				},
+			]),
 			stats: vi.fn().mockReturnValue({ fileCount: 5 }),
 		})),
 		Cursor: vi.fn(),

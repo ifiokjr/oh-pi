@@ -72,8 +72,14 @@ describe("adaptive routing telemetry", () => {
 		const stats = computeStats(events);
 		expect(stats.outcomes).toBe(3);
 		expect(stats.avgDurationMs).toBe(4_000);
-		expect(stats.perModelLatencyMs["openai/gpt-5.4"]).toEqual({ count: 2, avgMs: 5_000 });
-		expect(stats.perModelLatencyMs["google/gemini-2.5-flash"]).toEqual({ count: 1, avgMs: 2_000 });
+		expect(stats.perModelLatencyMs["openai/gpt-5.4"]).toEqual({
+			count: 2,
+			avgMs: 5_000,
+		});
+		expect(stats.perModelLatencyMs["google/gemini-2.5-flash"]).toEqual({
+			count: 1,
+			avgMs: 2_000,
+		});
 		expect(formatStats(stats)).toEqual(
 			expect.arrayContaining([
 				"Outcomes: 3",

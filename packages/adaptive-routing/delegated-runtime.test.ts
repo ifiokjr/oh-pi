@@ -16,10 +16,10 @@ vi.mock("@ifi/oh-pi-core", async () => {
 
 import {
 	buildDelegatedSelectionPolicy,
+	type DelegatedAvailableModelRef,
 	inspectDelegatedSelection,
 	readDelegatedSelectionLatencySnapshot,
 	readDelegatedSelectionUsageSnapshot,
-	type DelegatedAvailableModelRef,
 } from "./delegated-runtime.js";
 
 const sampleModels: DelegatedAvailableModelRef[] = [
@@ -53,7 +53,9 @@ describe("delegated runtime helpers", () => {
 	beforeEach(() => {
 		tempAgentDir = mkdtempSync(join(tmpdir(), "delegated-runtime-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 	});
 
 	afterEach(() => {

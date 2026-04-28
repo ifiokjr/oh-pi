@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { toOllamaModel, type OllamaProviderModel } from "./models.js";
+import { type OllamaProviderModel, toOllamaModel } from "./models.js";
 
 const CACHE_VERSION = 1;
 const DEFAULT_CACHE_PATH = join(homedir(), ".pi", "agent", "cache", "ollama-cloud-models.json");
@@ -51,7 +51,13 @@ function sanitizeCachedModels(models: unknown): OllamaProviderModel[] {
 		if (!model || typeof model !== "object") continue;
 		const id = (model as { id?: unknown }).id;
 		if (typeof id !== "string" || id.trim().length === 0) continue;
-		sanitized.push(toOllamaModel({ ...(model as Partial<OllamaProviderModel>), id: id.trim(), source: "cloud" }));
+		sanitized.push(
+			toOllamaModel({
+				...(model as Partial<OllamaProviderModel>),
+				id: id.trim(),
+				source: "cloud",
+			}),
+		);
 	}
 	return sanitized;
 }

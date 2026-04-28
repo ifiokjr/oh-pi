@@ -2,8 +2,7 @@
 description: Generate a pull request description
 ---
 
-Generate a PR description based on the changes in this branch (`git log --oneline main..HEAD` and
-`git diff main`).
+Generate a PR description based on the changes in this branch (`git log --oneline main..HEAD` and `git diff main`).
 
 Structure:
 

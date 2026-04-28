@@ -22,7 +22,13 @@ describe("summarizeProviders", () => {
 			summarizeProviders(
 				setup({
 					providerStrategy: "add",
-					providers: [{ name: "openai", apiKey: "OPENAI_API_KEY", defaultModel: "gpt-4o" }],
+					providers: [
+						{
+							name: "openai",
+							apiKey: "OPENAI_API_KEY",
+							defaultModel: "gpt-4o",
+						},
+					],
 				}),
 			),
 		).toBe("Add fallback providers: openai");
@@ -39,7 +45,13 @@ describe("summarizeProviders", () => {
 			summarizeProviders(
 				setup({
 					providerStrategy: "replace",
-					providers: [{ name: "anthropic", apiKey: "ANTHROPIC_API_KEY", defaultModel: "claude-sonnet-4-20250514" }],
+					providers: [
+						{
+							name: "anthropic",
+							apiKey: "ANTHROPIC_API_KEY",
+							defaultModel: "claude-sonnet-4-20250514",
+						},
+					],
 				}),
 			),
 		).toBe("Replace providers with: anthropic");

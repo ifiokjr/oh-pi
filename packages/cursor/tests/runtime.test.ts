@@ -4,9 +4,9 @@ import {
 	clearCursorRuntimeState,
 	deleteActiveRun,
 	deleteConversationState,
-	deterministicConversationId,
 	deriveBridgeKey,
 	deriveConversationKey,
+	deterministicConversationId,
 	getActiveRun,
 	getConversationState,
 	getCursorRuntimeStateSummary,
@@ -39,7 +39,10 @@ describe("cursor runtime state", () => {
 		}));
 		expect(first.conversationId).toBe("conv-1");
 		expect(getConversationState("session:one")?.checkpoint).toEqual(checkpoint);
-		expect(getCursorRuntimeStateSummary()).toEqual({ activeRuns: 0, checkpoints: 1 });
+		expect(getCursorRuntimeStateSummary()).toEqual({
+			activeRuns: 0,
+			checkpoints: 1,
+		});
 
 		deleteConversationState("session:one");
 		expect(getConversationState("session:one")).toBeUndefined();
@@ -94,6 +97,9 @@ describe("cursor runtime state", () => {
 		}));
 		clearCursorRuntimeState();
 		expect(aliveConnection.close).toHaveBeenCalledTimes(2);
-		expect(getCursorRuntimeStateSummary()).toEqual({ activeRuns: 0, checkpoints: 0 });
+		expect(getCursorRuntimeStateSummary()).toEqual({
+			activeRuns: 0,
+			checkpoints: 0,
+		});
 	});
 });

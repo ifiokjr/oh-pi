@@ -4,8 +4,8 @@
  * Runs in jsdom environment for all unit and component tests.
  */
 
-import { cleanup } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
 
 // Extend Vitest's expect with Testing Library matchers
 expect.extend(matchers);

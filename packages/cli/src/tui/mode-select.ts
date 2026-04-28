@@ -13,9 +13,21 @@ export async function selectMode(_env: EnvInfo): Promise<Mode> {
 	const mode = await p.select({
 		message: t("mode.select"),
 		options: [
-			{ hint: t("mode.quickHint"), label: t("mode.quick"), value: "quick" as Mode },
-			{ hint: t("mode.presetHint"), label: t("mode.preset"), value: "preset" as Mode },
-			{ hint: t("mode.customHint"), label: t("mode.custom"), value: "custom" as Mode },
+			{
+				hint: t("mode.quickHint"),
+				label: t("mode.quick"),
+				value: "quick" as Mode,
+			},
+			{
+				hint: t("mode.presetHint"),
+				label: t("mode.preset"),
+				value: "preset" as Mode,
+			},
+			{
+				hint: t("mode.customHint"),
+				label: t("mode.custom"),
+				value: "custom" as Mode,
+			},
 		],
 	});
 	if (p.isCancel(mode)) {

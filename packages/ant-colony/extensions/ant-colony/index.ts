@@ -9,11 +9,11 @@
  * - /colony-stop cancels a running colony
  */
 
+import type { ExtensionAPI, ModelRegistry } from "@mariozechner/pi-coding-agent";
+import { Container, matchesKey, Text } from "@mariozechner/pi-tui";
+import { Type } from "@sinclair/typebox";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ExtensionAPI, ModelRegistry } from "@mariozechner/pi-coding-agent";
-import { Container, Text, matchesKey } from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
 import { Nest } from "./nest.js";
 import { createUsageLimitsTracker, resumeColony, runColony } from "./queen.js";
 import type { QueenCallbacks } from "./queen.js";
@@ -186,7 +186,11 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 	const lastUserMessageText = (ctx: unknown): string => {
 		try {
-			const c = ctx as { sessionManager?: { getBranch?: () => { type: string; message?: { role: string } }[] } };
+			const c = ctx as {
+				sessionManager?: {
+					getBranch?: () => { type: string; message?: { role: string } }[];
+				};
+			};
 			const branch = c?.sessionManager?.getBranch?.() ?? [];
 			for (let i = branch.length - 1; i >= 0; i--) {
 				const e = branch[i];
@@ -270,7 +274,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 	const statusBar = createStatusBarState();
 
 	const setColonyStatus = (
-		ctx: { ui?: { setStatus?: (key: string, value: string | undefined) => unknown } },
+		ctx: {
+			ui?: { setStatus?: (key: string, value: string | undefined) => unknown };
+		},
 		value: string | undefined,
 	) => {
 		statusBar.set(ctx, "ant-colony", value);
@@ -401,7 +407,12 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			});
 
 			return {
-				content: [{ text: withWorkspaceReport(workspace, buildReport(state)), type: "text" as const }],
+				content: [
+					{
+						text: withWorkspaceReport(workspace, buildReport(state)),
+						type: "text" as const,
+					},
+				],
 				isError: state.status === "failed" || state.status === "budget_exceeded",
 			};
 		} catch (error) {
@@ -427,7 +438,11 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			sessionFile?: string | null;
 			sessionName?: string | null;
 		},
-		options?: { resume?: boolean; stableIdHint?: string; workspaceHint?: ColonyWorkspace | null },
+		options?: {
+			resume?: boolean;
+			stableIdHint?: string;
+			workspaceHint?: ColonyWorkspace | null;
+		},
 	): { id: string; workspace: ColonyWorkspace } {
 		const storageOptions = getStorageOptions();
 		const resume = options?.resume ?? false;
@@ -457,12 +472,21 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			antStreams: new Map(),
 			goal: params.goal,
 			id: colonyId,
-			identity: { runtimeId: colonyId, stableId: options?.stableIdHint ?? UNKNOWN_STABLE_COLONY_ID },
+			identity: {
+				runtimeId: colonyId,
+				stableId: options?.stableIdHint ?? UNKNOWN_STABLE_COLONY_ID,
+			},
 			logs: [],
 			phase: "initializing",
 			state: {
 				ants: [],
-				concurrency: { current: 0, history: [], max: params.maxAnts ?? 8, min: 1, optimal: 1 },
+				concurrency: {
+					current: 0,
+					history: [],
+					max: params.maxAnts ?? 8,
+					min: 1,
+					optimal: 1,
+				},
 				createdAt: now,
 				finishedAt: null,
 				goal: params.goal,
@@ -489,7 +513,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 		pushLog(colony, {
 			level: "info",
-			text: `INITIALIZING · Colony [${colonyIdentityVerbose(colony)}] launched in background · ${formatWorkspaceSummary(workspace)}`,
+			text: `INITIALIZING · Colony [${colonyIdentityVerbose(
+				colony,
+			)}] launched in background · ${formatWorkspaceSummary(workspace)}`,
 		});
 
 		let lastPhase = "";
@@ -510,7 +536,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				pi.sendMessage(
 					{
 						customType: "ant-colony-progress",
-						content: `[COLONY_SIGNAL:TASK_DONE] ${antIcon()}[${colonyIdentity(colony)}] ${icon} ${task.title.slice(0, 60)} (${progress}, ${cost})`,
+						content: `[COLONY_SIGNAL:TASK_DONE] ${antIcon()}[${colonyIdentity(
+							colony,
+						)}] ${icon} ${task.title.slice(0, 60)} (${progress}, ${cost})`,
 						display: true,
 					},
 					{ triggerTurn: false, deliverAs: "followUp" },
@@ -547,7 +575,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 					state.status === "done" ? "Colony mission complete" : `Colony ${state.status.replace(/_/g, " ")}`;
 				pushLog(colony, {
 					level: state.status === "done" ? "info" : "error",
-					text: `${statusLabel(state.status)} · ${state.metrics.tasksDone}/${state.metrics.tasksTotal} · ${formatCost(state.metrics.totalCost)}`,
+					text: `${statusLabel(state.status)} · ${state.metrics.tasksDone}/${state.metrics.tasksTotal} · ${formatCost(
+						state.metrics.totalCost,
+					)}`,
 				});
 				colony.antStreams.clear();
 				throttledRender();
@@ -557,7 +587,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				if (colony.state) {
 					colony.state.status = phase;
 				}
-				pushLog(colony, { level: "info", text: `${statusLabel(phase)} · ${detail}` });
+				pushLog(colony, {
+					level: "info",
+					text: `${statusLabel(phase)} · ${detail}`,
+				});
 				throttledRender();
 			},
 			onProgress(metrics) {
@@ -579,11 +612,16 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				if (signal.phase !== lastPhase) {
 					lastPhase = signal.phase;
 					const pct = Math.round(signal.progress * 100);
-					pushLog(colony, { level: "info", text: `${statusLabel(signal.phase)} ${pct}% · ${signal.message}` });
+					pushLog(colony, {
+						level: "info",
+						text: `${statusLabel(signal.phase)} ${pct}% · ${signal.message}`,
+					});
 					pi.sendMessage(
 						{
 							customType: "ant-colony-progress",
-							content: `[COLONY_SIGNAL:${signal.phase.toUpperCase()}] ${antIcon()}[${colonyIdentity(colony)}] ${signal.message} (${pct}%, ${formatCost(signal.cost)})`,
+							content: `[COLONY_SIGNAL:${signal.phase.toUpperCase()}] ${antIcon()}[${colonyIdentity(
+								colony,
+							)}] ${signal.message} (${pct}%, ${formatCost(signal.cost)})`,
 							display: true,
 						},
 						{ triggerTurn: false, deliverAs: "followUp" },
@@ -666,19 +704,26 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 
 				pi.events.emit("ant-colony:notify", {
 					level: ok ? "success" : "error",
-					msg: `${antIcon()}[${colonyIdentityVerbose(colony)}] Colony ${ok ? "completed" : phase.replace(/_/g, " ")}: ${m.tasksDone}/${m.tasksTotal} tasks │ ${formatCost(m.totalCost)} │ ${formatWorkspaceSummary(workspace)}`,
+					msg: `${antIcon()}[${colonyIdentityVerbose(colony)}] Colony ${
+						ok ? "completed" : phase.replace(/_/g, " ")
+					}: ${m.tasksDone}/${m.tasksTotal} tasks │ ${formatCost(m.totalCost)} │ ${formatWorkspaceSummary(workspace)}`,
 				});
 			})
 			.catch((error) => {
 				const crashDetail = error instanceof Error ? `${error.message}\n${error.stack || ""}` : String(error);
-				pushLog(colony, { level: "error", text: `CRASHED · ${crashDetail.slice(0, 500)}` });
+				pushLog(colony, {
+					level: "error",
+					text: `CRASHED · ${crashDetail.slice(0, 500)}`,
+				});
 				cleanupWorkspace("crash");
 				colonies.delete(colonyId);
 				if (colonies.size === 0) {
 					pi.events.emit("ant-colony:clear-ui");
 				}
 				pi.events.emit("ant-colony:notify", {
-					msg: `${antIcon()}[${colonyIdentityVerbose(colony)}] Colony crashed: ${error} │ ${formatWorkspaceSummary(workspace)}`,
+					msg: `${antIcon()}[${colonyIdentityVerbose(
+						colony,
+					)}] Colony crashed: ${error} │ ${formatWorkspaceSummary(workspace)}`,
 					level: "error",
 				});
 				const crashReport = withWorkspaceReport(workspace, `## ${antIcon()} Colony Crashed\n${error}`);
@@ -835,7 +880,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 							lines.push(theme.fg("muted", `  Stable ID: ${trim(c.identity.stableId, w - 14)}`));
 						}
 						lines.push(
-							`  ${statusIcon(phase)} ${theme.bold(statusLabel(phase))} │ ${m ? `${m.tasksDone}/${m.tasksTotal}` : "0/0"} │ ${pct}% │ ${boltIcon()}${activeAnts}`,
+							`  ${statusIcon(phase)} ${theme.bold(statusLabel(phase))} │ ${
+								m ? `${m.tasksDone}/${m.tasksTotal}` : "0/0"
+							} │ ${pct}% │ ${boltIcon()}${activeAnts}`,
 						);
 						lines.push(theme.fg("muted", `  ${progressBar(progress, barWidth)} ${pct}%`));
 						if (c.phase && c.phase !== "initializing") {
@@ -847,7 +894,11 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						lines.push("");
 
 						// ── Tabs ──
-						const tabs: { key: "tasks" | "streams" | "log"; hotkey: string; label: string }[] = [
+						const tabs: {
+							key: "tasks" | "streams" | "log";
+							hotkey: string;
+							label: string;
+						}[] = [
 							{ hotkey: "1", key: "tasks", label: "Tasks" },
 							{ hotkey: "2", key: "streams", label: "Streams" },
 							{ hotkey: "3", key: "log", label: "Log" },
@@ -930,7 +981,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 								for (const s of streams.slice(0, 10)) {
 									const excerpt = trim((s.lastLine || "...").replaceAll(/\s+/g, " "), Math.max(20, w - 24));
 									lines.push(
-										`  ${casteIcon(s.caste)} ${theme.fg("muted", s.antId.slice(0, 12))} ${theme.fg("muted", `${formatTokens(s.tokens)}t`)} ${theme.fg("text", excerpt)}`,
+										`  ${casteIcon(s.caste)} ${theme.fg(
+											"muted",
+											s.antId.slice(0, 12),
+										)} ${theme.fg("muted", `${formatTokens(s.tokens)}t`)} ${theme.fg("text", excerpt)}`,
 									);
 								}
 								if (streams.length > 10) {
@@ -1044,7 +1098,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						},
 					};
 				},
-				{ overlay: true, overlayOptions: { anchor: "center", maxHeight: "80%", width: "80%" } },
+				{
+					overlay: true,
+					overlayOptions: { anchor: "center", maxHeight: "80%", width: "80%" },
+				},
 			);
 		},
 	});
@@ -1064,7 +1121,12 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			const currentModel = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : null;
 			if (!currentModel) {
 				return {
-					content: [{ type: "text", text: "Colony failed: no model available in current session" }],
+					content: [
+						{
+							type: "text",
+							text: "Colony failed: no model available in current session",
+						},
+					],
 					isError: true,
 				};
 			}
@@ -1093,7 +1155,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				content: [
 					{
 						type: "text",
-						text: `[COLONY_SIGNAL:LAUNCHED] [${launched.id}]\n${antIcon()} Colony [${launched.id}] launched in background (${colonies.size} active).\nGoal: ${params.goal}\nWorkspace: ${formatWorkspaceSummary(launched.workspace)}\n\nThe colony runs autonomously in passive mode. Progress is pushed via [COLONY_SIGNAL:*] follow-up messages. Do not poll bg_colony_status unless the user explicitly asks for a manual snapshot.`,
+						text: `[COLONY_SIGNAL:LAUNCHED] [${launched.id}]\n${antIcon()} Colony [${launched.id}] launched in background (${colonies.size} active).\nGoal: ${params.goal}\nWorkspace: ${formatWorkspaceSummary(
+							launched.workspace,
+						)}\n\nThe colony runs autonomously in passive mode. Progress is pushed via [COLONY_SIGNAL:*] follow-up messages. Do not poll bg_colony_status unless the user explicitly asks for a manual snapshot.`,
 					},
 				],
 			};
@@ -1104,10 +1168,17 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		parameters: Type.Object({
 			goal: Type.String({ description: "What the colony should accomplish" }),
 			maxAnts: Type.Optional(
-				Type.Number({ description: "Max concurrent ants (default: auto-adapt)", minimum: 1, maximum: 8 }),
+				Type.Number({
+					description: "Max concurrent ants (default: auto-adapt)",
+					minimum: 1,
+					maximum: 8,
+				}),
 			),
 			maxCost: Type.Optional(
-				Type.Number({ description: "Max cost budget in USD (default: unlimited)", minimum: 0.01 }),
+				Type.Number({
+					description: "Max cost budget in USD (default: unlimited)",
+					minimum: 0.01,
+				}),
 			),
 		}),
 
@@ -1183,7 +1254,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 			`${antIcon()} ${statusIcon(phase)} ${trim(c.goal, 80)}`,
 			`ID: ${colonyIdentityVerbose(c)}`,
 			`Workspace: ${trim(formatWorkspaceSummary(c.workspace), 100)}`,
-			`${statusLabel(phase)} │ ${m ? `${m.tasksDone}/${m.tasksTotal} tasks` : "starting"} │ ${pct}% │ ${boltIcon()}${activeAnts} │ ${m ? formatCost(m.totalCost) : "$0"} │ ${elapsed}`,
+			`${statusLabel(phase)} │ ${
+				m ? `${m.tasksDone}/${m.tasksTotal} tasks` : "starting"
+			} │ ${pct}% │ ${boltIcon()}${activeAnts} │ ${m ? formatCost(m.totalCost) : "$0"} │ ${elapsed}`,
 			`${progressBar(progress, 18)} ${pct}%`,
 		];
 
@@ -1227,7 +1300,9 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		for (const colony of colonies.values()) {
 			if (colony.identity.runtimeId.startsWith(prefix)) {
 				items.push({
-					label: `${colony.identity.runtimeId} — ${colony.goal.slice(0, 50)}${hasStableId(colony.identity) ? ` (stable: ${colony.identity.stableId})` : ""}`,
+					label: `${colony.identity.runtimeId} — ${colony.goal.slice(0, 50)}${
+						hasStableId(colony.identity) ? ` (stable: ${colony.identity.stableId})` : ""
+					}`,
 					value: colony.identity.runtimeId,
 				});
 			}
@@ -1248,7 +1323,12 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
 			if (colonies.size === 0) {
 				return {
-					content: [{ type: "text" as const, text: "No colony is currently running." }],
+					content: [
+						{
+							type: "text" as const,
+							text: "No colony is currently running.",
+						},
+					],
 				};
 			}
 
@@ -1316,7 +1396,10 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 				sessionName: typeof pi.getSessionName === "function" ? (pi.getSessionName() ?? null) : null,
 			});
 			ctx.ui.notify(
-				`${antIcon()}[${launched.id}] Colony launched (${colonies.size} active): ${goal.slice(0, 70)}${goal.length > 70 ? "..." : ""}\nWorkspace: ${formatWorkspaceSummary(launched.workspace)}`,
+				`${antIcon()}[${launched.id}] Colony launched (${colonies.size} active): ${goal.slice(
+					0,
+					70,
+				)}${goal.length > 70 ? "..." : ""}\nWorkspace: ${formatWorkspaceSummary(launched.workspace)}`,
 				"info",
 			);
 		},
@@ -1428,10 +1511,17 @@ export default function antColonyExtension(pi: ExtensionAPI) {
 						sessionFile: ctx.sessionManager?.getSessionFile?.() ?? null,
 						sessionName: typeof pi.getSessionName === "function" ? (pi.getSessionName() ?? null) : null,
 					},
-					{ resume: true, stableIdHint: found.colonyId, workspaceHint: found.state.workspace ?? null },
+					{
+						resume: true,
+						stableIdHint: found.colonyId,
+						workspaceHint: found.state.workspace ?? null,
+					},
 				);
 				ctx.ui.notify(
-					`${antIcon()}[${launched.id}|${found.colonyId}] Resuming: ${found.state.goal.slice(0, 60)}...\nWorkspace: ${formatWorkspaceSummary(launched.workspace)}`,
+					`${antIcon()}[${launched.id}|${found.colonyId}] Resuming: ${found.state.goal.slice(
+						0,
+						60,
+					)}...\nWorkspace: ${formatWorkspaceSummary(launched.workspace)}`,
 					"info",
 				);
 			}

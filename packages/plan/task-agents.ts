@@ -1,9 +1,9 @@
-import { randomBytes } from "node:crypto";
-import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { requirePiTuiModule } from "@ifi/pi-shared-qna";
 import { runSync } from "@ifi/pi-extension-subagents/execution.ts";
 import { getFinalOutput } from "@ifi/pi-extension-subagents/utils.ts";
+import { requirePiTuiModule } from "@ifi/pi-shared-qna";
+import type { AgentToolResult } from "@mariozechner/pi-agent-core";
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { randomBytes } from "node:crypto";
 import type {
 	NormalizedTaskAgentTask,
 	PlanModeState,
@@ -327,7 +327,11 @@ async function runTaskAgentTask(
 			cwd,
 			index: options.index,
 			onUpdate: (update) => {
-				const details = update.details as { progress?: TaskAgentProgressSnapshot[] } | undefined;
+				const details = update.details as
+					| {
+							progress?: TaskAgentProgressSnapshot[];
+					  }
+					| undefined;
 				const progress = details?.progress?.[0];
 				if (!progress) {
 					return;
@@ -396,10 +400,14 @@ function formatTaskAgentResult(result: TaskAgentTaskResult, index: number): stri
 
 	if (result.exitCode !== 0) {
 		const stderr = result.stderr.trim().length > 0 ? result.stderr.trim() : "unknown error";
-		return `${header}\nPrompt: ${result.task}\nCWD: ${result.cwd}\nDuration: ${formatTaskAgentDuration(result)}\nRecent activity:\n${activityText}\nError: ${stderr}`;
+		return `${header}\nPrompt: ${result.task}\nCWD: ${result.cwd}\nDuration: ${formatTaskAgentDuration(
+			result,
+		)}\nRecent activity:\n${activityText}\nError: ${stderr}`;
 	}
 
-	return `${header}\nPrompt: ${result.task}\nCWD: ${result.cwd}\nDuration: ${formatTaskAgentDuration(result)}\nRecent activity:\n${activityText}\n\n${output}\n\nReferences:\n${refs}`;
+	return `${header}\nPrompt: ${result.task}\nCWD: ${result.cwd}\nDuration: ${formatTaskAgentDuration(
+		result,
+	)}\nRecent activity:\n${activityText}\n\n${output}\n\nReferences:\n${refs}`;
 }
 
 export function buildTaskAgentRunDetails(runId: string, results: TaskAgentTaskResult[]): TaskAgentRunDetails {
@@ -574,7 +582,10 @@ export function registerTaskAgentTools(
 		renderCall(args, theme) {
 			const tasks = (args.tasks as TaskAgentTask[] | undefined) ?? [];
 			const lines: string[] = [
-				`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg("accent", `${tasks.length} task${tasks.length === 1 ? "" : "s"}`)}`,
+				`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg(
+					"accent",
+					`${tasks.length} task${tasks.length === 1 ? "" : "s"}`,
+				)}`,
 			];
 			for (const task of tasks.slice(0, TASK_AGENT_PREVIEW_LIMIT)) {
 				const taskId = task.id?.trim() || "(auto-id)";
@@ -591,14 +602,20 @@ export function registerTaskAgentTools(
 			const details = result.details;
 			if (isPartial && isTaskAgentProgressDetails(details)) {
 				const lines: string[] = [
-					`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg("accent", details.runId)} ${theme.fg("muted", `${details.completed}/${details.total}`)}`,
+					`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg(
+						"accent",
+						details.runId,
+					)} ${theme.fg("muted", `${details.completed}/${details.total}`)}`,
 				];
 				const visibleTasks = expanded ? details.tasks : details.tasks.slice(0, TASK_AGENT_PREVIEW_LIMIT);
 				for (const task of visibleTasks) {
 					const color = task.status === "failed" ? "error" : task.status === "completed" ? "success" : "warning";
 					const suffix = task.latestActivity ? ` ${theme.fg("dim", summarizeSnippet(task.latestActivity, 80))}` : "";
 					lines.push(
-						`${theme.fg(color, statusIcon(task.status))} ${theme.fg("accent", task.taskId)} ${theme.fg("muted", task.status)}${suffix}`,
+						`${theme.fg(color, statusIcon(task.status))} ${theme.fg(
+							"accent",
+							task.taskId,
+						)} ${theme.fg("muted", task.status)}${suffix}`,
 					);
 				}
 				if (!expanded && details.tasks.length > TASK_AGENT_PREVIEW_LIMIT) {
@@ -614,7 +631,10 @@ export function registerTaskAgentTools(
 			}
 
 			const lines: string[] = [
-				`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg("accent", details.runId)} ${theme.fg("muted", `${details.successCount}/${details.totalCount} succeeded`)}`,
+				`${theme.fg("toolTitle", theme.bold("task agents "))}${theme.fg("accent", details.runId)} ${theme.fg(
+					"muted",
+					`${details.successCount}/${details.totalCount} succeeded`,
+				)}`,
 			];
 			const visibleTasks = expanded ? details.tasks : details.tasks.slice(0, TASK_AGENT_PREVIEW_LIMIT);
 			for (const task of visibleTasks) {
@@ -780,7 +800,10 @@ export function registerTaskAgentTools(
 		renderCall(args, theme) {
 			const instruction = summarizeSnippet(args.instruction ?? "", 90);
 			return createRenderText(
-				`${theme.fg("toolTitle", theme.bold("steer task agent "))}${theme.fg("accent", `${args.runId}/${args.taskId}`)}\n${theme.fg("muted", instruction)}`,
+				`${theme.fg("toolTitle", theme.bold("steer task agent "))}${theme.fg(
+					"accent",
+					`${args.runId}/${args.taskId}`,
+				)}\n${theme.fg("muted", instruction)}`,
 			);
 		},
 	});

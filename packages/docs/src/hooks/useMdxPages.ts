@@ -21,7 +21,10 @@ function extractFrontmatter(modulePath: string): { title: string; order: number;
 		const titleSlug = match[2].replaceAll(/-/g, " ").replaceAll(/\b\w/g, (c) => c.toUpperCase());
 		return { order, title: titleSlug };
 	}
-	return { order: 999, title: fileName.replace(/\.mdx$/, "").replace(/-/g, " ") };
+	return {
+		order: 999,
+		title: fileName.replace(/\.mdx$/, "").replace(/-/g, " "),
+	};
 }
 
 // Static frontmatter map — keeps MDX content clean while providing rich metadata.

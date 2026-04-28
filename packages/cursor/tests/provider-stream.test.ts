@@ -155,7 +155,13 @@ function createContext() {
 	return {
 		systemPrompt: "You are helpful.",
 		messages: [],
-		tools: [{ name: "echo", description: "Echo text", parameters: { type: "object" } }],
+		tools: [
+			{
+				name: "echo",
+				description: "Echo text",
+				parameters: { type: "object" },
+			},
+		],
 	};
 }
 
@@ -234,7 +240,9 @@ beforeEach(() => {
 				onMessage(payload.value);
 			},
 	);
-	providerMocks.frameConnectMessage.mockImplementation((payload: unknown) => ({ framed: payload }));
+	providerMocks.frameConnectMessage.mockImplementation((payload: unknown) => ({
+		framed: payload,
+	}));
 	providerMocks.parseConnectEndStream.mockReturnValue(null);
 });
 
@@ -277,21 +285,42 @@ describe("streamSimpleCursor", () => {
 	});
 
 	it("resumes active runs, sends pending tool results, and completes on close", async () => {
-		const activeConnection = new providerMocks.FakeConnection({ url: "https://cursor.test" });
+		const activeConnection = new providerMocks.FakeConnection({
+			url: "https://cursor.test",
+		});
 		const activeRun = {
 			connection: activeConnection,
 			blobStore: new Map(),
 			mcpTools: [{ name: "echo" }],
 			pendingExecs: [
-				{ execId: "exec-1", execMsgId: "msg-1", toolCallId: "call-1", toolName: "echo", decodedArgs: "{}" },
-				{ execId: "exec-2", execMsgId: "msg-2", toolCallId: "call-2", toolName: "echo", decodedArgs: "{}" },
+				{
+					execId: "exec-1",
+					execMsgId: "msg-1",
+					toolCallId: "call-1",
+					toolName: "echo",
+					decodedArgs: "{}",
+				},
+				{
+					execId: "exec-2",
+					execMsgId: "msg-2",
+					toolCallId: "call-2",
+					toolName: "echo",
+					decodedArgs: "{}",
+				},
 			],
 			lastAccessMs: Date.now(),
 		};
 		providerMocks.parseCursorConversation.mockReturnValueOnce({
 			seed: "seed-text",
 			userText: "",
-			trailingToolResults: [{ toolCallId: "call-1", toolName: "echo", content: "pong", isError: false }],
+			trailingToolResults: [
+				{
+					toolCallId: "call-1",
+					toolName: "echo",
+					content: "pong",
+					isError: false,
+				},
+			],
 		} as never);
 		providerMocks.getActiveRun.mockReturnValueOnce(activeRun as never);
 
@@ -343,15 +372,26 @@ describe("streamSimpleCursor", () => {
 			url: "https://cursor.test",
 		});
 		expect(connection.startHeartbeat).toHaveBeenCalledWith(providerMocks.makeHeartbeatFrame);
-		expect(connection.write).toHaveBeenCalledWith({ framed: new Uint8Array([1, 2, 3]) });
-		expect(onPayload).toHaveBeenCalledWith({ model: "composer-2", conversationId: "saved-conv", toolCount: 1 });
+		expect(connection.write).toHaveBeenCalledWith({
+			framed: new Uint8Array([1, 2, 3]),
+		});
+		expect(onPayload).toHaveBeenCalledWith({
+			model: "composer-2",
+			conversationId: "saved-conv",
+			toolCount: 1,
+		});
 
 		connection.handlers.onData?.({
 			kind: "message",
 			value: {
 				message: {
 					case: "interactionUpdate",
-					value: { message: { case: "textDelta", value: { text: "Hello <think>secret" } } },
+					value: {
+						message: {
+							case: "textDelta",
+							value: { text: "Hello <think>secret" },
+						},
+					},
 				},
 			},
 		});
@@ -360,7 +400,12 @@ describe("streamSimpleCursor", () => {
 			value: {
 				message: {
 					case: "interactionUpdate",
-					value: { message: { case: "textDelta", value: { text: " plan</think> world" } } },
+					value: {
+						message: {
+							case: "textDelta",
+							value: { text: " plan</think> world" },
+						},
+					},
 				},
 			},
 		});
@@ -369,19 +414,26 @@ describe("streamSimpleCursor", () => {
 			value: {
 				message: {
 					case: "interactionUpdate",
-					value: { message: { case: "thinkingDelta", value: { text: "deep thought" } } },
+					value: {
+						message: { case: "thinkingDelta", value: { text: "deep thought" } },
+					},
 				},
 			},
 		});
 		connection.handlers.onData?.({
 			kind: "message",
 			value: {
-				message: { case: "interactionUpdate", value: { message: { case: "tokenDelta", value: { tokens: 7 } } } },
+				message: {
+					case: "interactionUpdate",
+					value: { message: { case: "tokenDelta", value: { tokens: 7 } } },
+				},
 			},
 		});
 		connection.handlers.onData?.({
 			kind: "message",
-			value: { message: { case: "kvServerMessage", value: { blobId: "blob-1" } } },
+			value: {
+				message: { case: "kvServerMessage", value: { blobId: "blob-1" } },
+			},
 		});
 		connection.handlers.onData?.({
 			kind: "message",
@@ -397,7 +449,11 @@ describe("streamSimpleCursor", () => {
 			value: {
 				message: {
 					case: "execServerMessage",
-					value: { execId: "1", id: "a", message: { case: "requestContextArgs", value: {} } },
+					value: {
+						execId: "1",
+						id: "a",
+						message: { case: "requestContextArgs", value: {} },
+					},
 				},
 			},
 		});
@@ -408,7 +464,13 @@ describe("streamSimpleCursor", () => {
 			["grepArgs", {}],
 			["fetchArgs", { url: "https://example.com" }],
 			["shellArgs", { command: "ls", workingDirectory: "/repo" }],
-			["backgroundShellSpawnArgs", { command: "npm test", workingDirectory: "/repo" }],
+			[
+				"backgroundShellSpawnArgs",
+				{
+					command: "npm test",
+					workingDirectory: "/repo",
+				},
+			],
 			["writeShellStdinArgs", {}],
 			["diagnosticsArgs", {}],
 		] as const) {
@@ -436,7 +498,12 @@ describe("streamSimpleCursor", () => {
 						id: "mcp-msg-1",
 						message: {
 							case: "mcpArgs",
-							value: { toolCallId: "tool-1", toolName: "echo", name: "echo", args: { text: "ping" } },
+							value: {
+								toolCallId: "tool-1",
+								toolName: "echo",
+								name: "echo",
+								args: { text: "ping" },
+							},
 						},
 					},
 				},
@@ -464,9 +531,15 @@ describe("streamSimpleCursor", () => {
 				expect.objectContaining({ type: "thinking_start" }),
 				expect.objectContaining({ type: "thinking_delta", delta: "secret" }),
 				expect.objectContaining({ type: "thinking_delta", delta: " plan" }),
-				expect.objectContaining({ type: "thinking_delta", delta: "deep thought" }),
+				expect.objectContaining({
+					type: "thinking_delta",
+					delta: "deep thought",
+				}),
 				expect.objectContaining({ type: "toolcall_start" }),
-				expect.objectContaining({ type: "toolcall_delta", delta: '{"text":"ping"}' }),
+				expect.objectContaining({
+					type: "toolcall_delta",
+					delta: '{"text":"ping"}',
+				}),
 				expect.objectContaining({
 					type: "toolcall_end",
 					toolCall: expect.objectContaining({ id: "tool-1", name: "echo" }),
@@ -500,7 +573,10 @@ describe("streamSimpleCursor", () => {
 		expect(stream.events.at(-1)).toMatchObject({
 			type: "error",
 			reason: "aborted",
-			error: expect.objectContaining({ stopReason: "aborted", errorMessage: "Request was aborted" }),
+			error: expect.objectContaining({
+				stopReason: "aborted",
+				errorMessage: "Request was aborted",
+			}),
 		});
 		expect(stream.end).toHaveBeenCalledTimes(1);
 	});

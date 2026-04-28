@@ -103,7 +103,10 @@ export function buildPrompt(
 	}
 
 	if (tandem?.priorError) {
-		prompt += `## ⚠️ Prior Attempt Failed\nA previous ant failed on this task. Learn from their mistake:\n${tandem.priorError.slice(0, 1500)}\n\n`;
+		prompt += `## ⚠️ Prior Attempt Failed\nA previous ant failed on this task. Learn from their mistake:\n${tandem.priorError.slice(
+			0,
+			1500,
+		)}\n\n`;
 	}
 
 	prompt += `## Your Assignment\n**Task:** ${task.title}\n**Description:** ${task.description}\n`;

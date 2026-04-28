@@ -72,8 +72,18 @@ describe("subagent skills", () => {
 		expect(normalizeSkillInput("git, context7, git")).toEqual(["git", "context7"]);
 		expect(
 			buildSkillInjection([
-				{ name: "git", path: "/skills/git.md", source: "project", content: "Use git carefully." },
-				{ name: "context7", path: "/skills/context7.md", source: "user", content: "Query docs first." },
+				{
+					name: "git",
+					path: "/skills/git.md",
+					source: "project",
+					content: "Use git carefully.",
+				},
+				{
+					name: "context7",
+					path: "/skills/context7.md",
+					source: "user",
+					content: "Query docs first.",
+				},
 			]),
 		).toBe('<skill name="git">\nUse git carefully.\n</skill>\n\n<skill name="context7">\nQuery docs first.\n</skill>');
 	});
@@ -109,15 +119,24 @@ describe("subagent skills", () => {
 
 		fs.writeFileSync(
 			path.join(projectPkgRoot, "package.json"),
-			JSON.stringify({ name: "@scope/pkg-a", pi: { skills: ["./package-skills"] } }),
+			JSON.stringify({
+				name: "@scope/pkg-a",
+				pi: { skills: ["./package-skills"] },
+			}),
 		);
 		fs.writeFileSync(
 			path.join(userPkgRoot, "package.json"),
-			JSON.stringify({ name: "pkg-b", pi: { skills: ["./user-package-skills"] } }),
+			JSON.stringify({
+				name: "pkg-b",
+				pi: { skills: ["./user-package-skills"] },
+			}),
 		);
 		fs.writeFileSync(
 			path.join(globalPkgRoot, "package.json"),
-			JSON.stringify({ name: "pkg-c", pi: { skills: ["./global-package-skills"] } }),
+			JSON.stringify({
+				name: "pkg-c",
+				pi: { skills: ["./global-package-skills"] },
+			}),
 		);
 		fs.writeFileSync(path.join(cwd, ".pi", "settings.json"), JSON.stringify({ skills: ["./custom/project-skill"] }));
 		fs.writeFileSync(path.join(agentDir, "settings.json"), JSON.stringify({ skills: ["~/custom-user-skill"] }));
@@ -191,11 +210,27 @@ describe("subagent skills", () => {
 		const available = discoverAvailableSkills(cwd);
 		expect(available).toEqual([
 			{ name: "builtin-skill", source: "builtin", description: "Builtin" },
-			{ name: "pkg-global", source: "user-package", description: "Global package" },
-			{ name: "pkg-project", source: "project-package", description: "Project package" },
+			{
+				name: "pkg-global",
+				source: "user-package",
+				description: "Global package",
+			},
+			{
+				name: "pkg-project",
+				source: "project-package",
+				description: "Project package",
+			},
 			{ name: "pkg-user", source: "user-package", description: "User package" },
-			{ name: "settings-project", source: "project-settings", description: "Project settings" },
-			{ name: "settings-user", source: "unknown", description: "User settings" },
+			{
+				name: "settings-project",
+				source: "project-settings",
+				description: "Project settings",
+			},
+			{
+				name: "settings-user",
+				source: "unknown",
+				description: "User settings",
+			},
 			{ name: "shared", source: "project", description: "Project copy" },
 		]);
 		expect(resolveSkillPath("shared", cwd)).toEqual({
@@ -224,16 +259,40 @@ describe("subagent skills", () => {
 
 		skillsMocks.loadSkills.mockReturnValue({
 			skills: [
-				{ name: "shared", filePath: sharedSkillFile, source: "project", description: "Project" },
-				{ name: "package", filePath: packageSkillFile, source: "package", description: "Package" },
-				{ name: "broken", filePath: path.join(cwd, "missing", "SKILL.md"), source: "project" },
+				{
+					name: "shared",
+					filePath: sharedSkillFile,
+					source: "project",
+					description: "Project",
+				},
+				{
+					name: "package",
+					filePath: packageSkillFile,
+					source: "package",
+					description: "Package",
+				},
+				{
+					name: "broken",
+					filePath: path.join(cwd, "missing", "SKILL.md"),
+					source: "project",
+				},
 			],
 		});
 
 		const resolved = resolveSkills(["shared", "package", "missing", "broken"], cwd);
 		expect(resolved.resolved).toEqual([
-			{ name: "shared", path: sharedSkillFile, content: "Project instructions", source: "project" },
-			{ name: "package", path: packageSkillFile, content: "Package instructions\n", source: "project-package" },
+			{
+				name: "shared",
+				path: sharedSkillFile,
+				content: "Project instructions",
+				source: "project",
+			},
+			{
+				name: "package",
+				path: packageSkillFile,
+				content: "Package instructions\n",
+				source: "project-package",
+			},
 		]);
 		expect(resolved.missing).toEqual(["missing", "broken"]);
 	});

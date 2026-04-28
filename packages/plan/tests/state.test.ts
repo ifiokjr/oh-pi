@@ -22,19 +22,33 @@ describe("getLatestState", () => {
 					{
 						type: "custom",
 						customType: "pi-plan:state",
-						data: { version: 1, active: true, planFilePath: "/tmp/old.plan.md", lastPlanLeafId: "leaf-old" },
+						data: {
+							version: 1,
+							active: true,
+							planFilePath: "/tmp/old.plan.md",
+							lastPlanLeafId: "leaf-old",
+						},
 					},
 					{
 						type: "custom",
 						customType: "pi-plan:state",
-						data: { version: 1, active: false, planFilePath: "/tmp/new.plan.md", lastPlanLeafId: "leaf-new" },
+						data: {
+							version: 1,
+							active: false,
+							planFilePath: "/tmp/new.plan.md",
+							lastPlanLeafId: "leaf-new",
+						},
 					},
 				],
 				getBranch: () => [
 					{
 						type: "custom",
 						customType: "pi-plan:state",
-						data: { version: 1, active: true, planFilePath: "/tmp/old.plan.md" },
+						data: {
+							version: 1,
+							active: true,
+							planFilePath: "/tmp/old.plan.md",
+						},
 					},
 				],
 			},
@@ -100,7 +114,11 @@ describe("createPlanModeStateManager tool visibility", () => {
 				{
 					type: "custom",
 					customType: "pi-plan:state",
-					data: { version: 1, active: false, planFilePath: "/tmp/session.plan.md" },
+					data: {
+						version: 1,
+						active: false,
+						planFilePath: "/tmp/session.plan.md",
+					},
 				},
 			]),
 		);

@@ -79,8 +79,12 @@ export async function confirmApply(config: OhPConfigWithRouting, env: EnvInfo) {
 	// ═══ Diff (if existing) ═══
 	if (env.hasExistingConfig) {
 		const diff = [
-			`Extensions:  ${chalk.dim(countExisting(env, "extensions"))} ${chalk.yellow("→")} ${chalk.green(config.extensions.length)}`,
-			`Prompts:     ${chalk.dim(countExisting(env, "prompts"))} ${chalk.yellow("→")} ${chalk.green(config.prompts.length)}`,
+			`Extensions:  ${chalk.dim(countExisting(env, "extensions"))} ${chalk.yellow(
+				"→",
+			)} ${chalk.green(config.extensions.length)}`,
+			`Prompts:     ${chalk.dim(countExisting(env, "prompts"))} ${chalk.yellow(
+				"→",
+			)} ${chalk.green(config.prompts.length)}`,
 		].join("\n");
 		p.note(diff, t("confirm.changes"));
 	}
@@ -90,9 +94,21 @@ export async function confirmApply(config: OhPConfigWithRouting, env: EnvInfo) {
 		const action = await p.select({
 			message: t("confirm.existingDetected"),
 			options: [
-				{ hint: t("confirm.backupHint"), label: t("confirm.backup"), value: "backup" },
-				{ hint: t("confirm.overwriteHint"), label: t("confirm.overwrite"), value: "overwrite" },
-				{ hint: t("confirm.cancelHint"), label: t("confirm.cancel"), value: "cancel" },
+				{
+					hint: t("confirm.backupHint"),
+					label: t("confirm.backup"),
+					value: "backup",
+				},
+				{
+					hint: t("confirm.overwriteHint"),
+					label: t("confirm.overwrite"),
+					value: "overwrite",
+				},
+				{
+					hint: t("confirm.cancelHint"),
+					label: t("confirm.cancel"),
+					value: "cancel",
+				},
 			],
 		});
 		if (p.isCancel(action) || action === "cancel") {

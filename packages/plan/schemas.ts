@@ -8,7 +8,9 @@ export const TaskSchema = Type.Object(
 				description: "Optional stable task ID (e.g. auth-scan) for tracing and steering.",
 			}),
 		),
-		prompt: Type.String({ description: "Task prompt for the delegated task agent." }),
+		prompt: Type.String({
+			description: "Task prompt for the delegated task agent.",
+		}),
 	},
 	{ additionalProperties: false },
 );
@@ -33,9 +35,15 @@ export const TaskAgentsSchema = Type.Object(
 
 export const SteerTaskAgentSchema = Type.Object(
 	{
-		instruction: Type.String({ description: "Additional steering instruction for the selected task." }),
-		runId: Type.String({ description: "Run ID from a previous task_agents result." }),
-		taskId: Type.String({ description: "Task ID from that run to rerun with steering." }),
+		instruction: Type.String({
+			description: "Additional steering instruction for the selected task.",
+		}),
+		runId: Type.String({
+			description: "Run ID from a previous task_agents result.",
+		}),
+		taskId: Type.String({
+			description: "Task ID from that run to rerun with steering.",
+		}),
 	},
 	{ additionalProperties: false },
 );
@@ -52,7 +60,9 @@ export const SetPlanSchema = Type.Object(
 
 export const RequestUserInputOptionSchema = Type.Object(
 	{
-		description: Type.String({ description: "One short sentence explaining impact/tradeoff if selected." }),
+		description: Type.String({
+			description: "One short sentence explaining impact/tradeoff if selected.",
+		}),
 		label: Type.String({ description: "User-facing label (1-5 words)." }),
 	},
 	{ additionalProperties: false },
@@ -60,15 +70,21 @@ export const RequestUserInputOptionSchema = Type.Object(
 
 export const RequestUserInputQuestionSchema = Type.Object(
 	{
-		header: Type.String({ description: "Short header label shown in the UI (12 or fewer chars)." }),
-		id: Type.String({ description: "Stable identifier for mapping answers (snake_case)." }),
+		header: Type.String({
+			description: "Short header label shown in the UI (12 or fewer chars).",
+		}),
+		id: Type.String({
+			description: "Stable identifier for mapping answers (snake_case).",
+		}),
 		options: Type.Optional(
 			Type.Array(RequestUserInputOptionSchema, {
 				description:
 					"Optional multiple-choice options. When omitted or empty, the question is treated as open-ended and accepts freeform input.",
 			}),
 		),
-		question: Type.String({ description: "Single-sentence prompt shown to the user." }),
+		question: Type.String({
+			description: "Single-sentence prompt shown to the user.",
+		}),
 	},
 	{ additionalProperties: false },
 );

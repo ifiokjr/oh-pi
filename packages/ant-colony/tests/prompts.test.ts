@@ -64,13 +64,17 @@ describe("buildPrompt", () => {
 
 	// Bio 3: Tandem foraging — tandem context
 	it("includes tandem parent result when provided", () => {
-		const r = buildPrompt(mkTask(), "", "System", 10, { parentResult: "Parent found auth module at src/auth.ts" });
+		const r = buildPrompt(mkTask(), "", "System", 10, {
+			parentResult: "Parent found auth module at src/auth.ts",
+		});
 		expect(r).toContain("Tandem Context");
 		expect(r).toContain("Parent found auth module");
 	});
 
 	it("includes tandem prior error when provided", () => {
-		const r = buildPrompt(mkTask(), "", "System", 10, { priorError: "TypeError: cannot read property" });
+		const r = buildPrompt(mkTask(), "", "System", 10, {
+			priorError: "TypeError: cannot read property",
+		});
 		expect(r).toContain("Prior Attempt Failed");
 		expect(r).toContain("TypeError: cannot read property");
 	});
@@ -98,7 +102,9 @@ describe("buildPrompt", () => {
 
 	it("truncates long parent result", () => {
 		const longResult = "x".repeat(5000);
-		const r = buildPrompt(mkTask(), "", "System", 10, { parentResult: longResult });
+		const r = buildPrompt(mkTask(), "", "System", 10, {
+			parentResult: longResult,
+		});
 		expect(r).toContain("Tandem Context");
 		// Should be truncated to 3000 chars
 		expect(r.length).toBeLessThan(longResult.length);

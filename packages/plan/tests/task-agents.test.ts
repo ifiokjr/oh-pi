@@ -33,7 +33,14 @@ function makeSingleResult(exitCode: number, error?: string) {
 		task: "Task",
 		exitCode,
 		messages: [],
-		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			cost: 0,
+			turns: 0,
+		},
 		error,
 	};
 }
@@ -171,10 +178,32 @@ describe("task_agents tool", () => {
 						latestActivity: "→ read src/auth.ts",
 						activityCount: 2,
 					},
-					{ taskId: "b", prompt: "Inspect docs", status: "completed", latestActivity: "done", activityCount: 1 },
-					{ taskId: "c", prompt: "Inspect cli", status: "failed", latestActivity: "boom", activityCount: 4 },
-					{ taskId: "d", prompt: "Inspect ui", status: "queued", activityCount: 0 },
-					{ taskId: "e", prompt: "Inspect build", status: "queued", activityCount: 0 },
+					{
+						taskId: "b",
+						prompt: "Inspect docs",
+						status: "completed",
+						latestActivity: "done",
+						activityCount: 1,
+					},
+					{
+						taskId: "c",
+						prompt: "Inspect cli",
+						status: "failed",
+						latestActivity: "boom",
+						activityCount: 4,
+					},
+					{
+						taskId: "d",
+						prompt: "Inspect ui",
+						status: "queued",
+						activityCount: 0,
+					},
+					{
+						taskId: "e",
+						prompt: "Inspect build",
+						status: "queued",
+						activityCount: 0,
+					},
 				],
 			},
 			content: [{ type: "text", text: "progress" }],
@@ -230,7 +259,10 @@ describe("task_agents tool", () => {
 		expect((runSync as MockRunSync).mock.calls[0]?.[2]).toBe("plan-researcher");
 		expect((runSync as MockRunSync).mock.calls[0]?.[3]).toContain("Task ID: task-a");
 		expect((runSync as MockRunSync).mock.calls[0]?.[0]).toBe("/repo");
-		expect((runSync as MockRunSync).mock.calls[0]?.[4]).toMatchObject({ cwd: "/repo", index: 0 });
+		expect((runSync as MockRunSync).mock.calls[0]?.[4]).toMatchObject({
+			cwd: "/repo",
+			index: 0,
+		});
 		expect(result.details.successCount).toBe(2);
 		expect(result.details.tasks[0]?.taskId).toBe("task-a");
 		expect(result.details.tasks[0]?.references).toContain("src/auth.ts");
@@ -255,7 +287,13 @@ describe("task_agents tool", () => {
 							references: ["src/auth.ts"],
 							exitCode: 0,
 							stderr: "",
-							activities: [{ kind: "assistant", text: "summary", timestamp: 1 }],
+							activities: [
+								{
+									kind: "assistant",
+									text: "summary",
+									timestamp: 1,
+								},
+							],
 							startedAt: 1,
 							finishedAt: 2_001,
 							steeringNotes: ["Focus on middleware"],
@@ -278,7 +316,10 @@ describe("task_agents tool", () => {
 				content: [{ type: "text", text: "done" }],
 			},
 			{ expanded: true, isPartial: false },
-			{ bold: (text: string) => text, fg: (_tone: string, text: string) => text },
+			{
+				bold: (text: string) => text,
+				fg: (_tone: string, text: string) => text,
+			},
 		);
 
 		expect(detailed.text).toContain("Steering notes:");
@@ -288,9 +329,15 @@ describe("task_agents tool", () => {
 		expect(detailed.text).toContain("Ctrl+O to collapse.");
 
 		const fallback = taskAgentsTool.renderResult(
-			{ details: undefined, content: [{ type: "text", text: "plain fallback" }] },
+			{
+				details: undefined,
+				content: [{ type: "text", text: "plain fallback" }],
+			},
 			{ expanded: false, isPartial: false },
-			{ bold: (text: string) => text, fg: (_tone: string, text: string) => text },
+			{
+				bold: (text: string) => text,
+				fg: (_tone: string, text: string) => text,
+			},
 		);
 		expect(fallback.text).toBe("plain fallback");
 	});
@@ -325,8 +372,15 @@ describe("steer_task_agent", () => {
 		const tools = registerTools();
 		const steerTaskAgentTool = tools.get("steer_task_agent");
 		const rendered = steerTaskAgentTool.renderCall(
-			{ runId: "run-1", taskId: "auth", instruction: "Focus carefully on middleware ordering and auth regressions" },
-			{ bold: (text: string) => text, fg: (_tone: string, text: string) => text },
+			{
+				runId: "run-1",
+				taskId: "auth",
+				instruction: "Focus carefully on middleware ordering and auth regressions",
+			},
+			{
+				bold: (text: string) => text,
+				fg: (_tone: string, text: string) => text,
+			},
 		);
 
 		expect(rendered.text).toContain("steer task agent run-1/auth");
@@ -387,7 +441,11 @@ describe("steer_task_agent", () => {
 
 		const unknownTask = await steerTaskAgentTool.execute(
 			"call-4",
-			{ runId: firstRun.details.runId, taskId: "missing", instruction: "retry" },
+			{
+				runId: firstRun.details.runId,
+				taskId: "missing",
+				instruction: "retry",
+			},
 			undefined,
 			undefined,
 			{ cwd: "/repo" },

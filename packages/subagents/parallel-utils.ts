@@ -76,7 +76,12 @@ export async function mapConcurrent<T, R>(
 
 /** Aggregate outputs from parallel tasks into a single string for {previous} */
 export function aggregateParallelOutputs(
-	results: { agent: string; output: string; exitCode: number | null; error?: string }[],
+	results: {
+		agent: string;
+		output: string;
+		exitCode: number | null;
+		error?: string;
+	}[],
 ): string {
 	return results
 		.map((r, i) => {

@@ -6,8 +6,7 @@
 
 ### Primary Positioning
 
-- **oh-pi**: One-click configuration and onboarding portal (install, initialize,
-  theme/extension/skill assembly)
+- **oh-pi**: One-click configuration and onboarding portal (install, initialize, theme/extension/skill assembly)
 - **ant-colony**: Optional advanced multi-agent extension (parallel execution of complex tasks)
 
 ### Communication Principles

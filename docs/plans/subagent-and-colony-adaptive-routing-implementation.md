@@ -1,8 +1,8 @@
 # Subagent and Colony Adaptive Routing — Implementation Plan
 
-**Branch**: `feat/delegated-routing-subagents-colony`  
-**Date**: 2026-04-12  
-**RFC**: `docs/plans/subagent-and-colony-adaptive-routing.md`  
+**Branch**: `feat/delegated-routing-subagents-colony`\
+**Date**: 2026-04-12\
+**RFC**: `docs/plans/subagent-and-colony-adaptive-routing.md`\
 **Tracking Issues**: #82, #87, #88, #89, #91, #92, #109
 
 ## Summary
@@ -21,7 +21,7 @@ The implementation should:
 
 ## Technical Context
 
-**Language**: TypeScript (strict mode)  
+**Language**: TypeScript (strict mode)\
 **Primary packages**:
 
 - `packages/adaptive-routing` — adaptive routing package
@@ -29,8 +29,8 @@ The implementation should:
 - `packages/subagents` — agent definitions, execution, management UI, schemas
 - `packages/ant-colony` — caste configs, spawning, budget planning, UI
 
-**Testing**: Vitest  
-**Build tool**: pnpm workspace  
+**Testing**: Vitest\
+**Build tool**: pnpm workspace\
 **Existing routing primitives**:
 
 - `packages/adaptive-routing/*`

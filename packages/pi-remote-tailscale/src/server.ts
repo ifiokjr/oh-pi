@@ -174,7 +174,10 @@ export async function startRemoteSessionServer(options: RemoteSessionServerOptio
 
 	if (options.enableTailscale !== false) {
 		try {
-			tailscaleSession = await startTailscale({ instanceId: started.instanceId, port });
+			tailscaleSession = await startTailscale({
+				instanceId: started.instanceId,
+				port,
+			});
 			tunnelUrl = tailscaleSession.publicUrl;
 			server.setTunnel({
 				provider: "tailscale",

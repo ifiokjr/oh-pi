@@ -26,7 +26,9 @@ export async function loginProvider(
 	}
 
 	callbacks.onProgress?.(`Refreshing the ${provider.name} model catalog...`);
-	return enrichProviderCredentials(provider, createStaticCredential(apiKey), { signal: callbacks.signal });
+	return enrichProviderCredentials(provider, createStaticCredential(apiKey), {
+		signal: callbacks.signal,
+	});
 }
 
 export function refreshProviderCredential(

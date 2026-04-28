@@ -87,7 +87,13 @@ describe("provider catalog", () => {
 			.mockImplementationOnce(async () => jsonResponse(sampleCatalog))
 			.mockImplementationOnce(async () =>
 				jsonResponse({
-					data: [{ id: "minimax-m2.5", thinking_enabled: true, max_tokens: 8192 }],
+					data: [
+						{
+							id: "minimax-m2.5",
+							thinking_enabled: true,
+							max_tokens: 8192,
+						},
+					],
 				}),
 			);
 		vi.stubGlobal("fetch", fetch);

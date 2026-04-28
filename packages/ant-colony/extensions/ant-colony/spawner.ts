@@ -27,7 +27,7 @@ import type { AgentSession, AgentSessionEvent, ResourceLoader } from "@mariozech
 import type { Nest } from "./nest.js";
 import { extractPheromones, parseSubTasks } from "./parser.js";
 import type { ParsedSubTask } from "./parser.js";
-import { CASTE_PROMPTS, buildPrompt } from "./prompts.js";
+import { buildPrompt, CASTE_PROMPTS } from "./prompts.js";
 import type { Ant, AntCaste, AntConfig, AntStreamEvent, AntUsageEvent, DroneCommandPolicy, Task } from "./types.js";
 
 let antCounter = 0;
@@ -195,7 +195,11 @@ function toNumber(value: unknown): number {
 /** Minimal ResourceLoader for ant sessions — ants don't load extensions or skills. */
 function makeMinimalResourceLoader(systemPrompt: string): ResourceLoader {
 	return {
-		getExtensions: () => ({ errors: [], extensions: [], runtime: createExtensionRuntime() }),
+		getExtensions: () => ({
+			errors: [],
+			extensions: [],
+			runtime: createExtensionRuntime(),
+		}),
 		getSkills: () => ({ diagnostics: [], skills: [] }),
 		getPrompts: () => ({ diagnostics: [], prompts: [] }),
 		getThemes: () => ({ diagnostics: [], themes: [] }),
@@ -234,7 +238,12 @@ export async function runDrone(cwd: string, nest: Nest, task: Task): Promise<Ant
 		const command = extractDroneCommand(task);
 		const argv = validateDroneCommand(command, DRONE_COMMAND_POLICY);
 		const [file, ...args] = argv;
-		const output = execFileSync(file, args, { cwd, encoding: "utf-8", stdio: "pipe", timeout: 30000 }).trim();
+		const output = execFileSync(file, args, {
+			cwd,
+			encoding: "utf-8",
+			stdio: "pipe",
+			timeout: 30000,
+		}).trim();
 
 		ant.status = "done";
 		ant.finishedAt = Date.now();
@@ -259,7 +268,13 @@ export async function runDrone(cwd: string, nest: Nest, task: Task): Promise<Ant
 		ant.finishedAt = Date.now();
 		nest.updateAnt(ant);
 		nest.updateTaskStatus(task.id, "failed", undefined, errStr.slice(0, 500));
-		return { ant, newTasks: [], output: errStr, pheromones: [], rateLimited: false };
+		return {
+			ant,
+			newTasks: [],
+			output: errStr,
+			pheromones: [],
+			rateLimited: false,
+		};
 	}
 }
 
@@ -479,7 +494,13 @@ export async function spawnAnt(
 
 		nest.updateTaskStatus(task.id, "done", finalOutput);
 
-		return { ant, newTasks, output: finalOutput, pheromones, rateLimited: false };
+		return {
+			ant,
+			newTasks,
+			output: finalOutput,
+			pheromones,
+			rateLimited: false,
+		};
 	} catch (error: unknown) {
 		const errStr = String(error);
 		rateLimited = errStr.includes("429") || errStr.includes("rate limit") || errStr.includes("Rate limit");
@@ -489,7 +510,13 @@ export async function spawnAnt(
 			ant.status = "failed";
 			ant.finishedAt = Date.now();
 			nest.updateAnt(ant);
-			return { ant, output: accumulatedText, newTasks: [], pheromones: [], rateLimited: true };
+			return {
+				ant,
+				output: accumulatedText,
+				newTasks: [],
+				pheromones: [],
+				rateLimited: true,
+			};
 		}
 
 		ant.status = "failed";
@@ -509,7 +536,13 @@ export async function spawnAnt(
 			: fullError.slice(0, 2000);
 		nest.updateTaskStatus(task.id, "failed", accumulatedText, errorWithPartialOutput);
 
-		return { ant, newTasks, output: accumulatedText, pheromones, rateLimited: false };
+		return {
+			ant,
+			newTasks,
+			output: accumulatedText,
+			pheromones,
+			rateLimited: false,
+		};
 	} finally {
 		try {
 			session?.dispose();

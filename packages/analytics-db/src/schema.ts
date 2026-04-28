@@ -6,8 +6,8 @@
  */
 
 /* C8 ignore start -- module import wiring is runtime boilerplate */
-import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { relations } from "drizzle-orm";
+import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 /* C8 ignore stop */
 
 // ─── Core Tables ─────────────────────────────────────────────────────────────

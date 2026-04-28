@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-	detectImageProtocol,
-	renderInlineImage,
-	getOuterTerminal,
-	isTmuxSession,
-	getTmuxPassthroughWarning,
 	__imageInternals,
+	detectImageProtocol,
+	getOuterTerminal,
+	getTmuxPassthroughWarning,
+	isTmuxSession,
+	renderInlineImage,
 } from "../src/image-inline.js";
 
 describe("detectImageProtocol", () => {
@@ -71,7 +71,9 @@ describe("renderInlineImage", () => {
 	});
 
 	it("generates kitty sequence", () => {
-		const seq = renderInlineImage("kitty", "image/png", "abc123", { maxWidth: 40 });
+		const seq = renderInlineImage("kitty", "image/png", "abc123", {
+			maxWidth: 40,
+		});
 		expect(seq).toContain("_Ga=T");
 	});
 });

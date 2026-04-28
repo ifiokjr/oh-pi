@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 
 const { getAgentDir } = vi.hoisted(() => ({
 	getAgentDir: vi.fn(() => "/mock-home/.pi/agent"),

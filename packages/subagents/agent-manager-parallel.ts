@@ -1,5 +1,6 @@
 import type { Theme } from "@mariozechner/pi-coding-agent";
 import { matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import { fuzzyFilter, pad, renderFooter, renderHeader, row } from "./render-helpers.js";
 import type { TextEditorState } from "./text-editor.js";
 import {
 	createEditorState,
@@ -9,7 +10,6 @@ import {
 	renderEditor,
 	wrapText,
 } from "./text-editor.js";
-import { fuzzyFilter, pad, renderFooter, renderHeader, row } from "./render-helpers.js";
 
 export interface ParallelSlot {
 	agentName: string;
@@ -278,7 +278,10 @@ export function renderParallel(state: ParallelState, agents: AgentOption[], widt
 			const nameStr = isCursor ? theme.fg("accent", a.name) : a.name;
 			const descWidth = Math.max(0, width - 2 - 1 - 1 - 16 - 2);
 			contentLines.push(
-				` ${cur} ${pad(truncateToWidth(nameStr, 16), 16)}  ${theme.fg("dim", truncateToWidth(a.description, descWidth))}`,
+				` ${cur} ${pad(truncateToWidth(nameStr, 16), 16)}  ${theme.fg(
+					"dim",
+					truncateToWidth(a.description, descWidth),
+				)}`,
 			);
 		}
 	} else if (state.mode === "edit-task") {

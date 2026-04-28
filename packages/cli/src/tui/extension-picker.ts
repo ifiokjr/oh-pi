@@ -1,5 +1,5 @@
-import { emitKeypressEvents } from "node:readline";
 import chalk from "chalk";
+import { emitKeypressEvents } from "node:readline";
 
 export interface KeypressKey {
 	name: string;

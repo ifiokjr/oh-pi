@@ -69,9 +69,15 @@ export function createQrRenderer(options: QrRenderOptions = {}): QrRenderer {
 			const qrModule = await loadModule();
 			const lines = await new Promise<string[]>((resolve, reject) => {
 				try {
-					const maybeOutput = qrModule.generate(url, { small: options.small ?? true }, (output) => {
-						resolve(splitQrOutput(output));
-					});
+					const maybeOutput = qrModule.generate(
+						url,
+						{
+							small: options.small ?? true,
+						},
+						(output) => {
+							resolve(splitQrOutput(output));
+						},
+					);
 
 					if (typeof maybeOutput === "string") {
 						resolve(splitQrOutput(maybeOutput));
@@ -96,6 +102,8 @@ async function loadQrTerminalModule(): Promise<QrTerminalModule> {
 		return globalThis.__PI_REMOTE_TAILSCALE_QR_LOADER__();
 	}
 
-	const imported = (await import(QR_MODULE_NAME)) as { default?: QrTerminalModule } & QrTerminalModule;
+	const imported = (await import(QR_MODULE_NAME)) as {
+		default?: QrTerminalModule;
+	} & QrTerminalModule;
 	return imported.default ?? imported;
 }

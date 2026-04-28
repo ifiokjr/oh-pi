@@ -79,7 +79,13 @@ describe("openScrollableSelect", () => {
 	});
 
 	it("returns null when there are no options", async () => {
-		const result = await openScrollableSelect({ custom: vi.fn() }, { title: "Empty", options: [] });
+		const result = await openScrollableSelect(
+			{ custom: vi.fn() },
+			{
+				title: "Empty",
+				options: [],
+			},
+		);
 
 		expect(result).toBeNull();
 	});

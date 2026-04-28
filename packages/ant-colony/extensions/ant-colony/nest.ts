@@ -237,7 +237,10 @@ export class Nest {
 			if (tasks.length > 1 && Math.random() < 0.1) {
 				chosen = tasks[Math.floor(Math.random() * tasks.length)];
 			} else {
-				const scored = tasks.map((t) => ({ score: scoreTask(t, this.pheromoneByFile), task: t }));
+				const scored = tasks.map((t) => ({
+					score: scoreTask(t, this.pheromoneByFile),
+					task: t,
+				}));
 				scored.sort((a, b) => b.score - a.score);
 				chosen = scored[0].task;
 			}
@@ -493,7 +496,9 @@ export class Nest {
 				// Ensure the colony storage directory still exists (it may have
 				// Been cleaned up mid-run by worktree teardown or another process).
 				fs.mkdirSync(path.dirname(this.lockFile), { recursive: true });
-				fs.writeFileSync(this.lockFile, `${process.pid}:${Date.now()}`, { flag: "wx" });
+				fs.writeFileSync(this.lockFile, `${process.pid}:${Date.now()}`, {
+					flag: "wx",
+				});
 				break;
 			} catch (error) {
 				if (!this.isLockContentionError(error)) {
@@ -503,7 +508,9 @@ export class Nest {
 						continue;
 					}
 					throw new Error(
-						`[Nest] failed to acquire state lock at ${this.lockFile}: ${error instanceof Error ? error.message : String(error)}`,
+						`[Nest] failed to acquire state lock at ${this.lockFile}: ${
+							error instanceof Error ? error.message : String(error)
+						}`,
 						{ cause: error },
 					);
 				}
@@ -511,7 +518,9 @@ export class Nest {
 					continue;
 				}
 				if (Date.now() - start > STATE_LOCK_WAIT_MS) {
-					throw new Error(this.buildStateLockTimeoutMessage(), { cause: error });
+					throw new Error(this.buildStateLockTimeoutMessage(), {
+						cause: error,
+					});
 				}
 				// Sleep with jitter instead of burning CPU in a tight busy loop.
 				blockingSleep(STATE_LOCK_SPIN_MS + Math.random() * STATE_LOCK_SPIN_MS * 2);

@@ -33,8 +33,7 @@ npx @ifi/oh-pi
 
 ## Package role
 
-This is a compiled Node.js CLI package. It is part of the oh-pi monorepo and depends on the other
-workspace packages for content and installation targets.
+This is a compiled Node.js CLI package. It is part of the oh-pi monorepo and depends on the other workspace packages for content and installation targets.
 
 ## Development
 

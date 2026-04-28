@@ -164,7 +164,10 @@ describe("provider catalog extension", () => {
 
 		const component = pickerFactory(
 			{ requestRender: vi.fn() },
-			{ fg: (_color: string, text: string) => text, bold: (text: string) => text },
+			{
+				fg: (_color: string, text: string) => text,
+				bold: (text: string) => text,
+			},
 			{},
 			() => undefined,
 		);
@@ -175,7 +178,10 @@ describe("provider catalog extension", () => {
 		expect(rendered).not.toContain("Previous 10");
 
 		expect(harness.providers.has(provider.id)).toBe(true);
-		expect(stored.get(provider.id)).toMatchObject({ type: "oauth", providerId: provider.id });
+		expect(stored.get(provider.id)).toMatchObject({
+			type: "oauth",
+			providerId: provider.id,
+		});
 		expect(refresh).toHaveBeenCalledTimes(1);
 	});
 

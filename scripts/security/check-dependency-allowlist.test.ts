@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -23,8 +23,12 @@ describe("check-dependency-allowlist", () => {
 		tempDirs.push(repoDir);
 
 		mkdirSync(path.join(repoDir, "security"), { recursive: true });
-		mkdirSync(path.join(repoDir, "packages", "internal-a"), { recursive: true });
-		mkdirSync(path.join(repoDir, "packages", "internal-b"), { recursive: true });
+		mkdirSync(path.join(repoDir, "packages", "internal-a"), {
+			recursive: true,
+		});
+		mkdirSync(path.join(repoDir, "packages", "internal-b"), {
+			recursive: true,
+		});
 
 		writeJson(path.join(repoDir, "security", "dependency-allowlist.json"), {
 			packages: ["chalk"],

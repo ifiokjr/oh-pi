@@ -14,7 +14,12 @@ export function createRoutes(options: RoutesOptions): Hono {
 	const app = new Hono();
 
 	// Health check — no auth required
-	app.get("/api/health", (c) => c.json({ status: "ok", uptime: Math.floor((Date.now() - options.startTime) / 1000) }));
+	app.get("/api/health", (c) =>
+		c.json({
+			status: "ok",
+			uptime: Math.floor((Date.now() - options.startTime) / 1000),
+		}),
+	);
 
 	// Auth middleware for all other /api routes
 	app.use("/api/*", async (c, next) => {

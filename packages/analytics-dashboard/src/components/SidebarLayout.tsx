@@ -6,11 +6,11 @@
  */
 import { Navigation } from "@/components/Navigation";
 import { TimeRangeSelector } from "@/components/TimeRangeSelector";
-import useDashboardStore from "@/stores/dashboard";
 import { cn } from "@/lib/utils";
+import useDashboardStore from "@/stores/dashboard";
+import type { ViewType } from "@/types";
 import { Download, Menu, X } from "lucide-react";
 import { useState } from "react";
-import type { ViewType } from "@/types";
 
 interface SidebarLayoutProps {
 	children: React.ReactNode;

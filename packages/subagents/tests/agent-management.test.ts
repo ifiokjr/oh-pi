@@ -82,7 +82,12 @@ describe("handleManagementAction", () => {
 		fs.writeFileSync(userAgentPath, "agent:helper", "utf8");
 		fs.writeFileSync(chainPath, "chain:delivery", "utf8");
 		discoveryState.builtin = [
-			{ name: "scout", description: "Builtin scout", source: "builtin", filePath: "/builtin/scout.md" },
+			{
+				name: "scout",
+				description: "Builtin scout",
+				source: "builtin",
+				filePath: "/builtin/scout.md",
+			},
 		];
 		discoveryState.user = [
 			{
@@ -103,7 +108,15 @@ describe("handleManagementAction", () => {
 				description: "Ship work",
 				source: "project",
 				filePath: chainPath,
-				steps: [{ agent: "helper", task: "inspect", output: "report.md", reads: ["spec.md"], progress: true }],
+				steps: [
+					{
+						agent: "helper",
+						task: "inspect",
+						output: "report.md",
+						reads: ["spec.md"],
+						progress: true,
+					},
+				],
 			},
 		];
 
@@ -114,7 +127,14 @@ describe("handleManagementAction", () => {
 		expect(listResult.content[0]?.text).toContain("- helper (user): User helper");
 		expect(listResult.content[0]?.text).toContain("- delivery (project): Ship work");
 
-		const getResult = handleManagementAction("get", { agent: "helper", chainName: "delivery" }, ctx as never);
+		const getResult = handleManagementAction(
+			"get",
+			{
+				agent: "helper",
+				chainName: "delivery",
+			},
+			ctx as never,
+		);
 		expect(getResult.content[0]?.text).toContain("Agent: helper (user)");
 		expect(getResult.content[0]?.text).toContain("Skills: git");
 		expect(getResult.content[0]?.text).toContain("Chain: delivery (project)");
@@ -162,7 +182,12 @@ describe("handleManagementAction", () => {
 					scope: "project",
 					steps: [
 						{ agent: "my-helper", task: "inspect" },
-						{ agent: "missing-agent", task: "ship", model: "missing-model", skills: ["missing-skill"] },
+						{
+							agent: "missing-agent",
+							task: "ship",
+							model: "missing-model",
+							skills: ["missing-skill"],
+						},
 					],
 				},
 			},
@@ -234,7 +259,12 @@ describe("handleManagementAction", () => {
 		const chainPath = path.join(projectDir, "delivery.chain.md");
 		fs.writeFileSync(chainPath, "chain:delivery", "utf8");
 		discoveryState.builtin = [
-			{ name: "scout", description: "Builtin scout", source: "builtin", filePath: "/builtin/scout.md" },
+			{
+				name: "scout",
+				description: "Builtin scout",
+				source: "builtin",
+				filePath: "/builtin/scout.md",
+			},
 		];
 		discoveryState.chains = [
 			{

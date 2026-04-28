@@ -106,9 +106,17 @@ describe("detectPiPackageInstallScopes", () => {
 		mkdirSync(join(cwd, ".pi"), { recursive: true });
 		writeFileSync(join(cwd, ".pi", "settings.json"), "{not-json");
 
-		const states = detectPiPackageInstallScopes(["@ifi/pi-provider-ollama"], { cwd, homeDir });
+		const states = detectPiPackageInstallScopes(["@ifi/pi-provider-ollama"], {
+			cwd,
+			homeDir,
+		});
 
-		expect(states).toEqual([{ packageName: "@ifi/pi-provider-ollama", scope: "none" }]);
+		expect(states).toEqual([
+			{
+				packageName: "@ifi/pi-provider-ollama",
+				scope: "none",
+			},
+		]);
 	});
 });
 
@@ -117,7 +125,11 @@ describe("findPiCommand", () => {
 		const run = vi.fn(() => Buffer.from("pi 0.64.0"));
 
 		expect(findPiCommand(run)).toBe("pi");
-		expect(run).toHaveBeenCalledWith("pi", ["--version"], { stdio: "pipe", timeout: 3000, shell: false });
+		expect(run).toHaveBeenCalledWith("pi", ["--version"], {
+			stdio: "pipe",
+			timeout: 3000,
+			shell: false,
+		});
 	});
 
 	it("throws when pi is not available", () => {
@@ -136,7 +148,9 @@ describe("installPiPackages", () => {
 				return Buffer.from("pi 0.64.0");
 			}
 			if (args[1] === "npm:@ifi/pi-provider-cursor") {
-				const error = new Error("already installed") as Error & { stderr: Buffer };
+				const error = new Error("already installed") as Error & {
+					stderr: Buffer;
+				};
 				error.stderr = Buffer.from("already installed");
 				throw error;
 			}
@@ -145,7 +159,11 @@ describe("installPiPackages", () => {
 
 		installPiPackages(["@ifi/pi-provider-ollama", "@ifi/pi-provider-cursor"], "project", run);
 
-		expect(run).toHaveBeenNthCalledWith(1, "pi", ["--version"], { stdio: "pipe", timeout: 3000, shell: false });
+		expect(run).toHaveBeenNthCalledWith(1, "pi", ["--version"], {
+			stdio: "pipe",
+			timeout: 3000,
+			shell: false,
+		});
 		expect(run).toHaveBeenNthCalledWith(2, "pi", ["install", "npm:@ifi/pi-provider-ollama", "-l"], {
 			stdio: "pipe",
 			timeout: 60000,

@@ -228,8 +228,7 @@ pi --mode rpc [options]
 
 ### Extension UI Sub-protocol
 
-Extension `ctx.ui.select/confirm/input/editor` calls become `extension_ui_request` /
-`extension_ui_response` request-response pairs in RPC mode.
+Extension `ctx.ui.select/confirm/input/editor` calls become `extension_ui_request` / `extension_ui_response` request-response pairs in RPC mode.
 
 `notify/setStatus/setWidget/setTitle/set_editor_text` are fire-and-forget (no response needed).
 

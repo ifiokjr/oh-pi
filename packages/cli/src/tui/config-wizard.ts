@@ -111,7 +111,13 @@ export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): 
 		if (step === "providers") {
 			state.providerSetup = await setupProviders(env);
 			state.adaptiveRouting = await setupAdaptiveRouting(
-				[...(env.existingProviders ?? []).map((name) => ({ apiKey: "none", name })), ...state.providerSetup.providers],
+				[
+					...(env.existingProviders ?? []).map((name) => ({
+						apiKey: "none",
+						name,
+					})),
+					...state.providerSetup.providers,
+				],
 				state.adaptiveRouting,
 			);
 			nextStep = "routing";
@@ -125,7 +131,13 @@ export async function runConfigWizard(env: EnvInfo, initial: WizardBaseConfig): 
 				continue;
 			}
 			state.adaptiveRouting = await setupAdaptiveRouting(
-				[...(env.existingProviders ?? []).map((name) => ({ apiKey: "none", name })), ...state.providerSetup.providers],
+				[
+					...(env.existingProviders ?? []).map((name) => ({
+						apiKey: "none",
+						name,
+					})),
+					...state.providerSetup.providers,
+				],
 				state.adaptiveRouting,
 			);
 			nextStep = "appearance";
@@ -182,7 +194,9 @@ export function summarizeProviders(setup: ProviderSetupResult | null): string {
 
 	if (setup.providerStrategy === "add") {
 		return setup.providers.length > 0
-			? t("custom.providersAdd", { list: setup.providers.map((p) => p.name).join(", ") })
+			? t("custom.providersAdd", {
+					list: setup.providers.map((p) => p.name).join(", "),
+				})
 			: t("confirm.providerStrategyAdd");
 	}
 
@@ -190,5 +204,7 @@ export function summarizeProviders(setup: ProviderSetupResult | null): string {
 		return t("confirm.providerStrategyReplace");
 	}
 
-	return t("custom.providersReplace", { list: setup.providers.map((p) => p.name).join(", ") });
+	return t("custom.providersReplace", {
+		list: setup.providers.map((p) => p.name).join(", "),
+	});
 }

@@ -44,7 +44,14 @@ export async function createTestOllamaBackend(): Promise<TestOllamaBackend> {
 				return;
 			}
 			res.writeHead(200, { "Content-Type": "application/json" });
-			res.end(JSON.stringify({ data: activeModels.map((model) => ({ id: model.id, object: "model" })) }));
+			res.end(
+				JSON.stringify({
+					data: activeModels.map((model) => ({
+						id: model.id,
+						object: "model",
+					})),
+				}),
+			);
 			return;
 		}
 
@@ -82,7 +89,9 @@ export async function createTestOllamaBackend(): Promise<TestOllamaBackend> {
 							parameter_size: match.parameterSize ?? undefined,
 							quantization_level: match.quantization ?? undefined,
 						},
-						model_info: { [`${family}.context_length`]: match.contextWindow ?? 131072 },
+						model_info: {
+							[`${family}.context_length`]: match.contextWindow ?? 131072,
+						},
 					}),
 				);
 			});

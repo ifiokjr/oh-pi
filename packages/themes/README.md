@@ -35,5 +35,4 @@ Themes are shipped as JSON files for pi to discover and load.
 
 ## Use case
 
-Use this package to add a curated theme pack to your pi setup without installing the full oh-pi
-bundle.
+Use this package to add a curated theme pack to your pi setup without installing the full oh-pi bundle.

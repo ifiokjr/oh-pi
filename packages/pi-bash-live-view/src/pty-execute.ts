@@ -1,13 +1,13 @@
 import type { AgentToolResult, AgentToolUpdateCallback } from "@mariozechner/pi-coding-agent";
+import { type ManagedPtySession, PtySessionManager } from "./pty-session.js";
+import { createTerminalEmulator, type TerminalEmulator } from "./terminal-emulator.js";
 import {
 	appendExitSummary,
 	highlightErrorOutput,
+	type OutputTruncation,
 	tailText,
 	truncateOutput,
-	type OutputTruncation,
 } from "./truncate.js";
-import { PtySessionManager, type ManagedPtySession } from "./pty-session.js";
-import { createTerminalEmulator, type TerminalEmulator } from "./terminal-emulator.js";
 import { PtyLiveWidgetController, type WidgetContextLike, type WidgetStatus } from "./widget.js";
 
 const STREAM_UPDATE_DEBOUNCE_MS = 120;
@@ -106,7 +106,11 @@ export async function executePtyCommand(options: ExecutePtyCommandOptions): Prom
 	const sessionManager = options.sessionManager ?? new PtySessionManager({ now });
 	const createEmulator =
 		options.createEmulator ??
-		(() => createTerminalEmulator({ columns: DEFAULT_TERMINAL_COLUMNS, rows: DEFAULT_TERMINAL_ROWS }));
+		(() =>
+			createTerminalEmulator({
+				columns: DEFAULT_TERMINAL_COLUMNS,
+				rows: DEFAULT_TERMINAL_ROWS,
+			}));
 	const createWidget =
 		options.createWidget ??
 		((ctx: WidgetContextLike, sessionId: string) =>

@@ -4,8 +4,8 @@
  *
  * For ranking lists like top models or codebases.
  */
-import { Bar, Cell, BarChart as RechartsBarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
+import { Bar, BarChart as RechartsBarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface BarDataItem {
 	name: string;
@@ -84,7 +84,7 @@ export function BarChart({
 						fill={color}
 						radius={[0, 4, 4, 0]}
 						onClick={(_e, payload) => {
-							if (onBarClick && payload?.id) {onBarClick(payload.id);}
+							if (onBarClick && payload?.id) onBarClick(payload.id);
 						}}
 						cursor={onBarClick ? "pointer" : "default"}
 					>

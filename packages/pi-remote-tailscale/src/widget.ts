@@ -87,7 +87,9 @@ export function createRemoteWidgetController(
 			return;
 		}
 
-		latestCtx.ui.setWidget(key, formatWidgetLines(latestState), { placement: "belowEditor" });
+		latestCtx.ui.setWidget(key, formatWidgetLines(latestState), {
+			placement: "belowEditor",
+		});
 		latestCtx.ui.setStatus(statusKey, formatStatusText(latestState.clientCount));
 	};
 

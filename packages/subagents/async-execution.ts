@@ -2,25 +2,25 @@
  * Async execution logic for subagent tool
  */
 
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { spawn } from "node:child_process";
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import type { AgentConfig } from "./agents.js";
 import { applyThinkingSuffix } from "./execution.js";
-import { injectSingleOutputInstruction, resolveSingleOutputPath } from "./single-output.js";
-import { isParallelStep, resolveStepBehavior } from "./settings.js";
-import type { ChainStep, ParallelStep, SequentialStep, StepOverrides } from "./settings.js";
+import { resolveSubagentModelResolution } from "./model-routing.js";
+import type { AvailableModelRef } from "./model-routing.js";
 import type { RunnerStep } from "./parallel-utils.js";
 import { resolvePiPackageRoot } from "./pi-spawn.js";
+import { isParallelStep, resolveStepBehavior } from "./settings.js";
+import type { ChainStep, ParallelStep, SequentialStep, StepOverrides } from "./settings.js";
+import { injectSingleOutputInstruction, resolveSingleOutputPath } from "./single-output.js";
 import { buildSkillInjection, normalizeSkillInput, resolveSkills } from "./skills.js";
 import { ASYNC_DIR, RESULTS_DIR } from "./types.js";
 import type { ArtifactConfig, Details, MaxOutputConfig } from "./types.js";
-import { resolveSubagentModelResolution } from "./model-routing.js";
-import type { AvailableModelRef } from "./model-routing.js";
 
 const require = createRequire(import.meta.url);
 const piPackageRoot = resolvePiPackageRoot();

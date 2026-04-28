@@ -48,8 +48,7 @@
 
 ### Decision
 
-- Prioritize one core developer community first (currently Chinese developer channels), while
-  keeping multilingual docs available.
+- Prioritize one core developer community first (currently Chinese developer channels), while keeping multilingual docs available.
 
 ### Consequences
 

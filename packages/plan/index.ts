@@ -1,9 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import { keyHint } from "@mariozechner/pi-coding-agent";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { registerPlanModeCommand } from "./flow";
 import { resolveActivePlanFilePath } from "./plan-files";
 import { loadPlanModePrompt } from "./prompts";
@@ -77,7 +77,12 @@ export default function (pi: ExtensionAPI) {
 			if (!stateManager.getState().active) {
 				return {
 					isError: true,
-					content: [{ type: "text", text: "set_plan is only available while plan mode is active." }],
+					content: [
+						{
+							type: "text",
+							text: "set_plan is only available while plan mode is active.",
+						},
+					],
 				};
 			}
 
@@ -85,7 +90,12 @@ export default function (pi: ExtensionAPI) {
 			if (!planFilePath) {
 				return {
 					isError: true,
-					content: [{ type: "text", text: "No active plan file. Restart plan mode and try again." }],
+					content: [
+						{
+							type: "text",
+							text: "No active plan file. Restart plan mode and try again.",
+						},
+					],
 				};
 			}
 
@@ -93,7 +103,12 @@ export default function (pi: ExtensionAPI) {
 			if (!plan) {
 				return {
 					isError: true,
-					content: [{ type: "text", text: "set_plan requires non-empty plan text." }],
+					content: [
+						{
+							type: "text",
+							text: "set_plan requires non-empty plan text.",
+						},
+					],
 				};
 			}
 

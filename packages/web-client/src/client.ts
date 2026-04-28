@@ -178,7 +178,9 @@ export class PiWebClient {
 	}
 
 	async getMessages(): Promise<unknown[]> {
-		const data = (await this._request({ type: "get_messages" })) as { messages: unknown[] };
+		const data = (await this._request({ type: "get_messages" })) as {
+			messages: unknown[];
+		};
 		return data.messages;
 	}
 
@@ -187,7 +189,9 @@ export class PiWebClient {
 	}
 
 	async getCommands(): Promise<CommandInfo[]> {
-		const data = (await this._request({ type: "get_commands" })) as { commands: CommandInfo[] };
+		const data = (await this._request({ type: "get_commands" })) as {
+			commands: CommandInfo[];
+		};
 		return data.commands;
 	}
 
@@ -196,7 +200,9 @@ export class PiWebClient {
 	}
 
 	async getAvailableModels(): Promise<unknown[]> {
-		const data = (await this._request({ type: "get_available_models" })) as { models: unknown[] };
+		const data = (await this._request({ type: "get_available_models" })) as {
+			models: unknown[];
+		};
 		return data.models;
 	}
 
@@ -205,11 +211,16 @@ export class PiWebClient {
 	}
 
 	async compact(instructions?: string): Promise<CompactionResult> {
-		return (await this._request({ customInstructions: instructions, type: "compact" })) as CompactionResult;
+		return (await this._request({
+			customInstructions: instructions,
+			type: "compact",
+		})) as CompactionResult;
 	}
 
 	async newSession(): Promise<{ cancelled: boolean }> {
-		return (await this._request({ type: "new_session" })) as { cancelled: boolean };
+		return (await this._request({ type: "new_session" })) as {
+			cancelled: boolean;
+		};
 	}
 
 	respondToUI(requestId: string, response: Omit<ExtensionUIResponse, "type" | "id">): void {

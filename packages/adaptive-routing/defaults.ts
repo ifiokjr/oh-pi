@@ -161,8 +161,16 @@ export const DEFAULT_ADAPTIVE_ROUTING_CONFIG: AdaptiveRoutingConfig = {
 			confidence: "estimated",
 			minRemainingPct: 20,
 		},
-		groq: { allowOverrideForPeak: false, applyToTiers: ["cheap", "balanced"], minRemainingPct: 10 },
-		openai: { allowOverrideForPeak: true, applyToTiers: ["premium", "peak"], minRemainingPct: 15 },
+		groq: {
+			allowOverrideForPeak: false,
+			applyToTiers: ["cheap", "balanced"],
+			minRemainingPct: 10,
+		},
+		openai: {
+			allowOverrideForPeak: true,
+			applyToTiers: ["premium", "peak"],
+			minRemainingPct: 15,
+		},
 	},
 	routerModels: ["openai/gpt-5-mini", "groq/llama-3.3-70b-versatile", "ollama-cloud/gpt-oss:20b"],
 	stickyTurns: 1,

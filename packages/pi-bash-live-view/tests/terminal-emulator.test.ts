@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	createTerminalEmulator,
-	terminalEmulatorInternals,
 	renderLineToAnsi,
 	resetHeadlessModuleLoader,
 	sanitizeAnsiOutput,
 	setHeadlessModuleLoader,
 	stripAnsiSequences,
 	styleToSgr,
+	terminalEmulatorInternals,
 } from "../src/terminal-emulator.js";
 
 function makeCell(overrides: Record<string, unknown> = {}) {
@@ -75,7 +75,14 @@ describe("terminal emulator", () => {
 			getCell(index: number) {
 				const cells = [
 					makeCell({ chars: "A", bold: true, fgColorMode: 2, fgColor: 2 }),
-					makeCell({ chars: "B", inverse: true, fgColorMode: 2, fgColor: 1, bgColorMode: 3, bgColor: 0x102030 }),
+					makeCell({
+						chars: "B",
+						inverse: true,
+						fgColorMode: 2,
+						fgColor: 1,
+						bgColorMode: 3,
+						bgColor: 0x102030,
+					}),
 					makeCell({ chars: " ", width: 1 }),
 					makeCell({ chars: "C", width: 0 }),
 					makeCell({ chars: "D", invisible: true, strikethrough: true }),
@@ -170,7 +177,16 @@ describe("terminal emulator", () => {
 				},
 			),
 		).toBe(true);
-		expect(terminalEmulatorInternals.getVisibleLineIndexes({ baseY: 2, cursorY: 0, length: 6 }, 3)).toEqual([2, 4]);
+		expect(
+			terminalEmulatorInternals.getVisibleLineIndexes(
+				{
+					baseY: 2,
+					cursorY: 0,
+					length: 6,
+				},
+				3,
+			),
+		).toEqual([2, 4]);
 		expect(terminalEmulatorInternals.getVisibleLineIndexes({ length: 0 }, 2)).toEqual([0, -1]);
 		expect(terminalEmulatorInternals.getVisibleLineIndexes(undefined as never, 2)).toEqual([0, 1]);
 		emulator.dispose();
@@ -186,7 +202,9 @@ describe("terminal emulator", () => {
 			dispose() {}
 		}
 
-		setHeadlessModuleLoader(async () => ({ Terminal: ThrowingTerminal as never }));
+		setHeadlessModuleLoader(async () => ({
+			Terminal: ThrowingTerminal as never,
+		}));
 		const emulator = await createTerminalEmulator({ rows: 1 });
 		emulator.resize(2, 1);
 		expect(emulator.toAnsiLines(1)).toEqual([]);

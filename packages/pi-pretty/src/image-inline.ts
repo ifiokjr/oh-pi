@@ -48,10 +48,13 @@ export function getOuterTerminal(): string {
 	if (process.env.LC_TERMINAL === "iTerm2") return "iTerm.app";
 	if (process.env.GHOSTTY_RESOURCES_DIR) return "ghostty";
 	if (process.env.KITTY_WINDOW_ID || process.env.KITTY_PID) return "kitty";
-	if (process.env.WEZTERM_EXECUTABLE || process.env.WEZTERM_CONFIG_DIR || process.env.WEZTERM_CONFIG_FILE)
+	if (process.env.WEZTERM_EXECUTABLE || process.env.WEZTERM_CONFIG_DIR || process.env.WEZTERM_CONFIG_FILE) {
 		return "WezTerm";
+	}
 	const termProgram = process.env.TERM_PROGRAM ?? "";
-	if (termProgram && termProgram !== "tmux" && termProgram !== "screen") return normalizeTerminalName(termProgram);
+	if (termProgram && termProgram !== "tmux" && termProgram !== "screen") {
+		return normalizeTerminalName(termProgram);
+	}
 	const tmuxClientTerm = readTmuxClientTerm();
 	if (tmuxClientTerm) return tmuxClientTerm;
 	const term = process.env.TERM ?? "";
@@ -62,7 +65,9 @@ export function getOuterTerminal(): string {
 
 export function detectImageProtocol(): ImageProtocol {
 	const forced = (process.env.PRETTY_IMAGE_PROTOCOL ?? "").toLowerCase();
-	if (forced === "kitty" || forced === "iterm2" || forced === "none") return forced as ImageProtocol;
+	if (forced === "kitty" || forced === "iterm2" || forced === "none") {
+		return forced as ImageProtocol;
+	}
 	const term = getOuterTerminal();
 	if (term === "ghostty" || term === "kitty") return "kitty";
 	if (["iTerm.app", "WezTerm", "mintty"].includes(term)) return "iterm2";
@@ -71,9 +76,13 @@ export function detectImageProtocol(): ImageProtocol {
 }
 
 export function tmuxAllowsPassthrough(): boolean | null {
-	if (TMUX_ALLOW_PASSTHROUGH_OVERRIDE !== undefined) return TMUX_ALLOW_PASSTHROUGH_OVERRIDE;
+	if (TMUX_ALLOW_PASSTHROUGH_OVERRIDE !== undefined) {
+		return TMUX_ALLOW_PASSTHROUGH_OVERRIDE;
+	}
 	if (!isTmuxSession()) return null;
-	if (TMUX_ALLOW_PASSTHROUGH_CACHE !== undefined) return TMUX_ALLOW_PASSTHROUGH_CACHE;
+	if (TMUX_ALLOW_PASSTHROUGH_CACHE !== undefined) {
+		return TMUX_ALLOW_PASSTHROUGH_CACHE;
+	}
 	try {
 		const value = execFileSync("tmux", ["show-options", "-gv", "allow-passthrough"], {
 			encoding: "utf8",

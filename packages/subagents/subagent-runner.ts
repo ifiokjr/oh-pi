@@ -5,18 +5,18 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { appendJsonl, getArtifactPaths } from "./artifacts.js";
-import { getPiSpawnCommand } from "./pi-spawn.js";
-import { persistSingleOutput } from "./single-output.js";
-import { DEFAULT_MAX_OUTPUT, truncateOutput, getSubagentDepthEnv } from "./types.js";
-import type { ArtifactConfig, ArtifactPaths, MaxOutputConfig } from "./types.js";
 import {
-	isParallelGroup,
-	flattenSteps,
-	mapConcurrent,
 	aggregateParallelOutputs,
+	flattenSteps,
+	isParallelGroup,
+	mapConcurrent,
 	MAX_PARALLEL_CONCURRENCY,
 } from "./parallel-utils.js";
-import type { RunnerSubagentStep as SubagentStep, RunnerStep } from "./parallel-utils.js";
+import type { RunnerStep, RunnerSubagentStep as SubagentStep } from "./parallel-utils.js";
+import { getPiSpawnCommand } from "./pi-spawn.js";
+import { persistSingleOutput } from "./single-output.js";
+import { DEFAULT_MAX_OUTPUT, getSubagentDepthEnv, truncateOutput } from "./types.js";
+import type { ArtifactConfig, ArtifactPaths, MaxOutputConfig } from "./types.js";
 
 interface SubagentRunConfig {
 	id: string;
@@ -107,7 +107,11 @@ function runPiStreaming(
 		const outputStream = fs.createWriteStream(outputFile, { flags: "w" });
 		const spawnEnv = { ...process.env, ...env, ...getSubagentDepthEnv() };
 		const spawnSpec = getPiSpawnCommand(args, piPackageRoot ? { piPackageRoot } : undefined);
-		const child = spawn(spawnSpec.command, spawnSpec.args, { cwd, env: spawnEnv, stdio: ["ignore", "pipe", "pipe"] });
+		const child = spawn(spawnSpec.command, spawnSpec.args, {
+			cwd,
+			env: spawnEnv,
+			stdio: ["ignore", "pipe", "pipe"],
+		});
 		let stdout = "";
 		let stderr = "";
 
@@ -130,7 +134,11 @@ function runPiStreaming(
 
 		child.on("error", (err) => {
 			outputStream.end();
-			resolve({ exitCode: 1, stderr: stderr || `Process spawn error: ${err.message}`, stdout });
+			resolve({
+				exitCode: 1,
+				stderr: stderr || `Process spawn error: ${err.message}`,
+				stdout,
+			});
 		});
 	});
 }
@@ -172,14 +180,18 @@ function createShareLink(htmlPath: string): { shareUrl: string; gistUrl: string 
 	try {
 		const auth = spawnSync("gh", ["auth", "status"], { encoding: "utf8" });
 		if (auth.status !== 0) {
-			return { error: "GitHub CLI is not logged in. Run 'gh auth login' first." };
+			return {
+				error: "GitHub CLI is not logged in. Run 'gh auth login' first.",
+			};
 		}
 	} catch {
 		return { error: "GitHub CLI (gh) is not installed." };
 	}
 
 	try {
-		const result = spawnSync("gh", ["gist", "create", htmlPath], { encoding: "utf8" });
+		const result = spawnSync("gh", ["gist", "create", htmlPath], {
+			encoding: "utf8",
+		});
 		if (result.status !== 0) {
 			const err = (result.stderr || "").trim() || "Failed to create gist.";
 			return { error: err };
@@ -293,7 +305,12 @@ interface SingleStepContext {
 async function runSingleStep(
 	step: SubagentStep,
 	ctx: SingleStepContext,
-): Promise<{ agent: string; output: string; exitCode: number | null; artifactPaths?: ArtifactPaths }> {
+): Promise<{
+	agent: string;
+	output: string;
+	exitCode: number | null;
+	artifactPaths?: ArtifactPaths;
+}> {
 	const args = ["-p"];
 	if (!ctx.sessionEnabled) {
 		args.push("--no-session");
@@ -441,7 +458,12 @@ async function runSingleStep(
 		outputForSummary = `[!] Process failed (exit ${result.exitCode}):\n${result.stderr.slice(0, 1000)}`;
 	}
 
-	return { agent: step.agent, artifactPaths, exitCode: result.exitCode, output: outputForSummary };
+	return {
+		agent: step.agent,
+		artifactPaths,
+		exitCode: result.exitCode,
+		output: outputForSummary,
+	};
 }
 
 async function runSubagent(config: SubagentRunConfig): Promise<void> {
@@ -502,7 +524,11 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 		sessionDir: config.sessionDir,
 		startedAt: overallStartTime,
 		state: "running",
-		steps: flatSteps.map((step) => ({ agent: step.agent, status: "pending", skills: step.skills })),
+		steps: flatSteps.map((step) => ({
+			agent: step.agent,
+			status: "pending",
+			skills: step.skills,
+		})),
 	};
 
 	fs.mkdirSync(asyncDir, { recursive: true });
@@ -559,7 +585,12 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 
 			const parallelResults = await mapConcurrent(group.parallel, concurrency, async (task, taskIdx) => {
 				if (aborted && failFast) {
-					return { agent: task.agent, exitCode: -1 as number | null, output: "(skipped — fail-fast)", skipped: true };
+					return {
+						agent: task.agent,
+						exitCode: -1 as number | null,
+						output: "(skipped — fail-fast)",
+						skipped: true,
+					};
 				}
 
 				const fi = groupStartFlatIndex + taskIdx;
@@ -658,7 +689,11 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 
 			// Aggregate parallel outputs for {previous}
 			previousOutput = aggregateParallelOutputs(
-				parallelResults.map((r) => ({ agent: r.agent, exitCode: r.exitCode, output: r.output })),
+				parallelResults.map((r) => ({
+					agent: r.agent,
+					exitCode: r.exitCode,
+					output: r.output,
+				})),
 			);
 
 			appendJsonl(

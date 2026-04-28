@@ -1,6 +1,4 @@
 /* C8 ignore file */
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from "@ifi/oh-pi-core";
 import type {
 	DelegatedAvailableModel,
@@ -10,6 +8,8 @@ import type {
 	ModelTaskProfile,
 } from "@ifi/oh-pi-core";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { AntCaste, WorkerClass } from "./types.js";
 
 export interface AvailableModelRef {
@@ -237,7 +237,11 @@ export function resolveColonyCategoryModel(
 		usage?: Record<string, DelegatedSelectionUsageSnapshot>;
 		roleKeys?: string[];
 	} = {},
-): { model?: string; category?: string; source: "delegated-category" | "session-default" } {
+): {
+	model?: string;
+	category?: string;
+	source: "delegated-category" | "session-default";
+} {
 	if (!category) {
 		return { source: "session-default" };
 	}
@@ -262,7 +266,11 @@ export function resolveColonyCategoryModel(
 		usage: options.usage,
 	});
 	if (selection.selectedModel) {
-		return { category, model: selection.selectedModel, source: "delegated-category" };
+		return {
+			category,
+			model: selection.selectedModel,
+			source: "delegated-category",
+		};
 	}
 	return { category, source: "session-default" };
 }

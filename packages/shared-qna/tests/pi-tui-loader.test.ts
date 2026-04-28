@@ -55,7 +55,9 @@ describe("requirePiTuiModule", () => {
 				throw error;
 			},
 		});
-		expect(resolved).toEqual({ source: "/custom-bun/install/global/node_modules/@mariozechner/pi-tui" });
+		expect(resolved).toEqual({
+			source: "/custom-bun/install/global/node_modules/@mariozechner/pi-tui",
+		});
 		expect(calls[0]).toBe("@mariozechner/pi-tui");
 		expect(calls[1]).toBe("/custom-bun/install/global/node_modules/@mariozechner/pi-tui");
 	});

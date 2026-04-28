@@ -60,9 +60,15 @@ describe("workspace helpers", () => {
 
 	it("lists numbered feature directories and resolves them from the current branch", () => {
 		const repoRoot = createTempDir("pi-spec-workspace");
-		mkdirSync(path.join(repoRoot, "specs", "001-auth-flow"), { recursive: true });
-		mkdirSync(path.join(repoRoot, "specs", "002-billing-reports"), { recursive: true });
-		mkdirSync(path.join(repoRoot, "specs", "misc-not-a-feature"), { recursive: true });
+		mkdirSync(path.join(repoRoot, "specs", "001-auth-flow"), {
+			recursive: true,
+		});
+		mkdirSync(path.join(repoRoot, "specs", "002-billing-reports"), {
+			recursive: true,
+		});
+		mkdirSync(path.join(repoRoot, "specs", "misc-not-a-feature"), {
+			recursive: true,
+		});
 
 		expect(listFeatureDirs(repoRoot)).toEqual(["001-auth-flow", "002-billing-reports"]);
 		expect(resolveFeatureFromBranch(repoRoot, "002-any-branch-name")).toBe("002-billing-reports");
@@ -70,8 +76,12 @@ describe("workspace helpers", () => {
 
 	it("computes the next feature number from both specs and git branches", () => {
 		const repoRoot = createTempDir("pi-spec-next-feature");
-		mkdirSync(path.join(repoRoot, "specs", "002-billing-reports"), { recursive: true });
-		mkdirSync(path.join(repoRoot, "specs", "005-data-import"), { recursive: true });
+		mkdirSync(path.join(repoRoot, "specs", "002-billing-reports"), {
+			recursive: true,
+		});
+		mkdirSync(path.join(repoRoot, "specs", "005-data-import"), {
+			recursive: true,
+		});
 
 		expect(computeNextFeatureNumber(repoRoot, ["003-something", "origin/006-another"])).toBe(7);
 	});

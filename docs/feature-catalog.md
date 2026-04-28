@@ -2,8 +2,7 @@
 
 A package-by-package inventory of the features currently shipped in this repo.
 
-This document is the long-form companion to the root [README](../README.md). Use it when you want
-one place that answers:
+This document is the long-form companion to the root [README](../README.md). Use it when you want one place that answers:
 
 - what `npx @ifi/oh-pi` installs by default
 - which features are opt-in add-ons
@@ -119,14 +118,11 @@ Opt-in packages that stay separate from the default installer bundle:
 
 ### Contributor-facing/internal packages
 
-These are important parts of the codebase, but they are primarily consumed by other packages or by
-people extending oh-pi:
+These are important parts of the codebase, but they are primarily consumed by other packages or by people extending oh-pi:
 
 <!-- {=repoContributorCompiledPackagesDocs} -->
 
-Most runtime packages in this repo ship raw TypeScript and can be loaded directly by pi. A smaller
-set of contributor-facing packages (`core`, `cli`, `web-client`, `web-server`) emit `dist/` output,
-so build those when you are working on them directly.
+Most runtime packages in this repo ship raw TypeScript and can be loaded directly by pi. A smaller set of contributor-facing packages (`core`, `cli`, `web-client`, `web-server`) emit `dist/` output, so build those when you are working on them directly.
 
 <!-- {/repoContributorCompiledPackagesDocs} -->
 
@@ -153,7 +149,7 @@ so build those when you are working on them directly.
 | [`@ifi/pi-provider-catalog`](../packages/providers)                  | No                  | `/providers*`                                                                           | Multi-provider catalog and lazy API-key login backed by `models.dev`                                                                     |
 | [`@ifi/pi-provider-cursor`](../packages/cursor)                      | No                  | `/login cursor`, `/cursor*`                                                             | Experimental Cursor OAuth provider with model discovery and direct AgentService streaming                                                |
 | [`@ifi/pi-provider-ollama`](../packages/ollama)                      | No                  | `/login ollama-cloud`, `/ollama*`, `/model`                                             | Experimental Ollama local + cloud provider integration                                                                                   |
-| [`@ifi/pi-analytics-extension`](../packages/analytics-extension)     | No                  | `/analytics`, `/analytics-dashboard`                                                     | Analytics tracking extension with SQLite persistence and browser dashboard                                                             |
+| [`@ifi/pi-analytics-extension`](../packages/analytics-extension)     | No                  | `/analytics`, `/analytics-dashboard`                                                    | Analytics tracking extension with SQLite persistence and browser dashboard                                                               |
 | [`@ifi/pi-remote-tailscale`](../packages/pi-remote-tailscale)        | No                  | `/remote`, `/remote:widget`, `/remote:stop`                                             | Secure remote session sharing via Tailscale HTTPS with PTY, WebSocket, QR codes, and token auth                                          |
 | [`@ifi/pi-bash-live-view`](../packages/pi-bash-live-view)            | No                  | `/bash-pty`, `bash_live_view` tool with `usePTY`                                        | PTY-backed live terminal viewing with real-time widget and `/xterm/headless` ANSI rendering                                              |
 | [`@ifi/pi-pretty`](../packages/pi-pretty)                            | No                  | wrapped `read`, `bash_pretty`, `ls`, `find`, `grep` tools                               | Syntax highlighting via Shiki, Nerd Font icons, tree-view listings, colored bash summaries, FFF search                                   |
@@ -182,8 +178,7 @@ This package is where most of the day-to-day ergonomics live.
 
 ### Scheduler details
 
-The scheduler is one of the most important workflow additions because it turns pi into something that
-can check back later instead of requiring you to babysit every long-running task.
+The scheduler is one of the most important workflow additions because it turns pi into something that can check back later instead of requiring you to babysit every long-running task.
 
 Key behaviors:
 
@@ -211,8 +206,7 @@ It provides:
 
 ### Watchdog details
 
-The watchdog focuses on keeping interactive pi sessions usable as more extensions and UI surfaces are
-loaded.
+The watchdog focuses on keeping interactive pi sessions usable as more extensions and UI surfaces are loaded.
 
 It includes:
 
@@ -245,8 +239,7 @@ This package turns explicit long-lived shell tasks into a first-class pi workflo
 
 ## `@ifi/pi-diagnostics`: prompt timing
 
-`@ifi/pi-diagnostics` adds prompt-level completion timing on top of the lower-level tool timing that
-`tool-metadata` already records.
+`@ifi/pi-diagnostics` adds prompt-level completion timing on top of the lower-level tool timing that `tool-metadata` already records.
 
 Primary surfaces:
 
@@ -300,8 +293,7 @@ Use ant-colony for:
 
 ## `@ifi/pi-extension-subagents`: delegated execution runtime
 
-Subagents is the other major execution system, but it is more explicit and user-directed than
-ant-colony.
+Subagents is the other major execution system, but it is more explicit and user-directed than ant-colony.
 
 ### Major capabilities
 
@@ -411,8 +403,7 @@ Primary actions:
 - inspect connection status
 - stop remote sharing via `/remote stop`
 
-This package sits on top of the lower-level `@ifi/pi-web-server` and `@ifi/pi-web-client`
-libraries.
+This package sits on top of the lower-level `@ifi/pi-web-server` and `@ifi/pi-web-client` libraries.
 
 ## Optional routing and provider packages
 
@@ -587,17 +578,17 @@ The AGENTS template pack currently ships 5 templates.
 
 ## Contributor-facing packages and libraries
 
-| Package                                        | Role                                                                                                   |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [`@ifi/oh-pi`](../packages/oh-pi)              | Meta-installer that registers the default bundle with pi                                               |
-| [`@ifi/oh-pi-cli`](../packages/cli)            | Interactive setup/configuration TUI with provider/model/routing/package selection flows                |
-| [`@ifi/oh-pi-core`](../packages/core)          | Shared registries, icons, i18n helpers, and path helpers for the pi agent directory and shared storage |
-| [`@ifi/pi-shared-qna`](../packages/shared-qna) | Reusable TUI Q&A helpers and shared `pi-tui` loading logic                                             |
-| [`@ifi/pi-web-client`](../packages/web-client) | Platform-agnostic TypeScript client for custom remote session UIs                                      |
-| [`@ifi/pi-web-server`](../packages/web-server) | Embeddable HTTP + WebSocket remote session server                                                      |
-| [`@ifi/pi-analytics-db`](../packages/analytics-db) | SQLite schema and Drizzle ORM client for analytics data                                                |
-| [`@ifi/pi-analytics-dashboard`](../packages/analytics-dashboard) | React dashboard for visualizing AI usage (private package)                                               |
-| [`@ifi/oh-pi-docs`](../packages/docs) | Documentation site for oh-pi (private package)                                                         |
+| Package                                                          | Role                                                                                                   |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [`@ifi/oh-pi`](../packages/oh-pi)                                | Meta-installer that registers the default bundle with pi                                               |
+| [`@ifi/oh-pi-cli`](../packages/cli)                              | Interactive setup/configuration TUI with provider/model/routing/package selection flows                |
+| [`@ifi/oh-pi-core`](../packages/core)                            | Shared registries, icons, i18n helpers, and path helpers for the pi agent directory and shared storage |
+| [`@ifi/pi-shared-qna`](../packages/shared-qna)                   | Reusable TUI Q&A helpers and shared `pi-tui` loading logic                                             |
+| [`@ifi/pi-web-client`](../packages/web-client)                   | Platform-agnostic TypeScript client for custom remote session UIs                                      |
+| [`@ifi/pi-web-server`](../packages/web-server)                   | Embeddable HTTP + WebSocket remote session server                                                      |
+| [`@ifi/pi-analytics-db`](../packages/analytics-db)               | SQLite schema and Drizzle ORM client for analytics data                                                |
+| [`@ifi/pi-analytics-dashboard`](../packages/analytics-dashboard) | React dashboard for visualizing AI usage (private package)                                             |
+| [`@ifi/oh-pi-docs`](../packages/docs)                            | Documentation site for oh-pi (private package)                                                         |
 
 ## Which feature should I reach for?
 
@@ -618,5 +609,4 @@ The AGENTS template pack currently ships 5 templates.
 - **Usage analytics and browser dashboard for your AI sessions** → `@ifi/pi-analytics-extension`
 - **Ollama local/cloud integration** → `@ifi/pi-provider-ollama`
 
-For the local development loop that points a real pi install at this checkout, see the root
-[README running locally section](../README.md#running-locally--local-development).
+For the local development loop that points a real pi install at this checkout, see the root [README running locally section](../README.md#running-locally--local-development).

@@ -15,7 +15,7 @@
  */
 
 import { completeSimple, streamSimple } from "@mariozechner/pi-ai";
-import type { ThinkingLevel as AiThinkingLevel, AssistantMessage, Message } from "@mariozechner/pi-ai";
+import type { AssistantMessage, Message, ThinkingLevel as AiThinkingLevel } from "@mariozechner/pi-ai";
 import { buildSessionContext } from "@mariozechner/pi-coding-agent";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
@@ -116,7 +116,11 @@ export async function resolveBtwApiKey(
 
 	try {
 		const piModule = (await import("@mariozechner/pi-coding-agent")) as Record<string, unknown>;
-		const authStorageModule = Reflect.get(piModule, "AuthStorage") as { create?: () => unknown } | undefined;
+		const authStorageModule = Reflect.get(piModule, "AuthStorage") as
+			| {
+					create?: () => unknown;
+			  }
+			| undefined;
 		const modelRegistryModule = Reflect.get(piModule, "ModelRegistry") as
 			| (new (authStorage: unknown) => CompatibleModelRegistry)
 			| undefined;
@@ -176,13 +180,23 @@ function buildMainMessages(ctx: ExtensionCommandContext): Message[] {
 function buildThreadMessages(ctx: ExtensionCommandContext, thread: BtwDetails[]): Message[] {
 	const messages: Message[] = [
 		{
-			content: [{ type: "text", text: "[The following is a separate side conversation. Continue this thread.]" }],
+			content: [
+				{
+					type: "text",
+					text: "[The following is a separate side conversation. Continue this thread.]",
+				},
+			],
 			role: "user",
 			timestamp: Date.now(),
 		},
 		{
 			api: ctx.model?.api ?? "openai-responses",
-			content: [{ type: "text", text: "Understood, continuing our side conversation." }],
+			content: [
+				{
+					type: "text",
+					text: "Understood, continuing our side conversation.",
+				},
+			],
 			model: ctx.model?.id ?? "unknown",
 			provider: ctx.model?.provider ?? "unknown",
 			role: "assistant",

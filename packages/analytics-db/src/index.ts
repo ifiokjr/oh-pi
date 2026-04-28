@@ -5,8 +5,8 @@
  * Comprehensive analytics tracking for Pi usage with SQLite persistence.
  */
 
-export * from "./schema.js";
 export * from "./db.js";
-export { runMigrations, resetDatabase, getSchemaVersion } from "./migrations.js";
+export { getSchemaVersion, resetDatabase, runMigrations } from "./migrations.js";
+export * from "./schema.js";
 
 export const VERSION = "0.2.0";

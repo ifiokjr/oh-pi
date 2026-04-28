@@ -82,7 +82,10 @@ export function buildWidgetLines(
 ): string[] {
 	const maxLines = options.maxLines ?? DEFAULT_WIDGET_MAX_LINES;
 	const statusColor = toStatusColor(state.status);
-	const header = `${theme.fg("accent", theme.bold("🖥 Bash PTY"))} ${theme.fg(statusColor, toStatusLabel(state.status))} · ${formatElapsedMmSs(now - state.startedAt)}`;
+	const header = `${theme.fg("accent", theme.bold("🖥 Bash PTY"))} ${theme.fg(
+		statusColor,
+		toStatusLabel(state.status),
+	)} · ${formatElapsedMmSs(now - state.startedAt)}`;
 	const commandLine = theme.fg("dim", truncateCommand(state.command));
 	const bodyLines = state.ansiLines.length > maxLines ? state.ansiLines.slice(-maxLines) : state.ansiLines;
 
@@ -169,7 +172,9 @@ export class PtyLiveWidgetController {
 						if (!this.state) {
 							return [];
 						}
-						return buildWidgetLines(theme, this.state, { maxLines: this.maxLines });
+						return buildWidgetLines(theme, this.state, {
+							maxLines: this.maxLines,
+						});
 					},
 				};
 			},

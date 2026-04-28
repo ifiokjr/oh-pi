@@ -1,9 +1,9 @@
 /* C8 ignore file */
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { analyticsApi } from "@/api/analytics";
 import type { TimeRange } from "@/types";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, MessageSquare, Smile, SpellCheck, TrendingUp } from "lucide-react";
+import { useState } from "react";
 
 export function Insights({ timeRange }: { timeRange: TimeRange }) {
 	const [_selectedModel, _setSelectedModel] = useState<string>("all");
@@ -168,7 +168,10 @@ export function Insights({ timeRange }: { timeRange: TimeRange }) {
 										<div
 											className="h-full rounded-full bg-amber-500/60"
 											style={{
-												width: `${Math.min(100, (m.count / maxMisspellingCount(misspellings.data ?? mockMisspellings())) * 100)}%`,
+												width: `${Math.min(
+													100,
+													(m.count / maxMisspellingCount(misspellings.data ?? mockMisspellings())) * 100,
+												)}%`,
 											}}
 										/>
 									</div>
@@ -224,8 +227,12 @@ function EmotionBar({ label, value, color }: { label: string; value: number; col
 }
 
 function InsightIcon({ type, severity }: { type: string; severity: string }) {
-	if (severity === "warning") {return <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />;}
-	if (type === "trend") {return <TrendingUp className="mt-0.5 h-5 w-5 shrink-0 text-blue-400" />;}
+	if (severity === "warning") {
+		return <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />;
+	}
+	if (type === "trend") {
+		return <TrendingUp className="mt-0.5 h-5 w-5 shrink-0 text-blue-400" />;
+	}
 	return <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-green-400" />;
 }
 

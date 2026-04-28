@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import type { Server } from "node:http";
 import { tmpdir } from "node:os";
@@ -165,7 +165,9 @@ export function renderDiscoveryHtml(records: DiscoveryRecord[]): string {
 								</header>
 								<p><strong>CWD:</strong> ${escapeHtml(record.cwd)}</p>
 								<p><strong>PID:</strong> ${record.pid}</p>
-								<p><strong>Connect:</strong> ${escapeHtml(record.connectUrl ?? record.tunnelUrl ?? record.lanUrl ?? record.localUrl ?? "unavailable")}</p>
+								<p><strong>Connect:</strong> ${escapeHtml(
+									record.connectUrl ?? record.tunnelUrl ?? record.lanUrl ?? record.localUrl ?? "unavailable",
+								)}</p>
 							</article>
 						`;
 					})
@@ -212,7 +214,9 @@ export async function startDiscoveryHttpServer(
 		const records = await service.list();
 
 		if (url.pathname === "/sessions.json") {
-			response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+			response.writeHead(200, {
+				"content-type": "application/json; charset=utf-8",
+			});
 			response.end(JSON.stringify({ sessions: records }));
 			return;
 		}

@@ -192,21 +192,18 @@ pi.registerTool({
 
 ### Output Truncation
 
-Built-in limit: 50KB / 2000 lines. Custom tools must truncate output themselves. Use exported
-utility functions:
+Built-in limit: 50KB / 2000 lines. Custom tools must truncate output themselves. Use exported utility functions:
 
 - `truncateHead(output, opts)` — Keep the beginning
 - `truncateTail(output, opts)` — Keep the end
 
 ### Overriding Built-in Tools
 
-Register a tool with the same name to override `read`, `bash`, `edit`, `write`, `grep`, `find`,
-`ls`.
+Register a tool with the same name to override `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`.
 
 ### Remote Execution
 
-Built-in tools support a pluggable Operations interface for delegation to SSH/container/remote
-systems.
+Built-in tools support a pluggable Operations interface for delegation to SSH/container/remote systems.
 
 ## 8. UI Interaction
 

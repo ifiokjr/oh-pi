@@ -54,7 +54,11 @@ const TITLE_MAP = {
 		order: 7,
 		title: "CLI Reference",
 	},
-	"feature-catalog": { description: "Package-by-package feature inventory.", order: 8, title: "Feature Catalog" },
+	"feature-catalog": {
+		description: "Package-by-package feature inventory.",
+		order: 8,
+		title: "Feature Catalog",
+	},
 };
 
 function convertHtmlCommentsToMdx(content) {

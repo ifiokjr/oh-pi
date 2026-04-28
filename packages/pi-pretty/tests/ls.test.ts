@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { renderTree } from "../src/ls.js";
 
 const { renderTree: rt } = await import("../src/ls.js");
@@ -6,7 +6,11 @@ const { renderTree: rt } = await import("../src/ls.js");
 describe("renderTree", () => {
 	it("renders simple directory tree", () => {
 		const entries = [
-			{ name: "src", isDirectory: true, children: [{ name: "index.ts", isDirectory: false }] },
+			{
+				name: "src",
+				isDirectory: true,
+				children: [{ name: "index.ts", isDirectory: false }],
+			},
 			{ name: "README.md", isDirectory: false },
 		];
 		const output = renderTree(entries);

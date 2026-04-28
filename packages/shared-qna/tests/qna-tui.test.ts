@@ -194,7 +194,12 @@ describe("QnATuiComponent", () => {
 			tui,
 			done,
 			{
-				templates: [{ label: "Brief", template: "{{index}}/{{total}} {{question}} => {{answer}}" }],
+				templates: [
+					{
+						label: "Brief",
+						template: "{{index}}/{{total}} {{question}} => {{answer}}",
+					},
+				],
 				onResponsesChange,
 				questionSummaryLabel: (_question, index) => `Prompt ${index + 1}`,
 			},
@@ -207,7 +212,9 @@ describe("QnATuiComponent", () => {
 		});
 
 		component.handleInput("<enter>");
-		expect(onResponsesChange.mock.calls.at(-1)?.[0][0]).toMatchObject({ committed: true });
+		expect(onResponsesChange.mock.calls.at(-1)?.[0][0]).toMatchObject({
+			committed: true,
+		});
 
 		component.handleInput("<ctrl-t>");
 		component.handleInput("!");
@@ -227,7 +234,10 @@ describe("QnATuiComponent", () => {
 		expect(result.text).toContain("Q: Choose a runtime");
 		expect(result.text).toContain("A: Bun");
 		expect(result.text).toContain("Q: Any rollout notes?");
-		expect(result.responses[1]).toMatchObject({ committed: true, selectionTouched: true });
+		expect(result.responses[1]).toMatchObject({
+			committed: true,
+			selectionTouched: true,
+		});
 		expect(tui.requestRender).toHaveBeenCalled();
 	});
 
@@ -273,7 +283,10 @@ describe("QnATuiComponent", () => {
 				{
 					question: "Choose release behavior",
 					options: [
-						{ label: "Fail on any weird partial state", description: "Stop immediately." },
+						{
+							label: "Fail on any weird partial state",
+							description: "Stop immediately.",
+						},
 						{
 							label: "Allow already-published packages and continue",
 							description: "Proceed if already-published packages are consistent.",
@@ -283,7 +296,15 @@ describe("QnATuiComponent", () => {
 			],
 			createTui(),
 			vi.fn(),
-			{ initialResponses: [{ selectedOptionIndex: 1, selectionTouched: true, committed: true }] },
+			{
+				initialResponses: [
+					{
+						selectedOptionIndex: 1,
+						selectionTouched: true,
+						committed: true,
+					},
+				],
+			},
 		);
 
 		const width = 51;
@@ -300,13 +321,25 @@ describe("QnATuiComponent", () => {
 					question: "Which strategy?",
 					options: [
 						{ label: "Kani", description: "Formal verification" },
-						{ label: "Proptest", description: "Finds more bugs per hour", recommended: true },
+						{
+							label: "Proptest",
+							description: "Finds more bugs per hour",
+							recommended: true,
+						},
 					],
 				},
 			],
 			createTui(),
 			done,
-			{ initialResponses: [{ selectedOptionIndex: 0, selectionTouched: true, committed: false }] },
+			{
+				initialResponses: [
+					{
+						selectedOptionIndex: 0,
+						selectionTouched: true,
+						committed: false,
+					},
+				],
+			},
 		);
 
 		const rendered = component.render(80).join("\n");
@@ -322,7 +355,13 @@ describe("QnATuiComponent", () => {
 			[
 				{
 					question: "Which tool?",
-					options: [{ label: "Start with Kani", description: "Recommended approach", recommended: true }],
+					options: [
+						{
+							label: "Start with Kani",
+							description: "Recommended approach",
+							recommended: true,
+						},
+					],
 				},
 			],
 			createTui(),

@@ -35,13 +35,9 @@ npx @ifi/oh-pi
 
 ## What it provides
 
-These extensions add commands, tools, UI widgets, background process handling,
-usage monitoring, scheduling features, tool execution metadata,
-external-editor integration, git worktree awareness, and runtime performance protection
-(`/watchdog`, `/watchdog:blame`, `/safe-mode`) to pi.
+These extensions add commands, tools, UI widgets, background process handling, usage monitoring, scheduling features, tool execution metadata, external-editor integration, git worktree awareness, and runtime performance protection (`/watchdog`, `/watchdog:blame`, `/safe-mode`) to pi.
 
-`bg-process` now delegates to the richer `@ifi/pi-background-tasks` runtime, so the core bundle
-also gets `/bg`, `Ctrl+Shift+B`, and the `bg_task` tool.
+`bg-process` now delegates to the richer `@ifi/pi-background-tasks` runtime, so the core bundle also gets `/bg`, `Ctrl+Shift+B`, and the `bg_task` tool.
 
 `git-guard` also blocks git bash invocations that are likely to open an interactive editor in agent environments (for example `git rebase --continue` without non-interactive editor overrides), preventing hangs before they happen.
 
@@ -62,9 +58,7 @@ The `external-editor` extension adds:
 - `/external-editor status` — show the configured editor and available bindings
 - `Ctrl+Shift+E` — open the current draft in the configured external editor
 
-When the editor exits successfully, the updated text is synced back into pi's main draft editor.
-This complements pi's built-in `app.editor.external` binding (`Ctrl+G` by default) with a
-discoverable slash command and an extra shortcut.
+When the editor exits successfully, the updated text is synced back into pi's main draft editor. This complements pi's built-in `app.editor.external` binding (`Ctrl+G` by default) with a discoverable slash command and an extra shortcut.
 
 ## Worktree
 
@@ -76,22 +70,17 @@ The `worktree` extension adds centralized git worktree awareness for oh-pi:
 - `/worktree create <branch> [purpose]` — create a pi-owned worktree under shared pi storage with owner + purpose metadata
 - `/worktree cleanup <branch|path|id|all>` — remove pi-owned worktrees while leaving external/manual worktrees alone by default
 
-pi-owned worktrees are stored under shared pi storage using a workspace-mirrored root so every repo
-gets a stable namespace. Each managed worktree records which pi instance/session created it and why.
+pi-owned worktrees are stored under shared pi storage using a workspace-mirrored root so every repo gets a stable namespace. Each managed worktree records which pi instance/session created it and why.
 
 ## Scheduler follow-ups
 
 <!-- {=extensionsSchedulerOverview} -->
 
-The scheduler extension adds recurring checks, one-time reminders, and the LLM-callable
-`schedule_prompt` tool so pi can schedule future follow-ups like PR, CI, build, or deployment
-checks. Tasks run only while pi is active and idle, and scheduler state is persisted in shared pi
-storage using a workspace-mirrored path.
+The scheduler extension adds recurring checks, one-time reminders, and the LLM-callable `schedule_prompt` tool so pi can schedule future follow-ups like PR, CI, build, or deployment checks. Tasks run only while pi is active and idle, and scheduler state is persisted in shared pi storage using a workspace-mirrored path.
 
 <!-- {/extensionsSchedulerOverview} -->
 
-Use `continueUntilComplete: true` (plus optional `completionSignal`, `retryInterval`, and
-`maxAttempts`) when a scheduled check should keep retrying until completion is detected.
+Use `continueUntilComplete: true` (plus optional `completionSignal`, `retryInterval`, and `maxAttempts`) when a scheduled check should keep retrying until completion is detected.
 
 ## Package layout
 
@@ -105,11 +94,7 @@ Pi loads the raw TypeScript extensions from this directory.
 
 <!-- {=extensionsSchedulerOwnershipDocs} -->
 
-The scheduler distinguishes between instance-scoped tasks and workspace-scoped tasks. Instance
-scope is the default for `/loop`, `/remind`, and `schedule_prompt`, which means tasks stay owned by
-one pi instance and other instances restore them for review instead of auto-running them.
-Workspace scope is an explicit opt-in for shared CI/build/deploy monitors that should survive
-instance changes in the same repository.
+The scheduler distinguishes between instance-scoped tasks and workspace-scoped tasks. Instance scope is the default for `/loop`, `/remind`, and `schedule_prompt`, which means tasks stay owned by one pi instance and other instances restore them for review instead of auto-running them. Workspace scope is an explicit opt-in for shared CI/build/deploy monitors that should survive instance changes in the same repository.
 
 <!-- {/extensionsSchedulerOwnershipDocs} -->
 
@@ -125,17 +110,13 @@ Use workspace scope sparingly for long-running shared checks like CI/build/deplo
 
 <!-- {=extensionsUsageTrackerOverview} -->
 
-The usage-tracker extension is a CodexBar-inspired provider quota and cost monitor for pi. It
-shows provider-level rate limits for Anthropic, OpenAI, and Google using pi-managed auth, while
-also tracking per-model token usage and session costs locally.
+The usage-tracker extension is a CodexBar-inspired provider quota and cost monitor for pi. It shows provider-level rate limits for Anthropic, OpenAI, and Google using pi-managed auth, while also tracking per-model token usage and session costs locally.
 
 <!-- {/extensionsUsageTrackerOverview} -->
 
 <!-- {=extensionsUsageTrackerPersistenceDocs} -->
 
-Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot
-under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing
-recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
+Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
 
 <!-- {/extensionsUsageTrackerPersistenceDocs} -->
 
@@ -156,16 +137,13 @@ Key usage-tracker surfaces:
 
 <!-- {=extensionsWatchdogConfigOverview} -->
 
-The watchdog extension reads optional runtime protection settings from a JSON config file in the pi
-agent directory. That config controls whether sampling is enabled, how frequently samples run, and
-which CPU, memory, and event-loop thresholds trigger alerts or safe-mode escalation.
+The watchdog extension reads optional runtime protection settings from a JSON config file in the pi agent directory. That config controls whether sampling is enabled, how frequently samples run, and which CPU, memory, and event-loop thresholds trigger alerts or safe-mode escalation.
 
 <!-- {/extensionsWatchdogConfigOverview} -->
 
 <!-- {=extensionsWatchdogConfigPathDocs} -->
 
-Path to the optional watchdog JSON config file under the pi agent directory. This is the default
-location used for watchdog sampling, threshold overrides, and enable/disable settings.
+Path to the optional watchdog JSON config file under the pi agent directory. This is the default location used for watchdog sampling, threshold overrides, and enable/disable settings.
 
 <!-- {/extensionsWatchdogConfigPathDocs} -->
 
@@ -193,11 +171,7 @@ Example:
 
 <!-- {=extensionsWatchdogAlertBehaviorDocs} -->
 
-The watchdog samples CPU, memory, and event-loop lag on an interval, records recent samples and
-alerts, and can escalate into safe mode automatically when repeated alerts indicate sustained UI
-churn or lag. Toast notifications are intentionally capped per session; ongoing watchdog state is
-kept visible in the status bar and the `/watchdog` overlay instead of repeatedly spamming the
-terminal.
+The watchdog samples CPU, memory, and event-loop lag on an interval, records recent samples and alerts, and can escalate into safe mode automatically when repeated alerts indicate sustained UI churn or lag. Toast notifications are intentionally capped per session; ongoing watchdog state is kept visible in the status bar and the `/watchdog` overlay instead of repeatedly spamming the terminal.
 
 <!-- {/extensionsWatchdogAlertBehaviorDocs} -->
 
@@ -205,22 +179,19 @@ terminal.
 
 <!-- {=extensionsLoadWatchdogConfigDocs} -->
 
-Load watchdog config from disk and return a safe object. Missing files, invalid JSON, or malformed
-values all fall back to an empty config so runtime monitoring can continue safely.
+Load watchdog config from disk and return a safe object. Missing files, invalid JSON, or malformed values all fall back to an empty config so runtime monitoring can continue safely.
 
 <!-- {/extensionsLoadWatchdogConfigDocs} -->
 
 <!-- {=extensionsResolveWatchdogThresholdsDocs} -->
 
-Resolve the effective watchdog thresholds by merging optional config overrides onto the built-in
-default thresholds.
+Resolve the effective watchdog thresholds by merging optional config overrides onto the built-in default thresholds.
 
 <!-- {/extensionsResolveWatchdogThresholdsDocs} -->
 
 <!-- {=extensionsResolveWatchdogSampleIntervalMsDocs} -->
 
-Resolve the watchdog sampling interval in milliseconds, clamping configured values into the
-supported range and falling back to the default interval when no valid override is provided.
+Resolve the watchdog sampling interval in milliseconds, clamping configured values into the supported range and falling back to the default interval when no valid override is provided.
 
 <!-- {/extensionsResolveWatchdogSampleIntervalMsDocs} -->
 
@@ -230,6 +201,4 @@ This package ships raw `.ts` extensions for pi to load directly.
 
 ## Auto session naming and compaction continuity
 
-`auto-session-name` now keeps session titles fresh as work focus changes, triggers a
-`continue` follow-up after compaction, and emits canonical resume hints with
-`pi --session <session-id>` whenever you switch sessions or exit.
+`auto-session-name` now keeps session titles fresh as work focus changes, triggers a `continue` follow-up after compaction, and emits canonical resume hints with `pi --session <session-id>` whenever you switch sessions or exit.

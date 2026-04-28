@@ -22,8 +22,8 @@ import {
 	type CasteBudget,
 	classifySeverity,
 	getLowestRateLimitPct,
-	type ProviderRateLimits,
 	planBudget,
+	type ProviderRateLimits,
 	type UsageLimitsEvent,
 } from "../extensions/ant-colony/budget-planner.js";
 import type { ColonyMetrics, ConcurrencyConfig } from "../extensions/ant-colony/types.js";
@@ -536,7 +536,15 @@ describe("applyConcurrencyCap", () => {
 	it("preserves min and history", () => {
 		const config = makeConcurrency({
 			min: 1,
-			history: [{ timestamp: 1, concurrency: 2, cpuLoad: 0.3, memFree: 8e9, throughput: 1 }],
+			history: [
+				{
+					timestamp: 1,
+					concurrency: 2,
+					cpuLoad: 0.3,
+					memFree: 8e9,
+					throughput: 1,
+				},
+			],
 		});
 		const plan: BudgetPlan = {
 			castes: {} as Record<string, CasteBudget>,

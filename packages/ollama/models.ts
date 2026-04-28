@@ -405,7 +405,10 @@ export async function discoverOllamaCloudModelList(
 ): Promise<OllamaProviderModel[] | null> {
 	const config = getOllamaCloudRuntimeConfig();
 	const fallbackModels = getFallbackOllamaCloudModels();
-	const modelIds = await discoverOllamaModelIds(config, { apiKey, signal: options.signal });
+	const modelIds = await discoverOllamaModelIds(config, {
+		apiKey,
+		signal: options.signal,
+	});
 	if (modelIds.length === 0) return null;
 	return modelIds
 		.map((id) => normalizeDiscoveredModel(id, null, "cloud", fallbackModels))
@@ -441,7 +444,10 @@ export async function enrichOllamaCloudCredentials(
 ): Promise<OllamaCloudCredentials> {
 	let models: OllamaProviderModel[] | undefined;
 	try {
-		models = (await discoverOllamaCloudModels(credentials.access, { signal: options.signal })) ?? undefined;
+		models =
+			(await discoverOllamaCloudModels(credentials.access, {
+				signal: options.signal,
+			})) ?? undefined;
 	} catch {
 		models = undefined;
 	}
@@ -496,7 +502,11 @@ export function toOllamaModel(
 	const compatDefaults = getOllamaCompatDefaults(model);
 	return {
 		capabilities: sanitizeCapabilities(model.capabilities),
-		compat: { ...OLLAMA_OPENAI_COMPAT, ...compatDefaults, ...(model.compat ?? {}) },
+		compat: {
+			...OLLAMA_OPENAI_COMPAT,
+			...compatDefaults,
+			...(model.compat ?? {}),
+		},
 		contextWindow,
 		cost: model.cost ? { ...model.cost } : { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		family: sanitizeOptionalString(model.family),
@@ -582,7 +592,11 @@ function normalizeDiscoveredModel(
 	if (!payload) {
 		return fallback
 			? cloneModel(fallback)
-			: toOllamaModel({ id, localAvailability: source === "local" ? "installed" : undefined, source });
+			: toOllamaModel({
+					id,
+					localAvailability: source === "local" ? "installed" : undefined,
+					source,
+				});
 	}
 	const capabilities = Array.isArray(payload.capabilities)
 		? payload.capabilities.filter((capability): capability is string => typeof capability === "string")

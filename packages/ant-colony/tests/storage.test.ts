@@ -53,7 +53,9 @@ describe("ant-colony shared storage", () => {
 		fs.mkdirSync(path.join(legacyDir, "tasks"), { recursive: true });
 		fs.writeFileSync(path.join(legacyDir, "state.json"), JSON.stringify({ id: "colony-legacy", status: "working" }));
 		fs.writeFileSync(path.join(legacyDir, "tasks", "t-1.json"), JSON.stringify({ id: "t-1" }));
-		fs.mkdirSync(path.join(cwd, ".ant-colony", "worktrees"), { recursive: true });
+		fs.mkdirSync(path.join(cwd, ".ant-colony", "worktrees"), {
+			recursive: true,
+		});
 
 		migrateLegacyProjectColonies(cwd, { mode: "shared", sharedRoot });
 
@@ -67,7 +69,10 @@ describe("ant-colony shared storage", () => {
 	it("cleans up empty shared workspace storage directories", () => {
 		const cwd = mkTempDir("colony-cleanup-");
 		const sharedRoot = mkTempDir("colony-cleanup-root-");
-		const stateParent = getColonyStateParentDir(cwd, { mode: "shared", sharedRoot });
+		const stateParent = getColonyStateParentDir(cwd, {
+			mode: "shared",
+			sharedRoot,
+		});
 		fs.mkdirSync(stateParent, { recursive: true });
 
 		cleanupEmptyColonyStorageDirs(cwd, { mode: "shared", sharedRoot });

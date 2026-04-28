@@ -9,16 +9,5 @@
 	"semi": true,
 	"arrowParens": "always",
 	"bracketSameLine": false,
-	"bracketSpacing": true,
-	"ignorePatterns": [
-		"**/node_modules/**",
-		"**/dist/**",
-		"**/build/**",
-		"**/coverage/**",
-		"**/.changeset/**",
-		"**/*.min.js",
-		"**/pnpm-lock.yaml",
-		"**/package-lock.json",
-		"**/yarn.lock"
-	]
+	"bracketSpacing": true
 }

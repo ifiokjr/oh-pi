@@ -51,7 +51,7 @@ jobs:
   changeset:
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || !startsWith(github.event.head_commit.message, 'chore: prepare releases')
+    if: "github.event_name == 'pull_request' || !startsWith(github.event.head_commit.message, 'chore: prepare releases')"
     steps:
       - name: checkout repository
         uses: actions/checkout@v4

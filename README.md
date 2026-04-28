@@ -8,10 +8,7 @@
 
 Like oh-my-zsh for pi — but with an autonomous ant colony.
 
-[![CI](https://github.com/ifiokjr/oh-pi/actions/workflows/ci.yml/badge.svg)](https://github.com/ifiokjr/oh-pi/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/ifiokjr/oh-pi/graph/badge.svg?branch=main)](https://codecov.io/gh/ifiokjr/oh-pi)
-[![license](https://img.shields.io/github/license/ifiokjr/oh-pi)](./LICENSE)
-[![node](https://img.shields.io/node/v/@ifi/oh-pi)](https://nodejs.org)
+[![CI](https://github.com/ifiokjr/oh-pi/actions/workflows/ci.yml/badge.svg)](https://github.com/ifiokjr/oh-pi/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/ifiokjr/oh-pi/graph/badge.svg?branch=main)](https://codecov.io/gh/ifiokjr/oh-pi) [![license](https://img.shields.io/github/license/ifiokjr/oh-pi)](./LICENSE) [![node](https://img.shields.io/node/v/@ifi/oh-pi)](https://nodejs.org)
 
 ```bash
 npx @ifi/oh-pi
@@ -28,8 +25,7 @@ npx @ifi/oh-pi       # install the default oh-pi bundle
 pi                    # start coding
 ```
 
-oh-pi installs the full bundle into pi in one command. See [Installer Options](#installer-options)
-for project-scoped installs and version pinning.
+oh-pi installs the full bundle into pi in one command. See [Installer Options](#installer-options) for project-scoped installs and version pinning.
 
 ## Start Here
 
@@ -90,60 +86,52 @@ oh-pi repo
 
 ### Fork-based Git install
 
-If you keep a personal fork with custom oh-pi changes, you can also install the repo root directly as a
-pi package:
+If you keep a personal fork with custom oh-pi changes, you can also install the repo root directly as a pi package:
 
 ```bash
 pi install https://github.com/<you>/oh-pi@<tag-or-commit>
 ```
 
-That git-install path is meant for personal fork distribution across machines. It aggregates the repo's
-shareable runtime packages directly from the clone so you do not have to mirror local workspace paths.
-Published npm installs remain the better default for stable releases.
+That git-install path is meant for personal fork distribution across machines. It aggregates the repo's shareable runtime packages directly from the clone so you do not have to mirror local workspace paths. Published npm installs remain the better default for stable releases.
 
 ## Packages
 
 This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick individual packages.
 
-| Package                                                             | Role                                                                      | Install                                             |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------- |
-| [`@ifi/oh-pi`](./packages/oh-pi)                                    | Meta-installer for the default oh-pi bundle                               | `npx @ifi/oh-pi`                                    |
-| [`@ifi/oh-pi-cli`](./packages/cli)                                  | Interactive TUI configurator                                              | `npx @ifi/oh-pi-cli`                                |
-| [`@ifi/oh-pi-core`](./packages/core)                                | Shared types, registries, icons, i18n, and path helpers                   | (library, not installed directly)                   |
-| [`@ifi/oh-pi-extensions`](./packages/extensions)                    | Core extension pack with 13 session features                              | `pi install npm:@ifi/oh-pi-extensions`              |
-| [`@ifi/pi-background-tasks`](./packages/background-tasks)           | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, and `bg_task` | `pi install npm:@ifi/pi-background-tasks`           |
-| [`@ifi/pi-diagnostics`](./packages/diagnostics)                     | Prompt completion timing extension                                        | `pi install npm:@ifi/pi-diagnostics`                |
-| [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)                    | Multi-agent swarm extension                                               | `pi install npm:@ifi/oh-pi-ant-colony`              |
-| [`@ifi/pi-extension-subagents`](./packages/subagents)               | Full-featured subagent delegation runtime                                 | `pi install npm:@ifi/pi-extension-subagents`        |
-| [`@ifi/pi-plan`](./packages/plan)                                   | Branch-aware planning mode extension                                      | `pi install npm:@ifi/pi-plan`                       |
-| [`@ifi/pi-spec`](./packages/spec)                                   | Native spec-driven workflow with `/spec`                                  | `pi install npm:@ifi/pi-spec`                       |
-| [`@ifi/pi-web-remote`](./packages/web-remote)                       | `/remote` session sharing extension                                       | `pi install npm:@ifi/pi-web-remote`                 |
-| [`@ifi/pi-extension-adaptive-routing`](./packages/adaptive-routing) | Optional adaptive + delegated routing                                     | `pi install npm:@ifi/pi-extension-adaptive-routing` |
-| [`@ifi/pi-provider-catalog`](./packages/providers)                  | Experimental OpenCode-backed provider catalog                             | `pi install npm:@ifi/pi-provider-catalog`           |
-| [`@ifi/pi-provider-cursor`](./packages/cursor)                      | Experimental Cursor OAuth provider                                        | `pi install npm:@ifi/pi-provider-cursor`            |
-| [`@ifi/pi-provider-ollama`](./packages/ollama)                      | Experimental Ollama local + cloud provider                                | `pi install npm:@ifi/pi-provider-ollama`            |
-| [`@ifi/oh-pi-themes`](./packages/themes)                            | 6 color themes                                                            | `pi install npm:@ifi/oh-pi-themes`                  |
-| [`@ifi/oh-pi-prompts`](./packages/prompts)                          | 10 prompt templates                                                       | `pi install npm:@ifi/oh-pi-prompts`                 |
-| [`@ifi/oh-pi-skills`](./packages/skills)                            | 17 skill packs                                                            | `pi install npm:@ifi/oh-pi-skills`                  |
-| [`@ifi/oh-pi-agents`](./packages/agents)                            | 5 AGENTS.md templates                                                     | (used by CLI/templates)                             |
-| [`@ifi/pi-shared-qna`](./packages/shared-qna)                       | Shared Q&A TUI helpers                                                    | (library, not installed directly)                   |
-| [`@ifi/pi-web-client`](./packages/web-client)                       | Platform-agnostic remote session client library                           | `pnpm add @ifi/pi-web-client`                       |
-| [`@ifi/pi-web-server`](./packages/web-server)                       | Embeddable remote session server                                          | `pnpm add @ifi/pi-web-server`                       |
-| [`@ifi/pi-analytics-extension`](./packages/analytics-extension)   | Analytics tracking extension with SQLite persistence and browser dashboard | `pi install npm:@ifi/pi-analytics-extension`          |
-| [`@ifi/pi-analytics-db`](./packages/analytics-db)                  | SQLite schema and Drizzle ORM client for analytics data                     | (library, not installed directly)                   |
-| [`@ifi/pi-analytics-dashboard`](./packages/analytics-dashboard)     | React dashboard for visualizing AI usage (private package)                | (private, run `pnpm dev` in package)                |
-| [`@ifi/oh-pi-docs`](./packages/docs)                              | Documentation site for oh-pi (private package)                            | (private, run `pnpm dev` in package)                |
+| Package                                                             | Role                                                                       | Install                                             |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------- |
+| [`@ifi/oh-pi`](./packages/oh-pi)                                    | Meta-installer for the default oh-pi bundle                                | `npx @ifi/oh-pi`                                    |
+| [`@ifi/oh-pi-cli`](./packages/cli)                                  | Interactive TUI configurator                                               | `npx @ifi/oh-pi-cli`                                |
+| [`@ifi/oh-pi-core`](./packages/core)                                | Shared types, registries, icons, i18n, and path helpers                    | (library, not installed directly)                   |
+| [`@ifi/oh-pi-extensions`](./packages/extensions)                    | Core extension pack with 13 session features                               | `pi install npm:@ifi/oh-pi-extensions`              |
+| [`@ifi/pi-background-tasks`](./packages/background-tasks)           | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, and `bg_task`  | `pi install npm:@ifi/pi-background-tasks`           |
+| [`@ifi/pi-diagnostics`](./packages/diagnostics)                     | Prompt completion timing extension                                         | `pi install npm:@ifi/pi-diagnostics`                |
+| [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)                    | Multi-agent swarm extension                                                | `pi install npm:@ifi/oh-pi-ant-colony`              |
+| [`@ifi/pi-extension-subagents`](./packages/subagents)               | Full-featured subagent delegation runtime                                  | `pi install npm:@ifi/pi-extension-subagents`        |
+| [`@ifi/pi-plan`](./packages/plan)                                   | Branch-aware planning mode extension                                       | `pi install npm:@ifi/pi-plan`                       |
+| [`@ifi/pi-spec`](./packages/spec)                                   | Native spec-driven workflow with `/spec`                                   | `pi install npm:@ifi/pi-spec`                       |
+| [`@ifi/pi-web-remote`](./packages/web-remote)                       | `/remote` session sharing extension                                        | `pi install npm:@ifi/pi-web-remote`                 |
+| [`@ifi/pi-extension-adaptive-routing`](./packages/adaptive-routing) | Optional adaptive + delegated routing                                      | `pi install npm:@ifi/pi-extension-adaptive-routing` |
+| [`@ifi/pi-provider-catalog`](./packages/providers)                  | Experimental OpenCode-backed provider catalog                              | `pi install npm:@ifi/pi-provider-catalog`           |
+| [`@ifi/pi-provider-cursor`](./packages/cursor)                      | Experimental Cursor OAuth provider                                         | `pi install npm:@ifi/pi-provider-cursor`            |
+| [`@ifi/pi-provider-ollama`](./packages/ollama)                      | Experimental Ollama local + cloud provider                                 | `pi install npm:@ifi/pi-provider-ollama`            |
+| [`@ifi/oh-pi-themes`](./packages/themes)                            | 6 color themes                                                             | `pi install npm:@ifi/oh-pi-themes`                  |
+| [`@ifi/oh-pi-prompts`](./packages/prompts)                          | 10 prompt templates                                                        | `pi install npm:@ifi/oh-pi-prompts`                 |
+| [`@ifi/oh-pi-skills`](./packages/skills)                            | 17 skill packs                                                             | `pi install npm:@ifi/oh-pi-skills`                  |
+| [`@ifi/oh-pi-agents`](./packages/agents)                            | 5 AGENTS.md templates                                                      | (used by CLI/templates)                             |
+| [`@ifi/pi-shared-qna`](./packages/shared-qna)                       | Shared Q&A TUI helpers                                                     | (library, not installed directly)                   |
+| [`@ifi/pi-web-client`](./packages/web-client)                       | Platform-agnostic remote session client library                            | `pnpm add @ifi/pi-web-client`                       |
+| [`@ifi/pi-web-server`](./packages/web-server)                       | Embeddable remote session server                                           | `pnpm add @ifi/pi-web-server`                       |
+| [`@ifi/pi-analytics-extension`](./packages/analytics-extension)     | Analytics tracking extension with SQLite persistence and browser dashboard | `pi install npm:@ifi/pi-analytics-extension`        |
+| [`@ifi/pi-analytics-db`](./packages/analytics-db)                   | SQLite schema and Drizzle ORM client for analytics data                    | (library, not installed directly)                   |
+| [`@ifi/pi-analytics-dashboard`](./packages/analytics-dashboard)     | React dashboard for visualizing AI usage (private package)                 | (private, run `pnpm dev` in package)                |
+| [`@ifi/oh-pi-docs`](./packages/docs)                                | Documentation site for oh-pi (private package)                             | (private, run `pnpm dev` in package)                |
 
-`@ifi/pi-extension-adaptive-routing`, `@ifi/pi-provider-catalog`, `@ifi/pi-provider-cursor`,
-`@ifi/pi-provider-ollama`, and `@ifi/pi-analytics-extension` stay opt-in for now and are **not**
-installed by `npx @ifi/oh-pi`.
-They are intentionally shipped as separate optional packages.
+`@ifi/pi-extension-adaptive-routing`, `@ifi/pi-provider-catalog`, `@ifi/pi-provider-cursor`, `@ifi/pi-provider-ollama`, and `@ifi/pi-analytics-extension` stay opt-in for now and are **not** installed by `npx @ifi/oh-pi`. They are intentionally shipped as separate optional packages.
 
 ### Full Feature Catalog
 
-For a package-by-package inventory of everything in the repo — including every extension, runtime
-package, prompt, skill, theme, AGENTS template, and contributor-facing library — see
-[docs/feature-catalog.md](./docs/feature-catalog.md).
+For a package-by-package inventory of everything in the repo — including every extension, runtime package, prompt, skill, theme, AGENTS template, and contributor-facing library — see [docs/feature-catalog.md](./docs/feature-catalog.md).
 
 ### Native `/spec` Workflow
 
@@ -169,8 +157,7 @@ npx @ifi/oh-pi --remove             # uninstall all oh-pi packages from pi
 
 ### Compatibility Policy
 
-oh-pi tracks upstream pi fairly closely and currently treats **pi `0.56.1` or newer** as the
-minimum supported runtime baseline for packages that integrate directly with the pi SDK.
+oh-pi tracks upstream pi fairly closely and currently treats **pi `0.56.1` or newer** as the minimum supported runtime baseline for packages that integrate directly with the pi SDK.
 
 Policy:
 
@@ -182,14 +169,11 @@ Policy:
 
 ### Documentation reuse with MDT
 
-This repo uses [MDT](https://github.com/ifiokjr/mdt) to keep selected markdown sections and exported
-TypeScript API docs synchronized from shared provider blocks under `docs/mdt/`.
+This repo uses [MDT](https://github.com/ifiokjr/mdt) to keep selected markdown sections and exported TypeScript API docs synchronized from shared provider blocks under `docs/mdt/`.
 
 <!-- {=repoMdtUsageRuleDocs} -->
 
-Use MDT through `pnpm mdt ...`, not a globally installed `mdt` binary. This keeps documentation
-reuse commands pinned to the repo's declared `@ifi/mdt` version and makes local runs, CI, and agent
-instructions consistent.
+Use MDT through `pnpm mdt ...`, not a globally installed `mdt` binary. This keeps documentation reuse commands pinned to the repo's declared `@ifi/mdt` version and makes local runs, CI, and agent instructions consistent.
 
 <!-- {/repoMdtUsageRuleDocs} -->
 
@@ -213,8 +197,7 @@ pnpm docs:check
 
 <!-- {=repoMdtCiDocs} -->
 
-CI runs `pnpm mdt check` so provider and consumer blocks stay in sync with the repo-pinned MDT
-version.
+CI runs `pnpm mdt check` so provider and consumer blocks stay in sync with the repo-pinned MDT version.
 
 <!-- {/repoMdtCiDocs} -->
 
@@ -224,9 +207,7 @@ version.
 
 ### Plain Icons (disable emoji)
 
-If emoji icons render poorly in your terminal (wrong font, garbled glyphs, misaligned widths), you
-can switch to ASCII-safe fallbacks. All emoji like 🐜 ✅ ❌ 🚀 become plain text like `[ant]`
-`[ok]` `[ERR]` `[>>]`.
+If emoji icons render poorly in your terminal (wrong font, garbled glyphs, misaligned widths), you can switch to ASCII-safe fallbacks. All emoji like 🐜 ✅ ❌ 🚀 become plain text like `[ant]` `[ok]` `[ERR]` `[>>]`.
 
 Three ways to enable (in priority order):
 
@@ -270,19 +251,15 @@ echo '  "plainIcons": true' >> .pi/settings.json
 
 ### 📦 Git Guard (`git-guard`) — **default: on**
 
-Prevents accidental code loss by auto-creating stash checkpoints before the agent makes changes.
-Warns when the repo is dirty (uncommitted changes) and notifies when operations complete.
+Prevents accidental code loss by auto-creating stash checkpoints before the agent makes changes. Warns when the repo is dirty (uncommitted changes) and notifies when operations complete.
 
-**How it works:** On `session_start`, checks `git status`. If dirty, creates `git stash` with a
-timestamped name. On `tool_result` for write/edit operations, tracks changed files.
+**How it works:** On `session_start`, checks `git status`. If dirty, creates `git stash` with a timestamped name. On `tool_result` for write/edit operations, tracks changed files.
 
 ### 📝 Auto Session Name (`auto-session-name`) — **default: on**
 
-Automatically names sessions based on the first user message. Instead of "Session
-2025-03-04T10:33:35", you get "Refactor auth to JWT" or "Fix CI pipeline".
+Automatically names sessions based on the first user message. Instead of "Session 2025-03-04T10:33:35", you get "Refactor auth to JWT" or "Fix CI pipeline".
 
-**How it works:** Listens for the first `turn_end` event, extracts a short title from the user's
-initial prompt, and calls `pi.setSessionName()`.
+**How it works:** Listens for the first `turn_end` event, extracts a short title from the user's initial prompt, and calls `pi.setSessionName()`.
 
 ### 📊 Custom Footer (`custom-footer`) — **default: on**
 
@@ -292,17 +269,13 @@ Replaces the default pi footer with a rich status bar showing real-time metrics:
 ◆ claude-sonnet-4 | 12.3k/8.1k $0.42 62% | ⏱3m12s | ⌂ projects/oh-pi | ⎇ main
 ```
 
-**Shows:** Model name with thinking-level indicator, input/output tokens, accumulated cost, context
-window %, elapsed time, working directory, git branch, and repo/worktree context when available.
+**Shows:** Model name with thinking-level indicator, input/output tokens, accumulated cost, context window %, elapsed time, working directory, git branch, and repo/worktree context when available.
 
-**How it works:** Uses `ctx.ui.setFooter()` with a component that reads
-`ctx.sessionManager.getBranch()` for token/cost data and `footerData.getGitBranch()` for git info.
-Auto-refreshes every 30s.
+**How it works:** Uses `ctx.ui.setFooter()` with a component that reads `ctx.sessionManager.getBranch()` for token/cost data and `footerData.getGitBranch()` for git info. Auto-refreshes every 30s.
 
 ### ⏱ Diagnostics (`diagnostics`) — **default: on**
 
-Adds prompt-level completion diagnostics so you can see when a prompt started, when it finished,
-how long it took, and how each assistant turn progressed.
+Adds prompt-level completion diagnostics so you can see when a prompt started, when it finished, how long it took, and how each assistant turn progressed.
 
 **Surfaces:**
 
@@ -311,93 +284,65 @@ how long it took, and how each assistant turn progressed.
 - expanded per-turn timing details for prompts that needed multiple assistant turns
 - `Ctrl+Shift+D` shortcut and `/diagnostics [status|toggle|on|off]`
 
-**How it works:** Reuses the same timestamp/duration formatting as `tool-metadata`, tracks
-`before_agent_start`, `turn_end`, and `agent_end`, then emits a custom diagnostic message when the
-agent goes idle for that prompt.
+**How it works:** Reuses the same timestamp/duration formatting as `tool-metadata`, tracks `before_agent_start`, `turn_end`, and `agent_end`, then emits a custom diagnostic message when the agent goes idle for that prompt.
 
 ### 🧾 Tool Metadata (`tool-metadata`) — **default: on**
 
-Enriches tool results with execution metadata so pi can show when a tool started, when it finished,
-how long it took, and roughly how much text went in or out.
+Enriches tool results with execution metadata so pi can show when a tool started, when it finished, how long it took, and roughly how much text went in or out.
 
-**Adds:** start/end timestamps, duration, approximate input/output sizing, and a context snapshot at
-completion. It also sanitizes oversized tool output/details payloads so the TUI stays stable even
-when tools return huge text blobs.
+**Adds:** start/end timestamps, duration, approximate input/output sizing, and a context snapshot at completion. It also sanitizes oversized tool output/details payloads so the TUI stays stable even when tools return huge text blobs.
 
-**How it works:** Hooks tool calls/results centrally and appends structured metadata to tool result
-`details`, which other features like diagnostics can reuse for consistent timing displays.
+**How it works:** Hooks tool calls/results centrally and appends structured metadata to tool result `details`, which other features like diagnostics can reuse for consistent timing displays.
 
 ### ⚡ Compact Header (`compact-header`) — **default: on**
 
-Replaces the verbose default startup header with a dense one-liner showing model, provider, thinking
-level, and extension count.
+Replaces the verbose default startup header with a dense one-liner showing model, provider, thinking level, and extension count.
 
 ### 🔄 Auto Update (`auto-update`) — **default: on**
 
-Checks npm for newer versions of oh-pi on startup. If an update is available, shows a notification
-with the new version and install command. Never blocks — fully async.
+Checks npm for newer versions of oh-pi on startup. If an update is available, shows a notification with the new version and install command. Never blocks — fully async.
 
-**How it works:** On `session_start`, runs `npm view oh-pi version` in the background via
-`pi.exec()`. Compares with the local version using semver.
+**How it works:** On `session_start`, runs `npm view oh-pi version` in the background via `pi.exec()`. Compares with the local version using semver.
 
 ### ⌨️ External Editor (`external-editor`) — **default: on**
 
-Adds a discoverable `/external-editor` command and a `Ctrl+Shift+E` shortcut for opening the
-current draft in `$VISUAL` or `$EDITOR`, then syncing the saved text back into pi.
+Adds a discoverable `/external-editor` command and a `Ctrl+Shift+E` shortcut for opening the current draft in `$VISUAL` or `$EDITOR`, then syncing the saved text back into pi.
 
 **Commands:** `/external-editor` | `/external-editor status`
 
-**Notes:** This complements pi's built-in `app.editor.external` binding (`Ctrl+G` by default).
-Users who want a different primary key can still remap that binding in `keybindings.json`.
+**Notes:** This complements pi's built-in `app.editor.external` binding (`Ctrl+G` by default). Users who want a different primary key can still remap that binding in `keybindings.json`.
 
 ### 🌲 Worktree (`worktree`) — **default: on**
 
-Adds centralized git worktree awareness for oh-pi. It detects whether the current checkout is the
-main repo or a linked worktree, shows when the current worktree is pi-owned, and tracks owner +
-purpose metadata for pi-created worktrees.
+Adds centralized git worktree awareness for oh-pi. It detects whether the current checkout is the main repo or a linked worktree, shows when the current worktree is pi-owned, and tracks owner + purpose metadata for pi-created worktrees.
 
 **Commands:** `/worktree` | `/worktree status` | `/worktree list` | `/worktree open [branch|path]` | `/worktree create <branch> [purpose]` | `/worktree cleanup <branch|path|id|all>`
 
-**Behavior:** pi-owned worktrees are created under shared pi storage, namespaced by the canonical
-repo root. Cleanup focuses on pi-owned worktrees only and leaves external/manual worktrees alone
-unless you explicitly intervene.
+**Behavior:** pi-owned worktrees are created under shared pi storage, namespaced by the canonical repo root. Cleanup focuses on pi-owned worktrees only and leaves external/manual worktrees alone unless you explicitly intervene.
 
 ### 📅 Scheduler (`scheduler`) — **default: on**
 
 Adds first-class reminders, recurring follow-ups, and future check-ins to pi.
 
-**Commands:** `/remind in 45m <prompt>` | `/loop 5m <prompt>` | `/loop cron '*/5 * * * *' <prompt>` |
-`/schedule` | `/schedule:tui` | `/schedule:list` | `/schedule:enable <id>` |
-`/schedule:disable <id>` | `/schedule:delete <id>` | `/schedule:clear` |
-`/schedule:clear-other` | `/schedule:adopt <id|all>` | `/schedule:release <id|all>` |
-`/schedule:clear-foreign`
+**Commands:** `/remind in 45m <prompt>` | `/loop 5m <prompt>` | `/loop cron '*/5 * * * *' <prompt>` | `/schedule` | `/schedule:tui` | `/schedule:list` | `/schedule:enable <id>` | `/schedule:disable <id>` | `/schedule:delete <id>` | `/schedule:clear` | `/schedule:clear-other` | `/schedule:adopt <id|all>` | `/schedule:release <id|all>` | `/schedule:clear-foreign`
 
 **Tool:** `schedule_prompt`
 
-**Behavior:** tasks run only while pi is active and idle, persist under shared pi storage, default
-to instance scope, and can opt into workspace scope for shared CI/build/deploy monitors. Use
-`continueUntilComplete` when a follow-up should keep retrying until a success marker appears.
+**Behavior:** tasks run only while pi is active and idle, persist under shared pi storage, default to instance scope, and can opt into workspace scope for shared CI/build/deploy monitors. Use `continueUntilComplete` when a follow-up should keep retrying until a success marker appears.
 
 ### 💬 BTW / QQ (`btw`) — **default: on**
 
-Creates a side-conversation widget above the editor so you can ask follow-up questions, think in
-parallel, or park a tangent without interrupting the main thread.
+Creates a side-conversation widget above the editor so you can ask follow-up questions, think in parallel, or park a tangent without interrupting the main thread.
 
-**Commands:** `/btw` | `/btw:new` | `/btw:clear` | `/btw:inject` | `/btw:summarize` and the alias
-set `/qq`, `/qq:new`, `/qq:clear`, `/qq:inject`, `/qq:summarize`
+**Commands:** `/btw` | `/btw:new` | `/btw:clear` | `/btw:inject` | `/btw:summarize` and the alias set `/qq`, `/qq:new`, `/qq:clear`, `/qq:inject`, `/qq:summarize`
 
-**Behavior:** keep a lightweight parallel thread, then either inject the full exchange into the main
-agent or inject a generated summary instead.
+**Behavior:** keep a lightweight parallel thread, then either inject the full exchange into the main agent or inject a generated summary instead.
 
 ### ⏳ Background Process (`bg-process`) — **default: off**
 
-Manages explicit background tasks for long-lived commands like dev servers, PR watchers, and log
-followers. Ordinary `bash` commands stay in the foreground so their output remains visible in the
-current pi session.
+Manages explicit background tasks for long-lived commands like dev servers, PR watchers, and log followers. Ordinary `bash` commands stay in the foreground so their output remains visible in the current pi session.
 
-**How it works:** Use `bg_task` or `/bg` when you want a command to keep running after the tool
-returns. Background tasks write output to `/tmp/oh-pi-bg-*.log`, can wake pi up on new output, and
-can be inspected or stopped later with `bg_status`, `bg_task`, or the `/bg` dashboard.
+**How it works:** Use `bg_task` or `/bg` when you want a command to keep running after the tool returns. Background tasks write output to `/tmp/oh-pi-bg-*.log`, can wake pi up on new output, and can be inspected or stopped later with `bg_status`, `bg_task`, or the `/bg` dashboard.
 
 ```
 Agent: bg_task spawn "npm run dev"
@@ -416,24 +361,19 @@ Adaptive routing now ships as its own package so users can opt into routing beha
 pi install npm:@ifi/pi-extension-adaptive-routing
 ```
 
-It adds `/route` controls, local routing telemetry, and delegated startup categories that subagents
-and ant-colony can use for provider assignment when no explicit model override is set.
+It adds `/route` controls, local routing telemetry, and delegated startup categories that subagents and ant-colony can use for provider assignment when no explicit model override is set.
 
 ### 💰 Usage Tracker (`usage-tracker`) — **default: off**
 
 <!-- {=extensionsUsageTrackerOverview} -->
 
-The usage-tracker extension is a CodexBar-inspired provider quota and cost monitor for pi. It
-shows provider-level rate limits for Anthropic, OpenAI, and Google using pi-managed auth, while
-also tracking per-model token usage and session costs locally.
+The usage-tracker extension is a CodexBar-inspired provider quota and cost monitor for pi. It shows provider-level rate limits for Anthropic, OpenAI, and Google using pi-managed auth, while also tracking per-model token usage and session costs locally.
 
 <!-- {/extensionsUsageTrackerOverview} -->
 
 <!-- {=extensionsUsageTrackerPersistenceDocs} -->
 
-Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot
-under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing
-recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
+Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
 
 <!-- {/extensionsUsageTrackerPersistenceDocs} -->
 
@@ -484,18 +424,13 @@ Key usage-tracker surfaces:
 
 Continuously samples runtime health so heavy sessions stay usable.
 
-**Commands:** `/watchdog` | `/watchdog:status` | `/watchdog:startup` | `/watchdog:overlay` |
-`/watchdog:dashboard` | `/watchdog:config` | `/watchdog:reset` | `/watchdog:on` |
-`/watchdog:off` | `/watchdog:sample` | `/watchdog:blame` | `/safe-mode [on|off|status]`
+**Commands:** `/watchdog` | `/watchdog:status` | `/watchdog:startup` | `/watchdog:overlay` | `/watchdog:dashboard` | `/watchdog:config` | `/watchdog:reset` | `/watchdog:on` | `/watchdog:off` | `/watchdog:sample` | `/watchdog:blame` | `/safe-mode [on|off|status]`
 
-**Behavior:** tracks CPU, memory, and event-loop lag; records recent samples and alerts; and can
-escalate into safe mode when repeated alerts suggest sustained UI churn. The optional config file
-lives at `~/.pi/agent/extensions/watchdog/config.json`.
+**Behavior:** tracks CPU, memory, and event-loop lag; records recent samples and alerts; and can escalate into safe mode when repeated alerts suggest sustained UI churn. The optional config file lives at `~/.pi/agent/extensions/watchdog/config.json`.
 
 ### 🐜 Ant Colony (`ant-colony`) — **default: off**
 
-The headline feature. A multi-agent swarm modeled after real ant ecology — deeply integrated into
-pi's SDK. See the [Ant Colony section](#-ant-colony-1) below for full documentation.
+The headline feature. A multi-agent swarm modeled after real ant ecology — deeply integrated into pi's SDK. See the [Ant Colony section](#-ant-colony-1) below for full documentation.
 
 ---
 
@@ -594,9 +529,7 @@ Anthropic · OpenAI · Google Gemini · Groq · OpenRouter · xAI · Mistral
 
 ## Skills
 
-The tables below highlight the most commonly reached-for skills. For the full list of all 17 skills,
-plus the 5 AGENTS.md templates that ship in this repo, see
-[docs/feature-catalog.md](./docs/feature-catalog.md).
+The tables below highlight the most commonly reached-for skills. For the full list of all 17 skills, plus the 5 AGENTS.md templates that ship in this repo, see [docs/feature-catalog.md](./docs/feature-catalog.md).
 
 ### 🔧 Tool Skills
 
@@ -671,9 +604,7 @@ pnpm install
 
 <!-- {=repoContributorCompiledPackagesDocs} -->
 
-Most runtime packages in this repo ship raw TypeScript and can be loaded directly by pi. A smaller
-set of contributor-facing packages (`core`, `cli`, `web-client`, `web-server`) emit `dist/` output,
-so build those when you are working on them directly.
+Most runtime packages in this repo ship raw TypeScript and can be loaded directly by pi. A smaller set of contributor-facing packages (`core`, `cli`, `web-client`, `web-server`) emit `dist/` output, so build those when you are working on them directly.
 
 <!-- {/repoContributorCompiledPackagesDocs} -->
 
@@ -704,17 +635,13 @@ pnpm test:coverage
 pnpm test:patch-coverage
 ```
 
-That keeps the repo-wide floor honest while still requiring new code paths in a PR to be fully
-covered. CI uses the same `pnpm test:patch-coverage` command on pull requests, so local results and
-CI results stay aligned.
+That keeps the repo-wide floor honest while still requiring new code paths in a PR to be fully covered. CI uses the same `pnpm test:patch-coverage` command on pull requests, so local results and CI results stay aligned.
 
 ### Running locally & local development
 
 <!-- {=repoPiLocalSwitcherOverviewDocs} -->
 
-The `pnpm pi:local` workflow points a real pi install at this checkout instead of the published npm
-packages. It is the normal local development loop for testing unpublished oh-pi changes in a real
-interactive pi session.
+The `pnpm pi:local` workflow points a real pi install at this checkout instead of the published npm packages. It is the normal local development loop for testing unpublished oh-pi changes in a real interactive pi session.
 
 <!-- {/repoPiLocalSwitcherOverviewDocs} -->
 
@@ -796,8 +723,7 @@ pnpm pi:switch status                     # show the current managed package sou
 
 <!-- {=repoPiSourceSwitchRestartDocs} -->
 
-After switching package sources, fully restart `pi`. Do not rely on `/reload` for source switches,
-because it can keep previously loaded package modules alive.
+After switching package sources, fully restart `pi`. Do not rely on `/reload` for source switches, because it can keep previously loaded package modules alive.
 
 <!-- {/repoPiSourceSwitchRestartDocs} -->
 
@@ -805,15 +731,11 @@ because it can keep previously loaded package modules alive.
 
 <!-- {=repoPiLocalInstallFreshnessDocs} -->
 
-If you recently pulled, rebased, or switched branches in the checkout you pointed `pi` at, run
-`pnpm install --frozen-lockfile` there before restarting `pi`. Local source mode loads workspace
-files directly, so stale `node_modules` can surface missing internal `@ifi/*` package errors.
+If you recently pulled, rebased, or switched branches in the checkout you pointed `pi` at, run `pnpm install --frozen-lockfile` there before restarting `pi`. Local source mode loads workspace files directly, so stale `node_modules` can surface missing internal `@ifi/*` package errors.
 
 <!-- {/repoPiLocalInstallFreshnessDocs} -->
 
-If you are changing one of the compiled contributor packages (`@ifi/oh-pi-core`, `@ifi/oh-pi-cli`,
-`@ifi/pi-web-client`, or `@ifi/pi-web-server`), also run the relevant build command or `pnpm build`
-so their emitted `dist/` output stays current.
+If you are changing one of the compiled contributor packages (`@ifi/oh-pi-core`, `@ifi/oh-pi-cli`, `@ifi/pi-web-client`, or `@ifi/pi-web-server`), also run the relevant build command or `pnpm build` so their emitted `dist/` output stays current.
 
 ### Changesets
 
@@ -823,9 +745,7 @@ so their emitted `dist/` output stays current.
 knope document-change
 ```
 
-This creates a file in `.changeset/` describing the change. Because this repo uses lockstep
-versioning and a single knope `[package]`, changeset frontmatter must use **only** `default` as
-the key:
+This creates a file in `.changeset/` describing the change. Because this repo uses lockstep versioning and a single knope `[package]`, changeset frontmatter must use **only** `default` as the key:
 
 ```md
 ---
@@ -833,8 +753,7 @@ default: patch
 ---
 ```
 
-Do not use package names like `@ifi/oh-pi` or `@ifi/oh-pi-extensions` in changeset frontmatter
-here — knope ignores those entries in this repo.
+Do not use package names like `@ifi/oh-pi` or `@ifi/oh-pi-extensions` in changeset frontmatter here — knope ignores those entries in this repo.
 
 Choose the change type:
 
@@ -854,8 +773,7 @@ Releases are done locally in two steps:
 knope publish
 ```
 
-The release script runs all CI/security checks (lint, security, typecheck, test, build) before
-calling `knope release`. Use `--dry-run` to preview without making changes.
+The release script runs all CI/security checks (lint, security, typecheck, test, build) before calling `knope release`. Use `--dry-run` to preview without making changes.
 
 ### Project Structure
 

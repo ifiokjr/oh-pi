@@ -210,7 +210,9 @@ async function resolveApiKey(
 ): Promise<string | undefined> {
 	const registry = ctx.modelRegistry as ExtensionContext["modelRegistry"] & {
 		getApiKeyForProvider?: (provider: string) => Promise<string | undefined>;
-		authStorage?: { getApiKey?: (provider: string) => Promise<string | undefined> };
+		authStorage?: {
+			getApiKey?: (provider: string) => Promise<string | undefined>;
+		};
 	};
 	if (typeof registry.getApiKey === "function") {
 		return registry.getApiKey(model);

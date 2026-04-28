@@ -80,15 +80,33 @@ describe("custom-footer helpers", () => {
 		const ctx = {
 			sessionManager: {
 				getBranch: () => [
-					{ type: "message", message: makeAssistantMessage({ input: 400, output: 200, cost: 0.01 }) },
+					{
+						type: "message",
+						message: makeAssistantMessage({
+							input: 400,
+							output: 200,
+							cost: 0.01,
+						}),
+					},
 					{ type: "message", message: { role: "user", content: "hello" } },
 					{ type: "custom", data: {} },
-					{ type: "message", message: makeAssistantMessage({ input: 600, output: 300, cost: 0.02 }) },
+					{
+						type: "message",
+						message: makeAssistantMessage({
+							input: 600,
+							output: 300,
+							cost: 0.02,
+						}),
+					},
 				],
 			},
 		};
 
-		expect(collectFooterUsageTotals(ctx as any)).toEqual({ input: 1000, output: 500, cost: 0.03 });
+		expect(collectFooterUsageTotals(ctx as any)).toEqual({
+			input: 1000,
+			output: 500,
+			cost: 0.03,
+		});
 	});
 });
 
@@ -98,7 +116,10 @@ describe("custom-footer extension", () => {
 		customFooter(pi as any);
 
 		const getBranch = vi.fn(() => [
-			{ type: "message", message: makeAssistantMessage({ input: 1200, output: 800, cost: 0.03 }) },
+			{
+				type: "message",
+				message: makeAssistantMessage({ input: 1200, output: 800, cost: 0.03 }),
+			},
 			{ type: "message", message: { role: "user", content: "hello" } },
 		]);
 
@@ -131,7 +152,9 @@ describe("custom-footer extension", () => {
 		expect(firstRender).toContain("$0.03");
 		expect(getBranch).toHaveBeenCalledTimes(1);
 
-		await pi._emit("turn_end", { message: makeAssistantMessage({ input: 500, output: 100, cost: 0.04 }) });
+		await pi._emit("turn_end", {
+			message: makeAssistantMessage({ input: 500, output: 100, cost: 0.04 }),
+		});
 		const secondRender = component.render(200)[0];
 		expect(secondRender).toContain("1.7k/900");
 		expect(secondRender).toContain("$0.07");
@@ -348,8 +371,16 @@ describe("custom-footer extension", () => {
 		const pi = createMockPi();
 		pi.exec = vi.fn().mockResolvedValue({
 			stdout: JSON.stringify([
-				{ number: 77, url: "https://github.com/ifiokjr/oh-pi/pull/77", headRefName: "feat/footer-pr-link" },
-				{ number: 81, url: "https://github.com/ifiokjr/oh-pi/pull/81", headRefName: "feat/footer-pr-link" },
+				{
+					number: 77,
+					url: "https://github.com/ifiokjr/oh-pi/pull/77",
+					headRefName: "feat/footer-pr-link",
+				},
+				{
+					number: 81,
+					url: "https://github.com/ifiokjr/oh-pi/pull/81",
+					headRefName: "feat/footer-pr-link",
+				},
 			]),
 			exitCode: 0,
 		});
@@ -373,7 +404,10 @@ describe("custom-footer extension", () => {
 		const component = footerFactory(
 			{ requestRender: vi.fn() },
 			{ fg: (_color: string, text: string) => text },
-			{ onBranchChange: () => () => undefined, getGitBranch: () => "feat/footer-pr-link" },
+			{
+				onBranchChange: () => () => undefined,
+				getGitBranch: () => "feat/footer-pr-link",
+			},
 		);
 
 		// Wait for the async PR probe to resolve
@@ -430,9 +464,22 @@ describe("custom-footer extension", () => {
 		let customFactory: any;
 		const ctx = {
 			model: { id: "claude-sonnet-4-20250514", provider: "anthropic" },
-			getContextUsage: () => ({ tokens: 45000, contextWindow: 200000, percent: 22.5 }),
+			getContextUsage: () => ({
+				tokens: 45000,
+				contextWindow: 200000,
+				percent: 22.5,
+			}),
 			sessionManager: {
-				getBranch: () => [{ type: "message", message: makeAssistantMessage({ input: 1200, output: 800, cost: 0.03 }) }],
+				getBranch: () => [
+					{
+						type: "message",
+						message: makeAssistantMessage({
+							input: 1200,
+							output: 800,
+							cost: 0.03,
+						}),
+					},
+				],
 			},
 			ui: {
 				setFooter(factory: any) {

@@ -42,7 +42,10 @@ describe("adaptive routing config", () => {
 				openai: { minRemainingPct: 120, applyToTiers: ["premium", "fake"] },
 			},
 			taskClasses: {
-				quick: { defaultThinking: "bad", candidates: ["google/gemini-2.5-flash"] },
+				quick: {
+					defaultThinking: "bad",
+					candidates: ["google/gemini-2.5-flash"],
+				},
 			},
 			delegatedRouting: {
 				categories: {
@@ -92,7 +95,9 @@ describe("adaptive routing config", () => {
 	it("warns once and falls back when config JSON is invalid", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "adaptive-routing-config-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 		writeFileSync(join(tempAgentDir, "extensions", "adaptive-routing", "config.json"), "{ broken json", "utf-8");
 
 		try {
@@ -110,7 +115,9 @@ describe("adaptive routing config", () => {
 	it("reads config from the shared pi agent directory", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "adaptive-routing-config-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 		writeFileSync(
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			`${JSON.stringify({ mode: "auto", models: { ranked: ["anthropic/claude-opus-4.6"] } }, null, 2)}\n`,

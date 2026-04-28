@@ -35,7 +35,12 @@ describe("cursor models", () => {
 		const payload = toBinary(
 			GetUsableModelsResponseSchema,
 			create(GetUsableModelsResponseSchema, {
-				models: [create(ModelDetailsSchema, { modelId: "composer-2", displayName: "Composer 2" })],
+				models: [
+					create(ModelDetailsSchema, {
+						modelId: "composer-2",
+						displayName: "Composer 2",
+					}),
+				],
 			}),
 		);
 
@@ -45,7 +50,13 @@ describe("cursor models", () => {
 
 	it("uses discovered models from the backend", async () => {
 		const backend = await createTestCursorBackend();
-		backend.setDiscoveredModels([{ id: "composer-2", name: "Composer 2", reasoning: true }]);
+		backend.setDiscoveredModels([
+			{
+				id: "composer-2",
+				name: "Composer 2",
+				reasoning: true,
+			},
+		]);
 		const models = await discoverCursorModels("test-access", backend.apiUrl);
 		expect(models?.[0]?.id).toBe("composer-2");
 		expect(backend.getDiscoveryAuthHeaders()).toEqual(["Bearer test-access"]);
@@ -57,7 +68,13 @@ describe("cursor models", () => {
 			refresh: "r",
 			access: "a",
 			expires: Date.now() + 1000,
-			models: [toCursorProviderModel({ id: "gpt-5.2", name: "GPT-5.2", reasoning: true })],
+			models: [
+				toCursorProviderModel({
+					id: "gpt-5.2",
+					name: "GPT-5.2",
+					reasoning: true,
+				}),
+			],
 		});
 		expect(models).toHaveLength(1);
 		expect(models[0]?.id).toBe("gpt-5.2");

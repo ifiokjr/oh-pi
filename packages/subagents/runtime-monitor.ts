@@ -1,6 +1,6 @@
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { buildCompletionKey, markSeenWithTtl } from "./completion-dedupe.js";
 import { createFileCoalescer } from "./file-coalescer.js";
 import { renderWidget } from "./render.js";

@@ -1,5 +1,5 @@
-import { Link } from "react-router";
 import { BookOpen, Puzzle, Terminal, Zap } from "lucide-react";
+import { Link } from "react-router";
 
 interface FeatureCardProps {
 	icon: React.ReactNode;

@@ -127,7 +127,9 @@ describe("@ifi/pi-spec extension", () => {
 
 	it("/spec:status reports workflow state without triggering the model", async () => {
 		const repoRoot = createTempRepo("pi-spec-status");
-		mkdirSync(path.join(repoRoot, "specs", "001-auth-flow"), { recursive: true });
+		mkdirSync(path.join(repoRoot, "specs", "001-auth-flow"), {
+			recursive: true,
+		});
 		writeFileSync(path.join(repoRoot, "specs", "001-auth-flow", "spec.md"), "# Feature Specification", "utf8");
 		const pi = createPiMock();
 		specExtension(pi as any);
@@ -177,7 +179,9 @@ describe("@ifi/pi-spec extension", () => {
 
 	it("/spec:specify prepares a feature workspace and queues the native workflow prompt", async () => {
 		const repoRoot = createTempRepo("pi-spec-specify");
-		mkdirSync(path.join(repoRoot, "specs", "002-existing-feature"), { recursive: true });
+		mkdirSync(path.join(repoRoot, "specs", "002-existing-feature"), {
+			recursive: true,
+		});
 		gitClientMock.listBranches.mockReturnValue(["001-first-feature"]);
 		const pi = createPiMock();
 		specExtension(pi as any);
@@ -198,7 +202,9 @@ describe("@ifi/pi-spec extension", () => {
 
 	it("/spec:plan scaffolds plan.md and references pi-agent.md in the queued prompt", async () => {
 		const repoRoot = createTempRepo("pi-spec-plan");
-		mkdirSync(path.join(repoRoot, "specs", "001-auth-flow"), { recursive: true });
+		mkdirSync(path.join(repoRoot, "specs", "001-auth-flow"), {
+			recursive: true,
+		});
 		writeFileSync(path.join(repoRoot, "specs", "001-auth-flow", "spec.md"), "# Feature Specification", "utf8");
 		gitClientMock.getCurrentBranch.mockReturnValue("001-auth-flow");
 		const pi = createPiMock();

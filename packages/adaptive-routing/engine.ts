@@ -252,7 +252,10 @@ function buildQuotaSummary(usage?: ProviderUsageState): Record<string, RouteQuot
 	}
 	const summary: Record<string, RouteQuotaSnapshot> = {};
 	for (const [provider, state] of Object.entries(usage.providers)) {
-		summary[provider] = { confidence: state.confidence, remainingPct: state.remainingPct };
+		summary[provider] = {
+			confidence: state.confidence,
+			remainingPct: state.remainingPct,
+		};
 	}
 	return summary;
 }

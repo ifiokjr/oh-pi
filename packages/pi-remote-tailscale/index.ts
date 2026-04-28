@@ -4,9 +4,9 @@ import { createDiscoveryService } from "./src/discovery.js";
 import { createQrRenderer } from "./src/qr.js";
 import {
 	isRemoteSessionEnv,
-	startRemoteSessionServer,
 	type RemoteSessionHandle,
 	type RemoteSessionServerOptions,
+	startRemoteSessionServer,
 } from "./src/server.js";
 import { createRemoteWidgetController, type RemoteWidgetState } from "./src/widget.js";
 

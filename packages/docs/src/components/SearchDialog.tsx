@@ -1,7 +1,7 @@
+import { useSearch } from "@/hooks/useSearch";
+import { FileText, Search, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
-import { FileText, Search, X } from "lucide-react";
-import { useSearch } from "@/hooks/useSearch";
 
 interface SearchDialogProps {
 	open: boolean;
@@ -22,13 +22,13 @@ export function SearchDialog({ open, onClose }: SearchDialogProps) {
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape" && open) {onClose();}
+			if (e.key === "Escape" && open) onClose();
 		};
 		document.addEventListener("keydown", handleKeyDown);
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [open, onClose]);
 
-	if (!open) {return null;}
+	if (!open) return null;
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">

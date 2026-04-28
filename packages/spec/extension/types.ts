@@ -1,9 +1,7 @@
 /**
 <!-- {=piSpecSubcommandsDocs} -->
 
-Canonical `/spec` subcommands exposed by the extension. Keep README command lists and exported type
-metadata in sync with this source of truth: `status`, `help`, `init`, `constitution`, `specify`,
-`clarify`, `checklist`, `plan`, `tasks`, `analyze`, `implement`, `list`, and `next`.
+Canonical `/spec` subcommands exposed by the extension. Keep README command lists and exported type metadata in sync with this source of truth: `status`, `help`, `init`, `constitution`, `specify`, `clarify`, `checklist`, `plan`, `tasks`, `analyze`, `implement`, `list`, and `next`.
 
 <!-- {/piSpecSubcommandsDocs} -->
 */
@@ -28,9 +26,7 @@ export type SpecSubcommand = (typeof SPEC_SUBCOMMANDS)[number];
 /**
 <!-- {=piSpecWorkflowStepsDocs} -->
 
-Workflow steps that hand work back into pi for feature execution. These ordered steps are
-`constitution`, `specify`, `clarify`, `checklist`, `plan`, `tasks`, `analyze`, and `implement`.
-Keep contributor-facing docs aligned with the same sequence.
+Workflow steps that hand work back into pi for feature execution. These ordered steps are `constitution`, `specify`, `clarify`, `checklist`, `plan`, `tasks`, `analyze`, and `implement`. Keep contributor-facing docs aligned with the same sequence.
 
 <!-- {/piSpecWorkflowStepsDocs} -->
 */

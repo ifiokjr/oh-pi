@@ -115,7 +115,12 @@ describe("compact-header plain-icons bootstrap", () => {
 			| undefined;
 		expect(headerFactory).toBeTypeOf("function");
 
-		const component = headerFactory?.({ requestRender() {} }, { fg: (_color: string, text: string) => text });
+		const component = headerFactory?.(
+			{ requestRender() {} },
+			{
+				fg: (_color: string, text: string) => text,
+			},
+		);
 		component?.render(120);
 		component?.render(120);
 

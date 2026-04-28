@@ -31,8 +31,7 @@ Numbered steps, each small and actionable:
    - Changes: What to modify
    - Acceptance: How to verify
 
-2. **Task 2**: Description
-   ...
+2. **Task 2**: Description ...
 
 ## Files to Modify
 

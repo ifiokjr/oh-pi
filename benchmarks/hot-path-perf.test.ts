@@ -89,7 +89,10 @@ describe("hot path micro benchmarks", () => {
 					const cache: { strength: number; createdAt: number }[] = [];
 					const now = Date.now();
 					for (let i = 0; i < 500; i++) {
-						cache.push({ strength: 1.0, createdAt: now - Math.floor(Math.random() * 600_000) });
+						cache.push({
+							strength: 1.0,
+							createdAt: now - Math.floor(Math.random() * 600_000),
+						});
 					}
 					let write = 0;
 					for (const p of cache) {

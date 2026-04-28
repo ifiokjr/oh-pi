@@ -24,7 +24,12 @@ describe("watchdog runtime diagnostics", () => {
 		recordRuntimeSample("scheduler", "event", "turn_end", 140, "scheduler");
 		recordRuntimeUiActivity("scheduler", "status", "scheduler");
 		recordRuntimeUiActivity("scheduler", "status", "scheduler");
-		recordRuntimeMetric({ extensionId: "scheduler", pendingTasks: 6, dueTasks: 2, note: "observer mode" });
+		recordRuntimeMetric({
+			extensionId: "scheduler",
+			pendingTasks: 6,
+			dueTasks: 2,
+			note: "observer mode",
+		});
 
 		recordRuntimeSample("git-guard", "event", "tool_call", 20, "git-guard");
 

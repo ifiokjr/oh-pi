@@ -73,7 +73,10 @@ function parseAgentToken(token: string): { name: string; config: InlineConfig } 
 
 function extractBgFlag(args: string): { args: string; bg: boolean } {
 	if (args.endsWith(" --bg") || args === "--bg") {
-		return { args: args.slice(0, args.length - (args === "--bg" ? 4 : 5)).trim(), bg: true };
+		return {
+			args: args.slice(0, args.length - (args === "--bg" ? 4 : 5)).trim(),
+			bg: true,
+		};
 	}
 	return { args, bg: false };
 }
@@ -99,11 +102,17 @@ function makeAgentCompletions(getBaseCwd: () => string, multiAgent: boolean) {
 		const lastWord = (prefix.match(/(\S*)$/) || ["", ""])[1];
 		const beforeLastWord = prefix.slice(0, prefix.length - lastWord.length);
 		if (lastWord === "->") {
-			return agents.map((agent) => ({ value: `${prefix} ${agent.name}`, label: agent.name }));
+			return agents.map((agent) => ({
+				value: `${prefix} ${agent.name}`,
+				label: agent.name,
+			}));
 		}
 		return agents
 			.filter((agent) => agent.name.startsWith(lastWord))
-			.map((agent) => ({ value: `${beforeLastWord}${agent.name}`, label: agent.name }));
+			.map((agent) => ({
+				value: `${beforeLastWord}${agent.name}`,
+				label: agent.name,
+			}));
 	};
 }
 
@@ -230,7 +239,11 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 			if (inline.reads && Array.isArray(inline.reads) && inline.reads.length > 0) {
 				finalTask = `[Read from: ${inline.reads.join(", ")}]\n\n${finalTask}`;
 			}
-			const params: Record<string, unknown> = { agent: agentName, task: finalTask, clarify: false };
+			const params: Record<string, unknown> = {
+				agent: agentName,
+				task: finalTask,
+				clarify: false,
+			};
 			if (inline.output !== undefined) params.output = inline.output;
 			if (inline.skill !== undefined) params.skill = inline.skill;
 			if (inline.model) params.model = inline.model;
@@ -257,7 +270,12 @@ export function registerSubagentCommands(pi: ExtensionAPI, options: RegisterSuba
 				...(config.skill !== undefined ? { skill: config.skill } : {}),
 				...(config.progress !== undefined ? { progress: config.progress } : {}),
 			}));
-			const params: Record<string, unknown> = { chain, task: parsed.task, clarify: false, agentScope: "both" };
+			const params: Record<string, unknown> = {
+				chain,
+				task: parsed.task,
+				clarify: false,
+				agentScope: "both",
+			};
 			if (bg) params.async = true;
 			pi.sendUserMessage(`Call the subagent tool with these exact parameters: ${JSON.stringify(params)}`);
 		},

@@ -14,11 +14,31 @@ export async function selectAgents(initialValue?: string): Promise<string> {
 		initialValue,
 		message: t("agent.select"),
 		options: [
-			{ value: "general-developer", label: t("agent.general"), hint: t("agent.generalHint") },
-			{ value: "fullstack-developer", label: t("agent.fullstack"), hint: t("agent.fullstackHint") },
-			{ value: "security-researcher", label: t("agent.security"), hint: t("agent.securityHint") },
-			{ value: "data-ai-engineer", label: t("agent.dataai"), hint: t("agent.dataaiHint") },
-			{ value: "colony-operator", label: t("agent.colony"), hint: t("agent.colonyHint") },
+			{
+				value: "general-developer",
+				label: t("agent.general"),
+				hint: t("agent.generalHint"),
+			},
+			{
+				value: "fullstack-developer",
+				label: t("agent.fullstack"),
+				hint: t("agent.fullstackHint"),
+			},
+			{
+				value: "security-researcher",
+				label: t("agent.security"),
+				hint: t("agent.securityHint"),
+			},
+			{
+				value: "data-ai-engineer",
+				label: t("agent.dataai"),
+				hint: t("agent.dataaiHint"),
+			},
+			{
+				value: "colony-operator",
+				label: t("agent.colony"),
+				hint: t("agent.colonyHint"),
+			},
 		],
 	});
 	if (p.isCancel(agent)) {

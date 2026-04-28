@@ -5,11 +5,10 @@ oh-pi is a lockstep-versioned pnpm monorepo of pi extensions, themes, prompts, s
 ## Essentials
 
 - Use `pnpm` for all workspace commands.
+
 <!-- {=repoMdtUsageRuleDocs} -->
 
-Use MDT through `pnpm mdt ...`, not a globally installed `mdt` binary. This keeps documentation
-reuse commands pinned to the repo's declared `@ifi/mdt` version and makes local runs, CI, and agent
-instructions consistent.
+Use MDT through `pnpm mdt ...`, not a globally installed `mdt` binary. This keeps documentation reuse commands pinned to the repo's declared `@ifi/mdt` version and makes local runs, CI, and agent instructions consistent.
 
 <!-- {/repoMdtUsageRuleDocs} -->
 
@@ -17,6 +16,7 @@ instructions consistent.
   - `pnpm typecheck` — type-checks the repo with `tsgo` (`@typescript/native-preview`)
   - `pnpm build` — runs every workspace package build script
 - Every non-release change must include a changeset created with `knope document-change`; changeset frontmatter must use only `default`.
+
 <!-- {=repoMdtCommandsDocs} -->
 
 ```bash

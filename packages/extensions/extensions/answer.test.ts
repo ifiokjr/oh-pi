@@ -98,7 +98,11 @@ function setupHarnessWithAssistantMessage(text: string, stopReason = "stop") {
 }
 
 function makeExtractedQuestionsResponse(
-	questions: Array<{ question: string; context?: string; options?: Array<{ label: string; description: string }> }>,
+	questions: Array<{
+		question: string;
+		context?: string;
+		options?: Array<{ label: string; description: string }>;
+	}>,
 ) {
 	return {
 		stopReason: "stop",
@@ -151,12 +155,26 @@ describe("normalizeExtractedQuestions", () => {
 	});
 
 	it("extracts a simple question", () => {
-		expect(normalizeExtractedQuestions([{ question: "What DB?" }])).toEqual([{ question: "What DB?" }]);
+		expect(normalizeExtractedQuestions([{ question: "What DB?" }])).toEqual([
+			{
+				question: "What DB?",
+			},
+		]);
 	});
 
 	it("extracts question with context", () => {
-		const result = normalizeExtractedQuestions([{ question: "Which ORM?", context: "We use Node.js" }]);
-		expect(result).toEqual([{ question: "Which ORM?", context: "We use Node.js" }]);
+		const result = normalizeExtractedQuestions([
+			{
+				question: "Which ORM?",
+				context: "We use Node.js",
+			},
+		]);
+		expect(result).toEqual([
+			{
+				question: "Which ORM?",
+				context: "We use Node.js",
+			},
+		]);
 	});
 
 	it("extracts concise question plus options from a detailed section", () => {
@@ -181,7 +199,11 @@ describe("normalizeExtractedQuestions", () => {
 			{
 				question: "Database?",
 				options: [
-					{ label: "PostgreSQL", description: "Relational", recommended: false },
+					{
+						label: "PostgreSQL",
+						description: "Relational",
+						recommended: false,
+					},
 					{ label: "MongoDB", description: "Document", recommended: false },
 				],
 			},
@@ -190,20 +212,41 @@ describe("normalizeExtractedQuestions", () => {
 
 	it("filters options without label", () => {
 		const result = normalizeExtractedQuestions([
-			{ question: "Pick one?", options: [{ label: "A", description: "First" }, { description: "No label" }] },
+			{
+				question: "Pick one?",
+				options: [
+					{ label: "A", description: "First" },
+					{
+						description: "No label",
+					},
+				],
+			},
 		]);
 		expect(result).toEqual([
-			{ question: "Pick one?", options: [{ label: "A", description: "First", recommended: false }] },
+			{
+				question: "Pick one?",
+				options: [{ label: "A", description: "First", recommended: false }],
+			},
 		]);
 	});
 
 	it("strips options entirely when none remain after filtering", () => {
-		const result = normalizeExtractedQuestions([{ question: "Any thoughts?", options: [{ description: "No label" }] }]);
+		const result = normalizeExtractedQuestions([
+			{
+				question: "Any thoughts?",
+				options: [{ description: "No label" }],
+			},
+		]);
 		expect(result).toEqual([{ question: "Any thoughts?" }]);
 	});
 
 	it("ignores empty context strings", () => {
-		const result = normalizeExtractedQuestions([{ question: "Q?", context: "   " }]);
+		const result = normalizeExtractedQuestions([
+			{
+				question: "Q?",
+				context: "   ",
+			},
+		]);
 		expect(result).toEqual([{ question: "Q?" }]);
 	});
 
@@ -223,25 +266,53 @@ describe("normalizeExtractedQuestions", () => {
 	});
 
 	it("ignores empty fullContext strings", () => {
-		const result = normalizeExtractedQuestions([{ question: "Q?", fullContext: "   " }]);
+		const result = normalizeExtractedQuestions([
+			{
+				question: "Q?",
+				fullContext: "   ",
+			},
+		]);
 		expect(result).toEqual([{ question: "Q?" }]);
 	});
 
 	it("ignores empty options arrays", () => {
-		const result = normalizeExtractedQuestions([{ question: "Q?", options: [] }]);
+		const result = normalizeExtractedQuestions([
+			{
+				question: "Q?",
+				options: [],
+			},
+		]);
 		expect(result).toEqual([{ question: "Q?" }]);
 	});
 
 	it("trim label whitespace in options", () => {
 		const result = normalizeExtractedQuestions([
-			{ question: "Q?", options: [{ label: "  A  ", description: "  desc  " }] },
+			{
+				question: "Q?",
+				options: [{ label: "  A  ", description: "  desc  " }],
+			},
 		]);
-		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "desc", recommended: false }] }]);
+		expect(result).toEqual([
+			{
+				question: "Q?",
+				options: [{ label: "A", description: "desc", recommended: false }],
+			},
+		]);
 	});
 
 	it("uses empty string for non-string description in options", () => {
-		const result = normalizeExtractedQuestions([{ question: "Q?", options: [{ label: "A", description: 123 }] }]);
-		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "", recommended: false }] }]);
+		const result = normalizeExtractedQuestions([
+			{
+				question: "Q?",
+				options: [{ label: "A", description: 123 }],
+			},
+		]);
+		expect(result).toEqual([
+			{
+				question: "Q?",
+				options: [{ label: "A", description: "", recommended: false }],
+			},
+		]);
 	});
 
 	it("preserves recommended flag on options", () => {
@@ -266,19 +337,39 @@ describe("normalizeExtractedQuestions", () => {
 	});
 
 	it("defaults recommended to false when omitted", () => {
-		const result = normalizeExtractedQuestions([{ question: "Q?", options: [{ label: "A", description: "Only" }] }]);
-		expect(result).toEqual([{ question: "Q?", options: [{ label: "A", description: "Only", recommended: false }] }]);
+		const result = normalizeExtractedQuestions([
+			{
+				question: "Q?",
+				options: [{ label: "A", description: "Only" }],
+			},
+		]);
+		expect(result).toEqual([
+			{
+				question: "Q?",
+				options: [{ label: "A", description: "Only", recommended: false }],
+			},
+		]);
 	});
 
 	it("synthesizes recommended option from recommendation string", () => {
 		const result = normalizeExtractedQuestions([
-			{ question: "Which tool?", context: "I recommend Kani.", recommendation: "Start with Kani" },
+			{
+				question: "Which tool?",
+				context: "I recommend Kani.",
+				recommendation: "Start with Kani",
+			},
 		]);
 		expect(result).toEqual([
 			{
 				question: "Which tool?",
 				context: "I recommend Kani.",
-				options: [{ label: "Start with Kani", description: "", recommended: true }],
+				options: [
+					{
+						label: "Start with Kani",
+						description: "",
+						recommended: true,
+					},
+				],
 			},
 		]);
 	});
@@ -287,14 +378,26 @@ describe("normalizeExtractedQuestions", () => {
 		const result = normalizeExtractedQuestions([
 			{
 				question: "Which tool?",
-				options: [{ label: "Kani", description: "Verifier", recommended: true }],
+				options: [
+					{
+						label: "Kani",
+						description: "Verifier",
+						recommended: true,
+					},
+				],
 				recommendation: "Use Kani",
 			},
 		]);
 		expect(result).toEqual([
 			{
 				question: "Which tool?",
-				options: [{ label: "Kani", description: "Verifier", recommended: true }],
+				options: [
+					{
+						label: "Kani",
+						description: "Verifier",
+						recommended: true,
+					},
+				],
 			},
 		]);
 	});
@@ -494,7 +597,11 @@ describe("extractQuestions", () => {
 			{
 				question: "Database?",
 				options: [
-					{ label: "PostgreSQL", description: "Relational", recommended: false },
+					{
+						label: "PostgreSQL",
+						description: "Relational",
+						recommended: false,
+					},
 					{ label: "SQLite", description: "Embedded", recommended: false },
 				],
 			},
@@ -505,7 +612,12 @@ describe("extractQuestions", () => {
 		const harness = setupHarnessWithAssistantMessage("Hello?");
 		mockCompleteSimple.mockResolvedValue({
 			stopReason: "stop",
-			content: [{ type: "text" as const, text: '```json\n[{"question": "Q?"}]\n```' }],
+			content: [
+				{
+					type: "text" as const,
+					text: '```json\n[{"question": "Q?"}]\n```',
+				},
+			],
 			usage: {
 				input: 0,
 				output: 0,
@@ -575,7 +687,10 @@ describe("answer extension registration", () => {
 		const cmd = harness.commands.get("answer:auto")!;
 		await cmd.handler("", harness.ctx as never);
 		expect(harness.notifications).toEqual([
-			expect.objectContaining({ msg: "Auto-answer detection disabled", type: "info" }),
+			expect.objectContaining({
+				msg: "Auto-answer detection disabled",
+				type: "info",
+			}),
 		]);
 	});
 
@@ -588,7 +703,10 @@ describe("answer extension registration", () => {
 		const cmd = harness.commands.get("answer:auto")!;
 		await cmd.handler("", harness.ctx as never);
 		expect(harness.notifications).toEqual([
-			expect.objectContaining({ msg: "Auto-answer detection enabled", type: "info" }),
+			expect.objectContaining({
+				msg: "Auto-answer detection enabled",
+				type: "info",
+			}),
 		]);
 	});
 });
@@ -623,7 +741,10 @@ describe("/answer command", () => {
 		await cmd.handler("", harness.ctx as never);
 
 		expect(harness.notifications).toEqual([
-			expect.objectContaining({ msg: "/answer requires interactive mode", type: "error" }),
+			expect.objectContaining({
+				msg: "/answer requires interactive mode",
+				type: "error",
+			}),
 		]);
 	});
 
@@ -659,7 +780,10 @@ describe("/answer command", () => {
 		await cmd.handler("", harness.ctx as never);
 
 		expect(harness.notifications).toEqual([
-			expect.objectContaining({ msg: "No questions found in the last message", type: "info" }),
+			expect.objectContaining({
+				msg: "No questions found in the last message",
+				type: "info",
+			}),
 		]);
 	});
 
@@ -674,7 +798,10 @@ describe("/answer command", () => {
 		await cmd.handler("", harness.ctx as never);
 
 		expect(harness.notifications).toEqual([
-			expect.objectContaining({ msg: "No questions found in the last message", type: "info" }),
+			expect.objectContaining({
+				msg: "No questions found in the last message",
+				type: "info",
+			}),
 		]);
 	});
 
@@ -742,7 +869,10 @@ describe("/answer command", () => {
 
 		expect(harness.userMessages).toContain("Q: Question 1\nA: Use TypeScript");
 		expect(harness.notifications).toEqual([
-			expect.objectContaining({ msg: expect.stringContaining("Answers submitted"), type: "info" }),
+			expect.objectContaining({
+				msg: expect.stringContaining("Answers submitted"),
+				type: "info",
+			}),
 		]);
 	});
 
@@ -805,14 +935,20 @@ describe("/answer:auto command", () => {
 
 		await cmd.handler("", harness.ctx as never);
 		expect(harness.notifications).toEqual([
-			expect.objectContaining({ msg: "Auto-answer detection enabled", type: "info" }),
+			expect.objectContaining({
+				msg: "Auto-answer detection enabled",
+				type: "info",
+			}),
 		]);
 
 		harness.notifications.length = 0;
 
 		await cmd.handler("", harness.ctx as never);
 		expect(harness.notifications).toEqual([
-			expect.objectContaining({ msg: "Auto-answer detection disabled", type: "info" }),
+			expect.objectContaining({
+				msg: "Auto-answer detection disabled",
+				type: "info",
+			}),
 		]);
 	});
 
@@ -827,7 +963,9 @@ describe("/answer:auto command", () => {
 
 		await cmd.handler("", harness.ctx as never);
 
-		expect(appendEntrySpy).toHaveBeenCalledWith("answer-state", { autoDetect: true });
+		expect(appendEntrySpy).toHaveBeenCalledWith("answer-state", {
+			autoDetect: true,
+		});
 	});
 });
 
@@ -1062,7 +1200,10 @@ describe("runAnswerFlow factory callbacks", () => {
 
 		// Aborted extraction should result in "No questions found" notification
 		expect(harness.notifications).toEqual([
-			expect.objectContaining({ msg: "No questions found in the last message", type: "info" }),
+			expect.objectContaining({
+				msg: "No questions found in the last message",
+				type: "info",
+			}),
 		]);
 	});
 
@@ -1101,7 +1242,10 @@ describe("runAnswerFlow factory callbacks", () => {
 		await cmd.handler("", harness.ctx as never);
 
 		expect(harness.notifications).toEqual([
-			expect.objectContaining({ msg: "No questions found in the last message", type: "info" }),
+			expect.objectContaining({
+				msg: "No questions found in the last message",
+				type: "info",
+			}),
 		]);
 	});
 

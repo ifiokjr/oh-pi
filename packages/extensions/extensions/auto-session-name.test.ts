@@ -12,7 +12,12 @@ describe("auto-session-name extension", () => {
 			"agent_end",
 			{
 				type: "agent_end",
-				messages: [{ role: "user", content: "Refactor scheduler startup ownership checks and notifications" }],
+				messages: [
+					{
+						role: "user",
+						content: "Refactor scheduler startup ownership checks and notifications",
+					},
+				],
 			},
 			harness.ctx,
 		);
@@ -29,7 +34,12 @@ describe("auto-session-name extension", () => {
 			"agent_end",
 			{
 				type: "agent_end",
-				messages: [{ role: "user", content: "Investigate scheduler ownership handling" }],
+				messages: [
+					{
+						role: "user",
+						content: "Investigate scheduler ownership handling",
+					},
+				],
 			},
 			harness.ctx,
 		);
@@ -61,7 +71,12 @@ describe("auto-session-name extension", () => {
 			"agent_end",
 			{
 				type: "agent_end",
-				messages: [{ role: "user", content: "Investigate scheduler ownership handling" }],
+				messages: [
+					{
+						role: "user",
+						content: "Investigate scheduler ownership handling",
+					},
+				],
 			},
 			harness.ctx,
 		);
@@ -97,7 +112,12 @@ describe("auto-session-name extension", () => {
 			"agent_end",
 			{
 				type: "agent_end",
-				messages: [{ role: "user", content: "Refactor scheduler startup ownership checks and notifications" }],
+				messages: [
+					{
+						role: "user",
+						content: "Refactor scheduler startup ownership checks and notifications",
+					},
+				],
 			},
 			harness.ctx,
 		);

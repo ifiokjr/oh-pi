@@ -1,7 +1,4 @@
 /* C8 ignore file */
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { mergeDelegatedSelectionPolicies, selectDelegatedModel } from "@ifi/oh-pi-core";
 import type {
 	DelegatedAvailableModel,
@@ -10,6 +7,9 @@ import type {
 	DelegatedSelectionUsageSnapshot,
 	ModelTaskProfile,
 } from "@ifi/oh-pi-core";
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { AgentConfig } from "./agents.js";
 
 export interface AvailableModelRef {
@@ -116,7 +116,9 @@ function readProviderUsageSnapshot(): Record<string, DelegatedSelectionUsageSnap
 	}
 
 	try {
-		const raw = JSON.parse(readFileSync(cachePath, "utf8")) as { providers?: Record<string, unknown> };
+		const raw = JSON.parse(readFileSync(cachePath, "utf8")) as {
+			providers?: Record<string, unknown>;
+		};
 		if (!raw.providers || typeof raw.providers !== "object") {
 			return undefined;
 		}

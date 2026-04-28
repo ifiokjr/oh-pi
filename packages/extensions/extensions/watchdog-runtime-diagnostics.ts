@@ -1,5 +1,5 @@
-import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import path from "node:path";
 
 const DIAGNOSTIC_WINDOW_MS = 2 * 60_000;
 const SAMPLE_LIMIT = 64;
@@ -209,7 +209,11 @@ export function recordRuntimeSample(
 	timestamp = Date.now(),
 ): void {
 	const profile = ensureProfile(extensionId, source);
-	const sample: RuntimeSample = { durationMs: Math.max(0, durationMs), name, timestamp };
+	const sample: RuntimeSample = {
+		durationMs: Math.max(0, durationMs),
+		name,
+		timestamp,
+	};
 
 	if (channel === "event") {
 		pushBounded(profile.eventSamples, sample);
@@ -353,7 +357,9 @@ export function getStartupDiagnostics(): StartupDiagnostic[] {
 }
 
 export function formatStartupDiagnostic(diagnostic: StartupDiagnostic): string {
-	return `${diagnostic.extensionId} · last ${diagnostic.lastMs.toFixed(1)}ms · total ${diagnostic.totalMs.toFixed(1)}ms`;
+	return `${diagnostic.extensionId} · last ${diagnostic.lastMs.toFixed(
+		1,
+	)}ms · total ${diagnostic.totalMs.toFixed(1)}ms`;
 }
 
 function wrapContext<T>(ctx: T, extensionId: string, source: string): T {
@@ -361,7 +367,9 @@ function wrapContext<T>(ctx: T, extensionId: string, source: string): T {
 		return ctx;
 	}
 
-	const candidate = ctx as { ui?: Record<string, (...args: unknown[]) => unknown> };
+	const candidate = ctx as {
+		ui?: Record<string, (...args: unknown[]) => unknown>;
+	};
 	if (!candidate.ui || typeof candidate.ui !== "object") {
 		return ctx;
 	}
@@ -466,7 +474,10 @@ export function installRuntimeDiagnostics(pi: ExtensionAPI): void {
 		const { extensionId, source } = inferCallerIdentity();
 		noteRegistration(extensionId, source, "commands", name);
 		const nextSpec = spec.handler
-			? { ...spec, handler: wrapWithTiming(extensionId, source, "command", name, spec.handler) }
+			? {
+					...spec,
+					handler: wrapWithTiming(extensionId, source, "command", name, spec.handler),
+				}
 			: spec;
 		return originalRegisterCommand(name, nextSpec);
 	}) as ExtensionAPI["registerCommand"];
@@ -476,7 +487,10 @@ export function installRuntimeDiagnostics(pi: ExtensionAPI): void {
 		const { extensionId, source } = inferCallerIdentity();
 		noteRegistration(extensionId, source, "tools", tool.name);
 		const nextTool = tool.execute
-			? { ...tool, execute: wrapWithTiming(extensionId, source, "tool", tool.name, tool.execute) }
+			? {
+					...tool,
+					execute: wrapWithTiming(extensionId, source, "tool", tool.name, tool.execute),
+				}
 			: tool;
 		return originalRegisterTool(nextTool);
 	}) as ExtensionAPI["registerTool"];

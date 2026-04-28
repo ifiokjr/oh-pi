@@ -17,8 +17,8 @@ vi.mock("@mariozechner/pi-coding-agent", async () => {
 });
 
 import backgroundTasksExtension from "../../background-tasks/index.js";
-import bashLiveViewExtension, { BASH_LIVE_VIEW_TOOL } from "../index.js";
 import { enhanceBashTool, PRETTY_BASH_TOOL } from "../../pi-pretty/src/bash.js";
+import bashLiveViewExtension, { BASH_LIVE_VIEW_TOOL } from "../index.js";
 
 describe("bash tool conflict regression", () => {
 	it("registers distinct tool names across background, live-view, and pretty extensions", () => {

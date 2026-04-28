@@ -1,5 +1,5 @@
-import { execSync } from "node:child_process";
 import * as p from "@clack/prompts";
+import { execSync } from "node:child_process";
 import { messages } from "./locales.js";
 import type { Locale } from "./types.js";
 
@@ -37,7 +37,10 @@ function detectLocale(): Locale | undefined {
 
 	if (!lang && process.platform === "win32") {
 		try {
-			lang = execSync('powershell -NoProfile -Command "(Get-Culture).Name"', { encoding: "utf8", timeout: 3000 })
+			lang = execSync('powershell -NoProfile -Command "(Get-Culture).Name"', {
+				encoding: "utf8",
+				timeout: 3000,
+			})
 				.trim()
 				.toLowerCase();
 		} catch {

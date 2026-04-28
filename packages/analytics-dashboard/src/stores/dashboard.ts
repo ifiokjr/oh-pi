@@ -4,9 +4,9 @@
  * Manages global dashboard state including filters, view preferences, and UI state.
  */
 
+import type { DashboardFilters, TimeRange, UserPreferences, ViewType } from "@/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { DashboardFilters, TimeRange, UserPreferences, ViewType } from "@/types";
 
 interface DashboardState {
 	// Current view

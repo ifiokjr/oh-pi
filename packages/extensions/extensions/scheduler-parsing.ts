@@ -77,7 +77,10 @@ export function formatDurationShort(ms: number): string {
 
 export function normalizeDuration(durationMs: number): { durationMs: number; note?: string } {
 	if (durationMs <= 0) {
-		return { durationMs: ONE_MINUTE, note: "Rounded up to 1m (minimum interval)." };
+		return {
+			durationMs: ONE_MINUTE,
+			note: "Rounded up to 1m (minimum interval).",
+		};
 	}
 
 	const rounded = Math.ceil(durationMs / ONE_MINUTE) * ONE_MINUTE;
@@ -181,7 +184,11 @@ function extractLeadingCron(input: string): { cronExpression: string; prompt: st
 		if (!(normalized && prompt)) {
 			return undefined;
 		}
-		return { cronExpression: normalized.expression, note: normalized.note, prompt };
+		return {
+			cronExpression: normalized.expression,
+			note: normalized.note,
+			prompt,
+		};
 	}
 
 	const tokens = rest.split(/\s+/);
@@ -208,7 +215,11 @@ function extractLeadingCron(input: string): { cronExpression: string; prompt: st
 		if (!prompt) {
 			continue;
 		}
-		return { cronExpression: normalized.expression, note: normalized.note, prompt };
+		return {
+			cronExpression: normalized.expression,
+			note: normalized.note,
+			prompt,
+		};
 	}
 
 	return undefined;
@@ -225,7 +236,11 @@ export function parseLoopScheduleArgs(args: string): ParseResult | undefined {
 	if (leadingCron) {
 		return {
 			prompt: leadingCron.prompt,
-			recurring: { cronExpression: leadingCron.cronExpression, mode: "cron", note: leadingCron.note },
+			recurring: {
+				cronExpression: leadingCron.cronExpression,
+				mode: "cron",
+				note: leadingCron.note,
+			},
 		};
 	}
 	if (explicitlyCron) {
@@ -237,7 +252,11 @@ export function parseLoopScheduleArgs(args: string): ParseResult | undefined {
 		const normalized = normalizeDuration(leading.durationMs);
 		return {
 			prompt: leading.prompt,
-			recurring: { durationMs: normalized.durationMs, mode: "interval", note: normalized.note },
+			recurring: {
+				durationMs: normalized.durationMs,
+				mode: "interval",
+				note: normalized.note,
+			},
 		};
 	}
 
@@ -249,7 +268,11 @@ export function parseLoopScheduleArgs(args: string): ParseResult | undefined {
 			const normalized = normalizeDuration(parsed);
 			return {
 				prompt,
-				recurring: { durationMs: normalized.durationMs, mode: "interval", note: normalized.note },
+				recurring: {
+					durationMs: normalized.durationMs,
+					mode: "interval",
+					note: normalized.note,
+				},
 			};
 		}
 	}
@@ -312,7 +335,14 @@ export function validateSchedulePromptAddInput(input: { kind?: TaskKind; duratio
 			return { error: "invalid_duration", ok: false };
 		}
 		const normalized = normalizeDuration(parsed);
-		return { ok: true, plan: { durationMs: normalized.durationMs, kind: "once", note: normalized.note } };
+		return {
+			ok: true,
+			plan: {
+				durationMs: normalized.durationMs,
+				kind: "once",
+				note: normalized.note,
+			},
+		};
 	}
 
 	if (input.duration && input.cron) {
@@ -343,12 +373,21 @@ export function validateSchedulePromptAddInput(input: { kind?: TaskKind; duratio
 		const normalized = normalizeDuration(parsed);
 		return {
 			ok: true,
-			plan: { durationMs: normalized.durationMs, kind: "recurring", mode: "interval", note: normalized.note },
+			plan: {
+				durationMs: normalized.durationMs,
+				kind: "recurring",
+				mode: "interval",
+				note: normalized.note,
+			},
 		};
 	}
 
 	return {
 		ok: true,
-		plan: { durationMs: DEFAULT_LOOP_INTERVAL, kind: "recurring", mode: "interval" },
+		plan: {
+			durationMs: DEFAULT_LOOP_INTERVAL,
+			kind: "recurring",
+			mode: "interval",
+		},
 	};
 }

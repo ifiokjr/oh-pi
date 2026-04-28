@@ -12,8 +12,7 @@ This package contains reusable agent profile templates such as:
 
 ## What this package is for
 
-`@ifi/oh-pi-agents` is a content package used by the oh-pi configurator and installer. It helps seed
-`AGENTS.md`-style instructions for pi projects and user setups.
+`@ifi/oh-pi-agents` is a content package used by the oh-pi configurator and installer. It helps seed `AGENTS.md`-style instructions for pi projects and user setups.
 
 ## Install
 

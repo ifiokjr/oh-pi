@@ -44,11 +44,26 @@ vi.mock("@mariozechner/pi-coding-agent", async () => {
 vi.mock("@sinclair/typebox", () => ({
 	Type: {
 		Object: (schema: unknown) => schema,
-		String: (options?: Record<string, unknown>) => ({ type: "string", ...options }),
-		Number: (options?: Record<string, unknown>) => ({ type: "number", ...options }),
-		Integer: (options?: Record<string, unknown>) => ({ type: "integer", ...options }),
-		Boolean: (options?: Record<string, unknown>) => ({ type: "boolean", ...options }),
-		Optional: (value: unknown) => ({ optional: true, ...((value as Record<string, unknown> | undefined) ?? {}) }),
+		String: (options?: Record<string, unknown>) => ({
+			type: "string",
+			...options,
+		}),
+		Number: (options?: Record<string, unknown>) => ({
+			type: "number",
+			...options,
+		}),
+		Integer: (options?: Record<string, unknown>) => ({
+			type: "integer",
+			...options,
+		}),
+		Boolean: (options?: Record<string, unknown>) => ({
+			type: "boolean",
+			...options,
+		}),
+		Optional: (value: unknown) => ({
+			optional: true,
+			...((value as Record<string, unknown> | undefined) ?? {}),
+		}),
 		Literal: (value: unknown) => ({ type: "literal", value }),
 	},
 }));
@@ -72,7 +87,9 @@ import bashLiveViewExtension, { BASH_LIVE_VIEW_TOOL, BASH_PTY_COMMAND, bashLiveV
 describe("@ifi/pi-bash-live-view index", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.delegatedExecute.mockResolvedValue({ content: [{ type: "text", text: "delegated" }] });
+		mocks.delegatedExecute.mockResolvedValue({
+			content: [{ type: "text", text: "delegated" }],
+		});
 		mocks.executePtyCommand.mockResolvedValue({ sessionId: "pty-1" });
 	});
 
@@ -138,9 +155,15 @@ describe("@ifi/pi-bash-live-view index", () => {
 		);
 
 		expect(mocks.executePtyCommand).toHaveBeenCalledWith(
-			expect.objectContaining({ command: "pnpm dev", cwd: "/custom/cwd", ctx: harness.ctx }),
+			expect.objectContaining({
+				command: "pnpm dev",
+				cwd: "/custom/cwd",
+				ctx: harness.ctx,
+			}),
 		);
-		expect(mocks.toAgentToolResult).toHaveBeenCalledWith({ sessionId: "pty-1" });
+		expect(mocks.toAgentToolResult).toHaveBeenCalledWith({
+			sessionId: "pty-1",
+		});
 		expect(result).toMatchObject({ content: [{ text: "tool:pty-1" }] });
 	});
 
@@ -197,16 +220,28 @@ describe("@ifi/pi-bash-live-view index", () => {
 
 		const [okResult] = await harness.emitAsync(
 			"user_bash",
-			{ type: "user_bash", command: "htop", cwd: "/tmp", excludeFromContext: false },
+			{
+				type: "user_bash",
+				command: "htop",
+				cwd: "/tmp",
+				excludeFromContext: false,
+			},
 			harness.ctx,
 		);
 		expect(mocks.toUserBashResult).toHaveBeenCalledWith({ sessionId: "pty-1" });
-		expect(okResult).toMatchObject({ result: { output: "user:pty-1", exitCode: 0 } });
+		expect(okResult).toMatchObject({
+			result: { output: "user:pty-1", exitCode: 0 },
+		});
 
 		mocks.executePtyCommand.mockRejectedValueOnce(new Error("bad-user-bash"));
 		const [errorResult] = await harness.emitAsync(
 			"user_bash",
-			{ type: "user_bash", command: "broken", cwd: "/tmp", excludeFromContext: true },
+			{
+				type: "user_bash",
+				command: "broken",
+				cwd: "/tmp",
+				excludeFromContext: true,
+			},
 			harness.ctx,
 		);
 		expect(errorResult).toMatchObject({
@@ -221,10 +256,17 @@ describe("@ifi/pi-bash-live-view index", () => {
 		mocks.executePtyCommand.mockRejectedValueOnce("user-raw");
 		const [rawErrorResult] = await harness.emitAsync(
 			"user_bash",
-			{ type: "user_bash", command: "broken", cwd: "/tmp", excludeFromContext: true },
+			{
+				type: "user_bash",
+				command: "broken",
+				cwd: "/tmp",
+				excludeFromContext: true,
+			},
 			harness.ctx,
 		);
-		expect(rawErrorResult).toMatchObject({ result: { output: "PTY execution failed: user-raw" } });
+		expect(rawErrorResult).toMatchObject({
+			result: { output: "PTY execution failed: user-raw" },
+		});
 	});
 
 	it("disposes PTY sessions on session shutdown", () => {

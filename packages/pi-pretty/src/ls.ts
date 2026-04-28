@@ -1,6 +1,6 @@
-import type { ExtensionAPI, AgentToolResult } from "@mariozechner/pi-coding-agent";
+import type { AgentToolResult, ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { createLsTool } from "@mariozechner/pi-coding-agent";
-import { getFileIcon, getDirectoryIcon } from "./icons.js";
+import { getDirectoryIcon, getFileIcon } from "./icons.js";
 import { FG_DIM, FG_MUTED, fillToolBackground } from "./theme.js";
 
 const TREE_PIPE = "│ ";
@@ -81,7 +81,12 @@ export function enhanceLsTool(pi: ExtensionAPI): void {
 			});
 			return {
 				...result,
-				content: [{ type: "text" as const, text: fillToolBackground(withIcons.join("\n")) }],
+				content: [
+					{
+						type: "text" as const,
+						text: fillToolBackground(withIcons.join("\n")),
+					},
+				],
 			};
 		},
 	});

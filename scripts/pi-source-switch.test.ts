@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -6,6 +6,7 @@ import { SWITCHER_PACKAGES } from "../packages/oh-pi/bin/package-list.mts";
 import {
 	buildPiExecutableCandidates,
 	dedupeManagedPackageEntries,
+	main,
 	mergeManagedPackageManifest,
 	parseNpmPackageName,
 	planPackageSyncOperations,
@@ -14,7 +15,6 @@ import {
 	resolveWorkspacePackageManifests,
 	resolveWorkspacePackageSources,
 	rewriteManagedPackageSources,
-	main,
 } from "./pi-source-switch.mts";
 
 const tempDirs: string[] = [];
@@ -49,7 +49,10 @@ function writeWorkspacePackage(
 	mkdirSync(packageDir, { recursive: true });
 	writeFileSync(
 		path.join(packageDir, "package.json"),
-		JSON.stringify({ name: packageName, ...(options.pi ? { pi: options.pi } : {}) }),
+		JSON.stringify({
+			name: packageName,
+			...(options.pi ? { pi: options.pi } : {}),
+		}),
 	);
 	return packageDir;
 }
@@ -264,7 +267,10 @@ describe("pi source switcher helpers", () => {
 	it("merges local package manifests into object settings so new extensions are not missed", () => {
 		expect(
 			mergeManagedPackageManifest(
-				{ source: "/repo/packages/extensions", extensions: ["extensions/existing.ts"] },
+				{
+					source: "/repo/packages/extensions",
+					extensions: ["extensions/existing.ts"],
+				},
 				{ extensions: ["extensions/existing.ts", "extensions/worktree.ts"] },
 			),
 		).toEqual({
@@ -290,7 +296,9 @@ describe("pi source switcher helpers", () => {
 			path.join(packageDir, "package.json"),
 			JSON.stringify({
 				name: "@ifi/oh-pi-extensions",
-				pi: { extensions: ["./extensions/custom-footer.ts", "./extensions/worktree.ts"] },
+				pi: {
+					extensions: ["./extensions/custom-footer.ts", "./extensions/worktree.ts"],
+				},
 			}),
 		);
 
@@ -311,8 +319,16 @@ describe("pi source switcher helpers", () => {
 
 		expect(operations).toEqual(
 			expect.arrayContaining([
-				{ packageName: "@ifi/oh-pi-extensions", source: "/repo/packages/extensions", action: "update" },
-				{ packageName: "@ifi/pi-provider-catalog", source: "/repo/packages/providers", action: "install" },
+				{
+					packageName: "@ifi/oh-pi-extensions",
+					source: "/repo/packages/extensions",
+					action: "update",
+				},
+				{
+					packageName: "@ifi/pi-provider-catalog",
+					source: "/repo/packages/providers",
+					action: "install",
+				},
 			]),
 		);
 	});
@@ -379,7 +395,13 @@ describe("pi source switcher helpers", () => {
 		mkdirSync(path.dirname(settingsPath), { recursive: true });
 		const originalSettings = JSON.stringify(
 			{
-				packages: [{ source: "npm:@ifi/oh-pi-extensions", extensions: ["extensions/legacy.ts"] }, "npm:chalk@5.0.0"],
+				packages: [
+					{
+						source: "npm:@ifi/oh-pi-extensions",
+						extensions: ["extensions/legacy.ts"],
+					},
+					"npm:chalk@5.0.0",
+				],
 			},
 			null,
 			2,
@@ -422,7 +444,10 @@ describe("pi source switcher helpers", () => {
 			JSON.stringify(
 				{
 					packages: [
-						{ source: "npm:@ifi/oh-pi-extensions@0.4.3", extensions: ["extensions/custom-footer.ts"] },
+						{
+							source: "npm:@ifi/oh-pi-extensions@0.4.3",
+							extensions: ["extensions/custom-footer.ts"],
+						},
 						"npm:chalk@5.0.0",
 					],
 				},
@@ -448,7 +473,9 @@ describe("pi source switcher helpers", () => {
 		expect(result.stdout).toContain("Syncing packages with pi...");
 		expect(result.stdout).toContain("✅ Done. Fully restart pi to reload the switched packages.");
 
-		const savedSettings = JSON.parse(readFileSync(settingsPath, "utf8")) as { packages: unknown[] };
+		const savedSettings = JSON.parse(readFileSync(settingsPath, "utf8")) as {
+			packages: unknown[];
+		};
 		const savedSources = savedSettings.packages
 			.map(getPackageSource)
 			.filter((value): value is string => Boolean(value));
@@ -490,7 +517,9 @@ describe("pi source switcher helpers", () => {
 			},
 		});
 
-		const savedSettings = JSON.parse(readFileSync(settingsPath, "utf8")) as { packages: unknown[] };
+		const savedSettings = JSON.parse(readFileSync(settingsPath, "utf8")) as {
+			packages: unknown[];
+		};
 		const savedSources = savedSettings.packages
 			.map(getPackageSource)
 			.filter((value): value is string => Boolean(value));

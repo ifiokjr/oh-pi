@@ -1,6 +1,7 @@
 import type { Theme } from "@mariozechner/pi-coding-agent";
 import { matchesKey, truncateToWidth } from "@mariozechner/pi-tui";
 import type { AgentConfig } from "./agents.js";
+import { formatScrollInfo, pad, renderFooter, renderHeader, row } from "./render-helpers.js";
 import {
 	createEditorState,
 	ensureCursorVisible,
@@ -10,7 +11,6 @@ import {
 	wrapText,
 } from "./text-editor.js";
 import type { TextEditorState } from "./text-editor.js";
-import { formatScrollInfo, pad, renderFooter, renderHeader, row } from "./render-helpers.js";
 
 export interface ModelInfo {
 	provider: string;
@@ -87,7 +87,10 @@ function parseTools(value: string): { tools?: string[]; mcp?: string[] } {
 			tools.push(item);
 		}
 	}
-	return { mcp: mcp.length > 0 ? mcp : undefined, tools: tools.length > 0 ? tools : undefined };
+	return {
+		mcp: mcp.length > 0 ? mcp : undefined,
+		tools: tools.length > 0 ? tools : undefined,
+	};
 }
 function parseCommaList(value: string): string[] | undefined {
 	const items = value
@@ -611,7 +614,10 @@ export function handleEditInput(
 			const cursorPos = getCursorDisplayPos(state.promptEditor.cursor, wrapped.starts);
 			const targetLine = Math.max(0, cursorPos.line - PROMPT_VIEWPORT_HEIGHT);
 			const targetCol = Math.min(cursorPos.col, wrapped.lines[targetLine]?.length ?? 0);
-			state.promptEditor = { ...state.promptEditor, cursor: wrapped.starts[targetLine] + targetCol };
+			state.promptEditor = {
+				...state.promptEditor,
+				cursor: wrapped.starts[targetLine] + targetCol,
+			};
 			return;
 		}
 		if (matchesKey(data, "pagedown") || matchesKey(data, "shift+down")) {
@@ -619,10 +625,15 @@ export function handleEditInput(
 			const cursorPos = getCursorDisplayPos(state.promptEditor.cursor, wrapped.starts);
 			const targetLine = Math.min(wrapped.lines.length - 1, cursorPos.line + PROMPT_VIEWPORT_HEIGHT);
 			const targetCol = Math.min(cursorPos.col, wrapped.lines[targetLine]?.length ?? 0);
-			state.promptEditor = { ...state.promptEditor, cursor: wrapped.starts[targetLine] + targetCol };
+			state.promptEditor = {
+				...state.promptEditor,
+				cursor: wrapped.starts[targetLine] + targetCol,
+			};
 			return;
 		}
-		const nextState = handleEditorInput(state.promptEditor, data, textWidth, { multiLine: true });
+		const nextState = handleEditorInput(state.promptEditor, data, textWidth, {
+			multiLine: true,
+		});
 		if (nextState) {
 			state.promptEditor = nextState;
 		}

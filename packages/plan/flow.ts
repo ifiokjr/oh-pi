@@ -1,12 +1,6 @@
-import path from "node:path";
 import { BorderedLoader } from "@mariozechner/pi-coding-agent";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import {
-	PLAN_MODE_END_OPTIONS,
-	PLAN_MODE_START_OPTIONS,
-	PLAN_MODE_SUMMARY_PROMPT,
-	buildImplementationPrefill,
-} from "./utils";
+import path from "node:path";
 import {
 	createFreshPlanFilePath,
 	ensurePlanFileExists,
@@ -19,6 +13,12 @@ import {
 } from "./plan-files";
 import { getFirstUserMessageId, hasEntryInSession } from "./state";
 import type { PlanModeState } from "./types";
+import {
+	buildImplementationPrefill,
+	PLAN_MODE_END_OPTIONS,
+	PLAN_MODE_START_OPTIONS,
+	PLAN_MODE_SUMMARY_PROMPT,
+} from "./utils";
 
 interface PlanModeStateManager {
 	getState: () => PlanModeState;
@@ -228,7 +228,12 @@ async function exitPlanMode(
 						summarize: true,
 					})
 					.then(done)
-					.catch((error) => done({ cancelled: false, error: error instanceof Error ? error.message : String(error) }));
+					.catch((error) =>
+						done({
+							cancelled: false,
+							error: error instanceof Error ? error.message : String(error),
+						}),
+					);
 
 				return loader;
 			});
@@ -247,7 +252,9 @@ async function exitPlanMode(
 			}
 		} else {
 			try {
-				const navigateResult = await ctx.navigateTree(originLeafId, { summarize: false });
+				const navigateResult = await ctx.navigateTree(originLeafId, {
+					summarize: false,
+				});
 				if (navigateResult.cancelled) {
 					ctx.ui.notify("Returning from plan mode was cancelled. Use /plan to try again.", "info");
 					return false;

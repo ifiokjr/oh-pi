@@ -98,7 +98,9 @@ describe("createRoutes", () => {
 		});
 		const app = createApp(session);
 
-		const state = await app.request("/api/session/state", { headers: authHeaders() });
+		const state = await app.request("/api/session/state", {
+			headers: authHeaders(),
+		});
 		expect(state.status).toBe(200);
 		expect(await state.json()).toEqual({
 			model: "openai/gpt-5-mini",
@@ -108,11 +110,15 @@ describe("createRoutes", () => {
 			messageCount: 2,
 		});
 
-		const messages = await app.request("/api/session/messages", { headers: authHeaders() });
+		const messages = await app.request("/api/session/messages", {
+			headers: authHeaders(),
+		});
 		expect(messages.status).toBe(200);
 		expect(await messages.json()).toEqual({ messages: session.messages });
 
-		const stats = await app.request("/api/session/stats", { headers: authHeaders() });
+		const stats = await app.request("/api/session/stats", {
+			headers: authHeaders(),
+		});
 		expect(stats.status).toBe(200);
 		expect(await stats.json()).toEqual({
 			sessionId: "session-1",

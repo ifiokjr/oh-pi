@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@mariozechner/pi-coding-agent", async () => {
 	const actual = await vi.importActual<typeof import("@mariozechner/pi-coding-agent")>("@mariozechner/pi-coding-agent");
@@ -8,7 +8,9 @@ vi.mock("@mariozechner/pi-coding-agent", async () => {
 			name: "bash",
 			label: "bash",
 			description: "test bash",
-			execute: vi.fn().mockResolvedValue({ content: [{ type: "text", text: "output" }] }),
+			execute: vi.fn().mockResolvedValue({
+				content: [{ type: "text", text: "output" }],
+			}),
 		}),
 	};
 });

@@ -20,7 +20,12 @@ describe("extensions runtime smoke tests", () => {
 		expect(harness.tools.has("schedule_prompt")).toBe(true);
 
 		const tool = harness.tools.get("schedule_prompt");
-		const result = await tool.execute("tool-1", { action: "add", prompt: "check CI", kind: "once", duration: "30m" });
+		const result = await tool.execute("tool-1", {
+			action: "add",
+			prompt: "check CI",
+			kind: "once",
+			duration: "30m",
+		});
 		expect(result.content[0].text).toContain("Reminder scheduled");
 	});
 

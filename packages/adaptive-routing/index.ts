@@ -1,8 +1,8 @@
 /* C8 ignore file */
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { classifyPrompt } from "./classifier.js";
-import { inspectDelegatedSelection } from "./delegated-runtime.js";
 import { readAdaptiveRoutingConfig } from "./config.js";
+import { inspectDelegatedSelection } from "./delegated-runtime.js";
 import { decideRoute } from "./engine.js";
 import { normalizeRouteCandidates } from "./normalize.js";
 import { readAdaptiveRoutingState, writeAdaptiveRoutingState } from "./state.js";
@@ -388,29 +388,81 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 
 	pi.registerCommand("route", routeCommand);
 
-	const routeAliases: { name: string; subcommand: string; description: string }[] = [
-		{ description: "Show the current adaptive routing status.", name: "route:status", subcommand: "status" },
-		{ description: "Enable adaptive routing auto mode.", name: "route:on", subcommand: "on" },
-		{ description: "Enable adaptive routing auto mode.", name: "route:auto", subcommand: "auto" },
-		{ description: "Disable adaptive routing.", name: "route:off", subcommand: "off" },
+	const routeAliases: {
+		name: string;
+		subcommand: string;
+		description: string;
+	}[] = [
+		{
+			description: "Show the current adaptive routing status.",
+			name: "route:status",
+			subcommand: "status",
+		},
+		{
+			description: "Enable adaptive routing auto mode.",
+			name: "route:on",
+			subcommand: "on",
+		},
+		{
+			description: "Enable adaptive routing auto mode.",
+			name: "route:auto",
+			subcommand: "auto",
+		},
+		{
+			description: "Disable adaptive routing.",
+			name: "route:off",
+			subcommand: "off",
+		},
 		{
 			description: "Suggest route decisions without changing the active model.",
 			name: "route:shadow",
 			subcommand: "shadow",
 		},
-		{ description: "Explain the latest adaptive route decision.", name: "route:explain", subcommand: "explain" },
-		{ description: "Show delegated routing assignments.", name: "route:assignments", subcommand: "assignments" },
-		{ description: "Show delegated routing assignments.", name: "route:delegated", subcommand: "delegated" },
-		{ description: "Inspect why a delegated model was chosen.", name: "route:why", subcommand: "why" },
-		{ description: "Lock routing to the current model and thinking level.", name: "route:lock", subcommand: "lock" },
-		{ description: "Clear the adaptive routing lock.", name: "route:unlock", subcommand: "unlock" },
-		{ description: "Refresh routing config and usage snapshots.", name: "route:refresh", subcommand: "refresh" },
+		{
+			description: "Explain the latest adaptive route decision.",
+			name: "route:explain",
+			subcommand: "explain",
+		},
+		{
+			description: "Show delegated routing assignments.",
+			name: "route:assignments",
+			subcommand: "assignments",
+		},
+		{
+			description: "Show delegated routing assignments.",
+			name: "route:delegated",
+			subcommand: "delegated",
+		},
+		{
+			description: "Inspect why a delegated model was chosen.",
+			name: "route:why",
+			subcommand: "why",
+		},
+		{
+			description: "Lock routing to the current model and thinking level.",
+			name: "route:lock",
+			subcommand: "lock",
+		},
+		{
+			description: "Clear the adaptive routing lock.",
+			name: "route:unlock",
+			subcommand: "unlock",
+		},
+		{
+			description: "Refresh routing config and usage snapshots.",
+			name: "route:refresh",
+			subcommand: "refresh",
+		},
 		{
 			description: "Record feedback for the last adaptive routing decision.",
 			name: "route:feedback",
 			subcommand: "feedback",
 		},
-		{ description: "Show adaptive routing telemetry stats.", name: "route:stats", subcommand: "stats" },
+		{
+			description: "Show adaptive routing telemetry stats.",
+			name: "route:stats",
+			subcommand: "stats",
+		},
 	];
 
 	for (const alias of routeAliases) {
@@ -602,7 +654,12 @@ function buildDelegatedAssignmentLines(
 		lines.push(`Disabled models: ${disabledModels.join(", ")}`);
 	}
 	for (const [category, policy] of categoryEntries) {
-		const resolvedModel = resolveDelegatedAssignmentModel({ availableModels, category, config, policy });
+		const resolvedModel = resolveDelegatedAssignmentModel({
+			availableModels,
+			category,
+			config,
+			policy,
+		});
 		lines.push(`- ${category}`);
 		if (policy.preferredProviders?.length) {
 			lines.push(`  providers: ${policy.preferredProviders.join(" → ")}`);
@@ -767,7 +824,12 @@ export function resolveDelegatedAssignmentModel(params: {
 	category?: string;
 	policy: NonNullable<ReturnType<typeof readAdaptiveRoutingConfig>["delegatedRouting"]["categories"][string]>;
 	config: ReturnType<typeof readAdaptiveRoutingConfig>;
-	availableModels: { provider: string; id: string; fullId: string; name: string }[];
+	availableModels: {
+		provider: string;
+		id: string;
+		fullId: string;
+		name: string;
+	}[];
 	override?: ReturnType<typeof readAdaptiveRoutingConfig>["delegatedModelSelection"]["roleOverrides"][string];
 }): string | undefined {
 	const { category, policy, config, availableModels, override } = params;
@@ -808,7 +870,14 @@ export function resolveDelegatedAssignmentModel(params: {
 		}
 	}
 	/* C8 ignore next 5 */
-	let cheapFallback: { provider: string; id: string; fullId: string; name: string } | undefined;
+	let cheapFallback:
+		| {
+				provider: string;
+				id: string;
+				fullId: string;
+				name: string;
+		  }
+		| undefined;
 	if (category === "quick-discovery") {
 		cheapFallback = unblockedModels.find((model) => model.provider === "groq");
 	}
@@ -840,6 +909,9 @@ async function openOverlay(ctx: ExtensionCommandContext, lines: string[]): Promi
 				return lines.map((line) => line.slice(0, width));
 			},
 		}),
-		{ overlay: true, overlayOptions: { anchor: "center", maxHeight: 28, width: 96 } },
+		{
+			overlay: true,
+			overlayOptions: { anchor: "center", maxHeight: 28, width: 96 },
+		},
 	);
 }

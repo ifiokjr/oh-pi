@@ -159,7 +159,12 @@ async function removeDirectoryWithRetry(targetPath: string): Promise<void> {
 		}
 
 		try {
-			await fs.rm(targetPath, { force: true, maxRetries: 3, recursive: true, retryDelay: 25 });
+			await fs.rm(targetPath, {
+				force: true,
+				maxRetries: 3,
+				recursive: true,
+				retryDelay: 25,
+			});
 			return;
 		} catch (error) {
 			lastError = error;
@@ -240,12 +245,22 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 			note: "Loads every default oh-pi extension from package.json and fires the first session_start.",
 			async run() {
 				vi.resetModules();
-				const harness = createBenchmarkHarness({ cwd: repoDir, entries: [], branch: [] });
+				const harness = createBenchmarkHarness({
+					cwd: repoDir,
+					entries: [],
+					branch: [],
+				});
 				for (const entry of manifestEntries) {
 					entry.module.default(harness.pi as never);
 				}
 				await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
-				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
+				await harness.emitAsync(
+					"session_shutdown",
+					{
+						type: "session_shutdown",
+					},
+					harness.ctx,
+				);
 			},
 			warmupIterations: 1,
 		},
@@ -268,7 +283,13 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 					entry.module.default(harness.pi as never);
 				}
 				await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
-				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
+				await harness.emitAsync(
+					"session_shutdown",
+					{
+						type: "session_shutdown",
+					},
+					harness.ctx,
+				);
 			},
 			warmupIterations: 1,
 		},
@@ -330,7 +351,13 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				});
 				usageTrackerModule.default(harness.pi as never);
 				await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
-				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
+				await harness.emitAsync(
+					"session_shutdown",
+					{
+						type: "session_shutdown",
+					},
+					harness.ctx,
+				);
 			},
 			warmupIterations: 1,
 		},
@@ -387,7 +414,13 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				});
 				component.render(200);
 				component.dispose?.();
-				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
+				await harness.emitAsync(
+					"session_shutdown",
+					{
+						type: "session_shutdown",
+					},
+					harness.ctx,
+				);
 			},
 			warmupIterations: 1,
 		},
@@ -413,7 +446,13 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 				});
 				entry.module.default(harness.pi as never);
 				await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
-				await harness.emitAsync("session_shutdown", { type: "session_shutdown" }, harness.ctx);
+				await harness.emitAsync(
+					"session_shutdown",
+					{
+						type: "session_shutdown",
+					},
+					harness.ctx,
+				);
 			},
 			warmupIterations: 1,
 		});

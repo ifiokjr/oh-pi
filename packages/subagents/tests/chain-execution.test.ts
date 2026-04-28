@@ -131,7 +131,14 @@ function createResult(agent: string, exitCode: number, text: string, extra: Reco
 		task: text,
 		exitCode,
 		messages: [{ role: "assistant", content: [{ type: "text", text }] }],
-		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 1 },
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			cost: 0,
+			turns: 1,
+		},
 		progressSummary: { durationMs: 12 },
 		...extra,
 	};
@@ -181,7 +188,12 @@ beforeEach(() => {
 		(items: any[], _concurrency: number, mapper: (item: any, index: number) => Promise<any>) =>
 			Promise.all(items.map((item, index) => mapper(item, index))),
 	);
-	chainMocks.discoverAvailableSkills.mockReturnValue([{ name: "git" }, { name: "context7" }]);
+	chainMocks.discoverAvailableSkills.mockReturnValue([
+		{ name: "git" },
+		{
+			name: "context7",
+		},
+	]);
 	chainMocks.resolveSubagentModelResolution.mockImplementation(
 		(_agent: any, _models: any[], explicitModel?: string) => ({
 			model: explicitModel,
@@ -199,7 +211,13 @@ afterEach(() => {
 });
 
 describe("executeChain", () => {
-	const agents = [{ name: "scout", model: "anthropic/claude-sonnet-4" }, { name: "planner" }, { name: "reviewer" }];
+	const agents = [
+		{ name: "scout", model: "anthropic/claude-sonnet-4" },
+		{
+			name: "planner",
+		},
+		{ name: "reviewer" },
+	];
 
 	it("cancels clarified chains and removes the chain dir", async () => {
 		const chainDir = createTempDir("pi-chain-cancel-");
@@ -287,7 +305,12 @@ describe("executeChain", () => {
 			chain: [
 				{
 					parallel: [
-						{ agent: "planner", task: "Plan {task}", progress: true, output: "plan.md" },
+						{
+							agent: "planner",
+							task: "Plan {task}",
+							progress: true,
+							output: "plan.md",
+						},
 						{ agent: "reviewer", task: "Review {task}", progress: true },
 					],
 					concurrency: 2,
@@ -322,12 +345,25 @@ describe("executeChain", () => {
 		chainMocks.runSync.mockResolvedValueOnce(
 			createResult("scout", 0, "Scout output", {
 				progress: { index: 0, agent: "scout", status: "completed" },
-				artifactPaths: { inputPath: "in.md", outputPath: "out.md", metadataPath: "meta.json", jsonlPath: "run.jsonl" },
+				artifactPaths: {
+					inputPath: "in.md",
+					outputPath: "out.md",
+					metadataPath: "meta.json",
+					jsonlPath: "run.jsonl",
+				},
 			}),
 		);
 
 		const result = await executeChain({
-			chain: [{ agent: "scout", task: "Inspect {task}", output: "report.md", reads: ["spec.md"], progress: true }],
+			chain: [
+				{
+					agent: "scout",
+					task: "Inspect {task}",
+					output: "report.md",
+					reads: ["spec.md"],
+					progress: true,
+				},
+			],
 			task: "the repo",
 			agents,
 			ctx: ctx as never,
@@ -343,10 +379,23 @@ describe("executeChain", () => {
 		expect(result.isError).toBeUndefined();
 		expect(result.content[0]?.text).toContain("summary:completed");
 		expect(result.details.results[0]?.error).toContain("Agent wrote to different file(s): alt.md instead of report.md");
-		expect(result.details.progress).toEqual([{ index: 0, agent: "scout", status: "completed" }]);
+		expect(result.details.progress).toEqual([
+			{
+				index: 0,
+				agent: "scout",
+				status: "completed",
+			},
+		]);
 		expect(result.details.artifacts).toEqual({
 			dir: "/tmp/artifacts",
-			files: [{ inputPath: "in.md", outputPath: "out.md", metadataPath: "meta.json", jsonlPath: "run.jsonl" }],
+			files: [
+				{
+					inputPath: "in.md",
+					outputPath: "out.md",
+					metadataPath: "meta.json",
+					jsonlPath: "run.jsonl",
+				},
+			],
 		});
 		expect(chainMocks.recordRun).toHaveBeenCalledWith("scout", "Inspect the repo", 0, 12);
 	});

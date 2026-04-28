@@ -149,7 +149,10 @@ export async function getCatalogModels(provider: SupportedProviderDefinition): P
 export async function resolveProviderModels(
 	provider: SupportedProviderDefinition,
 	apiKey: string,
-	options: { signal?: AbortSignal; previous?: readonly ProviderCatalogModel[] } = {},
+	options: {
+		signal?: AbortSignal;
+		previous?: readonly ProviderCatalogModel[];
+	} = {},
 ): Promise<ProviderCatalogModel[]> {
 	const catalogModels = await getCatalogModels(provider).catch(() => []);
 
@@ -180,7 +183,10 @@ export function getCredentialModels(credentials: ProviderCatalogCredentials): Pr
 export function discoverProviderModels(
 	provider: SupportedProviderDefinition,
 	apiKey: string,
-	options: { signal?: AbortSignal; fallbackModels?: readonly ProviderCatalogModel[] } = {},
+	options: {
+		signal?: AbortSignal;
+		fallbackModels?: readonly ProviderCatalogModel[];
+	} = {},
 ): Promise<ProviderCatalogModel[]> {
 	if (provider.api === "anthropic-messages") {
 		return discoverAnthropicModels(provider, apiKey, options);
@@ -240,7 +246,10 @@ function isTextGenerationModel(model: ModelsDevCatalogModel): boolean {
 async function discoverAnthropicModels(
 	provider: SupportedProviderDefinition,
 	apiKey: string,
-	options: { signal?: AbortSignal; fallbackModels?: readonly ProviderCatalogModel[] },
+	options: {
+		signal?: AbortSignal;
+		fallbackModels?: readonly ProviderCatalogModel[];
+	},
 ): Promise<ProviderCatalogModel[]> {
 	const response = (await fetchJsonFromCandidates<{ data?: AnthropicModelResponseItem[] }>(
 		buildModelEndpointCandidates(provider.baseUrl),
@@ -268,7 +277,10 @@ async function discoverAnthropicModels(
 async function discoverGoogleModels(
 	provider: SupportedProviderDefinition,
 	apiKey: string,
-	options: { signal?: AbortSignal; fallbackModels?: readonly ProviderCatalogModel[] },
+	options: {
+		signal?: AbortSignal;
+		fallbackModels?: readonly ProviderCatalogModel[];
+	},
 ): Promise<ProviderCatalogModel[]> {
 	const response = (await fetchJsonFromCandidates<{ models?: GoogleModelResponseItem[] }>(
 		[`${normalizeProviderBaseUrl(provider.baseUrl)}/v1beta/models?key=${encodeURIComponent(apiKey)}`],
@@ -294,7 +306,10 @@ async function discoverGoogleModels(
 async function discoverOpenAICompatibleModels(
 	provider: SupportedProviderDefinition,
 	apiKey: string,
-	options: { signal?: AbortSignal; fallbackModels?: readonly ProviderCatalogModel[] },
+	options: {
+		signal?: AbortSignal;
+		fallbackModels?: readonly ProviderCatalogModel[];
+	},
 ): Promise<ProviderCatalogModel[]> {
 	const response = (await fetchJsonFromCandidates<{ data?: OpenAIModelResponseItem[] }>(
 		buildModelEndpointCandidates(provider.baseUrl),

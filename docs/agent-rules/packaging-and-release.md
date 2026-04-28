@@ -65,8 +65,7 @@ pi install npm:@ifi/pi-pretty
 
 Do not use `bundledDependencies` in `@ifi/oh-pi`.
 
-Experimental packages can stay intentionally separate from the `@ifi/oh-pi` installer when they
-need an opt-in rollout or rely on unofficial upstream APIs.
+Experimental packages can stay intentionally separate from the `@ifi/oh-pi` installer when they need an opt-in rollout or rely on unofficial upstream APIs.
 
 ## Release flow
 

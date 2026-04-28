@@ -39,5 +39,4 @@ Templates are markdown files intended to be discovered and loaded by pi.
 
 ## Use case
 
-Use this package when you want a ready-made library of prompt shortcuts and reusable task framing
-for common development workflows.
+Use this package when you want a ready-made library of prompt shortcuts and reusable task framing for common development workflows.

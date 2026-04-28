@@ -13,11 +13,11 @@ vi.mock("node:child_process", () => ({
 
 import {
 	CURRENT_VERSION,
+	main,
 	MIN_VERSION,
+	parseArgs,
 	SMOKE_TESTS,
 	WORKSPACE_INSTALL_ARGS,
-	main,
-	parseArgs,
 } from "./verify-pi-compat.mjs";
 
 const tempDirs: string[] = [];

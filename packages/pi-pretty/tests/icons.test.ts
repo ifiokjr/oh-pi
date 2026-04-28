@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { getFileIcon, getDirectoryIcon, enableIcons, areIconsEnabled } from "../src/icons.js";
+import { describe, expect, it } from "vitest";
+import { areIconsEnabled, enableIcons, getDirectoryIcon, getFileIcon } from "../src/icons.js";
 
 describe("getFileIcon", () => {
 	it("returns TypeScript icon", () => {

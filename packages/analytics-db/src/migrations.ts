@@ -6,9 +6,9 @@
  */
 
 import Database from "better-sqlite3";
-import { dirname, join } from "node:path";
-import { mkdirSync, readFileSync, readdirSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 
 const MIGRATIONS_TABLE = "__drizzle_migrations";
 
@@ -40,7 +40,9 @@ function ensureMigrationsTable(db: Database.Database): void {
 function getAppliedMigrations(db: Database.Database): Set<string> {
 	ensureMigrationsTable(db);
 	try {
-		const rows = db.prepare(`SELECT hash FROM ${MIGRATIONS_TABLE}`).all() as { hash: string }[];
+		const rows = db.prepare(`SELECT hash FROM ${MIGRATIONS_TABLE}`).all() as {
+			hash: string;
+		}[];
 		return new Set(rows.map((r) => r.hash));
 	} catch {
 		return new Set();

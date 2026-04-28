@@ -6,7 +6,9 @@ function pad(value: number): string {
 
 export function formatTimestamp(timestamp: number): string {
 	const date = new Date(timestamp);
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+		date.getDate(),
+	)} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 export function formatDuration(durationMs: number): string {

@@ -37,8 +37,8 @@
 		"lint": "oxlint --deny-warnings .",
 		"lint:fix": "oxlint --fix .",
 		"lint:type-aware": "oxlint --deny-warnings --type-aware .",
-		"format": "oxfmt --write 'benchmarks/**/*.ts' 'packages/**/*.ts' '*.ts' '*.json'",
-		"format:check": "oxfmt --check 'benchmarks/**/*.ts' 'packages/**/*.ts' '*.ts' '*.json'",
+		"format": "oxfmt --write .",
+		"format:check": "oxfmt --check .",
 		"check": "pnpm format:check && pnpm lint"
 	},
 	"devDependencies": {

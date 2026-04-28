@@ -477,7 +477,10 @@ function renderPromptCompletionMessage(
 		`${theme.fg("muted", "Prompt")}: ${details.promptPreview}`,
 		`${theme.fg("muted", "Started")}: ${details.startedAtLabel}`,
 		`${theme.fg("muted", "Completed")}: ${details.completedAtLabel}`,
-		`${theme.fg("muted", "Duration")}: ${details.durationLabel} · ${pluralize(details.turnCount, "turn")} · ${pluralize(details.toolCount, "tool")}`,
+		`${theme.fg("muted", "Duration")}: ${details.durationLabel} · ${pluralize(
+			details.turnCount,
+			"turn",
+		)} · ${pluralize(details.toolCount, "tool")}`,
 	];
 	if (childPromptCount > 0) {
 		lines.push(`${theme.fg("muted", "Nested")}: ${pluralize(childPromptCount, "prompt")}`);
@@ -503,7 +506,10 @@ function renderPromptCompletionMessage(
 	for (const turn of details.turns) {
 		const stopReasonSuffix = turn.stopReason ? ` · ${turn.stopReason}` : "";
 		lines.push(
-			`${theme.fg("dim", `#${turn.turnIndex + 1}`)} ${turn.completedAtLabel} · ${turn.elapsedLabel} · ${pluralize(turn.toolCount, "tool")}${stopReasonSuffix}`,
+			`${theme.fg("dim", `#${turn.turnIndex + 1}`)} ${turn.completedAtLabel} · ${turn.elapsedLabel} · ${pluralize(
+				turn.toolCount,
+				"tool",
+			)}${stopReasonSuffix}`,
 		);
 		lines.push(`  ${theme.fg("muted", turn.responsePreview)}`);
 	}
@@ -513,7 +519,13 @@ function renderPromptCompletionMessage(
 		lines.push(theme.fg("accent", theme.bold("Nested prompts")));
 		for (const child of children) {
 			lines.push(
-				`${theme.fg("dim", "↳")} ${child.startedAtLabel} → ${child.completedAtLabel} · ${child.durationLabel} · ${pluralize(child.turnCount, "turn")} · ${pluralize(child.toolCount, "tool")}`,
+				`${theme.fg(
+					"dim",
+					"↳",
+				)} ${child.startedAtLabel} → ${child.completedAtLabel} · ${child.durationLabel} · ${pluralize(
+					child.turnCount,
+					"turn",
+				)} · ${pluralize(child.toolCount, "tool")}`,
 			);
 			lines.push(`  ${theme.fg("muted", child.promptPreview)}`);
 		}
@@ -555,7 +567,13 @@ function renderPromptHistoryMessage(
 		const childPromptCount = typeof item.childPromptCount === "number" ? item.childPromptCount : 0;
 		const childPrompts = childPromptCount > 0 ? ` · ${pluralize(childPromptCount, "nested prompt")}` : "";
 		lines.push(
-			`${theme.fg("dim", `#${index + 1}`)} ${item.statusLabel} ${item.completedAtLabel} · ${item.durationLabel} · ${pluralize(item.turnCount, "turn")} · ${pluralize(item.toolCount, "tool")}${childPrompts}`,
+			`${theme.fg(
+				"dim",
+				`#${index + 1}`,
+			)} ${item.statusLabel} ${item.completedAtLabel} · ${item.durationLabel} · ${pluralize(
+				item.turnCount,
+				"turn",
+			)} · ${pluralize(item.toolCount, "tool")}${childPrompts}`,
 		);
 		lines.push(`  ${theme.fg("muted", item.promptPreview)}`);
 	}
@@ -689,7 +707,10 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 				? ` · ${pluralize(activeToolRuns.size, "tool")} running (${activeToolSummary.toolNames})`
 				: "";
 			return [
-				`${theme.fg("accent", theme.bold("⏱ Diagnostics"))} ${theme.fg("success", "running")} · ${startedAtLabel} · ${formatDuration(Date.now() - startedAt)} elapsed`,
+				`${theme.fg("accent", theme.bold("⏱ Diagnostics"))} ${theme.fg(
+					"success",
+					"running",
+				)} · ${startedAtLabel} · ${formatDuration(Date.now() - startedAt)} elapsed`,
 				`${theme.fg("muted", promptPreview)}${recordedTurns}${nestedPrompts}${runningTools}`,
 			];
 		}
@@ -697,8 +718,14 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		if (lastCompletion) {
 			const classification = classifyStopReason(lastCompletion.stopReason);
 			return [
-				`${theme.fg("accent", theme.bold("⏱ Diagnostics"))} ${theme.fg(classification.color, lastCompletion.statusLabel)} · ${lastCompletion.completedAtLabel} · ${lastCompletion.durationLabel}`,
-				`${theme.fg("muted", lastCompletion.promptPreview)} · ${pluralize(lastCompletion.turnCount, "turn")} · ${pluralize(lastCompletion.toolCount, "tool")}`,
+				`${theme.fg("accent", theme.bold("⏱ Diagnostics"))} ${theme.fg(
+					classification.color,
+					lastCompletion.statusLabel,
+				)} · ${lastCompletion.completedAtLabel} · ${lastCompletion.durationLabel}`,
+				`${theme.fg("muted", lastCompletion.promptPreview)} · ${pluralize(
+					lastCompletion.turnCount,
+					"turn",
+				)} · ${pluralize(lastCompletion.toolCount, "tool")}`,
 			];
 		}
 
@@ -868,7 +895,10 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		}
 
 		const now = Date.now();
-		pendingUserPrompts.push({ preview: summarizePrompt(event.text, event.images), receivedAt: now });
+		pendingUserPrompts.push({
+			preview: summarizePrompt(event.text, event.images),
+			receivedAt: now,
+		});
 		prunePendingUserPrompts(pendingUserPrompts, now);
 		return { action: "continue" };
 	});
@@ -1022,11 +1052,31 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		description: "Toggle prompt-completion diagnostics logging and widget output.",
 		getArgumentCompletions(prefix) {
 			const options = [
-				{ description: "Show the current diagnostics state", label: "status", value: "status" },
-				{ description: "Show recent prompt diagnostics from this branch", label: "history", value: "history" },
-				{ description: "Toggle diagnostics logging on or off", label: "toggle", value: "toggle" },
-				{ description: "Enable diagnostics logging and widget output", label: "on", value: "on" },
-				{ description: "Disable diagnostics logging and widget output", label: "off", value: "off" },
+				{
+					description: "Show the current diagnostics state",
+					label: "status",
+					value: "status",
+				},
+				{
+					description: "Show recent prompt diagnostics from this branch",
+					label: "history",
+					value: "history",
+				},
+				{
+					description: "Toggle diagnostics logging on or off",
+					label: "toggle",
+					value: "toggle",
+				},
+				{
+					description: "Enable diagnostics logging and widget output",
+					label: "on",
+					value: "on",
+				},
+				{
+					description: "Disable diagnostics logging and widget output",
+					label: "off",
+					value: "off",
+				},
 			];
 			const filtered = options.filter((option) => option.value.startsWith(prefix.trim()));
 			return filtered.length > 0 ? filtered : null;

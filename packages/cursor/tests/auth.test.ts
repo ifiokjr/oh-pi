@@ -27,7 +27,9 @@ describe("cursor auth", () => {
 
 	it("extracts JWT expiry with a five-minute safety margin", () => {
 		const exp = Math.floor(Date.now() / 1000) + 7200;
-		const token = `${Buffer.from("{}").toString("base64url")}.${Buffer.from(JSON.stringify({ exp })).toString("base64url")}.sig`;
+		const token = `${Buffer.from("{}").toString("base64url")}.${Buffer.from(JSON.stringify({ exp })).toString(
+			"base64url",
+		)}.sig`;
 		const expiry = getTokenExpiry(token);
 		expect(expiry).toBeGreaterThanOrEqual(exp * 1000 - 5 * 60 * 1000 - 1000);
 		expect(expiry).toBeLessThanOrEqual(exp * 1000 - 5 * 60 * 1000 + 1000);

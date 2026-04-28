@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_ADAPTIVE_ROUTING_CONFIG } from "./defaults.js";
 import { evaluateCorpus, formatEvaluationSummary } from "./evaluate-corpus.js";
-import { normalizeRouteCandidates } from "./normalize.js";
 import type { CorpusEntry } from "./evaluate-corpus.js";
+import { normalizeRouteCandidates } from "./normalize.js";
 
 const candidates = normalizeRouteCandidates([
 	{

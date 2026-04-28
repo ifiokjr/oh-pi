@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
 import MiniSearch from "minisearch";
+import { useCallback, useEffect, useState } from "react";
 
 export interface SearchResult {
 	id: string;
@@ -98,7 +98,10 @@ export function useSearch() {
 				if (cancelled) {
 					return;
 				}
-				const hits = index.search(query) as unknown as { id: string; title: string }[];
+				const hits = index.search(query) as unknown as {
+					id: string;
+					title: string;
+				}[];
 				const searchResults: SearchResult[] = hits.map((hit) => ({
 					id: hit.id,
 					text: "",

@@ -12,28 +12,43 @@
  *   { "asyncByDefault": true }
  */
 
+import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@mariozechner/pi-coding-agent";
+import { Text } from "@mariozechner/pi-tui";
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import { handleManagementAction } from "./agent-management.js";
+import { AgentManagerComponent } from "./agent-manager.js";
+import type { ManagerResult } from "./agent-manager.js";
+import { resolveExecutionAgentScope } from "./agent-scope.js";
 import { discoverAgents, discoverAgentsAll } from "./agents.js";
 import type { AgentConfig, AgentScope } from "./agents.js";
-import { resolveExecutionAgentScope } from "./agent-scope.js";
-import { cleanupOldChainDirs, getStepAgents, isParallelStep, resolveStepBehavior } from "./settings.js";
-import type { ChainStep, SequentialStep } from "./settings.js";
+import { cleanupAllArtifactDirs, cleanupOldArtifacts, getArtifactsDir } from "./artifacts.js";
+import { executeAsyncChain, executeAsyncSingle, isAsyncAvailable } from "./async-execution.js";
+import { ensureAccessibleDir, expandTildePath, getSubagentSessionRoot, loadSubagentConfig } from "./bootstrap.js";
 import { ChainClarifyComponent } from "./chain-clarify.js";
 import type { ChainClarifyResult, ModelInfo } from "./chain-clarify.js";
-import { cleanupAllArtifactDirs, cleanupOldArtifacts, getArtifactsDir } from "./artifacts.js";
+import { executeChain } from "./chain-execution.js";
+import { registerSubagentCommands } from "./command-registration.js";
+import { runSync } from "./execution.js";
+import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
+import { renderSubagentResult, renderWidget } from "./render.js";
+import { recordRun } from "./run-history.js";
+import { createSubagentRuntimeMonitor } from "./runtime-monitor.js";
+import { StatusParams, SubagentParams } from "./schemas.js";
+import { cleanupOldChainDirs, getStepAgents, isParallelStep, resolveStepBehavior } from "./settings.js";
+import type { ChainStep, SequentialStep } from "./settings.js";
+import { finalizeSingleOutput, injectSingleOutputInstruction, resolveSingleOutputPath } from "./single-output.js";
+import { discoverAvailableSkills, normalizeSkillInput } from "./skills.js";
 import {
 	ASYNC_DIR,
+	checkSubagentDepth,
 	DEFAULT_ARTIFACT_CONFIG,
 	DEFAULT_MAX_OUTPUT,
 	MAX_CONCURRENCY,
 	MAX_PARALLEL,
 	RESULTS_DIR,
 	WIDGET_KEY,
-	checkSubagentDepth,
 } from "./types.js";
 import type {
 	AgentProgress,
@@ -45,21 +60,6 @@ import type {
 	SingleResult,
 } from "./types.js";
 import { findByPrefix, getFinalOutput, mapConcurrent, readStatus } from "./utils.js";
-import { runSync } from "./execution.js";
-import { renderSubagentResult, renderWidget } from "./render.js";
-import { StatusParams, SubagentParams } from "./schemas.js";
-import { executeChain } from "./chain-execution.js";
-import { executeAsyncChain, executeAsyncSingle, isAsyncAvailable } from "./async-execution.js";
-import { discoverAvailableSkills, normalizeSkillInput } from "./skills.js";
-import { finalizeSingleOutput, injectSingleOutputInstruction, resolveSingleOutputPath } from "./single-output.js";
-import { AgentManagerComponent } from "./agent-manager.js";
-import type { ManagerResult } from "./agent-manager.js";
-import { recordRun } from "./run-history.js";
-import { handleManagementAction } from "./agent-management.js";
-import { registerSubagentCommands } from "./command-registration.js";
-import { ensureAccessibleDir, expandTildePath, getSubagentSessionRoot, loadSubagentConfig } from "./bootstrap.js";
-import { createSubagentRuntimeMonitor } from "./runtime-monitor.js";
-import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
 
 const STARTUP_CLEANUP_DELAY_MS = 250;
 
@@ -140,7 +140,12 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				const validActions = ["list", "get", "create", "update", "delete"];
 				if (!validActions.includes(params.action)) {
 					return {
-						content: [{ type: "text", text: `Unknown action: ${params.action}. Valid: ${validActions.join(", ")}` }],
+						content: [
+							{
+								type: "text",
+								text: `Unknown action: ${params.action}. Valid: ${validActions.join(", ")}`,
+							},
+						],
 						isError: true,
 						details: { mode: "management" as const, results: [] },
 					};
@@ -227,7 +232,12 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			if (hasChain && params.chain) {
 				if (params.chain.length === 0) {
 					return {
-						content: [{ type: "text", text: "Chain must have at least one step" }],
+						content: [
+							{
+								type: "text",
+								text: "Chain must have at least one step",
+							},
+						],
 						isError: true,
 						details: { mode: "chain" as const, results: [] },
 					};
@@ -242,7 +252,9 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 							content: [
 								{
 									type: "text",
-									text: `First parallel step: task ${missingTaskIndex + 1} must have a task (no previous output to reference)`,
+									text: `First parallel step: task ${
+										missingTaskIndex + 1
+									} must have a task (no previous output to reference)`,
 								},
 							],
 							isError: true,
@@ -251,7 +263,12 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					}
 				} else if (!(firstStep as SequentialStep).task && !params.task) {
 					return {
-						content: [{ type: "text", text: "First step in chain must have a task" }],
+						content: [
+							{
+								type: "text",
+								text: "First step in chain must have a task",
+							},
+						],
 						isError: true,
 						details: { mode: "chain" as const, results: [] },
 					};
@@ -263,7 +280,12 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					for (const agentName of stepAgents) {
 						if (!agents.find((a) => a.name === agentName)) {
 							return {
-								content: [{ type: "text", text: `Unknown agent: ${agentName} (step ${i + 1})` }],
+								content: [
+									{
+										type: "text",
+										text: `Unknown agent: ${agentName} (step ${i + 1})`,
+									},
+								],
 								isError: true,
 								details: { mode: "chain" as const, results: [] },
 							};
@@ -272,7 +294,12 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					// Validate parallel steps have at least one task
 					if (isParallelStep(step) && step.parallel.length === 0) {
 						return {
-							content: [{ type: "text", text: `Parallel step ${i + 1} must have at least one task` }],
+							content: [
+								{
+									type: "text",
+									text: `Parallel step ${i + 1} must have at least one task`,
+								},
+							],
 							isError: true,
 							details: { mode: "chain" as const, results: [] },
 						};
@@ -420,12 +447,13 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 			if (hasTasks && params.tasks) {
 				// MAX_PARALLEL check first (fail fast before TUI)
-				if (params.tasks.length > MAX_PARALLEL)
+				if (params.tasks.length > MAX_PARALLEL) {
 					return {
 						content: [{ type: "text", text: `Max ${MAX_PARALLEL} tasks` }],
 						isError: true,
 						details: { mode: "parallel" as const, results: [] },
 					};
+				}
 
 				// Validate all agents exist
 				const agentConfigs: AgentConfig[] = [];
@@ -486,11 +514,17 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 								done,
 								"parallel", // mode
 							),
-						{ overlay: true, overlayOptions: { anchor: "center", width: 84, maxHeight: "80%" } },
+						{
+							overlay: true,
+							overlayOptions: { anchor: "center", width: 84, maxHeight: "80%" },
+						},
 					);
 
 					if (!result || !result.confirmed) {
-						return { content: [{ type: "text", text: "Cancelled" }], details: { mode: "parallel", results: [] } };
+						return {
+							content: [{ type: "text", text: "Cancelled" }],
+							details: { mode: "parallel", results: [] },
+						};
 					}
 
 					// Apply TUI overrides
@@ -504,7 +538,9 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 								category: modelResolutions[i]?.category,
 							};
 						}
-						if (override?.skills !== undefined) skillOverrides[i] = override.skills;
+						if (override?.skills !== undefined) {
+							skillOverrides[i] = override.skills;
+						}
 					}
 
 					// User requested background execution
@@ -579,7 +615,9 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 									const stepResults = p.details?.results || [];
 									const stepProgress = p.details?.progress || [];
 									if (stepResults.length > 0) liveResults[i] = stepResults[0];
-									if (stepProgress.length > 0) liveProgress[i] = stepProgress[0];
+									if (stepProgress.length > 0) {
+										liveProgress[i] = stepProgress[0];
+									}
 									const mergedResults = liveResults.filter((r): r is SingleResult => r !== undefined);
 									const mergedProgress = liveProgress.filter((pg): pg is AgentProgress => pg !== undefined);
 									onUpdate({
@@ -678,7 +716,10 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 						fullId: `${m.provider}/${m.id}`,
 					}));
 
-					const behavior = resolveStepBehavior(agentConfig, { output: effectiveOutput, skills: skillOverride });
+					const behavior = resolveStepBehavior(agentConfig, {
+						output: effectiveOutput,
+						skills: skillOverride,
+					});
 					const availableSkills = discoverAvailableSkills(ctx.cwd);
 
 					const result = await ctx.ui.custom<ChainClarifyResult>(
@@ -696,11 +737,17 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 								done,
 								"single", // mode
 							),
-						{ overlay: true, overlayOptions: { anchor: "center", width: 84, maxHeight: "80%" } },
+						{
+							overlay: true,
+							overlayOptions: { anchor: "center", width: 84, maxHeight: "80%" },
+						},
 					);
 
 					if (!result || !result.confirmed) {
-						return { content: [{ type: "text", text: "Cancelled" }], details: { mode: "single", results: [] } };
+						return {
+							content: [{ type: "text", text: "Cancelled" }],
+							details: { mode: "single", results: [] },
+						};
 					}
 
 					// Apply TUI overrides
@@ -791,7 +838,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					exitCode: r.exitCode,
 				});
 
-				if (r.exitCode !== 0)
+				if (r.exitCode !== 0) {
 					return {
 						content: [{ type: "text", text: r.error || "Failed" }],
 						details: {
@@ -803,8 +850,14 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 						},
 						isError: true,
 					};
+				}
 				return {
-					content: [{ type: "text", text: finalizedOutput.displayOutput || "(no output)" }],
+					content: [
+						{
+							type: "text",
+							text: finalizedOutput.displayOutput || "(no output)",
+						},
+					],
 					details: {
 						mode: "single",
 						results: [r],
@@ -830,21 +883,25 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			if (args.action) {
 				const target = args.agent || args.chainName || "";
 				return new Text(
-					`${theme.fg("toolTitle", theme.bold("subagent "))}${args.action}${target ? ` ${theme.fg("accent", target)}` : ""}`,
+					`${theme.fg("toolTitle", theme.bold("subagent "))}${args.action}${
+						target ? ` ${theme.fg("accent", target)}` : ""
+					}`,
 					0,
 					0,
 				);
 			}
 			const isParallel = (args.tasks?.length ?? 0) > 0;
 			const asyncLabel = args.async === true && !isParallel ? theme.fg("warning", " [async]") : "";
-			if (args.chain?.length)
+			if (args.chain?.length) {
 				return new Text(
 					`${theme.fg("toolTitle", theme.bold("subagent "))}chain (${args.chain.length})${asyncLabel}`,
 					0,
 					0,
 				);
-			if (isParallel)
+			}
+			if (isParallel) {
 				return new Text(`${theme.fg("toolTitle", theme.bold("subagent "))}parallel (${args.tasks!.length})`, 0, 0);
+			}
 			return new Text(
 				`${theme.fg("toolTitle", theme.bold("subagent "))}${theme.fg("accent", args.agent || "?")}${asyncLabel}`,
 				0,
@@ -882,7 +939,12 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 			if (!asyncDir && !resultPath) {
 				return {
-					content: [{ type: "text", text: "Async run not found. Provide id or dir." }],
+					content: [
+						{
+							type: "text",
+							text: "Async run not found. Provide id or dir.",
+						},
+					],
 					isError: true,
 					details: { mode: "single" as const, results: [] },
 				};
@@ -913,18 +975,28 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					if (fs.existsSync(logPath)) lines.push(`Log: ${logPath}`);
 					if (fs.existsSync(eventsPath)) lines.push(`Events: ${eventsPath}`);
 
-					return { content: [{ type: "text", text: lines.join("\n") }], details: { mode: "single", results: [] } };
+					return {
+						content: [{ type: "text", text: lines.join("\n") }],
+						details: { mode: "single", results: [] },
+					};
 				}
 			}
 
 			if (resultPath) {
 				try {
 					const raw = fs.readFileSync(resultPath, "utf-8");
-					const data = JSON.parse(raw) as { id?: string; success?: boolean; summary?: string };
+					const data = JSON.parse(raw) as {
+						id?: string;
+						success?: boolean;
+						summary?: string;
+					};
 					const status = data.success ? "complete" : "failed";
 					const lines = [`Run: ${data.id ?? params.id}`, `State: ${status}`, `Result: ${resultPath}`];
 					if (data.summary) lines.push("", data.summary);
-					return { content: [{ type: "text", text: lines.join("\n") }], details: { mode: "single", results: [] } };
+					return {
+						content: [{ type: "text", text: lines.join("\n") }],
+						details: { mode: "single", results: [] },
+					};
 				} catch {}
 			}
 
@@ -970,7 +1042,10 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 		const result = await ctx.ui.custom<ManagerResult>(
 			(tui, theme, _kb, done) => new AgentManagerComponent(tui, theme, agentData, models, skills, done),
-			{ overlay: true, overlayOptions: { anchor: "center", maxHeight: "80%", width: 84 } },
+			{
+				overlay: true,
+				overlayOptions: { anchor: "center", maxHeight: "80%", width: 84 },
+			},
 		);
 		if (!result) {
 			return;
@@ -986,7 +1061,14 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				agent: name,
 				...(i === 0 ? { task: result.task } : {}),
 			}));
-			executeChain({ chain, task: result.task, agents, ctx, ...exec, clarify: true })
+			executeChain({
+				chain,
+				task: result.task,
+				agents,
+				ctx,
+				...exec,
+				clarify: true,
+			})
 				.then((r) => {
 					// User requested async via TUI - dispatch to async executor
 					if (r.requestedAsync) {
@@ -995,7 +1077,11 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 							return;
 						}
 						const id = randomUUID();
-						const asyncCtx = { currentSessionId: ctx.sessionManager.getSessionId() ?? id, cwd: ctx.cwd, pi };
+						const asyncCtx = {
+							currentSessionId: ctx.sessionManager.getSessionId() ?? id,
+							cwd: ctx.cwd,
+							pi,
+						};
 						const asyncSessionRoot = getSubagentSessionRoot(ctx.sessionManager.getSessionFile() ?? null);
 						try {
 							fs.mkdirSync(asyncSessionRoot, { recursive: true });
@@ -1034,7 +1120,11 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		};
 
 		if (result.action === "launch") {
-			sendToolCall({ agent: result.agent, clarify: !result.skipClarify, task: result.task });
+			sendToolCall({
+				agent: result.agent,
+				clarify: !result.skipClarify,
+				task: result.task,
+			});
 		} else if (result.action === "launch-chain") {
 			const chainParam = result.chain.steps.map((step) => ({
 				agent: step.agent,
@@ -1045,7 +1135,11 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				skill: step.skills,
 				task: step.task || undefined,
 			}));
-			sendToolCall({ chain: chainParam, clarify: !result.skipClarify, task: result.task });
+			sendToolCall({
+				chain: chainParam,
+				clarify: !result.skipClarify,
+				task: result.task,
+			});
 		} else if (result.action === "parallel") {
 			sendToolCall({ clarify: !result.skipClarify, tasks: result.tasks });
 		}
@@ -1092,7 +1186,11 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 	});
 
 	pi.events.on("subagent:complete", (data) => {
-		const result = data as { id?: string; success?: boolean; asyncDir?: string };
+		const result = data as {
+			id?: string;
+			success?: boolean;
+			asyncDir?: string;
+		};
 		const asyncId = result.id;
 		if (!asyncId) {
 			return;

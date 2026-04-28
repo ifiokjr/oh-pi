@@ -3,11 +3,9 @@
 ## 1. UI Layout (Top to Bottom)
 
 1. **Startup Header** — Keybindings, loaded AGENTS.md, Prompt Templates, Skills, Extensions
-2. **Messages** — User messages, assistant replies, tool calls/results, notifications, errors,
-   extension UI
+2. **Messages** — User messages, assistant replies, tool calls/results, notifications, errors, extension UI
 3. **Editor** — Input area, border color indicates thinking level
-4. **Footer** — Working directory, session name, token/cache usage, cost, context utilization,
-   current model
+4. **Footer** — Working directory, session name, token/cache usage, cost, context utilization, current model
 
 ## 2. Editor Features
 
@@ -21,8 +19,7 @@
 
 ## 3. Command System
 
-Type `/` to trigger commands. Extensions can register custom commands, Skills are invoked via
-`/skill:name`, Prompt Templates expand via `/templatename`.
+Type `/` to trigger commands. Extensions can register custom commands, Skills are invoked via `/skill:name`, Prompt Templates expand via `/templatename`.
 
 ### Built-in Commands
 
@@ -75,16 +72,13 @@ Edit `~/.pi/agent/keybindings.json`:
 }
 ```
 
-Each action can be bound to a single key or array of keys. Supports `ctrl`, `shift`, `alt` modifier
-combinations.
+Each action can be bound to a single key or array of keys. Supports `ctrl`, `shift`, `alt` modifier combinations.
 
 ### Complete Action List
 
-**Cursor movement**: cursorUp, cursorDown, cursorLeft, cursorRight, cursorWordLeft, cursorWordRight,
-cursorLineStart, cursorLineEnd, jumpForward, jumpBackward, pageUp, pageDown
+**Cursor movement**: cursorUp, cursorDown, cursorLeft, cursorRight, cursorWordLeft, cursorWordRight, cursorLineStart, cursorLineEnd, jumpForward, jumpBackward, pageUp, pageDown
 
-**Deletion**: deleteCharBackward, deleteCharForward, deleteWordBackward, deleteWordForward,
-deleteToLineStart, deleteToLineEnd
+**Deletion**: deleteCharBackward, deleteCharForward, deleteWordBackward, deleteWordForward, deleteToLineStart, deleteToLineEnd
 
 **Input**: newLine, submit, tab
 
@@ -106,8 +100,7 @@ deleteToLineStart, deleteToLineEnd
 
 You can submit messages while the agent is working:
 
-- **Enter** — Queue a steering message, delivered after current tool finishes (interrupts remaining
-  tools)
+- **Enter** — Queue a steering message, delivered after current tool finishes (interrupts remaining tools)
 - **Alt+Enter** — Queue a follow-up message, delivered only after agent completes all work
 - **Escape** — Abort and restore queued message to editor
 - **Alt+Up** — Retrieve queued message to editor

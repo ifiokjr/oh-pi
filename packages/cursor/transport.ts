@@ -41,7 +41,9 @@ export function decodeConnectUnaryBody(payload: Uint8Array): Uint8Array | null {
 
 export function parseConnectEndStream(data: Uint8Array): Error | null {
 	try {
-		const payload = JSON.parse(new TextDecoder().decode(data)) as { error?: { code?: string; message?: string } };
+		const payload = JSON.parse(new TextDecoder().decode(data)) as {
+			error?: { code?: string; message?: string };
+		};
 		if (!payload.error) {
 			return null;
 		}

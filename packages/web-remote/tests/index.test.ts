@@ -29,7 +29,11 @@ function createMockServer(overrides: Partial<Record<string, unknown>> = {}) {
 		instanceId: "instance-42",
 		start: vi.fn(() => {
 			running = true;
-			return Promise.resolve({ url: server.url, token: server.token, instanceId: server.instanceId });
+			return Promise.resolve({
+				url: server.url,
+				token: server.token,
+				instanceId: server.instanceId,
+			});
 		}),
 		stop: vi.fn(() => {
 			running = false;
@@ -91,7 +95,9 @@ describe("web-remote extension", () => {
 		expect(webServerModule.createPiWebServer).toHaveBeenCalledTimes(1);
 		expect(webServerModule.startTunnel).toHaveBeenCalledWith(3100, "cloudflared");
 		expect(server.setTunnel).toHaveBeenCalledWith(
-			expect.objectContaining({ publicUrl: "https://quiet-river.trycloudflare.com" }),
+			expect.objectContaining({
+				publicUrl: "https://quiet-river.trycloudflare.com",
+			}),
 		);
 		expect(harness.notifications.map((entry) => entry.msg)).toEqual([
 			"Starting remote access...",
@@ -118,7 +124,10 @@ describe("web-remote extension", () => {
 		await command.handler(undefined, harness.ctx);
 		expect(harness.notifications.at(-1)?.msg).toContain("http://192.168.1.20:3100?t=test-token");
 
-		const localhostServer = createMockServer({ url: "http://localhost:4100", token: "local-token" });
+		const localhostServer = createMockServer({
+			url: "http://localhost:4100",
+			token: "local-token",
+		});
 		webServerModule.createPiWebServer.mockReturnValueOnce(localhostServer);
 		await command.handler("stop", harness.ctx);
 		await command.handler(undefined, harness.ctx);

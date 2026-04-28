@@ -67,7 +67,9 @@ describe("resolveSubagentModelResolution", () => {
 	it("resolves delegated categories from adaptive routing config", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "subagent-routing-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 		writeFileSync(
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			JSON.stringify(
@@ -112,7 +114,9 @@ describe("resolveSubagentModelResolution", () => {
 	it("applies provider disables and per-subagent overrides", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "subagent-routing-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 		writeFileSync(
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			JSON.stringify(
@@ -151,7 +155,9 @@ describe("resolveSubagentModelResolution", () => {
 				},
 				sampleModels,
 				undefined,
-				{ taskText: "Briefly inspect the repo and summarize the likely entry points." },
+				{
+					taskText: "Briefly inspect the repo and summarize the likely entry points.",
+				},
 			);
 			expect(result.model).toBe("openai/gpt-5-mini");
 			expect(result.source).toBe("delegated-category");
@@ -163,7 +169,9 @@ describe("resolveSubagentModelResolution", () => {
 	it("uses usage snapshots plus latency telemetry for delegated selection", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "subagent-routing-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 		mkdirSync(join(tempAgentDir, "adaptive-routing"), { recursive: true });
 		writeFileSync(
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
@@ -226,7 +234,9 @@ describe("resolveSubagentModelResolution", () => {
 				},
 				sampleModels,
 				undefined,
-				{ taskText: "Quickly scan the project and summarize the likely hotspots." },
+				{
+					taskText: "Quickly scan the project and summarize the likely hotspots.",
+				},
 			);
 			expect(result.model).toBe("google/gemini-2.5-flash");
 		} finally {
@@ -237,31 +247,61 @@ describe("resolveSubagentModelResolution", () => {
 	it("infers task profiles from agent names without explicit categories", () => {
 		expect(
 			resolveSubagentModelResolution(
-				{ name: "planner", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/planner.md" },
+				{
+					name: "planner",
+					description: "",
+					systemPrompt: "",
+					source: "builtin",
+					filePath: "/tmp/planner.md",
+				},
 				sampleModels,
 			).model,
 		).toBeDefined();
 		expect(
 			resolveSubagentModelResolution(
-				{ name: "design-helper", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/design.md" },
+				{
+					name: "design-helper",
+					description: "",
+					systemPrompt: "",
+					source: "builtin",
+					filePath: "/tmp/design.md",
+				},
 				sampleModels,
 			).source,
 		).toBe("delegated-category");
 		expect(
 			resolveSubagentModelResolution(
-				{ name: "writer-docs", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/write.md" },
+				{
+					name: "writer-docs",
+					description: "",
+					systemPrompt: "",
+					source: "builtin",
+					filePath: "/tmp/write.md",
+				},
 				sampleModels,
 			).source,
 		).toBe("delegated-category");
 		expect(
 			resolveSubagentModelResolution(
-				{ name: "code-helper", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/code.md" },
+				{
+					name: "code-helper",
+					description: "",
+					systemPrompt: "",
+					source: "builtin",
+					filePath: "/tmp/code.md",
+				},
 				sampleModels,
 			).source,
 		).toBe("delegated-category");
 		expect(
 			resolveSubagentModelResolution(
-				{ name: "generalist", description: "", systemPrompt: "", source: "builtin", filePath: "/tmp/general.md" },
+				{
+					name: "generalist",
+					description: "",
+					systemPrompt: "",
+					source: "builtin",
+					filePath: "/tmp/general.md",
+				},
 				sampleModels,
 			).source,
 		).toBe("delegated-category");
@@ -286,7 +326,9 @@ describe("resolveSubagentModelResolution", () => {
 	it("prefers measured-fast models when latency telemetry exists", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "subagent-routing-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 		mkdirSync(join(tempAgentDir, "adaptive-routing"), { recursive: true });
 		writeFileSync(
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
@@ -333,7 +375,9 @@ describe("resolveSubagentModelResolution", () => {
 				},
 				sampleModels,
 				undefined,
-				{ taskText: "Quickly scan the project and summarize the likely hotspots." },
+				{
+					taskText: "Quickly scan the project and summarize the likely hotspots.",
+				},
 			);
 			expect(result.model).toBe("google/gemini-2.5-flash");
 		} finally {
@@ -417,7 +461,9 @@ describe("resolveSubagentModelResolution", () => {
 		it("prefers the current session model over delegated routing", () => {
 			const tempAgentDir = mkdtempSync(join(tmpdir(), "subagent-routing-"));
 			getAgentDir.mockReturnValue(tempAgentDir);
-			mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+			mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+				recursive: true,
+			});
 			writeFileSync(
 				join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 				JSON.stringify(

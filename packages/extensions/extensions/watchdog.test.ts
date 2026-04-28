@@ -284,7 +284,11 @@ describe("watchdog extension", () => {
 		const seen: any[] = [];
 		pi.events.on("oh-pi:safe-mode", (state) => seen.push(state));
 
-		const state = applySafeMode(pi as any, true, { source: "manual", reason: "test", auto: false });
+		const state = applySafeMode(pi as any, true, {
+			source: "manual",
+			reason: "test",
+			auto: false,
+		});
 
 		expect(state.enabled).toBe(true);
 		expect(getSafeModeState().enabled).toBe(true);
@@ -451,7 +455,10 @@ describe("watchdog extension", () => {
 		const factory = ctx._custom.mock.calls.at(-1)[0] as (...args: unknown[]) => { render: (width: number) => string[] };
 		const component = factory(
 			{ requestRender: vi.fn() },
-			{ fg: (_color: string, text: string) => text, bold: (text: string) => text },
+			{
+				fg: (_color: string, text: string) => text,
+				bold: (text: string) => text,
+			},
 			{},
 			vi.fn(),
 		);
@@ -462,7 +469,12 @@ describe("watchdog extension", () => {
 		const pi = createMockPi();
 		const ctx = createMockCtx();
 		watchdogExtension(pi as any);
-		recordRuntimeMetric({ extensionId: "scheduler", pendingTasks: 8, dueTasks: 3, note: "dispatch throttled" });
+		recordRuntimeMetric({
+			extensionId: "scheduler",
+			pendingTasks: 8,
+			dueTasks: 3,
+			note: "dispatch throttled",
+		});
 
 		await pi._commands.get("watchdog").handler("blame", ctx);
 
@@ -491,7 +503,10 @@ describe("watchdog extension", () => {
 		const factory = ctx._custom.mock.calls[0][0] as (...args: unknown[]) => { render: (width: number) => string[] };
 		const component = factory(
 			{ requestRender: vi.fn() },
-			{ fg: (_color: string, text: string) => text, bold: (text: string) => text },
+			{
+				fg: (_color: string, text: string) => text,
+				bold: (text: string) => text,
+			},
 			{},
 			vi.fn(),
 		);

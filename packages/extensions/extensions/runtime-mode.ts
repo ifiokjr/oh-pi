@@ -30,7 +30,12 @@ export function isSafeModeEnabled(): boolean {
 
 export function setSafeModeState(
 	enabled: boolean,
-	options: { source?: SafeModeSource | null; reason?: string | null; auto?: boolean; updatedAt?: number } = {},
+	options: {
+		source?: SafeModeSource | null;
+		reason?: string | null;
+		auto?: boolean;
+		updatedAt?: number;
+	} = {},
 ): SafeModeState {
 	const nextState: SafeModeState = {
 		auto: enabled ? (options.auto ?? safeModeState.auto) : false,

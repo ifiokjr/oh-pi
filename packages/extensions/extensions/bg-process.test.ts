@@ -10,7 +10,10 @@ const { createBashToolMock, getShellConfigMock, spawnMock } = vi.hoisted(() => (
 		renderResult: undefined,
 		execute: vi.fn(),
 	})),
-	getShellConfigMock: vi.fn(() => ({ shell: "C:/Program Files/Git/bin/bash.exe", args: ["-c"] })),
+	getShellConfigMock: vi.fn(() => ({
+		shell: "C:/Program Files/Git/bin/bash.exe",
+		args: ["-c"],
+	})),
 	spawnMock: vi.fn(),
 }));
 
@@ -37,10 +40,22 @@ vi.mock("@ifi/pi-background-tasks", async (importOriginal) => await importOrigin
 vi.mock("@sinclair/typebox", () => ({
 	Type: {
 		Object: (schema: unknown) => schema,
-		String: (options?: Record<string, unknown>) => ({ type: "string", ...options }),
-		Number: (options?: Record<string, unknown>) => ({ type: "number", ...options }),
-		Boolean: (options?: Record<string, unknown>) => ({ type: "boolean", ...options }),
-		Optional: (value: unknown) => ({ optional: true, ...((value as object | undefined) ?? {}) }),
+		String: (options?: Record<string, unknown>) => ({
+			type: "string",
+			...options,
+		}),
+		Number: (options?: Record<string, unknown>) => ({
+			type: "number",
+			...options,
+		}),
+		Boolean: (options?: Record<string, unknown>) => ({
+			type: "boolean",
+			...options,
+		}),
+		Optional: (value: unknown) => ({
+			optional: true,
+			...((value as object | undefined) ?? {}),
+		}),
 	},
 }));
 
@@ -79,7 +94,10 @@ function createMockChild() {
 
 afterEach(() => {
 	vi.clearAllMocks();
-	getShellConfigMock.mockReturnValue({ shell: "C:/Program Files/Git/bin/bash.exe", args: ["-c"] });
+	getShellConfigMock.mockReturnValue({
+		shell: "C:/Program Files/Git/bin/bash.exe",
+		args: ["-c"],
+	});
 });
 
 describe("bg-process", () => {
@@ -101,7 +119,10 @@ describe("bg-process", () => {
 		bgProcessExtension(pi as never);
 		const tool = pi.tools.get("bg_task");
 
-		const result = await tool.execute("tool-1", { action: "spawn", command: "echo hello" });
+		const result = await tool.execute("tool-1", {
+			action: "spawn",
+			command: "echo hello",
+		});
 
 		expect(getShellConfigMock).toHaveBeenCalledOnce();
 		expect(spawnMock).toHaveBeenCalledWith(

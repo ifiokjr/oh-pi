@@ -120,7 +120,9 @@ describe("btw commands and rendering", () => {
 	it("streams a BTW answer, persists the thread entry, and saves visible notes", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = model as never;
-		harness.ctx.modelRegistry = { getApiKey: vi.fn().mockResolvedValue("direct-key") } as never;
+		harness.ctx.modelRegistry = {
+			getApiKey: vi.fn().mockResolvedValue("direct-key"),
+		} as never;
 		harness.ctx.ui.setWidget = vi.fn();
 		const appendEntry = vi.fn();
 		const sendMessage = vi.fn();
@@ -140,7 +142,13 @@ describe("btw commands and rendering", () => {
 						provider: "anthropic",
 						model: "claude-sonnet-4",
 						api: "anthropic-messages",
-						usage: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0, totalTokens: 3 },
+						usage: {
+							input: 1,
+							output: 2,
+							cacheRead: 0,
+							cacheWrite: 0,
+							totalTokens: 3,
+						},
 						stopReason: "stop",
 						timestamp: Date.now(),
 					},
@@ -153,19 +161,31 @@ describe("btw commands and rendering", () => {
 
 		expect(appendEntry).toHaveBeenCalledWith(
 			"btw-thread-entry",
-			expect.objectContaining({ question: "What changed?", answer: "Answer", thinking: "Thinking" }),
+			expect.objectContaining({
+				question: "What changed?",
+				answer: "Answer",
+				thinking: "Thinking",
+			}),
 		);
 		expect(sendMessage).toHaveBeenCalledWith(
-			expect.objectContaining({ customType: "btw-note", content: "Q: What changed?\n\nA: Answer" }),
+			expect.objectContaining({
+				customType: "btw-note",
+				content: "Q: What changed?\n\nA: Answer",
+			}),
 		);
-		expect(harness.notifications).toContainEqual({ msg: "Saved BTW note to the session.", type: "info" });
+		expect(harness.notifications).toContainEqual({
+			msg: "Saved BTW note to the session.",
+			type: "info",
+		});
 		expect(harness.ctx.ui.setWidget).toHaveBeenCalled();
 	});
 
 	it("queues saved btw notes as follow-up messages when the session is busy", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = model as never;
-		harness.ctx.modelRegistry = { getApiKey: vi.fn().mockResolvedValue("direct-key") } as never;
+		harness.ctx.modelRegistry = {
+			getApiKey: vi.fn().mockResolvedValue("direct-key"),
+		} as never;
 		harness.ctx.isIdle = () => false;
 		const sendMessage = vi.fn();
 		harness.pi.sendMessage = sendMessage;
@@ -178,7 +198,13 @@ describe("btw commands and rendering", () => {
 						provider: "anthropic",
 						model: "claude-sonnet-4",
 						api: "anthropic-messages",
-						usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2 },
+						usage: {
+							input: 1,
+							output: 1,
+							cacheRead: 0,
+							cacheWrite: 0,
+							totalTokens: 2,
+						},
 						stopReason: "stop",
 						timestamp: Date.now(),
 					},
@@ -189,7 +215,9 @@ describe("btw commands and rendering", () => {
 		btwExtension(harness.pi as never);
 		await harness.commands.get("btw").handler("--save Busy?", harness.ctx);
 
-		expect(sendMessage).toHaveBeenCalledWith(expect.anything(), { deliverAs: "followUp" });
+		expect(sendMessage).toHaveBeenCalledWith(expect.anything(), {
+			deliverAs: "followUp",
+		});
 		expect(harness.notifications).toContainEqual({
 			msg: "BTW note queued to save after the current turn finishes.",
 			type: "info",
@@ -199,7 +227,9 @@ describe("btw commands and rendering", () => {
 	it("injects or summarizes a thread back into the main session", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.model = model as never;
-		harness.ctx.modelRegistry = { getApiKey: vi.fn().mockResolvedValue("direct-key") } as never;
+		harness.ctx.modelRegistry = {
+			getApiKey: vi.fn().mockResolvedValue("direct-key"),
+		} as never;
 		const appendEntry = vi.fn();
 		const sendUserMessage = vi.fn();
 		harness.pi.appendEntry = appendEntry;
@@ -213,7 +243,13 @@ describe("btw commands and rendering", () => {
 						provider: "anthropic",
 						model: "claude-sonnet-4",
 						api: "anthropic-messages",
-						usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2 },
+						usage: {
+							input: 1,
+							output: 1,
+							cacheRead: 0,
+							cacheWrite: 0,
+							totalTokens: 2,
+						},
 						stopReason: "stop",
 						timestamp: Date.now(),
 					},
@@ -225,7 +261,13 @@ describe("btw commands and rendering", () => {
 			provider: "anthropic",
 			model: "claude-sonnet-4",
 			api: "anthropic-messages",
-			usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2 },
+			usage: {
+				input: 1,
+				output: 1,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: 2,
+			},
 			stopReason: "stop",
 			timestamp: Date.now(),
 		} as never);
@@ -238,7 +280,10 @@ describe("btw commands and rendering", () => {
 			expect.stringContaining("Here is a summary of a side conversation I had. Use this to update the plan."),
 		);
 		expect(appendEntry).toHaveBeenCalledWith("btw-thread-reset", expect.any(Object));
-		expect(harness.notifications).toContainEqual({ msg: "Injected BTW summary (1 exchange).", type: "info" });
+		expect(harness.notifications).toContainEqual({
+			msg: "Injected BTW summary (1 exchange).",
+			type: "info",
+		});
 	});
 
 	it("warns when inject or summarize is requested without a thread", async () => {
@@ -248,8 +293,14 @@ describe("btw commands and rendering", () => {
 		await harness.commands.get("btw:inject").handler("", harness.ctx);
 		await harness.commands.get("btw:summarize").handler("", harness.ctx);
 
-		expect(harness.notifications).toContainEqual({ msg: "No BTW thread to inject.", type: "warning" });
-		expect(harness.notifications).toContainEqual({ msg: "No BTW thread to summarize.", type: "warning" });
+		expect(harness.notifications).toContainEqual({
+			msg: "No BTW thread to inject.",
+			type: "warning",
+		});
+		expect(harness.notifications).toContainEqual({
+			msg: "No BTW thread to summarize.",
+			type: "warning",
+		});
 	});
 
 	it("filters visible BTW notes out of the main context and renders expanded messages", async () => {
@@ -276,7 +327,10 @@ describe("btw commands and rendering", () => {
 				},
 			},
 			{ expanded: true },
-			{ bold: (text: string) => text, fg: (_tone: string, text: string) => text },
+			{
+				bold: (text: string) => text,
+				fg: (_tone: string, text: string) => text,
+			},
 		);
 		expect(rendered.text).toContain("[BTW]");
 		expect(rendered.text).toContain("model: anthropic/claude-sonnet-4");

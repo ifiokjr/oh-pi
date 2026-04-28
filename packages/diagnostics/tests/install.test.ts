@@ -1,11 +1,15 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 // @ts-ignore missing declaration file for runtime installer script
-import { PACKAGE_NAME, findPi, main, parseArgs, printHelp, run } from "../install.mjs";
+import { findPi, main, PACKAGE_NAME, parseArgs, printHelp, run } from "../install.mjs";
 
 describe("diagnostics installer", () => {
 	it("parses supported flags and rejects unknown ones", () => {
-		expect(parseArgs(["node", "install.mjs"])).toEqual({ help: false, local: false, remove: false });
+		expect(parseArgs(["node", "install.mjs"])).toEqual({
+			help: false,
+			local: false,
+			remove: false,
+		});
 		expect(parseArgs(["node", "install.mjs", "--local", "--remove", "-h"])).toEqual({
 			help: true,
 			local: true,
@@ -92,7 +96,13 @@ describe("diagnostics installer", () => {
 			}
 			return Buffer.from("");
 		});
-		expect(main(["node", "install.mjs", "--local"], { log, error, execute: installExecute })).toBe(0);
+		expect(
+			main(["node", "install.mjs", "--local"], {
+				log,
+				error,
+				execute: installExecute,
+			}),
+		).toBe(0);
 		expect(installExecute).toHaveBeenCalledWith("pi", ["install", `npm:${PACKAGE_NAME}`, "-l"], {
 			stdio: "pipe",
 			timeout: 60_000,
@@ -105,7 +115,13 @@ describe("diagnostics installer", () => {
 			}
 			throw { stderr: Buffer.from("not found") };
 		});
-		expect(main(["node", "install.mjs", "--remove"], { log, error, execute: alreadyRemovedExecute })).toBe(0);
+		expect(
+			main(["node", "install.mjs", "--remove"], {
+				log,
+				error,
+				execute: alreadyRemovedExecute,
+			}),
+		).toBe(0);
 		expect(log).toHaveBeenLastCalledWith("\n✅ @ifi/pi-diagnostics is already absent from pi.");
 
 		const alreadyInstalledExecute = vi.fn((command: string, args: string[]) => {
@@ -114,7 +130,13 @@ describe("diagnostics installer", () => {
 			}
 			throw { stderr: Buffer.from("already exists") };
 		});
-		expect(main(["node", "install.mjs"], { log, error, execute: alreadyInstalledExecute })).toBe(0);
+		expect(
+			main(["node", "install.mjs"], {
+				log,
+				error,
+				execute: alreadyInstalledExecute,
+			}),
+		).toBe(0);
 		expect(log).toHaveBeenLastCalledWith("\n✅ @ifi/pi-diagnostics is already installed in pi.");
 
 		const failingExecute = vi.fn((command: string, args: string[]) => {

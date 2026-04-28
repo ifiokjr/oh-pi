@@ -56,7 +56,12 @@ describe("subagent settings helpers", () => {
 			{ agent: "scout", task: "Inspect {task}" },
 			{ agent: "planner" },
 			{
-				parallel: [{ agent: "reviewer", task: "Review {previous}" }, { agent: "qa" }],
+				parallel: [
+					{ agent: "reviewer", task: "Review {previous}" },
+					{
+						agent: "qa",
+					},
+				],
 			},
 		] as const;
 
@@ -120,7 +125,12 @@ describe("subagent settings helpers", () => {
 		});
 		expect(
 			resolveStepBehavior({ name: "planner", skills: ["plan"], defaultProgress: false }, { skills: false }, ["shared"]),
-		).toMatchObject({ skills: false, progress: false, output: false, reads: false });
+		).toMatchObject({
+			skills: false,
+			progress: false,
+			output: false,
+			reads: false,
+		});
 	});
 
 	it("builds read/write/progress instructions with previous-step summaries", () => {
@@ -147,7 +157,13 @@ describe("subagent settings helpers", () => {
 		const chainDir = createTempDir("pi-chain-parallel-settings-");
 		const behaviors = resolveParallelBehaviors(
 			[
-				{ agent: "planner", output: "plan.md", reads: ["spec.md"], progress: true, skill: ["plan"] },
+				{
+					agent: "planner",
+					output: "plan.md",
+					reads: ["spec.md"],
+					progress: true,
+					skill: ["plan"],
+				},
 				{ agent: "reviewer", skill: false, output: "/abs/review.md" },
 				{ agent: "writer" },
 			],
@@ -160,7 +176,12 @@ describe("subagent settings helpers", () => {
 					skills: ["git"],
 				},
 				{ name: "reviewer", output: "review.md", skills: ["review"] },
-				{ name: "writer", output: "write.md", skills: ["docs"], model: "anthropic/claude-sonnet-4" },
+				{
+					name: "writer",
+					output: "write.md",
+					skills: ["docs"],
+					model: "anthropic/claude-sonnet-4",
+				},
 			],
 			2,
 			["shared"],
@@ -199,7 +220,13 @@ describe("subagent settings helpers", () => {
 	it("aggregates parallel outputs with clear status markers", () => {
 		const summary = aggregateParallelOutputs([
 			{ agent: "planner", taskIndex: 0, output: "Plan complete", exitCode: 0 },
-			{ agent: "reviewer", taskIndex: 1, output: "", exitCode: 0, error: "Used fallback file" },
+			{
+				agent: "reviewer",
+				taskIndex: 1,
+				output: "",
+				exitCode: 0,
+				error: "Used fallback file",
+			},
 			{
 				agent: "qa",
 				taskIndex: 2,
@@ -209,7 +236,13 @@ describe("subagent settings helpers", () => {
 				outputTargetExists: false,
 			},
 			{ agent: "docs", taskIndex: 3, output: "", exitCode: -1 },
-			{ agent: "deploy", taskIndex: 4, output: "Logs", exitCode: 1, error: "boom" },
+			{
+				agent: "deploy",
+				taskIndex: 4,
+				output: "Logs",
+				exitCode: 1,
+				error: "boom",
+			},
 		]);
 
 		expect(summary).toContain("=== Parallel Task 1 (planner) ===\nPlan complete");

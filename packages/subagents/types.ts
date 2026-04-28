@@ -2,9 +2,9 @@
  * Type definitions for the subagent extension
  */
 
+import type { Message } from "@mariozechner/pi-ai";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { Message } from "@mariozechner/pi-ai";
 
 // ============================================================================
 // Basic Types
@@ -158,7 +158,13 @@ export interface AsyncStatus {
 	endedAt?: number;
 	lastUpdate?: number;
 	currentStep?: number;
-	steps?: { agent: string; status: string; durationMs?: number; tokens?: TokenUsage; skills?: string[] }[];
+	steps?: {
+		agent: string;
+		status: string;
+		durationMs?: number;
+		tokens?: TokenUsage;
+		skills?: string[];
+	}[];
 	sessionDir?: string;
 	outputFile?: string;
 	totalTokens?: TokenUsage;
@@ -270,7 +276,11 @@ export const DEFAULT_SUBAGENT_MAX_DEPTH = 2;
 // Recursion Depth Guard
 // ============================================================================
 
-export function checkSubagentDepth(): { blocked: boolean; depth: number; maxDepth: number } {
+export function checkSubagentDepth(): {
+	blocked: boolean;
+	depth: number;
+	maxDepth: number;
+} {
 	const depth = Number(process.env.PI_SUBAGENT_DEPTH ?? "0");
 	const maxDepth = Number(process.env.PI_SUBAGENT_MAX_DEPTH ?? String(DEFAULT_SUBAGENT_MAX_DEPTH));
 	const blocked = Number.isFinite(depth) && Number.isFinite(maxDepth) && depth >= maxDepth;
@@ -333,7 +343,9 @@ export function truncateOutput(
 	}
 
 	const keptLines = result.split("\n").length;
-	const marker = `[TRUNCATED: showing first ${keptLines} of ${lines.length} lines, ${formatBytes(Buffer.byteLength(result))} of ${formatBytes(bytes)}${artifactPath ? ` - full output at ${artifactPath}` : ""}]\n`;
+	const marker = `[TRUNCATED: showing first ${keptLines} of ${lines.length} lines, ${formatBytes(
+		Buffer.byteLength(result),
+	)} of ${formatBytes(bytes)}${artifactPath ? ` - full output at ${artifactPath}` : ""}]\n`;
 
 	return {
 		artifactPath,

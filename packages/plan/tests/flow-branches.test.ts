@@ -399,7 +399,10 @@ describe("plan flow branches", () => {
 		);
 		expect(stateManager.setState).toHaveBeenCalledWith(
 			ctx,
-			expect.objectContaining({ active: false, lastPlanLeafId: "planning-leaf" }),
+			expect.objectContaining({
+				active: false,
+				lastPlanLeafId: "planning-leaf",
+			}),
 		);
 		expect(setEditorText).toHaveBeenCalledWith(expect.stringContaining("/plans/session.plan.md"));
 		expect(onPlanModeExited).toHaveBeenCalledWith({

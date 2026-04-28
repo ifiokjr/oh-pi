@@ -2,12 +2,12 @@
  * Skill resolution and caching for subagent extension
  */
 
-import { execSync } from "node:child_process";
-import * as fs from "node:fs";
-import * as path from "node:path";
 import { expandHomeDir } from "@ifi/oh-pi-core";
 import { loadSkills } from "@mariozechner/pi-coding-agent";
 import type { Skill } from "@mariozechner/pi-coding-agent";
+import { execSync } from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { resolveAgentDir } from "./paths.js";
 
 export type SkillSource =
@@ -44,7 +44,11 @@ interface CachedSkillEntry {
 const skillCache = new Map<string, SkillCacheEntry>();
 const MAX_CACHE_SIZE = 50;
 
-let loadSkillsCache: { cwd: string; skills: CachedSkillEntry[]; timestamp: number } | null = null;
+let loadSkillsCache: {
+	cwd: string;
+	skills: CachedSkillEntry[];
+	timestamp: number;
+} | null = null;
 const LOAD_SKILLS_CACHE_TTL_MS = 5000;
 
 const CONFIG_DIR = ".pi";
@@ -103,7 +107,10 @@ function getGlobalNpmRoot(): string | null {
 		return cachedGlobalNpmRoot;
 	}
 	try {
-		cachedGlobalNpmRoot = execSync("npm root -g", { encoding: "utf8", timeout: 5000 }).trim();
+		cachedGlobalNpmRoot = execSync("npm root -g", {
+			encoding: "utf8",
+			timeout: 5000,
+		}).trim();
 		return cachedGlobalNpmRoot;
 	} catch {
 		cachedGlobalNpmRoot = ""; // Empty string means "tried but failed"
@@ -173,7 +180,10 @@ function collectPackageSkillPaths(cwd: string): string[] {
 function collectSettingsSkillPaths(cwd: string): string[] {
 	const results: string[] = [];
 	const settingsFiles = [
-		{ base: path.join(cwd, CONFIG_DIR), file: path.join(cwd, CONFIG_DIR, "settings.json") },
+		{
+			base: path.join(cwd, CONFIG_DIR),
+			file: path.join(cwd, CONFIG_DIR, "settings.json"),
+		},
 		{ base: AGENT_DIR, file: path.join(AGENT_DIR, "settings.json") },
 	];
 

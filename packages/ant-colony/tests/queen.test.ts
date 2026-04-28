@@ -148,7 +148,14 @@ describe("decidePromoteOrFinalize", () => {
 describe("validateExecutionPlan", () => {
 	it("accepts well-formed worker tasks", () => {
 		const plan = validateExecutionPlan([
-			mkTask({ id: "t-plan-1", caste: "worker", title: "Do x", description: "desc", priority: 1, files: ["a.ts"] }),
+			mkTask({
+				id: "t-plan-1",
+				caste: "worker",
+				title: "Do x",
+				description: "desc",
+				priority: 1,
+				files: ["a.ts"],
+			}),
 		]);
 		expect(plan.ok).toBe(true);
 		expect(plan.issues).toEqual([]);
@@ -396,8 +403,18 @@ describe("quorumMergeTasks", () => {
 	});
 
 	it("merges duplicate tasks with same files", () => {
-		const t1 = mkTask({ id: "t-1", title: "Fix auth", files: ["a.ts", "b.ts"], priority: 3 });
-		const t2 = mkTask({ id: "t-2", title: "Fix auth v2", files: ["a.ts", "b.ts"], priority: 3 });
+		const t1 = mkTask({
+			id: "t-1",
+			title: "Fix auth",
+			files: ["a.ts", "b.ts"],
+			priority: 3,
+		});
+		const t2 = mkTask({
+			id: "t-2",
+			title: "Fix auth v2",
+			files: ["a.ts", "b.ts"],
+			priority: 3,
+		});
 		nest.writeTask(t1);
 		nest.writeTask(t2);
 		quorumMergeTasks(nest);

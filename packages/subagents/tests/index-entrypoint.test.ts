@@ -9,7 +9,13 @@ const runtimeMonitorMock = vi.hoisted(() => ({
 
 const mocks = vi.hoisted(() => ({
 	discoverAgents: vi.fn(),
-	discoverAgentsAll: vi.fn(() => ({ agents: [], builtin: [], user: [], project: [], chains: [] })),
+	discoverAgentsAll: vi.fn(() => ({
+		agents: [],
+		builtin: [],
+		user: [],
+		project: [],
+		chains: [],
+	})),
 	resolveExecutionAgentScope: vi.fn(() => "both"),
 	cleanupOldChainDirs: vi.fn(),
 	getStepAgents: vi.fn((step: any) =>
@@ -49,7 +55,10 @@ const mocks = vi.hoisted(() => ({
 	expandTildePath: vi.fn((value: string) => value),
 	getSubagentSessionRoot: vi.fn(() => "/tmp/subagent-session-root"),
 	loadSubagentConfig: vi.fn(() => ({})),
-	resolveSubagentModelResolution: vi.fn(() => ({ model: undefined, source: "agent-default" })),
+	resolveSubagentModelResolution: vi.fn(() => ({
+		model: undefined,
+		source: "agent-default",
+	})),
 	createSubagentRuntimeMonitor: vi.fn(() => runtimeMonitorMock),
 }));
 
@@ -259,9 +268,19 @@ beforeEach(() => {
 		}
 	}
 	mocks.discoverAgents.mockReturnValue({ agents: agentConfigs });
-	mocks.discoverAgentsAll.mockReturnValue({ agents: agentConfigs, builtin: [], user: [], project: [], chains: [] });
+	mocks.discoverAgentsAll.mockReturnValue({
+		agents: agentConfigs,
+		builtin: [],
+		user: [],
+		project: [],
+		chains: [],
+	});
 	mocks.resolveExecutionAgentScope.mockReturnValue("both");
-	mocks.checkSubagentDepth.mockReturnValue({ blocked: false, depth: 0, maxDepth: 2 });
+	mocks.checkSubagentDepth.mockReturnValue({
+		blocked: false,
+		depth: 0,
+		maxDepth: 2,
+	});
 	mocks.getArtifactsDir.mockReturnValue("/tmp/artifacts");
 	mocks.isAsyncAvailable.mockReturnValue(true);
 	mocks.normalizeSkillInput.mockImplementation((value: unknown) => value);
@@ -291,10 +310,18 @@ beforeEach(() => {
 	mocks.resolveSubagentModelResolution.mockImplementation(
 		(_agent: any, _models: any[], explicitModel?: string, options?: { currentModel?: string }) => {
 			if (explicitModel) {
-				return { model: explicitModel, source: "runtime-override", category: "explicit" };
+				return {
+					model: explicitModel,
+					source: "runtime-override",
+					category: "explicit",
+				};
 			}
 			if (options?.currentModel) {
-				return { model: options.currentModel, source: "session-default", category: undefined };
+				return {
+					model: options.currentModel,
+					source: "session-default",
+					category: undefined,
+				};
 			}
 			return { model: undefined, source: "agent-default", category: undefined };
 		},
@@ -323,7 +350,13 @@ describe("subagent entrypoint", () => {
 
 		const tool = pi.tools.get("subagent");
 		const result = await tool.execute("tool-1", { action: "list" }, undefined, undefined, ctx);
-		expect(mocks.handleManagementAction).toHaveBeenCalledWith("list", { action: "list" }, ctx);
+		expect(mocks.handleManagementAction).toHaveBeenCalledWith(
+			"list",
+			{
+				action: "list",
+			},
+			ctx,
+		);
 		expect(result.content[0]?.text).toBe("listed");
 
 		const invalid = await tool.execute("tool-2", { action: "bogus" }, undefined, undefined, ctx);
@@ -337,7 +370,11 @@ describe("subagent entrypoint", () => {
 		registerSubagentExtension(pi as never);
 		const tool = pi.tools.get("subagent");
 
-		mocks.checkSubagentDepth.mockReturnValueOnce({ blocked: true, depth: 2, maxDepth: 2 });
+		mocks.checkSubagentDepth.mockReturnValueOnce({
+			blocked: true,
+			depth: 2,
+			maxDepth: 2,
+		});
 		const blocked = await tool.execute("tool-1", { agent: "scout", task: "inspect" }, undefined, undefined, ctx);
 		expect(blocked.isError).toBe(true);
 		expect(blocked.content[0]?.text).toContain("Nested subagent call blocked");
@@ -355,7 +392,12 @@ describe("subagent entrypoint", () => {
 
 		await expect(tool.execute("c0", { chain: [] }, undefined, undefined, ctx)).resolves.toMatchObject({
 			isError: true,
-			content: [{ type: "text", text: "Provide exactly one mode. Agents: scout, planner, reviewer" }],
+			content: [
+				{
+					type: "text",
+					text: "Provide exactly one mode. Agents: scout, planner, reviewer",
+				},
+			],
 		});
 
 		const firstStepMissingTask = await tool.execute("c1", { chain: [{ agent: "scout" }] }, undefined, undefined, ctx);
@@ -493,8 +535,17 @@ describe("subagent entrypoint", () => {
 		expect(mocks.executeAsyncChain.mock.calls[0]?.[1]?.chain).toEqual([
 			{
 				parallel: [
-					expect.objectContaining({ agent: "scout", task: "inspect", model: "anthropic/claude-sonnet-4" }),
-					expect.objectContaining({ agent: "planner", task: "plan", model: "openai/gpt-5", skill: false }),
+					expect.objectContaining({
+						agent: "scout",
+						task: "inspect",
+						model: "anthropic/claude-sonnet-4",
+					}),
+					expect.objectContaining({
+						agent: "planner",
+						task: "plan",
+						model: "openai/gpt-5",
+						skill: false,
+					}),
 				],
 			},
 		]);
@@ -524,7 +575,13 @@ describe("subagent entrypoint", () => {
 		ctx.ui.custom = vi.fn().mockResolvedValueOnce({
 			confirmed: true,
 			templates: ["inspect carefully"],
-			behaviorOverrides: [{ output: "notes.md", model: "openai/gpt-5", skills: ["git"] }],
+			behaviorOverrides: [
+				{
+					output: "notes.md",
+					model: "openai/gpt-5",
+					skills: ["git"],
+				},
+			],
 			runInBackground: true,
 		});
 		const background = await tool.execute(

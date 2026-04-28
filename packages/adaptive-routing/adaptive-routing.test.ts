@@ -81,7 +81,9 @@ describe("adaptive routing extension", () => {
 		vi.useFakeTimers();
 		tempAgentDir = mkdtempSync(join(tmpdir(), "adaptive-routing-ext-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 	});
 
 	afterEach(() => {
@@ -104,11 +106,18 @@ describe("adaptive routing extension", () => {
 		adaptiveRoutingExtension(harness.pi as never);
 		await harness.emitAsync(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Design a better settings page UI.", systemPrompt: "system" },
+			{
+				type: "before_agent_start",
+				prompt: "Design a better settings page UI.",
+				systemPrompt: "system",
+			},
 			harness.ctx,
 		);
 
-		expect(harness.ctx.model).toMatchObject({ provider: "google", id: "gemini-2.5-flash" });
+		expect(harness.ctx.model).toMatchObject({
+			provider: "google",
+			id: "gemini-2.5-flash",
+		});
 		expect(harness.notifications.some((item) => item.msg.includes("Adaptive route suggestion"))).toBe(false);
 		expect(harness.statusMap.has("adaptive-routing")).toBe(false);
 	});
@@ -173,11 +182,18 @@ describe("adaptive routing extension", () => {
 
 		await harness.emitAsync(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Design a better settings page UI.", systemPrompt: "system" },
+			{
+				type: "before_agent_start",
+				prompt: "Design a better settings page UI.",
+				systemPrompt: "system",
+			},
 			harness.ctx,
 		);
 
-		expect(harness.ctx.model).toMatchObject({ provider: "anthropic", id: "claude-opus-4.6" });
+		expect(harness.ctx.model).toMatchObject({
+			provider: "anthropic",
+			id: "claude-opus-4.6",
+		});
 		expect(harness.statusMap.get("adaptive-routing")).toContain("auto");
 	});
 
@@ -199,11 +215,18 @@ describe("adaptive routing extension", () => {
 		adaptiveRoutingExtension(harness.pi as never);
 		await harness.emitAsync(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Design a better settings page UI.", systemPrompt: "system" },
+			{
+				type: "before_agent_start",
+				prompt: "Design a better settings page UI.",
+				systemPrompt: "system",
+			},
 			harness.ctx,
 		);
 
-		expect(harness.ctx.model).toMatchObject({ provider: "google", id: "gemini-2.5-flash" });
+		expect(harness.ctx.model).toMatchObject({
+			provider: "google",
+			id: "gemini-2.5-flash",
+		});
 		expect(harness.notifications.some((item) => item.msg.includes("Adaptive route suggestion"))).toBe(true);
 	});
 
@@ -470,7 +493,11 @@ describe("adaptive routing extension", () => {
 		adaptiveRoutingExtension(harness.pi as never);
 		await harness.emitAsync(
 			"before_agent_start",
-			{ type: "before_agent_start", prompt: "Design a better settings page UI.", systemPrompt: "system" },
+			{
+				type: "before_agent_start",
+				prompt: "Design a better settings page UI.",
+				systemPrompt: "system",
+			},
 			harness.ctx,
 		);
 		await vi.advanceTimersByTimeAsync(3200);

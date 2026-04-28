@@ -60,11 +60,15 @@ export async function runInstaller(deps: InstallerDeps = defaultInstallerDeps): 
 		const cmp = compareVersion(installedVersion, pkgVersion);
 		if (cmp < 0) {
 			stdout.write(
-				`${chalk.yellow("▼ Update available")}  ${chalk.dim(installedVersion)} ${chalk.gray("→")} ${chalk.green.bold(pkgVersion)}\n`,
+				`${chalk.yellow("▼ Update available")}  ${chalk.dim(
+					installedVersion,
+				)} ${chalk.gray("→")} ${chalk.green.bold(pkgVersion)}\n`,
 			);
 		} else if (cmp > 0) {
 			stdout.write(
-				`${chalk.green("▲ Ahead")}  ${chalk.dim(installedVersion)} ${chalk.gray("→")} ${chalk.green.bold(pkgVersion)}\n`,
+				`${chalk.green("▲ Ahead")}  ${chalk.dim(installedVersion)} ${chalk.gray(
+					"→",
+				)} ${chalk.green.bold(pkgVersion)}\n`,
 			);
 		} else {
 			stdout.write(`${chalk.green("● Up to date")}  ${chalk.bold(pkgVersion)}\n`);

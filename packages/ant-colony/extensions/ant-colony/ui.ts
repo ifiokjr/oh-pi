@@ -181,7 +181,9 @@ export function buildReport(state: ColonyState): string {
 				.filter((ant) => ant.model)
 				.map(
 					(ant) =>
-						`${ant.caste}: ${ant.model}${ant.routeSource ? ` (${ant.routeSource}${ant.routeCategory ? `:${ant.routeCategory}` : ""})` : ""}`,
+						`${ant.caste}: ${ant.model}${
+							ant.routeSource ? ` (${ant.routeSource}${ant.routeCategory ? `:${ant.routeCategory}` : ""})` : ""
+						}`,
 				),
 		),
 	];

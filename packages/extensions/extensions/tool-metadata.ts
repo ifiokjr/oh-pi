@@ -39,7 +39,9 @@ function pad(value: number): string {
 
 export function formatTimestamp(timestamp: number): string {
 	const date = new Date(timestamp);
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+		date.getDate(),
+	)} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 export function formatDuration(durationMs: number): string {
@@ -210,7 +212,10 @@ function sanitizeDetails(details: unknown): { details: Record<string, unknown>; 
 	}
 	const normalized = sanitizeDetailsValue(details);
 	if (normalized.value && typeof normalized.value === "object" && !Array.isArray(normalized.value)) {
-		return { changed: normalized.changed, details: normalized.value as Record<string, unknown> };
+		return {
+			changed: normalized.changed,
+			details: normalized.value as Record<string, unknown>,
+		};
 	}
 	return { changed: true, details: {} };
 }
@@ -334,7 +339,13 @@ export default function toolMetadataExtension(pi: ExtensionAPI): void {
 		}
 
 		return {
-			content: [...safeContent, { text: formatToolMetadataText(metadata), type: "text" as const }],
+			content: [
+				...safeContent,
+				{
+					text: formatToolMetadataText(metadata),
+					type: "text" as const,
+				},
+			],
 			details,
 		};
 	});

@@ -11,11 +11,19 @@ const BASH_PTY_MESSAGE_TYPE = "pi-bash-live-view:result";
 const BASH_TOOL_PARAMETERS = Type.Object({
 	command: Type.String({ description: "Bash command to execute" }),
 	timeout: Type.Optional(
-		Type.Number({ description: "Optional timeout in seconds before the PTY command is terminated" }),
+		Type.Number({
+			description: "Optional timeout in seconds before the PTY command is terminated",
+		}),
 	),
-	cwd: Type.Optional(Type.String({ description: "Optional working directory override for this command" })),
+	cwd: Type.Optional(
+		Type.String({
+			description: "Optional working directory override for this command",
+		}),
+	),
 	usePTY: Type.Optional(
-		Type.Boolean({ description: "Run the command inside a pseudo-terminal with live terminal rendering" }),
+		Type.Boolean({
+			description: "Run the command inside a pseudo-terminal with live terminal rendering",
+		}),
 	),
 });
 
@@ -34,7 +42,12 @@ function resolveCwd(
 function toErrorToolResult(error: unknown) {
 	const message = error instanceof Error ? error.message : String(error);
 	return {
-		content: [{ type: "text" as const, text: `PTY execution failed: ${message}` }],
+		content: [
+			{
+				type: "text" as const,
+				text: `PTY execution failed: ${message}`,
+			},
+		],
 		details: { pty: true, error: true },
 	};
 }

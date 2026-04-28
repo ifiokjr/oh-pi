@@ -5,31 +5,24 @@ Based on pi-scheduler by @manojlds (MIT).
 
 <!-- {=extensionsSchedulerOverview} -->
 
-The scheduler extension adds recurring checks, one-time reminders, and the LLM-callable
-`schedule_prompt` tool so pi can schedule future follow-ups like PR, CI, build, or deployment
-checks. Tasks run only while pi is active and idle, and scheduler state is persisted in shared pi
-storage using a workspace-mirrored path.
+The scheduler extension adds recurring checks, one-time reminders, and the LLM-callable `schedule_prompt` tool so pi can schedule future follow-ups like PR, CI, build, or deployment checks. Tasks run only while pi is active and idle, and scheduler state is persisted in shared pi storage using a workspace-mirrored path.
 
 <!-- {/extensionsSchedulerOverview} -->
 
 <!-- {=extensionsSchedulerOwnershipDocs} -->
 
-The scheduler distinguishes between instance-scoped tasks and workspace-scoped tasks. Instance
-scope is the default for `/loop`, `/remind`, and `schedule_prompt`, which means tasks stay owned by
-one pi instance and other instances restore them for review instead of auto-running them.
-Workspace scope is an explicit opt-in for shared CI/build/deploy monitors that should survive
-instance changes in the same repository.
+The scheduler distinguishes between instance-scoped tasks and workspace-scoped tasks. Instance scope is the default for `/loop`, `/remind`, and `schedule_prompt`, which means tasks stay owned by one pi instance and other instances restore them for review instead of auto-running them. Workspace scope is an explicit opt-in for shared CI/build/deploy monitors that should survive instance changes in the same repository.
 
 <!-- {/extensionsSchedulerOwnershipDocs} -->
 */
 
-import { randomUUID } from "node:crypto";
-import * as fs from "node:fs";
-import * as path from "node:path";
 import { openScrollableSelect } from "@ifi/pi-shared-qna";
 import type { ScrollSelectOption } from "@ifi/pi-shared-qna";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
+import { randomUUID } from "node:crypto";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import {
 	computeNextCronRunAt,
 	formatDurationShort,
@@ -459,7 +452,9 @@ export class SchedulerRuntime {
 			const preview = task.prompt.length > 72 ? `${task.prompt.slice(0, 69)}...` : task.prompt;
 			lines.push(`${task.id}  ${state}  ${mode}  next ${next}`);
 			lines.push(
-				`  creator=${this.taskCreatorLabel(task)}  owner=${this.taskOwnerLabel(task)}  runs=${task.runCount}  last=${last}  status=${status}`,
+				`  creator=${this.taskCreatorLabel(task)}  owner=${this.taskOwnerLabel(
+					task,
+				)}  runs=${task.runCount}  last=${last}  status=${status}`,
 			);
 			if (task.lastOutcomeSnippet) {
 				lines.push(`  outcome=${this.truncateText(task.lastOutcomeSnippet, 72)}`);
@@ -704,7 +699,10 @@ export class SchedulerRuntime {
 			parts.push(`${resumeRequiredCount} due`);
 		}
 		if (scheduledCount > 0) {
-			const next = new Date(nextScheduledRunAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+			const next = new Date(nextScheduledRunAt).toLocaleTimeString([], {
+				hour: "2-digit",
+				minute: "2-digit",
+			});
 			parts.push(`${scheduledCount} active • next ${next}`);
 		}
 		this.setStatus("pi-scheduler", parts.join(" • ") || "paused");
@@ -901,7 +899,9 @@ export class SchedulerRuntime {
 			case `Take over scheduler and adopt foreign tasks${foreignTaskCount > 0 ? ` (${foreignTaskCount})` : ""}`: {
 				const adopted = this.takeOverScheduler(true);
 				ctx.ui.notify(
-					`Scheduler ownership moved to this instance.${adopted > 0 ? ` Adopted ${adopted} task${adopted === 1 ? "" : "s"}.` : ""}`,
+					`Scheduler ownership moved to this instance.${
+						adopted > 0 ? ` Adopted ${adopted} task${adopted === 1 ? "" : "s"}.` : ""
+					}`,
 					"warning",
 				);
 				break;
@@ -1047,7 +1047,9 @@ export class SchedulerRuntime {
 			const createdHere = this.wasCreatedHere(task);
 			const deleteLabel = createdHere ? "🗑 Delete" : "🧹 Clear (not created here)";
 			const title = [
-				`${task.id} • ${this.taskMode(task)} • next ${this.formatRelativeTime(task.nextRunAt)} (${this.formatClock(task.nextRunAt)})`,
+				`${task.id} • ${this.taskMode(task)} • next ${this.formatRelativeTime(
+					task.nextRunAt,
+				)} (${this.formatClock(task.nextRunAt)})`,
 				`Workspace: ${this.getWorkspaceLabel(ctx)}`,
 				`Created by: ${this.taskCreatorLabel(task)}`,
 				`Owner: ${this.taskOwnerLabel(task)}`,
@@ -1262,7 +1264,11 @@ export class SchedulerRuntime {
 				{
 					content: task.prompt,
 					customType: SCHEDULER_DISPATCHED_MESSAGE_TYPE,
-					details: { runCount: task.runCount + 1, taskId: task.id, taskMode: this.taskMode(task) },
+					details: {
+						runCount: task.runCount + 1,
+						taskId: task.id,
+						taskMode: this.taskMode(task),
+					},
 					display: true,
 				},
 				{ deliverAs: "followUp", triggerTurn: true },
@@ -1340,7 +1346,9 @@ export class SchedulerRuntime {
 			task.nextRunAt = now + (task.retryIntervalMs ?? ONE_MINUTE);
 			if (this.runtimeCtx?.hasUI && !this.safeModeEnabled) {
 				this.runtimeCtx.ui.notify(
-					`Scheduler task ${task.id} paused after ${task.runCount} attempt${task.runCount === 1 ? "" : "s"} without completion.`,
+					`Scheduler task ${task.id} paused after ${task.runCount} attempt${
+						task.runCount === 1 ? "" : "s"
+					} without completion.`,
 					"warning",
 				);
 			}
@@ -1488,7 +1496,9 @@ export class SchedulerRuntime {
 	private taskOptionLabel(task: ScheduleTask): string {
 		const origin = this.taskCreatorShortLabel(task);
 		const state = task.resumeRequired ? `! ${task.resumeReason ?? "review"}` : task.enabled ? "+" : "-";
-		return `${task.id} • ${origin} • ${state} [${task.scope ?? "instance"}] ${this.taskMode(task)} • ${this.formatRelativeTime(task.nextRunAt)} • ${this.truncateText(task.prompt, 50)}`;
+		return `${task.id} • ${origin} • ${state} [${task.scope ?? "instance"}] ${this.taskMode(
+			task,
+		)} • ${this.formatRelativeTime(task.nextRunAt)} • ${this.truncateText(task.prompt, 50)}`;
 	}
 
 	private getWorkspaceLabel(ctx?: ExtensionContext): string {
@@ -1503,7 +1513,10 @@ export class SchedulerRuntime {
 	}
 
 	formatClock(timestamp: number): string {
-		return new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+		return new Date(timestamp).toLocaleTimeString([], {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
 	}
 
 	hashString(input: string): number {
@@ -1547,7 +1560,12 @@ export class SchedulerRuntime {
 	private resolveTaskTargets(
 		target: string,
 		predicate?: (task: ScheduleTask) => boolean,
-	): { tasks: ScheduleTask[]; error?: undefined } | { tasks: ScheduleTask[]; error: string } {
+	):
+		| { tasks: ScheduleTask[]; error?: undefined }
+		| {
+				tasks: ScheduleTask[];
+				error: string;
+		  } {
 		if (target === "all") {
 			const tasks = this.getSortedTasks().filter((task) => predicate?.(task) ?? true);
 			return { tasks };
@@ -1557,7 +1575,10 @@ export class SchedulerRuntime {
 			return { error: `Task not found: ${target}`, tasks: [] };
 		}
 		if (predicate && !predicate(task)) {
-			return { error: `Task ${target} is not eligible for that operation.`, tasks: [] };
+			return {
+				error: `Task ${target} is not eligible for that operation.`,
+				tasks: [],
+			};
 		}
 		return { tasks: [task] };
 	}
@@ -2056,7 +2077,9 @@ export class SchedulerRuntime {
 		if (legacyCount > 0) {
 			parts.push(`${legacyCount} legacy task${legacyCount === 1 ? "" : "s"} with unknown creator`);
 		}
-		return `Delete ${tasks.length} scheduled task${tasks.length === 1 ? "" : "s"} for ${this.getWorkspaceLabel(ctx)} not created in this instance? (${parts.join(", ")})`;
+		return `Delete ${tasks.length} scheduled task${
+			tasks.length === 1 ? "" : "s"
+		} for ${this.getWorkspaceLabel(ctx)} not created in this instance? (${parts.join(", ")})`;
 	}
 
 	notifyResumeRequiredTasks() {
@@ -2147,10 +2170,7 @@ export class SchedulerRuntime {
 /**
 <!-- {=extensionsSchedulerOverview} -->
 
-The scheduler extension adds recurring checks, one-time reminders, and the LLM-callable
-`schedule_prompt` tool so pi can schedule future follow-ups like PR, CI, build, or deployment
-checks. Tasks run only while pi is active and idle, and scheduler state is persisted in shared pi
-storage using a workspace-mirrored path.
+The scheduler extension adds recurring checks, one-time reminders, and the LLM-callable `schedule_prompt` tool so pi can schedule future follow-ups like PR, CI, build, or deployment checks. Tasks run only while pi is active and idle, and scheduler state is persisted in shared pi storage using a workspace-mirrored path.
 
 <!-- {/extensionsSchedulerOverview} -->
 */
@@ -2158,7 +2178,13 @@ export default function schedulerExtension(pi: ExtensionAPI) {
 	const runtime = new SchedulerRuntime(pi);
 
 	pi.registerMessageRenderer(SCHEDULER_DISPATCHED_MESSAGE_TYPE, (message, _options, theme) => {
-		const details = message.details as { taskId?: string; taskMode?: string; runCount?: number } | undefined;
+		const details = message.details as
+			| {
+					taskId?: string;
+					taskMode?: string;
+					runCount?: number;
+			  }
+			| undefined;
 		const prefix = theme.bold(theme.fg("accent", "⏰ Scheduled run"));
 		const taskInfo = details?.taskId ? ` \u00B7 ${details.taskId}` : "";
 		const modeInfo = details?.taskMode ? ` \u00B7 ${details.taskMode}` : "";

@@ -17,11 +17,11 @@ import {
 	getGitDiff,
 	main,
 	normalizeCoveragePath,
-	shouldIgnoreFileForPatchCoverage,
 	parseChangedLinesFromDiff,
 	parseLcovByFile,
 	parsePatchCoverageArgs,
 	runPatchCoverageCheck,
+	shouldIgnoreFileForPatchCoverage,
 } from "./check-patch-coverage.ts";
 
 const tempDirs: string[] = [];
@@ -46,7 +46,10 @@ describe("check-patch-coverage", () => {
 	});
 
 	it("parses cli arguments with defaults and overrides", () => {
-		expect(parsePatchCoverageArgs([])).toMatchObject({ threshold: 100, lcovPath: "coverage/lcov.info" });
+		expect(parsePatchCoverageArgs([])).toMatchObject({
+			threshold: 100,
+			lcovPath: "coverage/lcov.info",
+		});
 		expect(
 			parsePatchCoverageArgs(["--threshold", "97.5", "--lcov", "tmp/lcov.info", "--base", "abc", "--head", "def"]),
 		).toEqual({
@@ -88,7 +91,11 @@ describe("check-patch-coverage", () => {
 		);
 		const summary = calculatePatchCoverage(changed, coverage);
 
-		expect(summary).toMatchObject({ covered: 2, total: 3, pct: 66.66666666666666 });
+		expect(summary).toMatchObject({
+			covered: 2,
+			total: 3,
+			pct: 66.66666666666666,
+		});
 		expect(summary.perFile).toEqual([
 			{
 				file: "packages/demo.ts",
@@ -160,7 +167,15 @@ describe("check-patch-coverage", () => {
 				covered: 3,
 				total: 3,
 				pct: 100,
-				perFile: [{ file: "packages/demo.ts", covered: 3, total: 3, pct: 100, uncoveredLines: [] }],
+				perFile: [
+					{
+						file: "packages/demo.ts",
+						covered: 3,
+						total: 3,
+						pct: 100,
+						uncoveredLines: [],
+					},
+				],
 			},
 			100,
 		);
@@ -194,7 +209,14 @@ describe("check-patch-coverage", () => {
 	it("skips patch coverage checks when base or head is missing", () => {
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-		expect(runPatchCoverageCheck({ base: "", head: "head", lcovPath: "coverage/lcov.info", threshold: 100 })).toEqual({
+		expect(
+			runPatchCoverageCheck({
+				base: "",
+				head: "head",
+				lcovPath: "coverage/lcov.info",
+				threshold: 100,
+			}),
+		).toEqual({
 			skipped: true,
 			pct: 100,
 			covered: 0,
@@ -211,11 +233,20 @@ describe("check-patch-coverage", () => {
 		fs.writeFileSync(ignoredFile, "/* c8 ignore file */\nexport const ignored = true;\n", "utf8");
 		fs.writeFileSync(lcovPath, `TN:\nSF:${normalizeCoveragePath(ignoredFile)}\nDA:2,0\nend_of_record\n`, "utf8");
 		childProcessMocks.execFileSync.mockReturnValueOnce(
-			`diff --git a/${normalizeCoveragePath(ignoredFile)} b/${normalizeCoveragePath(ignoredFile)}\n+++ b/${normalizeCoveragePath(ignoredFile)}\n@@ -1,0 +1,2 @@\n+/* c8 ignore file */\n+export const ignored = true;\n`,
+			`diff --git a/${normalizeCoveragePath(ignoredFile)} b/${normalizeCoveragePath(
+				ignoredFile,
+			)}\n+++ b/${normalizeCoveragePath(
+				ignoredFile,
+			)}\n@@ -1,0 +1,2 @@\n+/* c8 ignore file */\n+export const ignored = true;\n`,
 		);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-		const summary = runPatchCoverageCheck({ base: "base", head: "head", lcovPath, threshold: 100 });
+		const summary = runPatchCoverageCheck({
+			base: "base",
+			head: "head",
+			lcovPath,
+			threshold: 100,
+		});
 
 		expect(summary).toMatchObject({ covered: 0, total: 0, pct: 100 });
 		expect(logSpy).toHaveBeenCalledWith("Patch coverage: 100.00% (no changed executable lines found)");
@@ -230,7 +261,12 @@ describe("check-patch-coverage", () => {
 		);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-		const summary = runPatchCoverageCheck({ base: "base", head: "head", lcovPath, threshold: 100 });
+		const summary = runPatchCoverageCheck({
+			base: "base",
+			head: "head",
+			lcovPath,
+			threshold: 100,
+		});
 
 		expect(summary).toMatchObject({ covered: 0, total: 0, pct: 100 });
 		expect(logSpy).toHaveBeenCalledWith("Patch coverage: 100.00% (no changed executable lines found)");
@@ -245,9 +281,14 @@ describe("check-patch-coverage", () => {
 		);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-		expect(() => runPatchCoverageCheck({ base: "base", head: "head", lcovPath, threshold: 100 })).toThrow(
-			"Patch coverage 50.00% is below the required 100.00% threshold.",
-		);
+		expect(() =>
+			runPatchCoverageCheck({
+				base: "base",
+				head: "head",
+				lcovPath,
+				threshold: 100,
+			}),
+		).toThrow("Patch coverage 50.00% is below the required 100.00% threshold.");
 		expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Required threshold: 100.00%"));
 	});
 
@@ -268,7 +309,12 @@ describe("check-patch-coverage", () => {
 			);
 		const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-		const summary = runPatchCoverageCheck({ base: "base", head: "head", lcovPath, threshold: 100 });
+		const summary = runPatchCoverageCheck({
+			base: "base",
+			head: "head",
+			lcovPath,
+			threshold: 100,
+		});
 
 		expect(summary).toMatchObject({ covered: 1, total: 1, pct: 100 });
 		expect(logSpy).toHaveBeenCalledWith(
@@ -292,7 +338,12 @@ describe("check-patch-coverage", () => {
 			`diff --git a/${srcFile} b/${srcFile}\n+++ b/${srcFile}\n@@ -1,0 +1,3 @@\n+const a = 1;\n+const b = 2;\n+const c = 3;\n`,
 		);
 
-		const summary = runPatchCoverageCheck({ base: "base", head: "head", lcovPath, threshold: 100 });
+		const summary = runPatchCoverageCheck({
+			base: "base",
+			head: "head",
+			lcovPath,
+			threshold: 100,
+		});
 
 		// Line 2 (0 coverage) should be excluded due to // patch-coverage-ignore
 		expect(summary.perFile[0]?.uncoveredLines).not.toContain(2);

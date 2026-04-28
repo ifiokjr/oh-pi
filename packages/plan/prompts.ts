@@ -1,7 +1,7 @@
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
 
 const PLAN_MODE_PROMPT_FILENAME = "PLAN.prompt.md";
 

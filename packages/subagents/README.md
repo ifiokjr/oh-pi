@@ -51,10 +51,7 @@ Use `agentScope` parameter to control discovery: `"user"`, `"project"`, or `"bot
 
 <!-- {=subagentsProjectAgentStorageOverview} -->
 
-Subagents stores project-scope agents and chains in shared pi storage by default under a
-workspace-mirrored path, so repositories stay clean while still supporting parent-workspace lookup
-for nested projects. Legacy repo-local `.pi/agents/` storage remains available as an explicit
-project-mode override.
+Subagents stores project-scope agents and chains in shared pi storage by default under a workspace-mirrored path, so repositories stay clean while still supporting parent-workspace lookup for nested projects. Legacy repo-local `.pi/agents/` storage remains available as an explicit project-mode override.
 
 <!-- {/subagentsProjectAgentStorageOverview} -->
 
@@ -279,9 +276,7 @@ Analyze the codebase for {task}
 
 ## planner
 
-reads: context.md
-model: anthropic/claude-sonnet-4-5:high
-progress: true
+reads: context.md model: anthropic/claude-sonnet-4-5:high progress: true
 
 Create an implementation plan based on {previous}
 ```
@@ -426,9 +421,7 @@ Skills are specialized instructions loaded from SKILL.md files and injected into
 **Skill injection format:**
 
 ```xml
-<skill name="safe-bash">
-[skill content from SKILL.md, frontmatter stripped]
-</skill>
+<skill name="safe-bash">[skill content from SKILL.md, frontmatter stripped]</skill>
 ```
 
 **Missing skills:** If a skill cannot be found, execution continues with a warning shown in the result summary.
@@ -682,9 +675,7 @@ Sessions are always enabled — every subagent run gets a session directory for 
 
 <!-- {=subagentsResolveProjectAgentStorageOptionsDocs} -->
 
-Resolve the effective project-agent storage mode and shared root. Explicit options take precedence,
-then environment variables, then extension config, and shared storage is the default when no
-override is provided.
+Resolve the effective project-agent storage mode and shared root. Explicit options take precedence, then environment variables, then extension config, and shared storage is the default when no override is provided.
 
 <!-- {/subagentsResolveProjectAgentStorageOptionsDocs} -->
 
@@ -696,18 +687,13 @@ override is provided.
 
 <!-- {=subagentsProjectAgentStorageOverview} -->
 
-Subagents stores project-scope agents and chains in shared pi storage by default under a
-workspace-mirrored path, so repositories stay clean while still supporting parent-workspace lookup
-for nested projects. Legacy repo-local `.pi/agents/` storage remains available as an explicit
-project-mode override.
+Subagents stores project-scope agents and chains in shared pi storage by default under a workspace-mirrored path, so repositories stay clean while still supporting parent-workspace lookup for nested projects. Legacy repo-local `.pi/agents/` storage remains available as an explicit project-mode override.
 
 <!-- {/subagentsProjectAgentStorageOverview} -->
 
 <!-- {=subagentsMigrateLegacyProjectAgentsDocs} -->
 
-Best-effort migration for legacy repo-local project agents. When shared mode is active, discovered
-`.pi/agents/` directories are copied into shared storage and the empty legacy `.pi/` directory is
-removed when possible.
+Best-effort migration for legacy repo-local project agents. When shared mode is active, discovered `.pi/agents/` directories are copied into shared storage and the empty legacy `.pi/` directory is removed when possible.
 
 <!-- {/subagentsMigrateLegacyProjectAgentsDocs} -->
 
@@ -715,9 +701,7 @@ removed when possible.
 
 <!-- {=subagentsGetSharedProjectAgentsDirDocs} -->
 
-Build the shared directory for project-scope agent and chain definitions. The path combines the
-shared root, a mirrored workspace path, and the trailing `agents/` directory so different projects
-stay isolated from one another.
+Build the shared directory for project-scope agent and chain definitions. The path combines the shared root, a mirrored workspace path, and the trailing `agents/` directory so different projects stay isolated from one another.
 
 <!-- {/subagentsGetSharedProjectAgentsDirDocs} -->
 
@@ -730,9 +714,7 @@ stay isolated from one another.
 
 <!-- {=subagentsFindNearestProjectAgentsDirDocs} -->
 
-Find the highest-priority project agents directory for the current workspace. The resolver walks up
-parent workspaces, migrates legacy storage when needed, and preserves the same nearest-parent lookup
-semantics in both shared and project storage modes.
+Find the highest-priority project agents directory for the current workspace. The resolver walks up parent workspaces, migrates legacy storage when needed, and preserves the same nearest-parent lookup semantics in both shared and project storage modes.
 
 <!-- {/subagentsFindNearestProjectAgentsDirDocs} -->
 
@@ -839,8 +821,7 @@ Async runs write a dedicated observability folder:
   subagent-log-<id>.md
 ```
 
-`status.json` is the source of truth for async progress and powers the TUI widget. If you already use
-`/status <id>` you can keep doing that; otherwise use:
+`status.json` is the source of truth for async progress and powers the TUI widget. If you already use `/status <id>` you can keep doing that; otherwise use:
 
 ```typescript
 subagent_status({ id: "<id>" });

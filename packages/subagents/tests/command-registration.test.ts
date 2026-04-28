@@ -56,7 +56,9 @@ describe("registerSubagentCommands", () => {
 	});
 
 	it("validates /run and sends exact single-agent tool calls", async () => {
-		discoverAgentsMock.mockReturnValue({ agents: [{ name: "scout" }, { name: "planner" }] });
+		discoverAgentsMock.mockReturnValue({
+			agents: [{ name: "scout" }, { name: "planner" }],
+		});
 		const pi = createPi();
 		const ctx = createCtx();
 		registerSubagentCommands(pi as never, {
@@ -65,7 +67,10 @@ describe("registerSubagentCommands", () => {
 		});
 
 		await pi.commands.get("run").handler("unknown investigate", ctx);
-		expect(ctx.notifications.at(-1)).toEqual({ msg: "Unknown agent: unknown", level: "error" });
+		expect(ctx.notifications.at(-1)).toEqual({
+			msg: "Unknown agent: unknown",
+			level: "error",
+		});
 
 		await pi.commands
 			.get("run")
@@ -107,7 +112,12 @@ describe("registerSubagentCommands", () => {
 		);
 
 		const completions = pi.commands.get("chain").getArgumentCompletions("scout -> pl");
-		expect(completions).toEqual([{ value: "scout -> planner", label: "planner" }]);
+		expect(completions).toEqual([
+			{
+				value: "scout -> planner",
+				label: "planner",
+			},
+		]);
 	});
 
 	it("builds parallel chain calls and enforces the parallel cap", async () => {
@@ -122,7 +132,10 @@ describe("registerSubagentCommands", () => {
 		});
 
 		await pi.commands.get("parallel").handler('scout "inspect" -> planner "plan" -> reviewer "review"', ctx);
-		expect(ctx.notifications.at(-1)).toEqual({ msg: "Max 2 parallel tasks", level: "error" });
+		expect(ctx.notifications.at(-1)).toEqual({
+			msg: "Max 2 parallel tasks",
+			level: "error",
+		});
 
 		await pi.commands
 			.get("parallel")

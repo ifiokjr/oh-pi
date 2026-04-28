@@ -4,7 +4,9 @@ const asyncMocks = vi.hoisted(() => {
 	const createRequire = () => {
 		const requireFn = ((specifier: string) => {
 			throw new Error(`Unexpected require: ${specifier}`);
-		}) as ((specifier: string) => never) & { resolve: (specifier: string) => string };
+		}) as ((specifier: string) => never) & {
+			resolve: (specifier: string) => string;
+		};
 		requireFn.resolve = (specifier: string) => `/virtual/${specifier}`;
 		return requireFn;
 	};
@@ -101,7 +103,13 @@ function createCtx() {
 		cwd: "/repo",
 		currentSessionId: "session-1",
 		currentModel: "anthropic/claude-sonnet-4",
-		availableModels: [{ provider: "anthropic", id: "claude-sonnet-4", fullId: "anthropic/claude-sonnet-4" }],
+		availableModels: [
+			{
+				provider: "anthropic",
+				id: "claude-sonnet-4",
+				fullId: "anthropic/claude-sonnet-4",
+			},
+		],
 		pi: {
 			events: {
 				emit: vi.fn(),
@@ -139,10 +147,18 @@ beforeEach(() => {
 	asyncMocks.resolveSubagentModelResolution.mockImplementation(
 		(_agent: any, _models: any[], explicitModel?: string, options?: { currentModel?: string }) => {
 			if (explicitModel) {
-				return { model: explicitModel, source: "runtime-override", category: "explicit" };
+				return {
+					model: explicitModel,
+					source: "runtime-override",
+					category: "explicit",
+				};
 			}
 			if (options?.currentModel) {
-				return { model: options.currentModel, source: "session-default", category: undefined };
+				return {
+					model: options.currentModel,
+					source: "session-default",
+					category: undefined,
+				};
 			}
 			return { model: undefined, source: "agent-default", category: undefined };
 		},
@@ -180,7 +196,12 @@ describe("async execution helpers", () => {
 
 		expect(result).toEqual({
 			content: [{ type: "text", text: "Async: scout [run-1]" }],
-			details: { mode: "single", results: [], asyncId: "run-1", asyncDir: "/tmp/pi-async-subagent-runs/run-1" },
+			details: {
+				mode: "single",
+				results: [],
+				asyncId: "run-1",
+				asyncDir: "/tmp/pi-async-subagent-runs/run-1",
+			},
 		});
 		expect(asyncMocks.mkdirSync).toHaveBeenCalledWith("/tmp/pi-async-subagent-runs/run-1", { recursive: true });
 		expect(asyncMocks.spawn).toHaveBeenCalledWith(
@@ -190,7 +211,12 @@ describe("async execution helpers", () => {
 				expect.stringContaining("subagent-runner.ts"),
 				"/tmp/pi-async-cfg-123/run-1.json",
 			]),
-			expect.objectContaining({ cwd: "/workspace", detached: true, stdio: "ignore", windowsHide: true }),
+			expect.objectContaining({
+				cwd: "/workspace",
+				detached: true,
+				stdio: "ignore",
+				windowsHide: true,
+			}),
 		);
 
 		const config = lastRunnerConfig();
@@ -244,16 +270,38 @@ describe("async execution helpers", () => {
 	it("builds sequential and parallel async chain configs with resolved skills and outputs", () => {
 		const ctx = createCtx();
 		asyncMocks.resolveSubagentModelResolution
-			.mockReturnValueOnce({ model: "openai/gpt-5", source: "runtime-override", category: "explicit" })
-			.mockReturnValue({ model: "anthropic/claude-sonnet-4", source: "session-default", category: undefined });
+			.mockReturnValueOnce({
+				model: "openai/gpt-5",
+				source: "runtime-override",
+				category: "explicit",
+			})
+			.mockReturnValue({
+				model: "anthropic/claude-sonnet-4",
+				source: "session-default",
+				category: undefined,
+			});
 
 		const result = executeAsyncChain("chain-2", {
 			chain: [
-				{ agent: "scout", task: "Inspect {task}", output: "notes.md", skill: ["git"] },
+				{
+					agent: "scout",
+					task: "Inspect {task}",
+					output: "notes.md",
+					skill: ["git"],
+				},
 				{
 					parallel: [
-						{ agent: "planner", task: "Plan {previous}", output: "plan.md", cwd: "/workspace/a" },
-						{ agent: "reviewer", task: "Review {previous}", skill: ["context7"] },
+						{
+							agent: "planner",
+							task: "Plan {previous}",
+							output: "plan.md",
+							cwd: "/workspace/a",
+						},
+						{
+							agent: "reviewer",
+							task: "Review {previous}",
+							skill: ["context7"],
+						},
 					],
 					concurrency: 2,
 					failFast: true,
@@ -273,8 +321,18 @@ describe("async execution helpers", () => {
 		});
 
 		expect(result).toEqual({
-			content: [{ type: "text", text: "Async chain: scout -> [planner+reviewer] [chain-2]" }],
-			details: { mode: "chain", results: [], asyncId: "chain-2", asyncDir: "/tmp/pi-async-subagent-runs/chain-2" },
+			content: [
+				{
+					type: "text",
+					text: "Async chain: scout -> [planner+reviewer] [chain-2]",
+				},
+			],
+			details: {
+				mode: "chain",
+				results: [],
+				asyncId: "chain-2",
+				asyncDir: "/tmp/pi-async-subagent-runs/chain-2",
+			},
 		});
 
 		const config = lastRunnerConfig();

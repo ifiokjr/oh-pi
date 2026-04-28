@@ -31,7 +31,11 @@ type EventHandler = (clientId: string) => void;
 
 export class PiWebServer {
 	private _options: Required<
-		Pick<PiWebServerOptions, "host" | "maxClients"> & { port: number; token: string; instanceId: string }
+		Pick<PiWebServerOptions, "host" | "maxClients"> & {
+			port: number;
+			token: string;
+			instanceId: string;
+		}
 	>;
 	private _server: Server | undefined;
 	private _wss: WebSocketServer | undefined;

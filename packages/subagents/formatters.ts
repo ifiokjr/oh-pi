@@ -4,9 +4,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { SingleResult, Usage } from "./types.js";
 import type { ChainStep, SequentialStep } from "./settings.js";
 import { isParallelStep } from "./settings.js";
+import type { SingleResult, Usage } from "./types.js";
 
 /**
  * Format token count with k suffix for large numbers
@@ -89,7 +89,9 @@ export function buildChainSummary(
 
 	if (status === "completed") {
 		const stepWord = results.length === 1 ? "step" : "steps";
-		return `Chain completed: ${stepNames} (${results.length} ${stepWord}, ${durationStr})${skillsLine ? `\n${skillsLine}` : ""}
+		return `Chain completed: ${stepNames} (${results.length} ${stepWord}, ${durationStr})${
+			skillsLine ? `\n${skillsLine}` : ""
+		}
 
 Progress: ${hasProgress ? progressPath : "(none)"}
 📁 Artifacts: ${chainDir}`;

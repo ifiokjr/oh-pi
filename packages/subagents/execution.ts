@@ -2,14 +2,17 @@
  * Core execution logic for running subagents
  */
 
+import type { Message } from "@mariozechner/pi-ai";
 import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { Message } from "@mariozechner/pi-ai";
 import type { AgentConfig } from "./agents.js";
 import { ensureArtifactsDir, getArtifactPaths, writeArtifact, writeMetadata } from "./artifacts.js";
-import { DEFAULT_MAX_OUTPUT, DEFAULT_IDLE_TIMEOUT_MS, truncateOutput, getSubagentDepthEnv } from "./types.js";
+import { createJsonlWriter } from "./jsonl-writer.js";
+import { getPiSpawnCommand } from "./pi-spawn.js";
+import { buildSkillInjection, resolveSkills } from "./skills.js";
+import { DEFAULT_IDLE_TIMEOUT_MS, DEFAULT_MAX_OUTPUT, getSubagentDepthEnv, truncateOutput } from "./types.js";
 import type { AgentProgress, ArtifactPaths, RunSyncOptions, SingleResult } from "./types.js";
 import {
 	detectSubagentError,
@@ -19,9 +22,6 @@ import {
 	getFinalOutput,
 	writePrompt,
 } from "./utils.js";
-import { buildSkillInjection, resolveSkills } from "./skills.js";
-import { getPiSpawnCommand } from "./pi-spawn.js";
-import { createJsonlWriter } from "./jsonl-writer.js";
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
 
@@ -56,7 +56,14 @@ export async function runSync(
 			exitCode: 1,
 			messages: [],
 			task,
-			usage: { cacheRead: 0, cacheWrite: 0, cost: 0, input: 0, output: 0, turns: 0 },
+			usage: {
+				cacheRead: 0,
+				cacheWrite: 0,
+				cost: 0,
+				input: 0,
+				output: 0,
+				turns: 0,
+			},
 		};
 	}
 
@@ -160,7 +167,14 @@ export async function runSync(
 		skills: resolvedSkills.length > 0 ? resolvedSkills.map((s) => s.name) : undefined,
 		skillsWarning: missingSkills.length > 0 ? `Skills not found: ${missingSkills.join(", ")}` : undefined,
 		task,
-		usage: { cacheRead: 0, cacheWrite: 0, cost: 0, input: 0, output: 0, turns: 0 },
+		usage: {
+			cacheRead: 0,
+			cacheWrite: 0,
+			cost: 0,
+			input: 0,
+			output: 0,
+			turns: 0,
+		},
 	};
 
 	const progress: AgentProgress = {
@@ -264,7 +278,12 @@ export async function runSync(
 				updatePending = false;
 				progress.durationMs = now - startTime;
 				onUpdate({
-					content: [{ text: getFinalOutput(result.messages) || "(running...)", type: "text" }],
+					content: [
+						{
+							text: getFinalOutput(result.messages) || "(running...)",
+							type: "text",
+						},
+					],
 					details: { mode: "single", progress: [progress], results: [result] },
 				});
 			} else if (!updatePending) {
@@ -277,8 +296,17 @@ export async function runSync(
 						lastUpdateTime = Date.now();
 						progress.durationMs = Date.now() - startTime;
 						onUpdate({
-							content: [{ text: getFinalOutput(result.messages) || "(running...)", type: "text" }],
-							details: { mode: "single", progress: [progress], results: [result] },
+							content: [
+								{
+									text: getFinalOutput(result.messages) || "(running...)",
+									type: "text",
+								},
+							],
+							details: {
+								mode: "single",
+								progress: [progress],
+								results: [result],
+							},
 						});
 					}
 				}, UPDATE_THROTTLE_MS - elapsed);
@@ -291,7 +319,12 @@ export async function runSync(
 			}
 			jsonlWriter.writeLine(line);
 			try {
-				const evt = JSON.parse(line) as { type?: string; message?: Message; toolName?: string; args?: unknown };
+				const evt = JSON.parse(line) as {
+					type?: string;
+					message?: Message;
+					toolName?: string;
+					args?: unknown;
+				};
 				const now = Date.now();
 				progress.durationMs = now - startTime;
 

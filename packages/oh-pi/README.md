@@ -8,8 +8,7 @@
 npx @ifi/oh-pi
 ```
 
-This registers all oh-pi packages with pi in one command. Each package is installed separately so pi
-can load extensions with proper module resolution.
+This registers all oh-pi packages with pi in one command. Each package is installed separately so pi can load extensions with proper module resolution.
 
 ### Options
 
@@ -118,5 +117,4 @@ npx @ifi/oh-pi
 pi
 ```
 
-For the full package-by-package feature inventory and the local development workflow, see the repo
-README and `docs/feature-catalog.md` in GitHub.
+For the full package-by-package feature inventory and the local development workflow, see the repo README and `docs/feature-catalog.md` in GitHub.

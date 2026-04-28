@@ -212,7 +212,13 @@ describe("renderSubagentResult", () => {
 	});
 
 	it("renders single-result details including tools, markdown, skills, and artifacts", () => {
-		renderMocks.getDisplayItems.mockReturnValue([{ type: "tool", name: "bash", args: { command: "ls" } }]);
+		renderMocks.getDisplayItems.mockReturnValue([
+			{
+				type: "tool",
+				name: "bash",
+				args: { command: "ls" },
+			},
+		]);
 		const widget: any = renderSubagentResult(
 			{
 				content: [{ type: "text", text: "ok" }],
@@ -223,8 +229,20 @@ describe("renderSubagentResult", () => {
 							agent: "scout",
 							task: "Inspect the repo carefully",
 							exitCode: 0,
-							messages: [{ role: "assistant", content: [{ type: "text", text: "Final answer" }] }],
-							usage: { input: 10, output: 5, cacheRead: 1, cacheWrite: 0, cost: 0.2, turns: 1 },
+							messages: [
+								{
+									role: "assistant",
+									content: [{ type: "text", text: "Final answer" }],
+								},
+							],
+							usage: {
+								input: 10,
+								output: 5,
+								cacheRead: 1,
+								cacheWrite: 0,
+								cost: 0.2,
+								turns: 1,
+							},
 							model: "anthropic/claude-sonnet-4",
 							skills: ["git"],
 							skillsWarning: "Missing: context7",
@@ -275,8 +293,20 @@ describe("renderSubagentResult", () => {
 							agent: "scout",
 							task: "Collect facts",
 							exitCode: 0,
-							messages: [{ role: "assistant", content: [{ type: "text", text: "" }] }],
-							usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
+							messages: [
+								{
+									role: "assistant",
+									content: [{ type: "text", text: "" }],
+								},
+							],
+							usage: {
+								input: 0,
+								output: 0,
+								cacheRead: 0,
+								cacheWrite: 0,
+								cost: 0,
+								turns: 0,
+							},
 							progress: {
 								index: 0,
 								agent: "scout",
@@ -293,8 +323,20 @@ describe("renderSubagentResult", () => {
 							agent: "planner",
 							task: "[Write to: /tmp/plan.md] Draft plan",
 							exitCode: 0,
-							messages: [{ role: "assistant", content: [{ type: "text", text: "Plan draft" }] }],
-							usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 0 },
+							messages: [
+								{
+									role: "assistant",
+									content: [{ type: "text", text: "Plan draft" }],
+								},
+							],
+							usage: {
+								input: 0,
+								output: 0,
+								cacheRead: 0,
+								cacheWrite: 0,
+								cost: 0,
+								turns: 0,
+							},
 							model: "openai/gpt-5",
 							skills: ["plan"],
 							skillsWarning: "Missing: context7",
@@ -306,7 +348,13 @@ describe("renderSubagentResult", () => {
 								skills: ["plan"],
 								currentTool: "write",
 								currentToolArgs: '{"path":"/tmp/plan.md"}',
-								recentTools: [{ tool: "read", args: "spec.md", endMs: Date.now() }],
+								recentTools: [
+									{
+										tool: "read",
+										args: "spec.md",
+										endMs: Date.now(),
+									},
+								],
 								recentOutput: ["Drafting", "Polishing"],
 								toolCount: 2,
 								tokens: 10,

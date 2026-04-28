@@ -531,7 +531,10 @@ describe("parseRemindScheduleArgs", () => {
 
 describe("validateSchedulePromptAddInput", () => {
 	it("rejects cron for once tasks", () => {
-		const result = validateSchedulePromptAddInput({ kind: "once", cron: "*/5 * * * *" });
+		const result = validateSchedulePromptAddInput({
+			kind: "once",
+			cron: "*/5 * * * *",
+		});
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.error).toBe("invalid_cron_for_once");
@@ -547,7 +550,11 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("rejects both duration and cron for recurring", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", duration: "5m", cron: "*/5 * * * *" });
+		const result = validateSchedulePromptAddInput({
+			kind: "recurring",
+			duration: "5m",
+			cron: "*/5 * * * *",
+		});
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.error).toBe("conflicting_schedule_inputs");
@@ -555,7 +562,10 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("rejects invalid duration", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", duration: "banana" });
+		const result = validateSchedulePromptAddInput({
+			kind: "recurring",
+			duration: "banana",
+		});
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.error).toBe("invalid_duration");
@@ -563,7 +573,10 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("rejects invalid cron", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", cron: "not-a-cron" });
+		const result = validateSchedulePromptAddInput({
+			kind: "recurring",
+			cron: "not-a-cron",
+		});
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.error).toBe("invalid_cron");
@@ -571,7 +584,10 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("rejects recurring cron schedules faster than 1 minute", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", cron: "*/30 * * * * *" });
+		const result = validateSchedulePromptAddInput({
+			kind: "recurring",
+			cron: "*/30 * * * * *",
+		});
 		expect(result.ok).toBe(false);
 		if (!result.ok) {
 			expect(result.error).toBe("invalid_cron");
@@ -579,7 +595,10 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("validates and normalizes recurring cron", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", cron: "*/5 * * * *" });
+		const result = validateSchedulePromptAddInput({
+			kind: "recurring",
+			cron: "*/5 * * * *",
+		});
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.plan.kind).toBe("recurring");
@@ -593,7 +612,10 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("validates recurring duration", () => {
-		const result = validateSchedulePromptAddInput({ kind: "recurring", duration: "5m" });
+		const result = validateSchedulePromptAddInput({
+			kind: "recurring",
+			duration: "5m",
+		});
 		expect(result.ok).toBe(true);
 		if (result.ok && result.plan.kind === "recurring" && result.plan.mode === "interval") {
 			expect(result.plan.durationMs).toBe(5 * ONE_MINUTE);
@@ -612,7 +634,10 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("validates once with valid duration", () => {
-		const result = validateSchedulePromptAddInput({ kind: "once", duration: "30m" });
+		const result = validateSchedulePromptAddInput({
+			kind: "once",
+			duration: "30m",
+		});
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.plan.kind).toBe("once");
@@ -623,7 +648,10 @@ describe("validateSchedulePromptAddInput", () => {
 	});
 
 	it("normalizes once duration sub-minute values", () => {
-		const result = validateSchedulePromptAddInput({ kind: "once", duration: "30s" });
+		const result = validateSchedulePromptAddInput({
+			kind: "once",
+			duration: "30s",
+		});
 		expect(result.ok).toBe(true);
 		if (result.ok && result.plan.kind === "once") {
 			expect(result.plan.durationMs).toBe(ONE_MINUTE);
@@ -838,13 +866,17 @@ describe("SchedulerRuntime", () => {
 
 		it("accepts shorter custom recurring expiries", () => {
 			const now = Date.now();
-			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE, { expiresInMs: ONE_HOUR });
+			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE, {
+				expiresInMs: ONE_HOUR,
+			});
 			expect(task.expiresAt).toBe(now + ONE_HOUR);
 		});
 
 		it("caps recurring expiries at 1 day", () => {
 			const now = Date.now();
-			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE, { expiresInMs: THREE_DAYS });
+			const task = runtime.addRecurringIntervalTask("check", 5 * ONE_MINUTE, {
+				expiresInMs: THREE_DAYS,
+			});
 			expect(task.expiresAt).toBe(now + DEFAULT_RECURRING_EXPIRY_MS);
 		});
 	});
@@ -1494,7 +1526,9 @@ describe("SchedulerRuntime", () => {
 			const ctx = createMockCtx();
 			runtime.setRuntimeContext(ctx as any);
 			expect(runtime.taskCount).toBe(0);
-			expect(rmSync).toHaveBeenCalledWith(getSchedulerStoragePath(ctx.cwd), { force: true });
+			expect(rmSync).toHaveBeenCalledWith(getSchedulerStoragePath(ctx.cwd), {
+				force: true,
+			});
 		});
 
 		it("skips unsafe sub-minute cron tasks when loading from disk", () => {
@@ -1624,7 +1658,9 @@ describe("SchedulerRuntime", () => {
 			(writeFileSync as ReturnType<typeof vi.fn>).mockClear();
 			runtime.clearTasks();
 
-			expect(rmSync).toHaveBeenCalledWith(getSchedulerStoragePath(ctx.cwd), { force: true });
+			expect(rmSync).toHaveBeenCalledWith(getSchedulerStoragePath(ctx.cwd), {
+				force: true,
+			});
 		});
 
 		it("does not persist without storage path", () => {
@@ -2118,9 +2154,17 @@ describe("schedule_prompt tool", () => {
 
 		it("returns error when task limit reached", async () => {
 			for (let i = 0; i < MAX_TASKS; i++) {
-				await tool.execute("id", { action: "add", prompt: `task ${i}`, duration: "5m" });
+				await tool.execute("id", {
+					action: "add",
+					prompt: `task ${i}`,
+					duration: "5m",
+				});
 			}
-			const result = await tool.execute("id", { action: "add", prompt: "one more", duration: "5m" });
+			const result = await tool.execute("id", {
+				action: "add",
+				prompt: "one more",
+				duration: "5m",
+			});
 			expect(result.content[0].text).toContain("Task limit reached");
 			expect(result.details.error).toBe("task_limit");
 		});
@@ -2144,7 +2188,11 @@ describe("schedule_prompt tool", () => {
 		});
 
 		it("lists tasks with details", async () => {
-			await tool.execute("id", { action: "add", prompt: "check build", duration: "5m" });
+			await tool.execute("id", {
+				action: "add",
+				prompt: "check build",
+				duration: "5m",
+			});
 			const result = await tool.execute("id", { action: "list" });
 			expect(result.content[0].text).toContain("check build");
 			expect(result.content[0].text).toContain("on");
@@ -2154,7 +2202,11 @@ describe("schedule_prompt tool", () => {
 
 	describe("action: delete", () => {
 		it("deletes existing task", async () => {
-			const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+			const addResult = await tool.execute("id", {
+				action: "add",
+				prompt: "check",
+				duration: "5m",
+			});
 			const taskId = addResult.details.task.id;
 
 			const result = await tool.execute("id", { action: "delete", id: taskId });
@@ -2176,7 +2228,11 @@ describe("schedule_prompt tool", () => {
 
 	describe("action: enable/disable", () => {
 		it("enables a disabled task", async () => {
-			const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+			const addResult = await tool.execute("id", {
+				action: "add",
+				prompt: "check",
+				duration: "5m",
+			});
 			const taskId = addResult.details.task.id;
 
 			await tool.execute("id", { action: "disable", id: taskId });
@@ -2186,10 +2242,17 @@ describe("schedule_prompt tool", () => {
 		});
 
 		it("disables an enabled task", async () => {
-			const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+			const addResult = await tool.execute("id", {
+				action: "add",
+				prompt: "check",
+				duration: "5m",
+			});
 			const taskId = addResult.details.task.id;
 
-			const result = await tool.execute("id", { action: "disable", id: taskId });
+			const result = await tool.execute("id", {
+				action: "disable",
+				id: taskId,
+			});
 			expect(result.content[0].text).toContain("Disabled");
 			expect(result.details.enabled).toBe(false);
 		});
@@ -2222,14 +2285,26 @@ describe("schedule_prompt tool", () => {
 		});
 
 		it("clears tasks not created in this instance", async () => {
-			const first = await tool.execute("id", { action: "add", prompt: "local", duration: "5m" });
-			const second = await tool.execute("id", { action: "add", prompt: "other", duration: "10m" });
+			const first = await tool.execute("id", {
+				action: "add",
+				prompt: "local",
+				duration: "5m",
+			});
+			const second = await tool.execute("id", {
+				action: "add",
+				prompt: "other",
+				duration: "10m",
+			});
 			second.details.task.creatorInstanceId = "foreign-instance";
 			second.details.task.creatorSessionId = "/mock-home/.pi/agent/sessions/foreign.jsonl";
 
 			const result = await tool.execute("id", { action: "clear_other" });
 			expect(result.content[0].text).toContain("not created in this instance");
-			expect(result.details).toMatchObject({ cleared: 1, otherCount: 1, legacyCount: 0 });
+			expect(result.details).toMatchObject({
+				cleared: 1,
+				otherCount: 1,
+				legacyCount: 0,
+			});
 
 			const listResult = await tool.execute("id", { action: "list" });
 			expect(listResult.details.tasks).toHaveLength(1);
@@ -2256,13 +2331,23 @@ describe("schedule_prompt tool", () => {
 		});
 
 		it("adopts and releases tasks through the tool API", async () => {
-			const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+			const addResult = await tool.execute("id", {
+				action: "add",
+				prompt: "check",
+				duration: "5m",
+			});
 			const taskId = addResult.details.task.id;
 
-			const releaseResult = await tool.execute("id", { action: "release", id: taskId });
+			const releaseResult = await tool.execute("id", {
+				action: "release",
+				id: taskId,
+			});
 			expect(releaseResult.content[0].text).toContain("Released 1 scheduled task");
 
-			const adoptResult = await tool.execute("id", { action: "adopt", id: taskId });
+			const adoptResult = await tool.execute("id", {
+				action: "adopt",
+				id: taskId,
+			});
 			expect(adoptResult.content[0].text).toContain("Adopted 1 scheduled task");
 		});
 	});
@@ -2425,7 +2510,9 @@ describe("event wiring", () => {
 			});
 		});
 
-		const ctx = createMockCtx({ select: vi.fn().mockResolvedValue("Leave tasks in the other instance") });
+		const ctx = createMockCtx({
+			select: vi.fn().mockResolvedValue("Leave tasks in the other instance"),
+		});
 		pi._emit("session_start", { type: "session_start" }, ctx);
 		expect(ctx.ui.select).not.toHaveBeenCalled();
 
@@ -2454,7 +2541,9 @@ describe("event wiring", () => {
 			return JSON.stringify({ version: 1, tasks: [] });
 		});
 
-		const ctx = createMockCtx({ select: vi.fn().mockResolvedValue("Review tasks") });
+		const ctx = createMockCtx({
+			select: vi.fn().mockResolvedValue("Review tasks"),
+		});
 		pi._emit("session_start", { type: "session_start" }, ctx);
 		await vi.advanceTimersByTimeAsync(250);
 
@@ -2484,10 +2573,14 @@ describe("event wiring", () => {
 
 	it("keeps the scheduler running when another session shuts down", async () => {
 		const ctx = createMockCtx({
-			sessionManager: { getSessionFile: () => "/mock-home/.pi/agent/sessions/current.jsonl" },
+			sessionManager: {
+				getSessionFile: () => "/mock-home/.pi/agent/sessions/current.jsonl",
+			},
 		});
 		const otherCtx = createMockCtx({
-			sessionManager: { getSessionFile: () => "/mock-home/.pi/agent/sessions/other.jsonl" },
+			sessionManager: {
+				getSessionFile: () => "/mock-home/.pi/agent/sessions/other.jsonl",
+			},
 		});
 		pi._emit("session_start", { type: "session_start" }, ctx);
 		pi._emit("session_start", { type: "session_start" }, otherCtx);
@@ -2726,7 +2819,10 @@ describe("lease heartbeat refresh", () => {
 		});
 
 		// Create a context that is NOT idle.
-		const ctx = createMockCtx({ isIdle: () => false, hasPendingMessages: () => true });
+		const ctx = createMockCtx({
+			isIdle: () => false,
+			hasPendingMessages: () => true,
+		});
 		runtime.setRuntimeContext(ctx as any);
 
 		// Tick — should still refresh the heartbeat even though pi is busy.
@@ -2865,7 +2961,11 @@ describe("edge cases", () => {
 		await pi._commands.get("loop").handler("10m check worker backlog", ctx);
 		const select = vi.fn().mockResolvedValueOnce("🗑 Clear all");
 		const confirm = vi.fn().mockResolvedValueOnce(true);
-		const taskCtx = createMockCtx({ cwd: "/mock-project/apps/api", select, confirm });
+		const taskCtx = createMockCtx({
+			cwd: "/mock-project/apps/api",
+			select,
+			confirm,
+		});
 
 		await pi._commands.get("schedule").handler("", taskCtx);
 
@@ -2890,7 +2990,11 @@ describe("edge cases", () => {
 
 		const select = vi.fn().mockResolvedValueOnce("🧹 Clear tasks not created here (1)");
 		const confirm = vi.fn().mockResolvedValueOnce(true);
-		const taskCtx = createMockCtx({ cwd: "/mock-project/apps/api", select, confirm });
+		const taskCtx = createMockCtx({
+			cwd: "/mock-project/apps/api",
+			select,
+			confirm,
+		});
 
 		await pi._commands.get("schedule").handler("", taskCtx);
 
@@ -2919,7 +3023,11 @@ describe("edge cases", () => {
 
 	it("tool add then tool list shows the task", async () => {
 		const tool = pi._tools.get("schedule_prompt");
-		await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+		await tool.execute("id", {
+			action: "add",
+			prompt: "check",
+			duration: "5m",
+		});
 		const listResult = await tool.execute("id", { action: "list" });
 		expect(listResult.content[0].text).toContain("check");
 		expect(listResult.details.tasks).toHaveLength(1);
@@ -2927,7 +3035,11 @@ describe("edge cases", () => {
 
 	it("tool add + delete + list shows empty", async () => {
 		const tool = pi._tools.get("schedule_prompt");
-		const addResult = await tool.execute("id", { action: "add", prompt: "check", duration: "5m" });
+		const addResult = await tool.execute("id", {
+			action: "add",
+			prompt: "check",
+			duration: "5m",
+		});
 		const taskId = addResult.details.task.id;
 
 		await tool.execute("id", { action: "delete", id: taskId });
@@ -2983,7 +3095,14 @@ describe("edge cases", () => {
 		expect(runtime.getTask(task.id)?.awaitingCompletion).toBe(true);
 		expect(runtime.getTask(task.id)?.lastStatus).toBe("pending");
 
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "still running, not complete yet" }] });
+		runtime.handleAgentEnd({
+			messages: [
+				{
+					role: "assistant",
+					content: "still running, not complete yet",
+				},
+			],
+		});
 		expect(runtime.getTask(task.id)).toBeDefined();
 		expect(runtime.getTask(task.id)?.awaitingCompletion).toBe(false);
 		expect(runtime.getTask(task.id)?.lastStatus).toBe("pending");
@@ -2991,7 +3110,9 @@ describe("edge cases", () => {
 		const retryTask = runtime.getTask(task.id);
 		expect(retryTask).toBeDefined();
 		runtime.dispatchTask(retryTask!);
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "BUILD_DONE" }] });
+		runtime.handleAgentEnd({
+			messages: [{ role: "assistant", content: "BUILD_DONE" }],
+		});
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 
@@ -3006,7 +3127,9 @@ describe("edge cases", () => {
 		});
 
 		runtime.dispatchTask(task);
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "Deployed v2.0 with SUCCESS" }] });
+		runtime.handleAgentEnd({
+			messages: [{ role: "assistant", content: "Deployed v2.0 with SUCCESS" }],
+		});
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 
@@ -3022,7 +3145,9 @@ describe("edge cases", () => {
 
 		runtime.dispatchTask(task);
 		// Plain string signal should match as substring
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "The status is STATUS_OK now" }] });
+		runtime.handleAgentEnd({
+			messages: [{ role: "assistant", content: "The status is STATUS_OK now" }],
+		});
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 
@@ -3038,7 +3163,9 @@ describe("edge cases", () => {
 
 		runtime.dispatchTask(task);
 		// Invalid regex should fall back to substring matching
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "The signal is /([/" }] });
+		runtime.handleAgentEnd({
+			messages: [{ role: "assistant", content: "The signal is /([/" }],
+		});
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 
@@ -3054,11 +3181,15 @@ describe("edge cases", () => {
 
 		runtime.dispatchTask(task);
 		// First check — should not match
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "still running" }] });
+		runtime.handleAgentEnd({
+			messages: [{ role: "assistant", content: "still running" }],
+		});
 		expect(runtime.getTask(task.id)).toBeDefined();
 		// Second check — regex should be cached now, match on second attempt
 		runtime.dispatchTask(runtime.getTask(task.id)!);
-		runtime.handleAgentEnd({ messages: [{ role: "assistant", content: "Task completed!" }] });
+		runtime.handleAgentEnd({
+			messages: [{ role: "assistant", content: "Task completed!" }],
+		});
 		expect(runtime.getTask(task.id)).toBeUndefined();
 	});
 });

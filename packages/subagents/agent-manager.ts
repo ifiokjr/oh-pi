@@ -1,28 +1,30 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
 import type { Theme } from "@mariozechner/pi-coding-agent";
 import type { Component, TUI } from "@mariozechner/pi-tui";
 import { matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
-import type { AgentConfig, ChainConfig } from "./agents.js";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { handleChainDetailInput, renderChainDetail } from "./agent-manager-chain-detail.js";
+import type { ChainDetailAction, ChainDetailState } from "./agent-manager-chain-detail.js";
+import { handleDetailInput, renderDetail, renderTaskInput } from "./agent-manager-detail.js";
+import type { DetailAction, DetailState } from "./agent-manager-detail.js";
+import { createEditState, handleEditInput, renderEdit } from "./agent-manager-edit.js";
+import type { EditScreen, EditState, ModelInfo, SkillInfo } from "./agent-manager-edit.js";
+import { handleListInput, renderList } from "./agent-manager-list.js";
+import type { ListAction, ListAgent, ListState } from "./agent-manager-list.js";
+import {
+	createParallelState,
+	formatParallelTitle,
+	handleParallelInput,
+	renderParallel,
+} from "./agent-manager-parallel.js";
+import type { AgentOption, ParallelState } from "./agent-manager-parallel.js";
 import { serializeAgent } from "./agent-serializer.js";
 import { TEMPLATE_ITEMS } from "./agent-templates.js";
 import type { AgentTemplate, TemplateItem } from "./agent-templates.js";
+import type { AgentConfig, ChainConfig } from "./agents.js";
 import { parseChain, serializeChain } from "./chain-serializer.js";
-import { renderList, handleListInput } from "./agent-manager-list.js";
-import type { ListAgent, ListState, ListAction } from "./agent-manager-list.js";
-import {
-	createParallelState,
-	handleParallelInput,
-	renderParallel,
-	formatParallelTitle,
-} from "./agent-manager-parallel.js";
-import type { ParallelState, AgentOption } from "./agent-manager-parallel.js";
-import { renderDetail, handleDetailInput, renderTaskInput } from "./agent-manager-detail.js";
-import type { DetailState, DetailAction } from "./agent-manager-detail.js";
-import { renderChainDetail, handleChainDetailInput } from "./agent-manager-chain-detail.js";
-import type { ChainDetailAction, ChainDetailState } from "./agent-manager-chain-detail.js";
-import { createEditState, handleEditInput, renderEdit } from "./agent-manager-edit.js";
-import type { EditScreen, EditState, ModelInfo, SkillInfo } from "./agent-manager-edit.js";
+import { pad, renderFooter, renderHeader, row } from "./render-helpers.js";
+import { loadRunsForAgent } from "./run-history.js";
 import {
 	createEditorState,
 	ensureCursorVisible,
@@ -32,14 +34,21 @@ import {
 	wrapText,
 } from "./text-editor.js";
 import type { TextEditorState } from "./text-editor.js";
-import { loadRunsForAgent } from "./run-history.js";
-import { pad, renderFooter, renderHeader, row } from "./render-helpers.js";
 
 export type ManagerResult =
 	| { action: "launch"; agent: string; task: string; skipClarify?: boolean }
 	| { action: "chain"; agents: string[]; task: string; skipClarify?: boolean }
-	| { action: "parallel"; tasks: { agent: string; task: string }[]; skipClarify?: boolean }
-	| { action: "launch-chain"; chain: ChainConfig; task: string; skipClarify?: boolean }
+	| {
+			action: "parallel";
+			tasks: { agent: string; task: string }[];
+			skipClarify?: boolean;
+	  }
+	| {
+			action: "launch-chain";
+			chain: ChainConfig;
+			task: string;
+			skipClarify?: boolean;
+	  }
 	| undefined;
 
 export interface AgentData {
@@ -133,7 +142,12 @@ export class AgentManagerComponent implements Component {
 	private screen: ManagerScreen = "list";
 	private agents: AgentEntry[] = [];
 	private chains: ChainEntry[] = [];
-	private listState: ListState = { cursor: 0, filterQuery: "", scrollOffset: 0, selected: [] };
+	private listState: ListState = {
+		cursor: 0,
+		filterQuery: "",
+		scrollOffset: 0,
+		selected: [],
+	};
 	private detailState: DetailState = { resolved: true, scrollOffset: 0 };
 	private chainDetailState: ChainDetailState = { scrollOffset: 0 };
 	private editState: EditState | null = null;
@@ -169,19 +183,38 @@ export class AgentManagerComponent implements Component {
 		const agents: AgentEntry[] = [];
 		for (const config of this.agentData.builtin) {
 			if (!overridden.has(config.name)) {
-				agents.push({ id: `a${this.nextId++}`, kind: "agent", config: cloneConfig(config), isNew: false });
+				agents.push({
+					id: `a${this.nextId++}`,
+					kind: "agent",
+					config: cloneConfig(config),
+					isNew: false,
+				});
 			}
 		}
 		for (const config of this.agentData.user) {
-			agents.push({ id: `a${this.nextId++}`, kind: "agent", config: cloneConfig(config), isNew: false });
+			agents.push({
+				id: `a${this.nextId++}`,
+				kind: "agent",
+				config: cloneConfig(config),
+				isNew: false,
+			});
 		}
 		for (const config of this.agentData.project) {
-			agents.push({ id: `a${this.nextId++}`, kind: "agent", config: cloneConfig(config), isNew: false });
+			agents.push({
+				id: `a${this.nextId++}`,
+				kind: "agent",
+				config: cloneConfig(config),
+				isNew: false,
+			});
 		}
 		this.agents = agents;
 		const chains: ChainEntry[] = [];
 		for (const config of this.agentData.chains) {
-			chains.push({ id: `c${this.nextId++}`, kind: "chain", config: cloneChainConfig(config) });
+			chains.push({
+				id: `c${this.nextId++}`,
+				kind: "chain",
+				config: cloneChainConfig(config),
+			});
 		}
 		this.chains = chains;
 	}
@@ -231,7 +264,11 @@ export class AgentManagerComponent implements Component {
 
 	private enterDetail(entry: AgentEntry): void {
 		this.currentAgentId = entry.id;
-		this.detailState = { recentRuns: loadRunsForAgent(entry.config.name).slice(0, 5), resolved: true, scrollOffset: 0 };
+		this.detailState = {
+			recentRuns: loadRunsForAgent(entry.config.name).slice(0, 5),
+			resolved: true,
+			scrollOffset: 0,
+		};
 		this.screen = "detail";
 	}
 	private enterChainDetail(entry: ChainEntry): void {
@@ -258,7 +295,12 @@ export class AgentManagerComponent implements Component {
 				const e = this.getAgentEntry(id);
 				return e ? e.config.name : id;
 			});
-			this.done({ action: "chain", agents: names, skipClarify: false, task: "" });
+			this.done({
+				action: "chain",
+				agents: names,
+				skipClarify: false,
+				task: "",
+			});
 			return;
 		}
 		this.chainAgentIds = ids;
@@ -322,7 +364,14 @@ export class AgentManagerComponent implements Component {
 		if (mode === "new-agent" && template && template.name !== "Blank") {
 			initial = slugTemplateName(template.name);
 		}
-		this.nameInputState = { allowProject, editor: createEditorState(initial), mode, scope, sourceId, template };
+		this.nameInputState = {
+			allowProject,
+			editor: createEditorState(initial),
+			mode,
+			scope,
+			sourceId,
+			template,
+		};
 		this.screen = "name-input";
 	}
 
@@ -406,7 +455,10 @@ export class AgentManagerComponent implements Component {
 				return;
 			}
 			if (item.type === "agent") {
-				this.enterNameInput("new-agent", undefined, { name: item.name, config: item.config });
+				this.enterNameInput("new-agent", undefined, {
+					name: item.name,
+					config: item.config,
+				});
 			} else if (item.type === "chain") {
 				this.enterNameInput("new-chain");
 			}
@@ -472,10 +524,19 @@ export class AgentManagerComponent implements Component {
 				return;
 			}
 			try {
-				const cloned = cloneChainConfig({ ...sourceEntry.config, filePath, name, source: state.scope });
+				const cloned = cloneChainConfig({
+					...sourceEntry.config,
+					filePath,
+					name,
+					source: state.scope,
+				});
 				fs.mkdirSync(dir, { recursive: true });
 				fs.writeFileSync(filePath, serializeChain(cloned), "utf8");
-				const added: ChainEntry = { config: cloned, id: `c${this.nextId++}`, kind: "chain" };
+				const added: ChainEntry = {
+					config: cloned,
+					id: `c${this.nextId++}`,
+					kind: "chain",
+				};
 				this.chains.push(added);
 				this.nameInputState = null;
 				this.enterChainDetail(added);
@@ -510,7 +571,11 @@ export class AgentManagerComponent implements Component {
 			try {
 				fs.mkdirSync(dir, { recursive: true });
 				fs.writeFileSync(filePath, serializeChain(config), "utf8");
-				const entry: ChainEntry = { config, id: `c${this.nextId++}`, kind: "chain" };
+				const entry: ChainEntry = {
+					config,
+					id: `c${this.nextId++}`,
+					kind: "chain",
+				};
 				this.chains.push(entry);
 				this.nameInputState = null;
 				this.enterChainEdit(entry);
@@ -548,8 +613,18 @@ export class AgentManagerComponent implements Component {
 			return;
 		}
 		const filePath = path.join(dir, `${name}.md`);
-		const config: AgentConfig = { ...baseConfig, filePath, name, source: state.scope };
-		const entry: AgentEntry = { config, id: `a${this.nextId++}`, isNew: true, kind: "agent" };
+		const config: AgentConfig = {
+			...baseConfig,
+			filePath,
+			name,
+			source: state.scope,
+		};
+		const entry: AgentEntry = {
+			config,
+			id: `a${this.nextId++}`,
+			isNew: true,
+			kind: "agent",
+		};
 		this.agents.push(entry);
 		this.nameInputState = null;
 		this.enterEdit(entry);
@@ -823,7 +898,11 @@ export class AgentManagerComponent implements Component {
 							agent: slot.agentName,
 							task: slot.customTask || sharedTask,
 						}));
-						this.done({ action: "parallel", skipClarify: this.skipClarify, tasks });
+						this.done({
+							action: "parallel",
+							skipClarify: this.skipClarify,
+							tasks,
+						});
 						return;
 					}
 					const name = this.getAgentEntry(this.chainAgentIds[0] ?? null)?.config.name;
@@ -832,7 +911,12 @@ export class AgentManagerComponent implements Component {
 						this.tui.requestRender();
 						return;
 					}
-					this.done({ action: "launch", agent: name, skipClarify: this.skipClarify, task: this.taskEditor.buffer });
+					this.done({
+						action: "launch",
+						agent: name,
+						skipClarify: this.skipClarify,
+						task: this.taskEditor.buffer,
+					});
 					return;
 				}
 				return;
@@ -905,7 +989,10 @@ export class AgentManagerComponent implements Component {
 					const dir = matchesKey(data, "shift+up") || matchesKey(data, "pageup") ? -1 : 1;
 					const targetLine = Math.max(0, Math.min(wrapped.length - 1, cursorPos.line + dir * CHAIN_EDIT_VIEWPORT));
 					const targetCol = Math.min(cursorPos.col, wrapped[targetLine]?.length ?? 0);
-					this.chainEditState.editor = { ...this.chainEditState.editor, cursor: starts[targetLine] + targetCol };
+					this.chainEditState.editor = {
+						...this.chainEditState.editor,
+						cursor: starts[targetLine] + targetCol,
+					};
 					this.tui.requestRender();
 					return;
 				}
@@ -1003,8 +1090,11 @@ export class AgentManagerComponent implements Component {
 				return;
 			}
 			case "clone": {
-				if (this.getAgentEntry(action.id)) this.enterNameInput("clone-agent", action.id);
-				else if (this.getChainEntry(action.id)) this.enterNameInput("clone-chain", action.id);
+				if (this.getAgentEntry(action.id)) {
+					this.enterNameInput("clone-agent", action.id);
+				} else if (this.getChainEntry(action.id)) {
+					this.enterNameInput("clone-chain", action.id);
+				}
 				return;
 			}
 			case "new": {

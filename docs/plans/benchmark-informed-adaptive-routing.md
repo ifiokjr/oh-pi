@@ -45,8 +45,7 @@ That means separating the work into two connected systems:
 1. a **developer-centric benchmark platform** that measures how models and agent configurations perform on realistic coding tasks
 2. a **routing engine** that consumes those benchmark-derived priors plus live workspace signals to pick the best execution strategy
 
-The benchmark system produces the evidence.
-The router consumes that evidence at runtime.
+The benchmark system produces the evidence. The router consumes that evidence at runtime.
 
 ## 3. Why a New Benchmark Platform Is Needed
 
@@ -273,9 +272,7 @@ A practical first scoring function could combine:
 - context-fit risk
 - provider availability and quota state
 
-The benchmark platform provides the priors.
-The live runtime feature extractor provides the task signals.
-The user objective provides the weights.
+The benchmark platform provides the priors. The live runtime feature extractor provides the task signals. The user objective provides the weights.
 
 ## 6. User Preference Authoring
 
@@ -293,22 +290,15 @@ Recommended design:
 ```md
 # Routing priorities
 
-priority: cost
-secondary: quality
+priority: cost secondary: quality
 
-defaults:
-prefer-fast-feedback: true
-allow-subagents: true
-allow-ant-colony: false
+defaults: prefer-fast-feedback: true allow-subagents: true allow-ant-colony: false
 
-for large-repos:
-prefer: quality
+for large-repos: prefer: quality
 
-for quick-fixes:
-prefer: speed
+for quick-fixes: prefer: speed
 
-for ambiguous-prompts:
-prefer: robustness
+for ambiguous-prompts: prefer: robustness
 ```
 
 The runtime should compile this into a strict routing config shape rather than parsing freeform prose on every task.

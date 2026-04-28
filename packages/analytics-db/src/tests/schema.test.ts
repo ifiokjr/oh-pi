@@ -3,22 +3,22 @@
  *
  * Tests for utility functions and schema definitions that don't require SQLite.
  */
-import { describe, it, expect } from "vitest";
-import { formatDateBucket, formatHourBucket, formatWeekBucket, formatMonthBucket, formatDate } from "../db.js";
+import { describe, expect, it } from "vitest";
+import { formatDate, formatDateBucket, formatHourBucket, formatMonthBucket, formatWeekBucket } from "../db.js";
 import {
-	sessions,
+	codebaseDailyStats,
 	codebases,
-	providers,
-	models,
-	turns,
-	rateLimitSnapshots,
 	dailyStats,
 	hourlyStats,
-	modelDailyStats,
-	codebaseDailyStats,
-	wordFrequencies,
 	misspellings,
+	modelDailyStats,
+	models,
+	providers,
+	rateLimitSnapshots,
 	sessionEvents,
+	sessions,
+	turns,
+	wordFrequencies,
 } from "../schema.js";
 
 // ─── formatDateBucket ────────────────────────────────────────────────────────

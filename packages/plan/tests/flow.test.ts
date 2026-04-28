@@ -228,12 +228,25 @@ describe("/plan Alt+P shortcut", () => {
 			sessionManager: {
 				getLeafId: () => "planning-leaf",
 				getEntries: () => [
-					{ id: "origin-leaf", type: "message", message: { role: "assistant" } },
-					{ id: "planning-leaf", type: "message", message: { role: "assistant" } },
+					{
+						id: "origin-leaf",
+						type: "message",
+						message: { role: "assistant" },
+					},
+					{
+						id: "planning-leaf",
+						type: "message",
+						message: { role: "assistant" },
+					},
 				],
 				getEntry: (entryId: string) =>
 					entryId === "origin-leaf"
-						? { id: "origin-leaf", type: "message", parentId: "user-1", message: { role: "assistant" } }
+						? {
+								id: "origin-leaf",
+								type: "message",
+								parentId: "user-1",
+								message: { role: "assistant" },
+							}
 						: undefined,
 				branch: (entryId: string) => {
 					branchCalls.push(entryId);
@@ -303,7 +316,11 @@ describe("/plan continue planning", () => {
 				getLeafId: () => "current-leaf",
 				getEntries: () => [
 					{ id: "user-1", type: "message", message: { role: "user" } },
-					{ id: "planning-leaf", type: "message", message: { role: "assistant" } },
+					{
+						id: "planning-leaf",
+						type: "message",
+						message: { role: "assistant" },
+					},
 				],
 				getSessionFile: () => undefined,
 				getSessionDir: () => tmpDir,
@@ -371,7 +388,11 @@ describe("/plan continue planning", () => {
 				getLeafId: () => "current-leaf",
 				getEntries: () => [
 					{ id: "user-1", type: "message", message: { role: "user" } },
-					{ id: "planning-leaf", type: "message", message: { role: "assistant" } },
+					{
+						id: "planning-leaf",
+						type: "message",
+						message: { role: "assistant" },
+					},
 				],
 				getSessionFile: () => undefined,
 				getSessionDir: () => tmpDir,

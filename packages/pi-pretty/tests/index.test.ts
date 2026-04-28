@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/read.js", () => ({
 	enhanceReadTool: vi.fn(),
@@ -13,12 +13,31 @@ vi.mock("../src/find-grep.js", () => ({
 	enhanceFindTool: vi.fn(),
 	enhanceGrepTool: vi.fn(),
 	enhanceMultiGrepTool: vi.fn(),
-	multiGrep: vi.fn().mockResolvedValue({ ok: true, message: "found 1 match", matches: 1, results: [] }),
+	multiGrep: vi.fn().mockResolvedValue({
+		ok: true,
+		message: "found 1 match",
+		matches: 1,
+		results: [],
+	}),
 }));
 vi.mock("../src/fff-helpers.js", () => ({
-	checkHealth: vi.fn().mockResolvedValue({ ok: true, message: "healthy", indexed: true, fileCount: 42 }),
-	rescan: vi.fn().mockResolvedValue({ ok: true, message: "rescan done", indexed: true }),
-	multiGrep: vi.fn().mockResolvedValue({ ok: true, message: "found 1 match", matches: 1, results: [] }),
+	checkHealth: vi.fn().mockResolvedValue({
+		ok: true,
+		message: "healthy",
+		indexed: true,
+		fileCount: 42,
+	}),
+	rescan: vi.fn().mockResolvedValue({
+		ok: true,
+		message: "rescan done",
+		indexed: true,
+	}),
+	multiGrep: vi.fn().mockResolvedValue({
+		ok: true,
+		message: "found 1 match",
+		matches: 1,
+		results: [],
+	}),
 }));
 
 const mockRegisterCommand = vi.fn();

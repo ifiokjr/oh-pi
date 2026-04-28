@@ -90,7 +90,11 @@ export default function externalEditorExtension(pi: ExtensionAPI): void {
 		description: "Open the current draft in $VISUAL/$EDITOR and sync the result back into pi.",
 		getArgumentCompletions(prefix) {
 			const items = [
-				{ description: "Show the configured editor and available bindings", label: "status", value: "status" },
+				{
+					description: "Show the configured editor and available bindings",
+					label: "status",
+					value: "status",
+				},
 			];
 			const filtered = items.filter((item) => item.value.startsWith(prefix.trim()));
 			return filtered.length > 0 ? filtered : null;

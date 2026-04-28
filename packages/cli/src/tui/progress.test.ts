@@ -4,7 +4,9 @@ import { clearProgressLine, renderProgress, runWithProgress } from "./progress.j
 describe("renderProgress", () => {
 	it("writes a progress bar", () => {
 		const chunks: string[] = [];
-		const stdout = { write: (c: string) => chunks.push(c) } as unknown as NodeJS.WriteStream;
+		const stdout = {
+			write: (c: string) => chunks.push(c),
+		} as unknown as NodeJS.WriteStream;
 		renderProgress({ total: 10, current: 5, label: "test" }, { stdout });
 		const output = chunks.join("");
 		expect(output).toContain("50%");
@@ -16,7 +18,9 @@ describe("renderProgress", () => {
 describe("clearProgressLine", () => {
 	it("writes clear sequence", () => {
 		const chunks: string[] = [];
-		const stdout = { write: (c: string) => chunks.push(c) } as unknown as NodeJS.WriteStream;
+		const stdout = {
+			write: (c: string) => chunks.push(c),
+		} as unknown as NodeJS.WriteStream;
 		clearProgressLine({ stdout });
 		expect(chunks.join("")).toContain("\x1B[K");
 	});
@@ -25,7 +29,9 @@ describe("clearProgressLine", () => {
 describe("runWithProgress", () => {
 	it("runs tasks and shows progress", async () => {
 		const chunks: string[] = [];
-		const stdout = { write: (c: string) => chunks.push(c) } as unknown as NodeJS.WriteStream;
+		const stdout = {
+			write: (c: string) => chunks.push(c),
+		} as unknown as NodeJS.WriteStream;
 		const calls: string[] = [];
 		await runWithProgress(
 			[

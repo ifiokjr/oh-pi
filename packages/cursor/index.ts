@@ -61,14 +61,14 @@ function registerCursorCommand(pi: ExtensionAPI): void {
 	});
 }
 
-export { streamSimpleCursor } from "./provider.js";
 export { createCursorOAuthProvider, generateCursorAuthParams, getTokenExpiry } from "./auth.js";
 export {
+	type CursorCredentials,
 	discoverCursorModels,
 	getCredentialModels,
 	getFallbackCursorModels,
-	type CursorCredentials,
 } from "./models.js";
+export { streamSimpleCursor } from "./provider.js";
 export {
 	clearCursorRuntimeState,
 	deriveBridgeKey,

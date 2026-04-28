@@ -1,28 +1,92 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 104 64">
-  <!-- Abdomen — large hexagon, left -->
-  <polygon points="14,32 21,18 35,18 42,32 35,46 21,46" fill="#7c3aed"/>
+	<!-- Abdomen — large hexagon, left -->
+	<polygon points="14,32 21,18 35,18 42,32 35,46 21,46" fill="#7c3aed" />
 
-  <!-- Thorax — medium hexagon, center -->
-  <polygon points="44,32 48,24 56,24 60,32 56,40 48,40" fill="#7c3aed"/>
+	<!-- Thorax — medium hexagon, center -->
+	<polygon points="44,32 48,24 56,24 60,32 56,40 48,40" fill="#7c3aed" />
 
-  <!-- Head — small hexagon, right -->
-  <polygon points="62,32 66,24 74,24 78,32 74,40 66,40" fill="#00d4aa"/>
+	<!-- Head — small hexagon, right -->
+	<polygon points="62,32 66,24 74,24 78,32 74,40 66,40" fill="#00d4aa" />
 
-  <!-- Eyes -->
-  <rect x="68" y="27" width="3" height="3" fill="#fff"/>
-  <rect x="68" y="34" width="3" height="3" fill="#fff"/>
+	<!-- Eyes -->
+	<rect x="68" y="27" width="3" height="3" fill="#fff" />
+	<rect x="68" y="34" width="3" height="3" fill="#fff" />
 
-  <!-- Antennae -->
-  <line x1="78" y1="26" x2="90" y2="16" stroke="#00d4aa" stroke-width="2.5" stroke-linecap="square"/>
-  <line x1="78" y1="38" x2="90" y2="48" stroke="#00d4aa" stroke-width="2.5" stroke-linecap="square"/>
+	<!-- Antennae -->
+	<line
+		x1="78"
+		y1="26"
+		x2="90"
+		y2="16"
+		stroke="#00d4aa"
+		stroke-width="2.5"
+		stroke-linecap="square"
+	/>
+	<line
+		x1="78"
+		y1="38"
+		x2="90"
+		y2="48"
+		stroke="#00d4aa"
+		stroke-width="2.5"
+		stroke-linecap="square"
+	/>
 
-  <!-- Legs — 3 pairs from thorax -->
-  <line x1="48" y1="24" x2="40" y2="10" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="square"/>
-  <line x1="48" y1="40" x2="40" y2="54" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="square"/>
+	<!-- Legs — 3 pairs from thorax -->
+	<line
+		x1="48"
+		y1="24"
+		x2="40"
+		y2="10"
+		stroke="#7c3aed"
+		stroke-width="2.5"
+		stroke-linecap="square"
+	/>
+	<line
+		x1="48"
+		y1="40"
+		x2="40"
+		y2="54"
+		stroke="#7c3aed"
+		stroke-width="2.5"
+		stroke-linecap="square"
+	/>
 
-  <line x1="52" y1="24" x2="52" y2="8" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="square"/>
-  <line x1="52" y1="40" x2="52" y2="56" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="square"/>
+	<line
+		x1="52"
+		y1="24"
+		x2="52"
+		y2="8"
+		stroke="#7c3aed"
+		stroke-width="2.5"
+		stroke-linecap="square"
+	/>
+	<line
+		x1="52"
+		y1="40"
+		x2="52"
+		y2="56"
+		stroke="#7c3aed"
+		stroke-width="2.5"
+		stroke-linecap="square"
+	/>
 
-  <line x1="56" y1="24" x2="64" y2="10" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="square"/>
-  <line x1="56" y1="40" x2="64" y2="54" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="square"/>
+	<line
+		x1="56"
+		y1="24"
+		x2="64"
+		y2="10"
+		stroke="#7c3aed"
+		stroke-width="2.5"
+		stroke-linecap="square"
+	/>
+	<line
+		x1="56"
+		y1="40"
+		x2="64"
+		y2="54"
+		stroke="#7c3aed"
+		stroke-width="2.5"
+		stroke-linecap="square"
+	/>
 </svg>

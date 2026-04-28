@@ -1,11 +1,11 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
 import {
 	expandHomeDir,
 	getExtensionConfigPath,
 	getMirroredWorkspacePathSegments,
 	resolvePiAgentDir,
 } from "@ifi/oh-pi-core";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 export type ProjectAgentStorageMode = "shared" | "project";
 
@@ -56,9 +56,7 @@ function loadStorageConfig(): SubagentStorageConfig {
 /**
 <!-- {=subagentsResolveProjectAgentStorageOptionsDocs} -->
 
-Resolve the effective project-agent storage mode and shared root. Explicit options take precedence,
-then environment variables, then extension config, and shared storage is the default when no
-override is provided.
+Resolve the effective project-agent storage mode and shared root. Explicit options take precedence, then environment variables, then extension config, and shared storage is the default when no override is provided.
 
 <!-- {/subagentsResolveProjectAgentStorageOptionsDocs} -->
 */
@@ -104,9 +102,7 @@ export function getLegacyProjectAgentsDir(cwd: string): string {
 /**
 <!-- {=subagentsGetSharedProjectAgentsDirDocs} -->
 
-Build the shared directory for project-scope agent and chain definitions. The path combines the
-shared root, a mirrored workspace path, and the trailing `agents/` directory so different projects
-stay isolated from one another.
+Build the shared directory for project-scope agent and chain definitions. The path combines the shared root, a mirrored workspace path, and the trailing `agents/` directory so different projects stay isolated from one another.
 
 <!-- {/subagentsGetSharedProjectAgentsDirDocs} -->
 */
@@ -129,9 +125,7 @@ function cleanupLegacyPiDir(cwd: string): void {
 /**
 <!-- {=subagentsMigrateLegacyProjectAgentsDocs} -->
 
-Best-effort migration for legacy repo-local project agents. When shared mode is active, discovered
-`.pi/agents/` directories are copied into shared storage and the empty legacy `.pi/` directory is
-removed when possible.
+Best-effort migration for legacy repo-local project agents. When shared mode is active, discovered `.pi/agents/` directories are copied into shared storage and the empty legacy `.pi/` directory is removed when possible.
 
 <!-- {/subagentsMigrateLegacyProjectAgentsDocs} -->
 */
@@ -164,9 +158,7 @@ export function migrateLegacyProjectAgents(cwd: string, options?: ProjectAgentSt
 /**
 <!-- {=subagentsFindNearestProjectAgentsDirDocs} -->
 
-Find the highest-priority project agents directory for the current workspace. The resolver walks up
-parent workspaces, migrates legacy storage when needed, and preserves the same nearest-parent lookup
-semantics in both shared and project storage modes.
+Find the highest-priority project agents directory for the current workspace. The resolver walks up parent workspaces, migrates legacy storage when needed, and preserves the same nearest-parent lookup semantics in both shared and project storage modes.
 
 <!-- {/subagentsFindNearestProjectAgentsDirDocs} -->
 */

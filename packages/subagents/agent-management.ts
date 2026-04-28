@@ -1,10 +1,10 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { serializeAgent } from "./agent-serializer.js";
 import { discoverAgentsAll } from "./agents.js";
 import type { AgentConfig, AgentScope, AgentSource, ChainConfig, ChainStepConfig } from "./agents.js";
-import { serializeAgent } from "./agent-serializer.js";
 import { serializeChain } from "./chain-serializer.js";
 import { discoverAvailableSkills } from "./skills.js";
 import type { Details } from "./types.js";
@@ -25,7 +25,11 @@ interface ManagementParams {
 }
 
 function result(text: string, isError = false): AgentToolResult<Details> {
-	return { content: [{ type: "text", text }], details: { mode: "management", results: [] }, isError };
+	return {
+		content: [{ type: "text", text }],
+		details: { mode: "management", results: [] },
+		isError,
+	};
 }
 
 function parseCsv(value: string): string[] {
@@ -190,14 +194,19 @@ function parseStepList(raw: unknown): { steps?: ChainStepConfig[]; error?: strin
 		if (typeof s.agent !== "string" || !s.agent.trim()) {
 			return { error: `config.steps[${i}].agent must be a non-empty string.` };
 		}
-		const step: ChainStepConfig = { agent: s.agent.trim(), task: typeof s.task === "string" ? s.task : "" };
+		const step: ChainStepConfig = {
+			agent: s.agent.trim(),
+			task: typeof s.task === "string" ? s.task : "",
+		};
 		if (hasKey(s, "output")) {
 			if (s.output === false) {
 				step.output = false;
 			} else if (typeof s.output === "string") {
 				step.output = s.output;
 			} else {
-				return { error: `config.steps[${i}].output must be a string or false.` };
+				return {
+					error: `config.steps[${i}].output must be a string or false.`,
+				};
 			}
 		}
 		if (hasKey(s, "reads")) {
@@ -228,7 +237,9 @@ function parseStepList(raw: unknown): { steps?: ChainStepConfig[]; error?: strin
 					.map((v) => v.trim())
 					.filter(Boolean);
 			} else {
-				return { error: `config.steps[${i}].skills must be an array or false.` };
+				return {
+					error: `config.steps[${i}].skills must be an array or false.`,
+				};
 			}
 		}
 		if (hasKey(s, "progress")) {
@@ -399,7 +410,9 @@ function resolveTarget<T extends { source: AgentSource; filePath: string }>(
 	if (mutable.length === 0) {
 		if (matches.length > 0) {
 			return result(
-				`${kind === "agent" ? "Agent" : "Chain"} '${name}' is builtin and cannot be modified. Create a same-named ${kind} in user or project scope to override it.`,
+				`${
+					kind === "agent" ? "Agent" : "Chain"
+				} '${name}' is builtin and cannot be modified. Create a same-named ${kind} in user or project scope to override it.`,
 				true,
 			);
 		}
@@ -416,7 +429,9 @@ function resolveTarget<T extends { source: AgentSource; filePath: string }>(
 	if (!scope) {
 		const paths = mutable.map((m) => `${m.source}: ${m.filePath}`).join("\n");
 		return result(
-			`${kind === "agent" ? "Agent" : "Chain"} '${name}' exists in both scopes. Specify agentScope: 'user' or 'project'.\n${paths}`,
+			`${
+				kind === "agent" ? "Agent" : "Chain"
+			} '${name}' exists in both scopes. Specify agentScope: 'user' or 'project'.\n${paths}`,
 			true,
 		);
 	}
@@ -565,7 +580,9 @@ export function handleGet(params: ManagementParams, ctx: ManagementContext): Age
 	if (params.agent) {
 		const matches = findAgents(params.agent, ctx.cwd, "both");
 		if (matches.length === 0) {
-			const msg = `Agent '${params.agent}' not found. Available: ${availableNames(ctx.cwd, "agent").join(", ") || "none"}.`;
+			const msg = `Agent '${params.agent}' not found. Available: ${
+				availableNames(ctx.cwd, "agent").join(", ") || "none"
+			}.`;
 			if (!hasBoth) {
 				return result(msg, true);
 			}
@@ -578,7 +595,9 @@ export function handleGet(params: ManagementParams, ctx: ManagementContext): Age
 	if (params.chainName) {
 		const matches = findChains(params.chainName, ctx.cwd, "both");
 		if (matches.length === 0) {
-			const msg = `Chain '${params.chainName}' not found. Available: ${availableNames(ctx.cwd, "chain").join(", ") || "none"}.`;
+			const msg = `Chain '${params.chainName}' not found. Available: ${
+				availableNames(ctx.cwd, "chain").join(", ") || "none"
+			}.`;
 			if (!hasBoth) {
 				return result(msg, true);
 			}
@@ -621,7 +640,9 @@ export function handleCreate(params: ManagementParams, ctx: ManagementContext): 
 	const targetPath = path.join(targetDir, isChain ? `${name}.chain.md` : `${name}.md`);
 	if (fs.existsSync(targetPath)) {
 		return result(
-			`File already exists at ${targetPath} but is not a valid ${isChain ? "chain" : "agent"} definition. Remove or rename it first.`,
+			`File already exists at ${targetPath} but is not a valid ${
+				isChain ? "chain" : "agent"
+			} definition. Remove or rename it first.`,
 			true,
 		);
 	}

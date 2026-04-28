@@ -40,7 +40,11 @@ export function loadOrCreateToken(filePath?: string): TokenInfo {
 			const existing = readFileSync(filePath, "utf8").trim();
 
 			if (existing.length === 64) {
-				return { instanceId: generateInstanceId(existing), isNew: false, token: existing };
+				return {
+					instanceId: generateInstanceId(existing),
+					isNew: false,
+					token: existing,
+				};
 			}
 		} catch {
 			// File doesn't exist or is unreadable — create new

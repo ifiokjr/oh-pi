@@ -75,7 +75,10 @@ describe("background task shared helpers", () => {
 		const trimmed = trimOutputBuffer("0123456789", 8, 6);
 		expect(trimmed.output).toBe("456789");
 		expect(trimmed.lastAlertLength).toBe(4);
-		expect(trimOutputBuffer("abc", 2, 6)).toEqual({ output: "abc", lastAlertLength: 2 });
+		expect(trimOutputBuffer("abc", 2, 6)).toEqual({
+			output: "abc",
+			lastAlertLength: 2,
+		});
 		expect(taskDisplayName({ title: "   ", command: "pnpm test --watch" })).toBe("pnpm test --watch");
 
 		expect(
@@ -101,7 +104,13 @@ describe("background task shared helpers", () => {
 
 	it("validates event payloads and resolves tasks by id or pid", () => {
 		expect(isBackgroundTaskEventDetails(null)).toBe(false);
-		expect(isBackgroundTaskEventDetails({ eventType: "noop", task: {}, outputTail: "x" })).toBe(false);
+		expect(
+			isBackgroundTaskEventDetails({
+				eventType: "noop",
+				task: {},
+				outputTail: "x",
+			}),
+		).toBe(false);
 		expect(
 			isBackgroundTaskEventDetails({
 				eventType: "output",

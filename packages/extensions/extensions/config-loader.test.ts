@@ -94,7 +94,11 @@ describe("loadJsonConfigFile", () => {
 		});
 
 		expect(normalize).toHaveBeenCalledOnce();
-		expect(result).toEqual({ mode: "auto", stickyTurns: 4, ignored: { bad: true } });
+		expect(result).toEqual({
+			mode: "auto",
+			stickyTurns: 4,
+			ignored: { bad: true },
+		});
 		expect(warnings).toEqual(["Skipped invalid section: ignored"]);
 	});
 });

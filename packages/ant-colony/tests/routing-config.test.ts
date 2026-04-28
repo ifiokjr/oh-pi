@@ -32,7 +32,9 @@ describe("resolveColonyCategoryModel", () => {
 	it("resolves a model from delegated routing config", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "ant-routing-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 		writeFileSync(
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			JSON.stringify(
@@ -89,7 +91,9 @@ describe("resolveColonyCategoryModel", () => {
 	it("applies per-role overrides when present", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "ant-routing-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 		writeFileSync(
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			JSON.stringify(
@@ -142,7 +146,10 @@ describe("resolveColonyCategoryModel", () => {
 						fullId: "openai/gpt-5-mini",
 					},
 				],
-				{ roleKeys: ["colony:scout"], taskText: "Scan the repo and identify the key files." },
+				{
+					roleKeys: ["colony:scout"],
+					taskText: "Scan the repo and identify the key files.",
+				},
 			);
 			expect(result.model).toBe("openai/gpt-5-mini");
 			expect(result.source).toBe("delegated-category");
@@ -171,7 +178,9 @@ describe("resolveColonyCategoryModel", () => {
 	it("falls back to groq for quick-discovery when provider preferences miss", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "ant-routing-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 		writeFileSync(
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
 			JSON.stringify(
@@ -212,7 +221,9 @@ describe("resolveColonyCategoryModel", () => {
 	it("uses measured latency to prefer faster scout models", () => {
 		const tempAgentDir = mkdtempSync(join(tmpdir(), "ant-routing-"));
 		getAgentDir.mockReturnValue(tempAgentDir);
-		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), { recursive: true });
+		mkdirSync(join(tempAgentDir, "extensions", "adaptive-routing"), {
+			recursive: true,
+		});
 		mkdirSync(join(tempAgentDir, "adaptive-routing"), { recursive: true });
 		writeFileSync(
 			join(tempAgentDir, "extensions", "adaptive-routing", "config.json"),
@@ -274,7 +285,10 @@ describe("resolveColonyCategoryModel", () => {
 						fullId: "openai/gpt-5-mini",
 					},
 				],
-				{ roleKeys: ["colony:scout"], taskText: "Quickly inspect the repository." },
+				{
+					roleKeys: ["colony:scout"],
+					taskText: "Quickly inspect the repository.",
+				},
 			);
 			expect(result.model).toBe("google/gemini-2.5-flash");
 		} finally {

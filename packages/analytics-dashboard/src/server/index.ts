@@ -9,12 +9,6 @@
  * Default port: 31415 (API at /api/*, static files served in production)
  */
 
-import express from "express";
-import cors from "cors";
-import path from "node:path";
-import fs from "node:fs";
-import { desc } from "drizzle-orm";
-import * as schema from "@ifi/pi-analytics-db/schema";
 import {
 	formatDateBucket,
 	getActiveEvents,
@@ -28,6 +22,12 @@ import {
 	getTopMisspellings,
 	getTopWords,
 } from "@ifi/pi-analytics-db/db";
+import * as schema from "@ifi/pi-analytics-db/schema";
+import cors from "cors";
+import { desc } from "drizzle-orm";
+import express from "express";
+import fs from "node:fs";
+import path from "node:path";
 
 const app = express();
 const PORT = Number.parseInt(process.env.PORT ?? "31415", 10);

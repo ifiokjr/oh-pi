@@ -51,8 +51,16 @@ describe("ollama local downloads", () => {
 		const cloudBackend = await createTestOllamaBackend();
 		backends.push(cloudBackend);
 		cloudBackend.setModels([
-			{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752 },
-			{ id: "kimi-k2.5", capabilities: ["completion", "tools", "thinking", "vision"], contextWindow: 262144 },
+			{
+				id: "glm-5.1",
+				capabilities: ["completion", "tools", "thinking"],
+				contextWindow: 202752,
+			},
+			{
+				id: "kimi-k2.5",
+				capabilities: ["completion", "tools", "thinking", "vision"],
+				contextWindow: 262144,
+			},
 		]);
 
 		const localBackend = await createTestOllamaBackend();
@@ -91,7 +99,11 @@ describe("ollama local downloads", () => {
 		const cloudBackend = await createTestOllamaBackend();
 		backends.push(cloudBackend);
 		cloudBackend.setModels([
-			{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752 },
+			{
+				id: "glm-5.1",
+				capabilities: ["completion", "tools", "thinking"],
+				contextWindow: 202752,
+			},
 		]);
 
 		const localBackend = await createTestOllamaBackend();
@@ -109,7 +121,11 @@ describe("ollama local downloads", () => {
 			child.kill = vi.fn();
 			queueMicrotask(() => {
 				localBackend.setModels([
-					{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752 },
+					{
+						id: "glm-5.1",
+						capabilities: ["completion", "tools", "thinking"],
+						contextWindow: 202752,
+					},
 				]);
 				child.stdout.write("pulling glm-5.1\n");
 				child.stdout.end();
@@ -168,7 +184,11 @@ describe("ollama local downloads", () => {
 		const cloudBackend = await createTestOllamaBackend();
 		backends.push(cloudBackend);
 		cloudBackend.setModels([
-			{ id: "kimi-k2.5", capabilities: ["completion", "tools", "thinking", "vision"], contextWindow: 262144 },
+			{
+				id: "kimi-k2.5",
+				capabilities: ["completion", "tools", "thinking", "vision"],
+				contextWindow: 262144,
+			},
 		]);
 		process.env.PI_OLLAMA_CLOUD_API_URL = cloudBackend.apiUrl;
 		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${cloudBackend.apiUrl}/models`;
@@ -179,7 +199,13 @@ describe("ollama local downloads", () => {
 		await ollamaProviderExtension(harness.pi as never);
 		expect(execFileMock).not.toHaveBeenCalled();
 
-		const sessionStart = harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
+		const sessionStart = harness.emitAsync(
+			"session_start",
+			{
+				type: "session_start",
+			},
+			harness.ctx,
+		);
 		expect(execFileMock).not.toHaveBeenCalled();
 		await sessionStart;
 		expect(execFileMock).not.toHaveBeenCalled();

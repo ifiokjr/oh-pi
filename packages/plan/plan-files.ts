@@ -1,6 +1,6 @@
+import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { resolvePlanFilePath } from "./utils";
 
 export function getPlanFilePathForSession(ctx: ExtensionContext): string {

@@ -39,8 +39,7 @@ Narration:
 
 Example goal:
 
-- "Scan the repository, add one refactor plan document, only modify one file under docs, then review
-  output quality."
+- "Scan the repository, add one refactor plan document, only modify one file under docs, then review output quality."
 
 What to watch:
 
@@ -65,5 +64,4 @@ Narration:
 
 ## Closing line (ready to read)
 
-"oh-pi first solves usability, then ant colony solves complex-task efficiency. Nail the entry
-experience first, then gradually unlock advanced capabilities."
+"oh-pi first solves usability, then ant colony solves complex-task efficiency. Nail the entry experience first, then gradually unlock advanced capabilities."

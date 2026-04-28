@@ -207,7 +207,10 @@ export function selectDelegatedModel(params: {
 		}
 
 		if (contextWindow < minimumContextWindow) {
-			rejected.push({ model: fullId, reason: `context-too-small:${contextWindow}` });
+			rejected.push({
+				model: fullId,
+				reason: `context-too-small:${contextWindow}`,
+			});
 			continue;
 		}
 

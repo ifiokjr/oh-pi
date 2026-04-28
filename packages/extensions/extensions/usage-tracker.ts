@@ -3,17 +3,13 @@ Usage Tracker Extension — Rate Limit & Cost Monitor for pi
 
 <!-- {=extensionsUsageTrackerOverview} -->
 
-The usage-tracker extension is a CodexBar-inspired provider quota and cost monitor for pi. It
-shows provider-level rate limits for Anthropic, OpenAI, and Google using pi-managed auth, while
-also tracking per-model token usage and session costs locally.
+The usage-tracker extension is a CodexBar-inspired provider quota and cost monitor for pi. It shows provider-level rate limits for Anthropic, OpenAI, and Google using pi-managed auth, while also tracking per-model token usage and session costs locally.
 
 <!-- {/extensionsUsageTrackerOverview} -->
 
 <!-- {=extensionsUsageTrackerPersistenceDocs} -->
 
-Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot
-under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing
-recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
+Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
 
 <!-- {/extensionsUsageTrackerPersistenceDocs} -->
 
@@ -31,12 +27,12 @@ Key usage-tracker surfaces:
 <!-- {/extensionsUsageTrackerCommandsDocs} -->
 */
 
-import { existsSync, promises as fsp, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
 import type { AssistantMessage } from "@mariozechner/pi-ai";
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
+import { existsSync, mkdirSync, promises as fsp, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { getSafeModeState, subscribeSafeMode } from "./runtime-mode.js";
 import {
 	clampPercent,
@@ -140,9 +136,7 @@ function getUsageHistoryPath(): string {
 /**
 <!-- {=extensionsUsageTrackerPersistenceDocs} -->
 
-Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot
-under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing
-recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
+Usage-tracker persists rolling 30-day cost history and the last known provider rate-limit snapshot under the pi agent directory. That lets the widget and dashboard survive restarts and keep showing recent subscription windows when a live provider probe is temporarily rate-limited or unavailable.
 
 <!-- {/extensionsUsageTrackerPersistenceDocs} -->
 */
@@ -277,7 +271,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	async function loadRollingHistory(): Promise<void> {
 		try {
-			const raw = JSON.parse(await fsp.readFile(usageHistoryPath, "utf-8")) as { entries?: unknown };
+			const raw = JSON.parse(await fsp.readFile(usageHistoryPath, "utf-8")) as {
+				entries?: unknown;
+			};
 			if (!Array.isArray(raw.entries)) {
 				return;
 			}
@@ -339,7 +335,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 		if (!value || typeof value !== "object") {
 			return null;
 		}
-		const candidate = value as Partial<ProviderRateLimits> & { windows?: unknown };
+		const candidate = value as Partial<ProviderRateLimits> & {
+			windows?: unknown;
+		};
 		if (
 			!(
 				candidate.provider === "anthropic" ||
@@ -410,7 +408,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 						note: existing.note
 							? `${existing.note} Showing last known window values.`
 							: "Showing last known window values.",
-						windows: providerRateLimits.windows.map((window) => ({ ...window })),
+						windows: providerRateLimits.windows.map((window) => ({
+							...window,
+						})),
 					});
 					continue;
 				}
@@ -1322,7 +1322,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 					const right = formatPaceRight(pace);
 					const rightText = right ? `${theme.fg("dim", " | ")}${theme.fg("dim", right)}` : "";
 					lines.push(
-						`      ${theme.fg("accent", "Pace")}${theme.fg("dim", ": ")}${theme.fg(paceColor, formatPaceLeft(pace))}${theme.fg("dim", ` | Expected ${pace.expectedUsedPercent.toFixed(0)}% used`)}${rightText}`,
+						`      ${theme.fg("accent", "Pace")}${theme.fg("dim", ": ")}${theme.fg(
+							paceColor,
+							formatPaceLeft(pace),
+						)}${theme.fg("dim", ` | Expected ${pace.expectedUsedPercent.toFixed(0)}% used`)}${rightText}`,
 					);
 				}
 			}
@@ -1372,7 +1375,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 			const bar = theme.fg(color, progressBar(most.percentLeft, 8));
 			const reset = most.resetDescription ? theme.fg("dim", ` ↻${most.resetDescription}`) : "";
 			parts.push(
-				`${theme.fg("accent", name)} ${theme.fg("dim", `${most.label}:`)} ${bar} ${theme.fg(color, `${most.percentLeft}%`)}${reset}`,
+				`${theme.fg("accent", name)} ${theme.fg(
+					"dim",
+					`${most.label}:`,
+				)} ${bar} ${theme.fg(color, `${most.percentLeft}%`)}${reset}`,
 			);
 		}
 		return parts.join(theme.fg("dim", "  "));
@@ -1412,7 +1418,9 @@ export default function usageTracker(pi: ExtensionAPI) {
 		lines.push("");
 		lines.push(`Duration: ${fmtDuration(elapsed)} | Turns: ${totals.turns}`);
 		lines.push(
-			`Tokens: ${fmtTokens(totals.input)} in / ${fmtTokens(totals.output)} out (${fmtTokens(totals.totalTokens)} total)`,
+			`Tokens: ${fmtTokens(totals.input)} in / ${fmtTokens(
+				totals.output,
+			)} out (${fmtTokens(totals.totalTokens)} total)`,
 		);
 		lines.push(`Cost: ${fmtCost(totals.cost)}`);
 		if (!provider) {
@@ -1429,12 +1437,16 @@ export default function usageTracker(pi: ExtensionAPI) {
 		if (totals.cacheRead > 0 || totals.cacheWrite > 0) {
 			const cacheRatio = totals.input > 0 ? (totals.cacheRead / totals.input) * 100 : 0;
 			lines.push(
-				`Cache: ${fmtTokens(totals.cacheRead)} read / ${fmtTokens(totals.cacheWrite)} write (${cacheRatio.toFixed(0)}% read vs input)`,
+				`Cache: ${fmtTokens(totals.cacheRead)} read / ${fmtTokens(
+					totals.cacheWrite,
+				)} write (${cacheRatio.toFixed(0)}% read vs input)`,
 			);
 		}
 		if (ctxUsage?.percent != null) {
 			lines.push(
-				`Context: ${ctxUsage.percent.toFixed(0)}% used (${fmtTokens(ctxUsage.tokens ?? 0)} / ${fmtTokens(ctxUsage.contextWindow)})`,
+				`Context: ${ctxUsage.percent.toFixed(0)}% used (${fmtTokens(
+					ctxUsage.tokens ?? 0,
+				)} / ${fmtTokens(ctxUsage.contextWindow)})`,
 			);
 		}
 
@@ -1450,11 +1462,15 @@ export default function usageTracker(pi: ExtensionAPI) {
 					externalTokens += source.input + source.output;
 				}
 				lines.push(
-					`External inference: ${fmtCost(externalTotalCost)} across ${externalTurns} turns (${fmtTokens(externalTokens)} tokens)`,
+					`External inference: ${fmtCost(externalTotalCost)} across ${externalTurns} turns (${fmtTokens(
+						externalTokens,
+					)} tokens)`,
 				);
 				for (const source of externalSources) {
 					lines.push(
-						`  - ${source.source}: ${fmtCost(source.costTotal)}, ${source.turns} turns, ${fmtTokens(source.input)} in / ${fmtTokens(source.output)} out`,
+						`  - ${source.source}: ${fmtCost(
+							source.costTotal,
+						)}, ${source.turns} turns, ${fmtTokens(source.input)} in / ${fmtTokens(source.output)} out`,
 					);
 				}
 			}
@@ -1468,7 +1484,11 @@ export default function usageTracker(pi: ExtensionAPI) {
 				const modelTokens = model.input + model.output;
 				const avgTokens = model.turns > 0 ? modelTokens / model.turns : 0;
 				lines.push(
-					`  ${model.model} (${model.provider}): ${model.turns} turns, ${fmtTokens(model.input)} in / ${fmtTokens(model.output)} out, ${fmtCost(model.costTotal)} (${costShare.toFixed(0)}% of session), avg ${fmtTokens(Math.round(avgTokens))}/turn`,
+					`  ${model.model} (${model.provider}): ${model.turns} turns, ${fmtTokens(
+						model.input,
+					)} in / ${fmtTokens(model.output)} out, ${fmtCost(model.costTotal)} (${costShare.toFixed(
+						0,
+					)}% of session), avg ${fmtTokens(Math.round(avgTokens))}/turn`,
 				);
 				if (model.cacheRead > 0 || model.cacheWrite > 0) {
 					lines.push(`    cache: ${fmtTokens(model.cacheRead)} read / ${fmtTokens(model.cacheWrite)} write`);
@@ -1515,7 +1535,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 				`  ${theme.fg("accent", "Selected")}${sep}${theme.fg("accent", selectedProvider)}${sep}${selectionState}`,
 			);
 			lines.push(
-				`  ${theme.fg("accent", "Current ")}${sep}${theme.fg("dim", currentProvider ? providerDisplayName(currentProvider) : "unknown")}`,
+				`  ${theme.fg("accent", "Current ")}${sep}${theme.fg(
+					"dim",
+					currentProvider ? providerDisplayName(currentProvider) : "unknown",
+				)}`,
 			);
 			lines.push(`  ${theme.fg("accent", "Model   ")}${sep}${theme.fg("dim", getCurrentModelId(ctx))}`);
 			lines.push("");
@@ -1530,35 +1553,56 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 		lines.push(`  ${divider}`);
 		lines.push(
-			`  ${theme.fg("accent", provider ? "Session*" : "Session")}${sep}${fmtDuration(elapsed)}${sep}${totals.turns} turns${sep}${theme.fg("warning", fmtCost(totals.cost))}`,
+			`  ${theme.fg("accent", provider ? "Session*" : "Session")}${sep}${fmtDuration(
+				elapsed,
+			)}${sep}${totals.turns} turns${sep}${theme.fg("warning", fmtCost(totals.cost))}`,
 		);
 
 		if (!provider) {
 			lines.push(
-				`  ${theme.fg("accent", "30d    ")}${sep}${theme.fg("warning", fmtCost(totals.rolling30dCost))} ${theme.fg("dim", "total cost")}`,
+				`  ${theme.fg("accent", "30d    ")}${sep}${theme.fg(
+					"warning",
+					fmtCost(totals.rolling30dCost),
+				)} ${theme.fg("dim", "total cost")}`,
 			);
 		}
 
 		lines.push(
-			`  ${theme.fg("accent", "Tokens ")}${sep}${theme.fg("success", fmtTokens(totals.input))} in${sep}${theme.fg("warning", fmtTokens(totals.output))} out${sep}${theme.fg("dim", fmtTokens(totals.totalTokens))} total`,
+			`  ${theme.fg("accent", "Tokens ")}${sep}${theme.fg(
+				"success",
+				fmtTokens(totals.input),
+			)} in${sep}${theme.fg("warning", fmtTokens(totals.output))} out${sep}${theme.fg(
+				"dim",
+				fmtTokens(totals.totalTokens),
+			)} total`,
 		);
 
 		if (totals.turns > 0) {
 			lines.push(
-				`  ${theme.fg("accent", "Avg    ")}${sep}${fmtTokens(Math.round(totals.avgTokensPerTurn))} tok/turn${sep}${theme.fg("warning", fmtCost(totals.avgCostPerTurn))}/turn`,
+				`  ${theme.fg("accent", "Avg    ")}${sep}${fmtTokens(
+					Math.round(totals.avgTokensPerTurn),
+				)} tok/turn${sep}${theme.fg("warning", fmtCost(totals.avgCostPerTurn))}/turn`,
 			);
 		}
 
 		if (pace) {
 			lines.push(
-				`  ${theme.fg("accent", "Pace   ")}${sep}~${fmtTokens(pace.tokensPerMin)} tok/min${sep}${theme.fg("warning", `${fmtCost(pace.costPerHour)}/h`)}`,
+				`  ${theme.fg("accent", "Pace   ")}${sep}~${fmtTokens(pace.tokensPerMin)} tok/min${sep}${theme.fg(
+					"warning",
+					`${fmtCost(pace.costPerHour)}/h`,
+				)}`,
 			);
 		}
 
 		if (totals.cacheRead > 0 || totals.cacheWrite > 0) {
 			const cacheRatio = totals.input > 0 ? (totals.cacheRead / totals.input) * 100 : 0;
 			lines.push(
-				`  ${theme.fg("accent", "Cache  ")}${sep}${fmtTokens(totals.cacheRead)} read${sep}${fmtTokens(totals.cacheWrite)} write${sep}${theme.fg("dim", `${cacheRatio.toFixed(0)}% read/input`)}`,
+				`  ${theme.fg("accent", "Cache  ")}${sep}${fmtTokens(
+					totals.cacheRead,
+				)} read${sep}${fmtTokens(totals.cacheWrite)} write${sep}${theme.fg(
+					"dim",
+					`${cacheRatio.toFixed(0)}% read/input`,
+				)}`,
 			);
 		}
 
@@ -1566,7 +1610,10 @@ export default function usageTracker(pi: ExtensionAPI) {
 			const pct = ctxUsage.percent;
 			const color = pctColor(100 - pct);
 			lines.push(
-				`  ${theme.fg("accent", "Context")}${sep}${theme.fg(color, progressBar(100 - pct, 20))} ${theme.fg(color, `${(100 - pct).toFixed(0)}% free`)} of ${fmtTokens(ctxUsage.contextWindow)}`,
+				`  ${theme.fg("accent", "Context")}${sep}${theme.fg(
+					color,
+					progressBar(100 - pct, 20),
+				)} ${theme.fg(color, `${(100 - pct).toFixed(0)}% free`)} of ${fmtTokens(ctxUsage.contextWindow)}`,
 			);
 		}
 
@@ -1582,11 +1629,17 @@ export default function usageTracker(pi: ExtensionAPI) {
 					externalTokens += source.input + source.output;
 				}
 				lines.push(
-					`  ${theme.fg("accent", "External")}${sep}${theme.fg("warning", fmtCost(externalTotalCost))}${sep}${externalTurns} turns${sep}${fmtTokens(externalTokens)} tokens`,
+					`  ${theme.fg("accent", "External")}${sep}${theme.fg(
+						"warning",
+						fmtCost(externalTotalCost),
+					)}${sep}${externalTurns} turns${sep}${fmtTokens(externalTokens)} tokens`,
 				);
 				for (const source of externalSources.slice(0, 4)) {
 					lines.push(
-						`    ${theme.fg("dim", source.source)}${sep}${theme.fg("warning", fmtCost(source.costTotal))}${sep}${source.turns} turns${sep}${fmtTokens(source.input)} in / ${fmtTokens(source.output)} out`,
+						`    ${theme.fg("dim", source.source)}${sep}${theme.fg(
+							"warning",
+							fmtCost(source.costTotal),
+						)}${sep}${source.turns} turns${sep}${fmtTokens(source.input)} in / ${fmtTokens(source.output)} out`,
 					);
 				}
 				if (externalSources.length > 4) {
@@ -1613,7 +1666,12 @@ export default function usageTracker(pi: ExtensionAPI) {
 					`  ${theme.fg("accent", "◆")} ${theme.fg("accent", model.model)} ${theme.fg("dim", `(${model.provider})`)}`,
 				);
 				lines.push(
-					`    ${bar} ${theme.fg("warning", fmtCost(model.costTotal))}${sep}${model.turns} turns${sep}${fmtTokens(model.input)} in / ${fmtTokens(model.output)} out${sep}${theme.fg("dim", `${costShare.toFixed(0)}% of cost`)}`,
+					`    ${bar} ${theme.fg(
+						"warning",
+						fmtCost(model.costTotal),
+					)}${sep}${model.turns} turns${sep}${fmtTokens(model.input)} in / ${fmtTokens(
+						model.output,
+					)} out${sep}${theme.fg("dim", `${costShare.toFixed(0)}% of cost`)}`,
 				);
 				lines.push(`    ${theme.fg("dim", `avg ${fmtTokens(Math.round(avgTokens))} tok/turn`)}`);
 				if (model.cacheRead > 0 || model.cacheWrite > 0) {
@@ -1803,7 +1861,11 @@ export default function usageTracker(pi: ExtensionAPI) {
 				const externalSources = getExternalSources();
 				const externalCost = externalSources.reduce((sum, source) => sum + source.costTotal, 0);
 				const externalText = externalCost > 0 ? ` | external: ${fmtCost(externalCost)}` : "";
-				const sessionLine = `Session: ${fmtCost(totals.cost)} cost, ${totals.turns} turns, ${fmtTokens(totals.input)} in / ${fmtTokens(totals.output)} out | 30d: ${fmtCost(totals.rolling30dCost)}${externalText}`;
+				const sessionLine = `Session: ${fmtCost(
+					totals.cost,
+				)} cost, ${totals.turns} turns, ${fmtTokens(totals.input)} in / ${fmtTokens(
+					totals.output,
+				)} out | 30d: ${fmtCost(totals.rolling30dCost)}${externalText}`;
 				text = rlText.trim() ? `${rlText}\n${sessionLine}` : `No rate limit data available.\n${sessionLine}`;
 			} else {
 				text = generatePlainReport(ctx);

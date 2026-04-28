@@ -2,24 +2,24 @@
  * Utility Function Tests
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-	cn,
-	formatNumber,
-	formatCurrency,
-	formatTokens,
-	formatDuration,
-	formatDate,
-	formatTimeRange,
-	truncate,
-	stringToColor,
-	getChartColors,
 	calculatePercentage,
-	getProviderDisplayName,
-	getModelShortName,
+	cn,
 	debounce,
+	formatCurrency,
+	formatDate,
+	formatDuration,
+	formatNumber,
+	formatTimeRange,
+	formatTokens,
+	getChartColors,
+	getModelShortName,
+	getProviderDisplayName,
 	isEqual,
 	safeJsonParse,
+	stringToColor,
+	truncate,
 } from "../lib/utils";
 
 describe("utils", () => {
@@ -377,7 +377,9 @@ describe("utils", () => {
 		});
 
 		it("should return fallback for invalid JSON", () => {
-			expect(safeJsonParse("not json", { default: true })).toEqual({ default: true });
+			expect(safeJsonParse("not json", { default: true })).toEqual({
+				default: true,
+			});
 		});
 
 		it("should return fallback for empty string", () => {

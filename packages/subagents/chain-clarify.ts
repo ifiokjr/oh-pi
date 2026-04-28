@@ -10,7 +10,9 @@ import type { Component, TUI } from "@mariozechner/pi-tui";
 import { matchesKey, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { updateFrontmatterField } from "./agent-serializer.js";
 import type { AgentConfig, ChainConfig, ChainStepConfig } from "./agents.js";
+import { serializeChain } from "./chain-serializer.js";
 import { getUserAgentsDir } from "./paths.js";
 import type { ResolvedStepBehavior } from "./settings.js";
 import type { TextEditorState } from "./text-editor.js";
@@ -22,8 +24,6 @@ import {
 	renderEditor,
 	wrapText,
 } from "./text-editor.js";
-import { updateFrontmatterField } from "./agent-serializer.js";
-import { serializeChain } from "./chain-serializer.js";
 
 /** Clarify TUI mode */
 export type ClarifyMode = "single" | "parallel" | "chain";
@@ -92,7 +92,11 @@ export class ChainClarifyComponent implements Component {
 	private skillSearchQuery: string = "";
 	private skillSelectedNames = new Set<string>();
 	private skillCursorIndex: number = 0;
-	private filteredSkills: { name: string; source: string; description?: string }[] = [];
+	private filteredSkills: {
+		name: string;
+		source: string;
+		description?: string;
+	}[] = [];
 	private saveMessage: { text: string; type: "info" | "error" } | null = null;
 	private saveMessageTimer: ReturnType<typeof setTimeout> | null = null;
 	private saveChainNameState: TextEditorState = createEditorState();
@@ -109,7 +113,11 @@ export class ChainClarifyComponent implements Component {
 		private chainDir: string | undefined, // Undefined for single/parallel modes
 		private resolvedBehaviors: ResolvedStepBehavior[],
 		private availableModels: ModelInfo[],
-		private availableSkills: { name: string; source: string; description?: string }[],
+		private availableSkills: {
+			name: string;
+			source: string;
+			description?: string;
+		}[],
 		private done: (result: ChainClarifyResult) => void,
 		private mode: ClarifyMode = "chain", // Mode: 'single', 'parallel', or 'chain'
 	) {
@@ -872,7 +880,10 @@ export class ChainClarifyComponent implements Component {
 			const cursorPos = getCursorDisplayPos(this.editState.cursor, starts);
 			const targetLine = Math.max(0, cursorPos.line - this.EDIT_VIEWPORT_HEIGHT);
 			const targetCol = Math.min(cursorPos.col, wrapped[targetLine]?.length ?? 0);
-			this.editState = { ...this.editState, cursor: starts[targetLine] + targetCol };
+			this.editState = {
+				...this.editState,
+				cursor: starts[targetLine] + targetCol,
+			};
 			this.tui.requestRender();
 			return;
 		}
@@ -882,7 +893,10 @@ export class ChainClarifyComponent implements Component {
 			const cursorPos = getCursorDisplayPos(this.editState.cursor, starts);
 			const targetLine = Math.min(wrapped.length - 1, cursorPos.line + this.EDIT_VIEWPORT_HEIGHT);
 			const targetCol = Math.min(cursorPos.col, wrapped[targetLine]?.length ?? 0);
-			this.editState = { ...this.editState, cursor: starts[targetLine] + targetCol };
+			this.editState = {
+				...this.editState,
+				cursor: starts[targetLine] + targetCol,
+			};
 			this.tui.requestRender();
 			return;
 		}

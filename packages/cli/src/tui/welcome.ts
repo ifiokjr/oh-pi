@@ -18,15 +18,28 @@ export function welcome(env: EnvInfo) {
 		p.log.warn(t("welcome.piNotFound"));
 	}
 
-	p.log.info(t("welcome.envInfo", { node: process.version, os: env.os, terminal: env.terminal }));
+	p.log.info(
+		t("welcome.envInfo", {
+			node: process.version,
+			os: env.os,
+			terminal: env.terminal,
+		}),
+	);
 
 	if (env.existingProviders.length > 0) {
-		p.log.info(t("welcome.existingProviders", { providers: env.existingProviders.join(", ") }));
+		p.log.info(
+			t("welcome.existingProviders", {
+				providers: env.existingProviders.join(", "),
+			}),
+		);
 	}
 
 	if (env.hasExistingConfig) {
 		p.note(
-			`${t("welcome.existingConfigDetail", { count: env.existingFiles.length, size: env.configSizeKB })}\n${categorize(env.existingFiles)}`,
+			`${t("welcome.existingConfigDetail", {
+				count: env.existingFiles.length,
+				size: env.configSizeKB,
+			})}\n${categorize(env.existingFiles)}`,
 			t("welcome.existingConfig"),
 		);
 	}

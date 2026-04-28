@@ -3,10 +3,10 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { enhanceReadTool } from "./src/read.js";
 import { enhanceBashTool } from "./src/bash.js";
-import { enhanceLsTool } from "./src/ls.js";
 import { enhanceFindTool, enhanceGrepTool, enhanceMultiGrepTool } from "./src/find-grep.js";
+import { enhanceLsTool } from "./src/ls.js";
+import { enhanceReadTool } from "./src/read.js";
 
 export default function piPretty(pi: ExtensionAPI) {
 	// Wrap built-in tools with enhanced rendering

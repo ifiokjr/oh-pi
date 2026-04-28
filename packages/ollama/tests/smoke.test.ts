@@ -44,7 +44,9 @@ async function createDelayedCloudBootstrapBackend(
 					res.end(
 						JSON.stringify({
 							capabilities,
-							model_info: { [`${(parsed.model ?? "glm").split(/[:.-]/)[0]}.context_length`]: contextWindow },
+							model_info: {
+								[`${(parsed.model ?? "glm").split(/[:.-]/)[0]}.context_length`]: contextWindow,
+							},
 							details: {},
 						}),
 					);
@@ -100,7 +102,13 @@ describe("ollama provider smoke tests", () => {
 
 	it("does not crash on session_start when auth storage is not ready", async () => {
 		const backend = await createTestOllamaBackend();
-		backend.setModels([{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752 }]);
+		backend.setModels([
+			{
+				id: "glm-5.1",
+				capabilities: ["completion", "tools", "thinking"],
+				contextWindow: 202752,
+			},
+		]);
 		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
 		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
 		process.env.PI_OLLAMA_CLOUD_SHOW_URL = `${backend.origin}/api/show`;
@@ -161,8 +169,16 @@ describe("ollama provider smoke tests", () => {
 	it("bootstraps the public cloud catalog without an API key", async () => {
 		const backend = await createTestOllamaBackend();
 		backend.setModels([
-			{ id: "glm-5.1", capabilities: ["completion", "tools", "thinking"], contextWindow: 202752 },
-			{ id: "kimi-k2.5", capabilities: ["completion", "tools", "thinking", "vision"], contextWindow: 262144 },
+			{
+				id: "glm-5.1",
+				capabilities: ["completion", "tools", "thinking"],
+				contextWindow: 202752,
+			},
+			{
+				id: "kimi-k2.5",
+				capabilities: ["completion", "tools", "thinking", "vision"],
+				contextWindow: 262144,
+			},
 		]);
 		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
 		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
@@ -217,7 +233,10 @@ describe("ollama provider smoke tests", () => {
 	});
 
 	it("uses colon-style guidance when a local model is not installed yet", async () => {
-		vi.spyOn(localModule, "getOllamaCliStatus").mockResolvedValue({ available: true, version: "0.9.0" });
+		vi.spyOn(localModule, "getOllamaCliStatus").mockResolvedValue({
+			available: true,
+			version: "0.9.0",
+		});
 		vi.spyOn(modelsModule, "discoverOllamaLocalModels").mockResolvedValue([]);
 		const harness = createExtensionHarness();
 		harnesses.push(harness);

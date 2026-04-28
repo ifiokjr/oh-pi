@@ -1,7 +1,6 @@
 # 🐜 Ant Colony — Multi-Agent Swarm Extension
 
-> A self-organizing multi-agent system modeled after real ant colony ecology. Adaptive concurrency,
-> pheromone communication, zero centralized scheduling.
+> A self-organizing multi-agent system modeled after real ant colony ecology. Adaptive concurrency, pheromone communication, zero centralized scheduling.
 
 ## Architecture
 
@@ -29,17 +28,13 @@ Goal → Scouting → Task Pool → Workers Execute in Parallel → Soldiers Rev
 
 <!-- {=antColonySharedStorageOverview} -->
 
-Ant-colony stores runtime state outside the repository by default under the shared pi agent
-directory, mirroring the workspace path so each repo gets its own isolated storage root.
-Project-local `.ant-colony/` storage remains available as an explicit opt-in for legacy workflows.
+Ant-colony stores runtime state outside the repository by default under the shared pi agent directory, mirroring the workspace path so each repo gets its own isolated storage root. Project-local `.ant-colony/` storage remains available as an explicit opt-in for legacy workflows.
 
 <!-- {/antColonySharedStorageOverview} -->
 
 <!-- {=antColonyGetColonyWorktreeParentDirDocs} -->
 
-Resolve the parent directory for isolated colony worktrees. Shared mode keeps them under the
-workspace-mirrored shared root in `worktrees/`, while project mode places them under the legacy
-project-local `.ant-colony/worktrees/` path.
+Resolve the parent directory for isolated colony worktrees. Shared mode keeps them under the workspace-mirrored shared root in `worktrees/`, while project mode places them under the legacy project-local `.ant-colony/worktrees/` path.
 
 <!-- {/antColonyGetColonyWorktreeParentDirDocs} -->
 
@@ -55,9 +50,7 @@ Shared storage layout:
 
 <!-- {=antColonyPrepareColonyWorkspaceDocs} -->
 
-Prepare the execution workspace for a colony run. When worktree isolation is enabled and git
-supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch; otherwise it
-falls back to the shared working directory and records the reason.
+Prepare the execution workspace for a colony run. When worktree isolation is enabled and git supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch; otherwise it falls back to the shared working directory and records the reason.
 
 <!-- {/antColonyPrepareColonyWorkspaceDocs} -->
 
@@ -69,9 +62,7 @@ PI_ANT_COLONY_WORKTREE=0
 
 <!-- {=antColonyResolveStorageOptionsDocs} -->
 
-Resolve the effective ant-colony storage mode and shared root. Explicit options win, then
-environment variables, then extension config, and shared storage is the default when no override is
-provided.
+Resolve the effective ant-colony storage mode and shared root. Explicit options win, then environment variables, then extension config, and shared storage is the default when no override is provided.
 
 <!-- {/antColonyResolveStorageOptionsDocs} -->
 
@@ -148,8 +139,7 @@ To inspect a delegated colony pick, use `@ifi/pi-extension-adaptive-routing`'s `
 
 ## Usage Tracking Integration
 
-Ant inference usage (tokens + cost) is streamed to the `usage-tracker` extension via `pi.events` (`usage:record`).
-So `/usage`, `usage_report`, and session cost totals now include background colony inference, making colony spend visible.
+Ant inference usage (tokens + cost) is streamed to the `usage-tracker` extension via `pi.events` (`usage:record`). So `/usage`, `usage_report`, and session cost totals now include background colony inference, making colony spend visible.
 
 ## Pheromone System
 
@@ -163,8 +153,7 @@ Ants communicate indirectly through pheromones (stigmergy), not direct messages:
 | completion | Worker      | Task completion marker                  |
 | dependency | Any         | File dependency relationships           |
 
-Pheromones decay exponentially (10-minute half-life), preventing stale info from misleading
-subsequent ants.
+Pheromones decay exponentially (10-minute half-life), preventing stale info from misleading subsequent ants.
 
 ## File Locking
 
@@ -177,9 +166,7 @@ Each task declares the files it operates on. The queen guarantees:
 
 <!-- {=antColonyGetColonyStateParentDirDocs} -->
 
-Resolve the parent directory for persisted colony state. Shared mode stores state under the
-workspace-mirrored shared root in `colonies/`, while project mode keeps using the legacy local
-`.ant-colony/` directory.
+Resolve the parent directory for persisted colony state. Shared mode stores state under the workspace-mirrored shared root in `colonies/`, while project mode keeps using the legacy local `.ant-colony/` directory.
 
 <!-- {/antColonyGetColonyStateParentDirDocs} -->
 
@@ -194,9 +181,7 @@ workspace-mirrored shared root in `colonies/`, while project mode keeps using th
 
 <!-- {=antColonyMigrateLegacyProjectColoniesDocs} -->
 
-Best-effort migration for legacy project-local colony state. When shared mode is active, existing
-`.ant-colony/{colony-id}/` directories are copied into the shared store so resumable colonies keep
-working without leaving runtime state in the repo.
+Best-effort migration for legacy project-local colony state. When shared mode is active, existing `.ant-colony/{colony-id}/` directories are copied into the shared store so resumable colonies keep working without leaving runtime state in the repo.
 
 <!-- {/antColonyMigrateLegacyProjectColoniesDocs} -->
 

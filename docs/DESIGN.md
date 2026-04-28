@@ -4,8 +4,7 @@
 
 ## 1. Product Positioning
 
-**oh-pi** is the "out-of-the-box configurator" for pi-coding-agent. Users run `npx @ifi/oh-pi` and
-complete via interactive TUI:
+**oh-pi** is the "out-of-the-box configurator" for pi-coding-agent. Users run `npx @ifi/oh-pi` and complete via interactive TUI:
 
 - API setup (multi-provider one-stop configuration)
 - Preset extension/skill/theme installation
@@ -239,8 +238,7 @@ MCP: All preset MCP servers
 
 ### 4.5 MCP Server Presets
 
-Pi doesn't ship built-in MCP, but Extensions can bridge it. oh-pi provides an MCP bridge extension +
-preset server configs:
+Pi doesn't ship built-in MCP, but Extensions can bridge it. oh-pi provides an MCP bridge extension + preset server configs:
 
 | MCP Server                                         | Description              | Install |
 | -------------------------------------------------- | ------------------------ | ------- |

@@ -37,8 +37,7 @@ This package turns explicit background shell commands into a first-class pi work
 /bg stop bg-1
 ```
 
-The `bg_task` tool lets the agent start tasks explicitly and optionally gate wakeups with a
-substring or `/regex/flags` pattern.
+The `bg_task` tool lets the agent start tasks explicitly and optionally gate wakeups with a substring or `/regex/flags` pattern.
 
 The dashboard supports:
 

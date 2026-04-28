@@ -26,9 +26,7 @@
 
 <!-- {=repoMdtUsageRuleDocs} -->
 
-Use MDT through `pnpm mdt ...`, not a globally installed `mdt` binary. This keeps documentation
-reuse commands pinned to the repo's declared `@ifi/mdt` version and makes local runs, CI, and agent
-instructions consistent.
+Use MDT through `pnpm mdt ...`, not a globally installed `mdt` binary. This keeps documentation reuse commands pinned to the repo's declared `@ifi/mdt` version and makes local runs, CI, and agent instructions consistent.
 
 <!-- {/repoMdtUsageRuleDocs} -->
 

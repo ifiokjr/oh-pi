@@ -51,7 +51,10 @@ describe("git-guard extension", () => {
 		vi.useFakeTimers();
 		try {
 			const harness = createExtensionHarness();
-			harness.pi.exec = vi.fn(async () => ({ stdout: " M README.md\n?? notes.txt\n", exitCode: 0 }));
+			harness.pi.exec = vi.fn(async () => ({
+				stdout: " M README.md\n?? notes.txt\n",
+				exitCode: 0,
+			}));
 
 			gitGuardExtension(harness.pi as never);
 			harness.emit("session_start", {}, harness.ctx);

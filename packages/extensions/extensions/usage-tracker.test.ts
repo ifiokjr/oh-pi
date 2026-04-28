@@ -81,7 +81,12 @@ function makeAuthJson(overrides: Record<string, any> = {}) {
 			type: "oauth",
 			access:
 				// Minimal JWT: header.payload.signature
-				`eyJ0eXAiOiJKV1QifQ.${Buffer.from(JSON.stringify({ "https://api.openai.com/profile": { email: "test@example.com" }, "https://api.openai.com/auth": { chatgpt_plan_type: "pro" } })).toString("base64url")}.sig`,
+				`eyJ0eXAiOiJKV1QifQ.${Buffer.from(
+					JSON.stringify({
+						"https://api.openai.com/profile": { email: "test@example.com" },
+						"https://api.openai.com/auth": { chatgpt_plan_type: "pro" },
+					}),
+				).toString("base64url")}.sig`,
 			refresh: "rt_test",
 			expires: Date.now() + 86_400_000,
 			accountId: "test-account",
@@ -145,7 +150,12 @@ function makeOpenAiRateLimitCacheEntry() {
 }
 
 function makeFetchResponse(
-	opts: { status?: number; ok?: boolean; headers?: Record<string, string>; body?: unknown } = {},
+	opts: {
+		status?: number;
+		ok?: boolean;
+		headers?: Record<string, string>;
+		body?: unknown;
+	} = {},
 ) {
 	const headers = new Map(
 		Object.entries(opts.headers ?? {}).map(([key, value]) => [key.toLowerCase(), value] as const),
@@ -241,7 +251,11 @@ function createMockCtx(entries: any[] = []) {
 	return {
 		hasUI: true,
 		sessionManager: { getBranch: () => entries },
-		getContextUsage: () => ({ tokens: 45000, contextWindow: 200000, percent: 22.5 }),
+		getContextUsage: () => ({
+			tokens: 45000,
+			contextWindow: 200000,
+			percent: 22.5,
+		}),
 		model: { id: "claude-sonnet-4-20250514", provider: "anthropic" },
 		ui: {
 			setWidget(key: string, content: any) {
@@ -279,7 +293,7 @@ function stripAnsiForTest(text: string): string {
 
 // ─── Import ──────────────────────────────────────────────────────────────────
 
-import { existsSync, promises as fsPromises, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, promises as fsPromises, readFileSync, writeFileSync } from "node:fs";
 import { resetSafeModeStateForTests, setSafeModeState } from "./runtime-mode";
 import usageTracker, { flushPendingWrites } from "./usage-tracker.js";
 
@@ -367,10 +381,15 @@ describe("usage-tracker extension", () => {
 		it("defers persisted history and cache loading until after startup", async () => {
 			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path).includes("usage-tracker-history.json")) {
-					return JSON.stringify({ version: 1, entries: [{ timestamp: Date.now() - 60_000, cost: 1.25 }] });
+					return JSON.stringify({
+						version: 1,
+						entries: [{ timestamp: Date.now() - 60_000, cost: 1.25 }],
+					});
 				}
 				if (String(path).includes("usage-tracker-rate-limits.json")) {
-					return makeRateLimitCacheJson({ openai: makeOpenAiRateLimitCacheEntry() });
+					return makeRateLimitCacheJson({
+						openai: makeOpenAiRateLimitCacheEntry(),
+					});
 				}
 				return "{}";
 			});
@@ -429,11 +448,37 @@ describe("usage-tracker extension", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
-			const msg1 = makeAssistantMessage({ input: 1000, output: 500, costTotal: 0.01 });
-			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg1, toolResults: [] }, ctx);
+			const msg1 = makeAssistantMessage({
+				input: 1000,
+				output: 500,
+				costTotal: 0.01,
+			});
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: msg1,
+					toolResults: [],
+				},
+				ctx,
+			);
 
-			const msg2 = makeAssistantMessage({ input: 2000, output: 800, costTotal: 0.02 });
-			pi._emit("turn_end", { type: "turn_end", turnIndex: 1, message: msg2, toolResults: [] }, ctx);
+			const msg2 = makeAssistantMessage({
+				input: 2000,
+				output: 800,
+				costTotal: 0.02,
+			});
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 1,
+					message: msg2,
+					toolResults: [],
+				},
+				ctx,
+			);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
@@ -460,7 +505,10 @@ describe("usage-tracker extension", () => {
 				{
 					type: "turn_end",
 					turnIndex: 1,
-					message: makeAssistantMessage({ model: "gpt-4o", provider: "openai" }),
+					message: makeAssistantMessage({
+						model: "gpt-4o",
+						provider: "openai",
+					}),
 					toolResults: [],
 				},
 				ctx,
@@ -500,7 +548,12 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 			pi._emit(
 				"turn_end",
-				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.45 }), toolResults: [] },
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage({ costTotal: 0.45 }),
+					toolResults: [],
+				},
 				ctx,
 			);
 
@@ -533,7 +586,12 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 			pi._emit(
 				"turn_end",
-				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.5 }), toolResults: [] },
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage({ costTotal: 0.5 }),
+					toolResults: [],
+				},
 				ctx,
 			);
 
@@ -597,7 +655,12 @@ describe("usage-tracker extension", () => {
 
 			pi._emit(
 				"turn_end",
-				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.05 }), toolResults: [] },
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage({ costTotal: 0.05 }),
+					toolResults: [],
+				},
 				ctx,
 			);
 
@@ -618,7 +681,16 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
 			const msg = makeAssistantMessage({ costTotal: 0.55 });
-			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg, toolResults: [] }, ctx);
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: msg,
+					toolResults: [],
+				},
+				ctx,
+			);
 
 			expect(ctx._notifications.length).toBe(1);
 			expect(ctx._notifications[0].msg).toContain("$0.50");
@@ -631,12 +703,22 @@ describe("usage-tracker extension", () => {
 
 			pi._emit(
 				"turn_end",
-				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.55 }), toolResults: [] },
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage({ costTotal: 0.55 }),
+					toolResults: [],
+				},
 				ctx,
 			);
 			pi._emit(
 				"turn_end",
-				{ type: "turn_end", turnIndex: 1, message: makeAssistantMessage({ costTotal: 0.1 }), toolResults: [] },
+				{
+					type: "turn_end",
+					turnIndex: 1,
+					message: makeAssistantMessage({ costTotal: 0.1 }),
+					toolResults: [],
+				},
 				ctx,
 			);
 
@@ -649,7 +731,12 @@ describe("usage-tracker extension", () => {
 
 			pi._emit(
 				"turn_end",
-				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 1.1 }), toolResults: [] },
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage({ costTotal: 1.1 }),
+					toolResults: [],
+				},
 				ctx,
 			);
 
@@ -748,7 +835,16 @@ describe("usage-tracker extension", () => {
 		it("returns summary with rate limits, session cost, and 30d total", async () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
-			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: makeAssistantMessage(), toolResults: [] }, ctx);
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage(),
+					toolResults: [],
+				},
+				ctx,
+			);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "summary" }, undefined, undefined, ctx));
@@ -777,7 +873,11 @@ describe("usage-tracker extension", () => {
 				{
 					type: "turn_end",
 					turnIndex: 0,
-					message: makeAssistantMessage({ model: "gemma3:4b", provider: "ollama", api: "openai-completions" }),
+					message: makeAssistantMessage({
+						model: "gemma3:4b",
+						provider: "ollama",
+						api: "openai-completions",
+					}),
 					toolResults: [],
 				},
 				ollamaCtx,
@@ -802,7 +902,11 @@ describe("usage-tracker extension", () => {
 				if (url.includes("ollama.com/v1/models")) {
 					return Promise.resolve(
 						makeFetchResponse({
-							headers: { "x-ratelimit-limit": "100", "x-ratelimit-remaining": "75", "x-ratelimit-reset": "60s" },
+							headers: {
+								"x-ratelimit-limit": "100",
+								"x-ratelimit-remaining": "75",
+								"x-ratelimit-reset": "60s",
+							},
 							body: { data: [{ id: "gpt-oss:20b" }] },
 						}),
 					);
@@ -848,7 +952,16 @@ describe("usage-tracker extension", () => {
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
-			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: makeAssistantMessage(), toolResults: [] }, ctx);
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage(),
+					toolResults: [],
+				},
+				ctx,
+			);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
@@ -903,7 +1016,13 @@ describe("usage-tracker extension", () => {
 							}),
 						);
 					}
-					return Promise.resolve(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "5" } }));
+					return Promise.resolve(
+						makeFetchResponse({
+							status: 429,
+							ok: false,
+							headers: { "retry-after": "5" },
+						}),
+					);
 				}
 				return Promise.resolve(makeFetchResponse());
 			});
@@ -933,7 +1052,13 @@ describe("usage-tracker extension", () => {
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
+			mockFetch.mockResolvedValue(
+				makeFetchResponse({
+					status: 429,
+					ok: false,
+					headers: { "retry-after": "120" },
+				}),
+			);
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
@@ -1079,7 +1204,13 @@ describe("usage-tracker extension", () => {
 		});
 
 		it("shows a non-auth note when Anthropic OAuth usage endpoint is rate-limited", async () => {
-			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
+			mockFetch.mockResolvedValue(
+				makeFetchResponse({
+					status: 429,
+					ok: false,
+					headers: { "retry-after": "120" },
+				}),
+			);
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
@@ -1111,7 +1242,14 @@ describe("usage-tracker extension", () => {
 			ctx.model = { id: "gpt-4o" } as any;
 			(readFileSync as ReturnType<typeof vi.fn>).mockImplementation((path: string) => {
 				if (String(path).includes("auth.json")) {
-					return JSON.stringify({ anthropic: { type: "oauth", access: "sk-test", refresh: "r", expires: 0 } });
+					return JSON.stringify({
+						anthropic: {
+							type: "oauth",
+							access: "sk-test",
+							refresh: "r",
+							expires: 0,
+						},
+					});
 				}
 				return "{}";
 			});
@@ -1143,7 +1281,11 @@ describe("usage-tracker extension", () => {
 				{
 					type: "turn_end",
 					turnIndex: 0,
-					message: makeAssistantMessage({ provider: "anthropic", model: "claude-sonnet-4-20250514", costTotal: 0.02 }),
+					message: makeAssistantMessage({
+						provider: "anthropic",
+						model: "claude-sonnet-4-20250514",
+						costTotal: 0.02,
+					}),
 					toolResults: [],
 				},
 				ctx,
@@ -1153,7 +1295,11 @@ describe("usage-tracker extension", () => {
 				{
 					type: "turn_end",
 					turnIndex: 1,
-					message: makeAssistantMessage({ provider: "openai", model: "gpt-4o", costTotal: 0.03 }),
+					message: makeAssistantMessage({
+						provider: "openai",
+						model: "gpt-4o",
+						costTotal: 0.03,
+					}),
 					toolResults: [],
 				},
 				ctx,
@@ -1168,7 +1314,12 @@ describe("usage-tracker extension", () => {
 				  })
 				| undefined;
 			expect(widgetFactory).toBeDefined();
-			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
+			const component = widgetFactory?.(
+				{ requestRender: vi.fn() },
+				{
+					fg: (_color: string, text: string) => text,
+				},
+			);
 			const rendered = component?.render(200).join("\n") ?? "";
 			expect(rendered).toContain("$0.020");
 			expect(rendered).not.toContain("$0.050");
@@ -1188,7 +1339,12 @@ describe("usage-tracker extension", () => {
 				| undefined;
 			expect(widgetFactory).toBeDefined();
 			const requestRender = vi.fn();
-			widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+			widgetFactory?.(
+				{ requestRender },
+				{
+					fg: (_color: string, text: string) => text,
+				},
+			);
 			requestRender.mockClear();
 
 			pi._emit(
@@ -1209,7 +1365,10 @@ describe("usage-tracker extension", () => {
 			(existsSync as ReturnType<typeof vi.fn>).mockReturnValue(false);
 			(readFileSync as ReturnType<typeof vi.fn>).mockReturnValue("{}");
 			mockFetch.mockResolvedValue(makeFetchResponse({ body: {} }));
-			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
+			ctx.model = {
+				id: "claude-sonnet-4-20250514",
+				provider: "anthropic",
+			} as any;
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
@@ -1223,7 +1382,12 @@ describe("usage-tracker extension", () => {
 				| undefined;
 			expect(widgetFactory).toBeDefined();
 			const requestRender = vi.fn();
-			widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+			widgetFactory?.(
+				{ requestRender },
+				{
+					fg: (_color: string, text: string) => text,
+				},
+			);
 			requestRender.mockClear();
 
 			await vi.advanceTimersByTimeAsync(2_000);
@@ -1246,7 +1410,12 @@ describe("usage-tracker extension", () => {
 				| undefined;
 			expect(widgetFactory).toBeDefined();
 			const requestRender = vi.fn();
-			widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+			widgetFactory?.(
+				{ requestRender },
+				{
+					fg: (_color: string, text: string) => text,
+				},
+			);
 			requestRender.mockClear();
 
 			vi.advanceTimersByTime(60_000);
@@ -1269,7 +1438,12 @@ describe("usage-tracker extension", () => {
 				| undefined;
 			expect(widgetFactory).toBeDefined();
 			const requestRender = vi.fn();
-			const component = widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+			const component = widgetFactory?.(
+				{ requestRender },
+				{
+					fg: (_color: string, text: string) => text,
+				},
+			);
 
 			await pi._commands.get("usage-toggle").handler("", ctx);
 			component?.dispose();
@@ -1296,7 +1470,12 @@ describe("usage-tracker extension", () => {
 				| undefined;
 			expect(widgetFactory).toBeDefined();
 			const requestRender = vi.fn();
-			widgetFactory?.({ requestRender }, { fg: (_color: string, text: string) => text });
+			widgetFactory?.(
+				{ requestRender },
+				{
+					fg: (_color: string, text: string) => text,
+				},
+			);
 			requestRender.mockClear();
 
 			setSafeModeState(true, { source: "manual" });
@@ -1318,7 +1497,11 @@ describe("usage-tracker extension", () => {
 				{
 					type: "turn_end",
 					turnIndex: 0,
-					message: makeAssistantMessage({ provider: "anthropic", model: "claude-sonnet-4-20250514", costTotal: 0.02 }),
+					message: makeAssistantMessage({
+						provider: "anthropic",
+						model: "claude-sonnet-4-20250514",
+						costTotal: 0.02,
+					}),
 					toolResults: [],
 				},
 				ctx,
@@ -1333,10 +1516,21 @@ describe("usage-tracker extension", () => {
 				  })
 				| undefined;
 			expect(widgetFactory).toBeDefined();
-			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
+			const component = widgetFactory?.(
+				{ requestRender: vi.fn() },
+				{
+					fg: (_color: string, text: string) => text,
+				},
+			);
 
 			const nextCtx = createMockCtx([
-				makeSessionEntry(makeAssistantMessage({ provider: "openai", model: "gpt-4o", costTotal: 0.03 })),
+				makeSessionEntry(
+					makeAssistantMessage({
+						provider: "openai",
+						model: "gpt-4o",
+						costTotal: 0.03,
+					}),
+				),
 			]);
 			nextCtx.model = { id: "gpt-4o", provider: "openai" } as any;
 			pi._emit("session_switch", { type: "session_switch" }, nextCtx);
@@ -1360,7 +1554,13 @@ describe("usage-tracker extension", () => {
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
+			mockFetch.mockResolvedValue(
+				makeFetchResponse({
+					status: 429,
+					ok: false,
+					headers: { "retry-after": "120" },
+				}),
+			);
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
@@ -1375,7 +1575,12 @@ describe("usage-tracker extension", () => {
 				  })
 				| undefined;
 			expect(widgetFactory).toBeDefined();
-			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
+			const component = widgetFactory?.(
+				{ requestRender: vi.fn() },
+				{
+					fg: (_color: string, text: string) => text,
+				},
+			);
 			const rendered = component?.render(200).join("\n") ?? "";
 			expect(rendered).toContain("Anthropic");
 			expect(rendered).toContain("72%");
@@ -1391,11 +1596,19 @@ describe("usage-tracker extension", () => {
 			});
 			(mockFsReadFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
 				if (String(path) === RATE_LIMIT_CACHE_PATH) {
-					return makeRateLimitCacheJson({ openai: makeOpenAiRateLimitCacheEntry() });
+					return makeRateLimitCacheJson({
+						openai: makeOpenAiRateLimitCacheEntry(),
+					});
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
+			mockFetch.mockResolvedValue(
+				makeFetchResponse({
+					status: 429,
+					ok: false,
+					headers: { "retry-after": "120" },
+				}),
+			);
 			ctx.model = { id: "gpt-4o", provider: "openai" } as any;
 
 			usageTracker(pi as any);
@@ -1411,7 +1624,12 @@ describe("usage-tracker extension", () => {
 				  })
 				| undefined;
 			expect(widgetFactory).toBeDefined();
-			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
+			const component = widgetFactory?.(
+				{ requestRender: vi.fn() },
+				{
+					fg: (_color: string, text: string) => text,
+				},
+			);
 			const rendered = component?.render(200).join("\n") ?? "";
 			expect(rendered).toContain("OpenAI");
 			expect(rendered).toContain("61%");
@@ -1445,7 +1663,12 @@ describe("usage-tracker extension", () => {
 				  })
 				| undefined;
 			expect(widgetFactory).toBeDefined();
-			const component = widgetFactory?.({ requestRender: vi.fn() }, { fg: (_color: string, text: string) => text });
+			const component = widgetFactory?.(
+				{ requestRender: vi.fn() },
+				{
+					fg: (_color: string, text: string) => text,
+				},
+			);
 			const width = 24;
 			const renderedLines = component?.render(width) ?? [];
 			expect(renderedLines.length).toBeGreaterThan(0);
@@ -1503,16 +1726,32 @@ describe("usage-tracker extension", () => {
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
-			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: makeAssistantMessage(), toolResults: [] }, ctx);
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage(),
+					toolResults: [],
+				},
+				ctx,
+			);
 			vi.advanceTimersByTime(15_000);
 			pi._emit(
 				"turn_end",
-				{ type: "turn_end", turnIndex: 1, message: makeAssistantMessage({ costTotal: 0.015 }), toolResults: [] },
+				{
+					type: "turn_end",
+					turnIndex: 1,
+					message: makeAssistantMessage({ costTotal: 0.015 }),
+					toolResults: [],
+				},
 				ctx,
 			);
 
 			await runWithTimers(() => pi._commands.get("usage").handler("", ctx));
-			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), { overlay: true });
+			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {
+				overlay: true,
+			});
 
 			const rendererFactory = (ctx.ui.custom as ReturnType<typeof vi.fn>).mock.calls[0][0] as (...args: unknown[]) => {
 				render: (width: number) => string[];
@@ -1543,12 +1782,23 @@ describe("usage-tracker extension", () => {
 					return makeAuthJson();
 				}
 				if (String(path) === RATE_LIMIT_CACHE_PATH) {
-					return makeRateLimitCacheJson({ openai: makeOpenAiRateLimitCacheEntry() });
+					return makeRateLimitCacheJson({
+						openai: makeOpenAiRateLimitCacheEntry(),
+					});
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
-			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
+			mockFetch.mockResolvedValue(
+				makeFetchResponse({
+					status: 429,
+					ok: false,
+					headers: { "retry-after": "120" },
+				}),
+			);
+			ctx.model = {
+				id: "claude-sonnet-4-20250514",
+				provider: "anthropic",
+			} as any;
 			(ctx.ui.select as ReturnType<typeof vi.fn>).mockImplementation(async (_title: string, options: string[]) =>
 				options.find((option) => option.includes("OpenAI")),
 			);
@@ -1557,7 +1807,12 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 			pi._emit(
 				"turn_end",
-				{ type: "turn_end", turnIndex: 0, message: makeAssistantMessage({ costTotal: 0.015 }), toolResults: [] },
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: makeAssistantMessage({ costTotal: 0.015 }),
+					toolResults: [],
+				},
 				ctx,
 			);
 
@@ -1570,7 +1825,9 @@ describe("usage-tracker extension", () => {
 					expect.stringContaining("OpenAI"),
 				]),
 			);
-			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), { overlay: true });
+			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {
+				overlay: true,
+			});
 
 			const rendererFactory = (ctx.ui.custom as ReturnType<typeof vi.fn>).mock.calls[0][0] as (...args: unknown[]) => {
 				render: (width: number) => string[];
@@ -1588,14 +1845,19 @@ describe("usage-tracker extension", () => {
 		});
 
 		it("supports direct provider arguments and skips the picker", async () => {
-			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
+			ctx.model = {
+				id: "claude-sonnet-4-20250514",
+				provider: "anthropic",
+			} as any;
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
 			await runWithTimers(() => pi._commands.get("usage").handler("claude", ctx));
 
 			expect(ctx.ui.select).not.toHaveBeenCalled();
-			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), { overlay: true });
+			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {
+				overlay: true,
+			});
 		});
 
 		it("surfaces recently viewed providers in the picker", async () => {
@@ -1610,12 +1872,23 @@ describe("usage-tracker extension", () => {
 					return makeAuthJson();
 				}
 				if (String(path) === RATE_LIMIT_CACHE_PATH) {
-					return makeRateLimitCacheJson({ openai: makeOpenAiRateLimitCacheEntry() });
+					return makeRateLimitCacheJson({
+						openai: makeOpenAiRateLimitCacheEntry(),
+					});
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "120" } }));
-			ctx.model = { id: "claude-sonnet-4-20250514", provider: "anthropic" } as any;
+			mockFetch.mockResolvedValue(
+				makeFetchResponse({
+					status: 429,
+					ok: false,
+					headers: { "retry-after": "120" },
+				}),
+			);
+			ctx.model = {
+				id: "claude-sonnet-4-20250514",
+				provider: "anthropic",
+			} as any;
 			(ctx.ui.select as ReturnType<typeof vi.fn>).mockImplementation(
 				async (_title: string, options: string[]) => options[0],
 			);
@@ -1646,8 +1919,21 @@ describe("usage-tracker extension", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
-			const msg = makeAssistantMessage({ input: 1_500_000, output: 800, costTotal: 0.05 });
-			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg, toolResults: [] }, ctx);
+			const msg = makeAssistantMessage({
+				input: 1_500_000,
+				output: 800,
+				costTotal: 0.05,
+			});
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: msg,
+					toolResults: [],
+				},
+				ctx,
+			);
 
 			const tool = pi._tools.get("usage_report");
 			const result = await runWithTimers(() => tool.execute("id", { format: "detailed" }, undefined, undefined, ctx));
@@ -1701,8 +1987,21 @@ describe("usage-tracker extension", () => {
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
-			const msg = makeAssistantMessage({ input: 1000, output: 500, costTotal: 0.01 });
-			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg, toolResults: [] }, ctx);
+			const msg = makeAssistantMessage({
+				input: 1000,
+				output: 500,
+				costTotal: 0.01,
+			});
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: msg,
+					toolResults: [],
+				},
+				ctx,
+			);
 
 			expect(pi.events.emit).toHaveBeenCalledWith(
 				"usage:limits",
@@ -1724,14 +2023,25 @@ describe("usage-tracker extension", () => {
 				output: 500,
 				costTotal: 0.01,
 			});
-			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg, toolResults: [] }, ctx);
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: msg,
+					toolResults: [],
+				},
+				ctx,
+			);
 
 			// Find the last usage:limits call
 			const emitCalls = (pi.events.emit as ReturnType<typeof vi.fn>).mock.calls;
 			const limitsCalls = emitCalls.filter((c: unknown[]) => c[0] === "usage:limits");
 			expect(limitsCalls.length).toBeGreaterThan(0);
 			const lastCall = limitsCalls[limitsCalls.length - 1];
-			const data = lastCall[1] as { perModel: Record<string, { model: string }> };
+			const data = lastCall[1] as {
+				perModel: Record<string, { model: string }>;
+			};
 			expect(data.perModel["claude-sonnet-4-20250514"]).toBeDefined();
 			expect(data.perModel["claude-sonnet-4-20250514"].model).toBe("claude-sonnet-4-20250514");
 		});
@@ -1743,8 +2053,21 @@ describe("usage-tracker extension", () => {
 			pi._emit("session_start", { type: "session_start" }, ctx);
 
 			// Record a turn so there's data
-			const msg = makeAssistantMessage({ input: 500, output: 250, costTotal: 0.005 });
-			pi._emit("turn_end", { type: "turn_end", turnIndex: 0, message: msg, toolResults: [] }, ctx);
+			const msg = makeAssistantMessage({
+				input: 500,
+				output: 250,
+				costTotal: 0.005,
+			});
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 0,
+					message: msg,
+					toolResults: [],
+				},
+				ctx,
+			);
 
 			// Clear previous emit calls
 			(pi.events.emit as ReturnType<typeof vi.fn>).mockClear();
@@ -1869,7 +2192,13 @@ describe("usage-tracker extension", () => {
 				}
 				return "{}";
 			});
-			mockFetch.mockResolvedValue(makeFetchResponse({ status: 429, ok: false, headers: { "retry-after": "5" } }));
+			mockFetch.mockResolvedValue(
+				makeFetchResponse({
+					status: 429,
+					ok: false,
+					headers: { "retry-after": "5" },
+				}),
+			);
 
 			usageTracker(pi as any);
 			pi._emit("session_start", { type: "session_start" }, ctx);

@@ -2,8 +2,7 @@
 
 Native spec-driven workflow for pi, inspired by [github/spec-kit](https://github.com/github/spec-kit).
 
-`@ifi/pi-spec` is a **pi extension package**, not a shell wrapper and not a general-purpose JavaScript
-library. Its job is to bring the core spec-kit workflow into pi as a native TypeScript experience:
+`@ifi/pi-spec` is a **pi extension package**, not a shell wrapper and not a general-purpose JavaScript library. Its job is to bring the core spec-kit workflow into pi as a native TypeScript experience:
 
 - one `/spec` command instead of a pile of separate commands and shell entrypoints
 - deterministic local scaffolding under `.specify/`
@@ -12,8 +11,7 @@ library. Its job is to bring the core spec-kit workflow into pi as a native Type
 - prompt handoff back into pi via `pi.sendUserMessage(...)`
 - project-owned templates that can be customized locally after initialization
 
-The package deliberately keeps the **mental model** of spec-kit, but replaces its shell orchestration with
-normal pi tools and normal pi conversations.
+The package deliberately keeps the **mental model** of spec-kit, but replaces its shell orchestration with normal pi tools and normal pi conversations.
 
 ## Install
 
@@ -84,32 +82,25 @@ Supported subcommands:
 
 <!-- {=piSpecSubcommandsDocs} -->
 
-Canonical `/spec` subcommands exposed by the extension. Keep README command lists and exported type
-metadata in sync with this source of truth: `status`, `help`, `init`, `constitution`, `specify`,
-`clarify`, `checklist`, `plan`, `tasks`, `analyze`, `implement`, `list`, and `next`.
+Canonical `/spec` subcommands exposed by the extension. Keep README command lists and exported type metadata in sync with this source of truth: `status`, `help`, `init`, `constitution`, `specify`, `clarify`, `checklist`, `plan`, `tasks`, `analyze`, `implement`, `list`, and `next`.
 
 <!-- {/piSpecSubcommandsDocs} -->
 
 That is the **intentional public API**.
 
-There is **not** a separate public JS/TS library API right now. Internal modules like
-`workspace.ts`, `scaffold.ts`, or `prompts.ts` are implementation details for contributors, not a versioned
-integration surface for consumers.
+There is **not** a separate public JS/TS library API right now. Internal modules like `workspace.ts`, `scaffold.ts`, or `prompts.ts` are implementation details for contributors, not a versioned integration surface for consumers.
 
 Core workflow steps:
 
 <!-- {=piSpecWorkflowStepsDocs} -->
 
-Workflow steps that hand work back into pi for feature execution. These ordered steps are
-`constitution`, `specify`, `clarify`, `checklist`, `plan`, `tasks`, `analyze`, and `implement`.
-Keep contributor-facing docs aligned with the same sequence.
+Workflow steps that hand work back into pi for feature execution. These ordered steps are `constitution`, `specify`, `clarify`, `checklist`, `plan`, `tasks`, `analyze`, and `implement`. Keep contributor-facing docs aligned with the same sequence.
 
 <!-- {/piSpecWorkflowStepsDocs} -->
 
 ### Why one `/spec` command is the right API
 
-I chose **one command with subcommands** instead of many top-level commands like `/specify`, `/clarify`,
-`/plan`, `/tasks`, etc. for a few reasons:
+I chose **one command with subcommands** instead of many top-level commands like `/specify`, `/clarify`, `/plan`, `/tasks`, etc. for a few reasons:
 
 1. **It matches the workflow mental model**
    - All of these actions are part of one lifecycle.
@@ -192,8 +183,7 @@ Notes:
 
 ### Active feature resolution
 
-For steps that operate on a feature (`clarify`, `checklist`, `plan`, `tasks`, `analyze`, `implement`), the
-extension resolves the active feature using this order:
+For steps that operate on a feature (`clarify`, `checklist`, `plan`, `tasks`, `analyze`, `implement`), the extension resolves the active feature using this order:
 
 1. current branch name if it matches a numbered feature directory
 2. a single known feature directory, if there is only one
@@ -348,8 +338,7 @@ This step is meant to remove the highest-impact ambiguities before planning.
 /spec:checklist Authentication quality gates
 ```
 
-This is not supposed to generate implementation TODOs. It is meant to verify that the spec is precise,
-complete, and testable.
+This is not supposed to generate implementation TODOs. It is meant to verify that the spec is precise, complete, and testable.
 
 ### 6) Build the implementation plan
 
@@ -383,8 +372,7 @@ This step should produce a `tasks.md` with a strict checkbox-oriented execution 
 /spec:analyze
 ```
 
-This step is intentionally read-only. It is there to catch inconsistencies between the spec, plan,
-checklists, and tasks before coding begins.
+This step is intentionally read-only. It is there to catch inconsistencies between the spec, plan, checklists, and tasks before coding begins.
 
 ### 9) Implement
 
@@ -508,8 +496,7 @@ After initialization, you can customize the workflow by editing files in your re
 - `.specify/templates/*.md`
 - `.specify/templates/commands/*.md`
 
-This is another core design choice: the workflow should become **your repo's workflow**, not remain locked
-inside the npm package.
+This is another core design choice: the workflow should become **your repo's workflow**, not remain locked inside the npm package.
 
 ---
 
@@ -517,8 +504,7 @@ inside the npm package.
 
 If I had to describe the package in one sentence:
 
-> `@ifi/pi-spec` is a native pi implementation of a spec-first workflow whose public API is one `/spec`
-> command plus a deterministic `.specify/` and `specs/###-feature-name/` file layout.
+> `@ifi/pi-spec` is a native pi implementation of a spec-first workflow whose public API is one `/spec` command plus a deterministic `.specify/` and `specs/###-feature-name/` file layout.
 
 I think that is the correct API because it is:
 

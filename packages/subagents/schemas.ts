@@ -13,7 +13,11 @@ const SkillOverride = Type.Any({
 export const TaskItem = Type.Object({
 	agent: Type.String(),
 	cwd: Type.Optional(Type.String()),
-	model: Type.Optional(Type.String({ description: "Override model for this task (e.g. 'google/gemini-3-pro')" })),
+	model: Type.Optional(
+		Type.String({
+			description: "Override model for this task (e.g. 'google/gemini-3-pro')",
+		}),
+	),
 	skill: Type.Optional(SkillOverride),
 	task: Type.String(),
 });
@@ -24,7 +28,9 @@ export const SequentialStepSchema = Type.Object({
 	cwd: Type.Optional(Type.String()),
 	model: Type.Optional(Type.String({ description: "Override model for this step" })),
 	output: Type.Optional(
-		Type.Any({ description: "Output filename to write in {chain_dir} (string), or false to disable file output" }),
+		Type.Any({
+			description: "Output filename to write in {chain_dir} (string), or false to disable file output",
+		}),
 	),
 	progress: Type.Optional(Type.Boolean({ description: "Enable progress.md tracking in {chain_dir}" })),
 	reads: Type.Optional(
@@ -47,7 +53,9 @@ export const ParallelTaskSchema = Type.Object({
 	cwd: Type.Optional(Type.String()),
 	model: Type.Optional(Type.String({ description: "Override model for this task" })),
 	output: Type.Optional(
-		Type.Any({ description: "Output filename to write in {chain_dir} (string), or false to disable file output" }),
+		Type.Any({
+			description: "Output filename to write in {chain_dir} (string), or false to disable file output",
+		}),
 	),
 	progress: Type.Optional(Type.Boolean({ description: "Enable progress.md tracking in {chain_dir}" })),
 	reads: Type.Optional(
@@ -67,7 +75,10 @@ export const ParallelTaskSchema = Type.Object({
 export const ParallelStepSchema = Type.Object({
 	concurrency: Type.Optional(Type.Number({ description: "Max concurrent tasks (default: 4)" })),
 	failFast: Type.Optional(Type.Boolean({ description: "Stop on first failure (default: false)" })),
-	parallel: Type.Array(ParallelTaskSchema, { minItems: 1, description: "Tasks to run in parallel" }),
+	parallel: Type.Array(ParallelTaskSchema, {
+		minItems: 1,
+		description: "Tasks to run in parallel",
+	}),
 });
 
 // Chain item can be either sequential or parallel
@@ -85,7 +96,9 @@ export const MaxOutputSchema = Type.Optional(
 
 export const SubagentParams = Type.Object({
 	agent: Type.Optional(
-		Type.String({ description: "Agent name (SINGLE mode) or target for management get/update/delete" }),
+		Type.String({
+			description: "Agent name (SINGLE mode) or target for management get/update/delete",
+		}),
 	),
 	task: Type.Optional(Type.String({ description: "Task (SINGLE mode)" })),
 	// Management action (when present, tool operates in management mode)
@@ -108,7 +121,11 @@ export const SubagentParams = Type.Object({
 				"Agent or chain config for create/update. Agent: name, description, scope ('user'|'project', default 'user'), systemPrompt, model, category, tools (comma-separated), extensions (comma-separated), skills (comma-separated), thinking, output, reads, progress. Chain: name, description, scope, steps (array of {agent, task?, output?, reads?, model?, skills?, progress?}). Presence of 'steps' creates a chain instead of an agent.",
 		}),
 	),
-	tasks: Type.Optional(Type.Array(TaskItem, { description: "PARALLEL mode: [{agent, task}, ...]" })),
+	tasks: Type.Optional(
+		Type.Array(TaskItem, {
+			description: "PARALLEL mode: [{agent, task}, ...]",
+		}),
+	),
 	chain: Type.Optional(
 		Type.Array(ChainItem, {
 			description:
@@ -121,7 +138,11 @@ export const SubagentParams = Type.Object({
 				"Persistent directory for chain artifacts. Default: <tmpdir>/pi-chain-runs/ (auto-cleaned after 24h)",
 		}),
 	),
-	async: Type.Optional(Type.Boolean({ description: "Run in background (default: false, or per config)" })),
+	async: Type.Optional(
+		Type.Boolean({
+			description: "Run in background (default: false, or per config)",
+		}),
+	),
 	agentScope: Type.Optional(
 		Type.String({
 			description:
@@ -131,8 +152,16 @@ export const SubagentParams = Type.Object({
 	cwd: Type.Optional(Type.String()),
 	maxOutput: MaxOutputSchema,
 	artifacts: Type.Optional(Type.Boolean({ description: "Write debug artifacts (default: true)" })),
-	includeProgress: Type.Optional(Type.Boolean({ description: "Include full progress in result (default: false)" })),
-	share: Type.Optional(Type.Boolean({ description: "Upload session to GitHub Gist for sharing (default: false)" })),
+	includeProgress: Type.Optional(
+		Type.Boolean({
+			description: "Include full progress in result (default: false)",
+		}),
+	),
+	share: Type.Optional(
+		Type.Boolean({
+			description: "Upload session to GitHub Gist for sharing (default: false)",
+		}),
+	),
 	sessionDir: Type.Optional(
 		Type.String({
 			description: "Directory to store session logs (default: temp; enables sessions even if share=false)",
@@ -154,7 +183,9 @@ export const SubagentParams = Type.Object({
 	),
 	skill: Type.Optional(SkillOverride),
 	model: Type.Optional(
-		Type.String({ description: "Override model for single agent (e.g. 'anthropic/claude-sonnet-4')" }),
+		Type.String({
+			description: "Override model for single agent (e.g. 'anthropic/claude-sonnet-4')",
+		}),
 	),
 });
 

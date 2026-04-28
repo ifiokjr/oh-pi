@@ -7,7 +7,7 @@ import { expect, test } from "vitest";
  * Pure-logic tests (utils, API) stay in vitest.
  */
 
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

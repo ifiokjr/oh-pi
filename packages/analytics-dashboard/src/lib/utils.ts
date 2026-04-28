@@ -131,7 +131,11 @@ export function formatDate(date: Date | string | number, format: "short" | "medi
 	const options: Intl.DateTimeFormatOptions = {
 		short: { day: "numeric", month: "short" },
 		/* C8 ignore next -- ternary branch is covered in behavior tests but may report partial on this line */
-		medium: { day: "numeric", month: "short", year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined },
+		medium: {
+			day: "numeric",
+			month: "short",
+			year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+		},
 		long: { day: "numeric", month: "long", weekday: "long", year: "numeric" },
 	}[format];
 
@@ -150,8 +154,14 @@ export function formatTimeRange(start: Date | string, end: Date | string): strin
 		return `${formatDuration(duration)} session`;
 	}
 
-	const startTime = s.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-	const endTime = e.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+	const startTime = s.toLocaleTimeString("en-US", {
+		hour: "numeric",
+		minute: "2-digit",
+	});
+	const endTime = e.toLocaleTimeString("en-US", {
+		hour: "numeric",
+		minute: "2-digit",
+	});
 
 	return `${startTime} - ${endTime}`;
 }

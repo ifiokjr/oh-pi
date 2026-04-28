@@ -176,20 +176,45 @@ describe("handleWebSocketConnection", () => {
 
 		await authenticateSocket(ws);
 		await ws.emitMessage(
-			JSON.stringify({ id: "cmd-1", type: "prompt", message: "stream me", streamingBehavior: "steer" }),
+			JSON.stringify({
+				id: "cmd-1",
+				type: "prompt",
+				message: "stream me",
+				streamingBehavior: "steer",
+			}),
 		);
 		await ws.emitMessage(JSON.stringify({ id: "cmd-2", type: "steer", message: "faster" }));
-		await ws.emitMessage(JSON.stringify({ id: "cmd-3", type: "follow_up", message: "more detail" }));
+		await ws.emitMessage(
+			JSON.stringify({
+				id: "cmd-3",
+				type: "follow_up",
+				message: "more detail",
+			}),
+		);
 		await ws.emitMessage(JSON.stringify({ id: "cmd-4", type: "abort" }));
 		await ws.emitMessage(JSON.stringify({ id: "cmd-5", type: "get_state" }));
 		await ws.emitMessage(JSON.stringify({ id: "cmd-6", type: "get_messages" }));
-		await ws.emitMessage(JSON.stringify({ id: "cmd-7", type: "set_thinking_level", level: "high" }));
-		await ws.emitMessage(JSON.stringify({ id: "cmd-8", type: "compact", customInstructions: "trim" }));
+		await ws.emitMessage(
+			JSON.stringify({
+				id: "cmd-7",
+				type: "set_thinking_level",
+				level: "high",
+			}),
+		);
+		await ws.emitMessage(
+			JSON.stringify({
+				id: "cmd-8",
+				type: "compact",
+				customInstructions: "trim",
+			}),
+		);
 		await ws.emitMessage(JSON.stringify({ id: "cmd-9", type: "new_session" }));
 		await ws.emitMessage(JSON.stringify({ id: "cmd-10", type: "extension_ui_response" }));
 		await ws.emitMessage(JSON.stringify({ id: "cmd-11", type: "unknown_command" }));
 
-		expect(session.prompt).toHaveBeenCalledWith("stream me", { streamingBehavior: "steer" });
+		expect(session.prompt).toHaveBeenCalledWith("stream me", {
+			streamingBehavior: "steer",
+		});
 		expect(session.steer).toHaveBeenCalledWith("faster");
 		expect(session.followUp).toHaveBeenCalledWith("more detail");
 		expect(session.abort).toHaveBeenCalledTimes(1);
@@ -197,7 +222,12 @@ describe("handleWebSocketConnection", () => {
 		expect(session.compact).toHaveBeenCalledWith("trim");
 		expect(session.newSession).toHaveBeenCalledTimes(1);
 
-		expect(ws.sent).toContainEqual({ type: "response", command: "prompt", success: true, id: "cmd-1" });
+		expect(ws.sent).toContainEqual({
+			type: "response",
+			command: "prompt",
+			success: true,
+			id: "cmd-1",
+		});
 		expect(ws.sent).toContainEqual({
 			type: "response",
 			command: "get_state",

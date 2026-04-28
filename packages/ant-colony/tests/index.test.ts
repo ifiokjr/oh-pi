@@ -50,7 +50,11 @@ const queenMocks = vi.hoisted(() => {
 	}));
 
 	const runColonyMock = vi.fn((opts: any) => {
-		const inv = { opts, deferred: mkDeferred<any>(), stableId: stableIdFromGoal(opts.goal) };
+		const inv = {
+			opts,
+			deferred: mkDeferred<any>(),
+			stableId: stableIdFromGoal(opts.goal),
+		};
 		runInvocations.push(inv);
 		opts.callbacks?.onSignal?.({
 			phase: "working",
@@ -64,7 +68,11 @@ const queenMocks = vi.hoisted(() => {
 	});
 
 	const resumeColonyMock = vi.fn((opts: any) => {
-		const inv = { opts, deferred: mkDeferred<any>(), stableId: stableIdFromGoal(opts.goal) };
+		const inv = {
+			opts,
+			deferred: mkDeferred<any>(),
+			stableId: stableIdFromGoal(opts.goal),
+		};
 		resumeInvocations.push(inv);
 		opts.callbacks?.onSignal?.({
 			phase: "working",
@@ -389,8 +397,14 @@ describe("ant-colony extension commands", () => {
 
 	it("/colony-resume without args resumes all resumable colonies", async () => {
 		vi.spyOn(Nest, "findAllResumable").mockReturnValue([
-			{ colonyId: "colony-resume-a", state: mkState("working", "Resume goal A", "colony-resume-a") },
-			{ colonyId: "colony-resume-b", state: mkState("scouting", "Resume goal B", "colony-resume-b") },
+			{
+				colonyId: "colony-resume-a",
+				state: mkState("working", "Resume goal A", "colony-resume-a"),
+			},
+			{
+				colonyId: "colony-resume-b",
+				state: mkState("scouting", "Resume goal B", "colony-resume-b"),
+			},
 		]);
 
 		const resumeCmd = pi._commands.get("colony-resume");
@@ -407,7 +421,12 @@ describe("ant-colony extension commands", () => {
 		const statusTool = pi._tools.get("bg_colony_status");
 		const passive = await statusTool.execute("tool-1", {}, undefined, undefined, {
 			sessionManager: {
-				getBranch: () => [{ type: "message", message: { role: "user", content: "keep working" } }],
+				getBranch: () => [
+					{
+						type: "message",
+						message: { role: "user", content: "keep working" },
+					},
+				],
 			},
 		});
 		expect(passive.isError).toBe(true);
@@ -415,7 +434,12 @@ describe("ant-colony extension commands", () => {
 
 		const explicitCtx = {
 			sessionManager: {
-				getBranch: () => [{ type: "message", message: { role: "user", content: "show colony status now" } }],
+				getBranch: () => [
+					{
+						type: "message",
+						message: { role: "user", content: "show colony status now" },
+					},
+				],
 			},
 		};
 		const snapshot = await statusTool.execute("tool-2", {}, undefined, undefined, explicitCtx);
@@ -450,7 +474,14 @@ describe("ant-colony extension commands", () => {
 			fg: (_color: string, text: string) => text,
 			bold: (text: string) => text,
 		};
-		const renderedCall = antColonyTool.renderCall({ goal: "Tool-driven colony", maxAnts: 3, maxCost: 1 }, theme);
+		const renderedCall = antColonyTool.renderCall(
+			{
+				goal: "Tool-driven colony",
+				maxAnts: 3,
+				maxCost: 1,
+			},
+			theme,
+		);
 		expect(renderedCall.text).toContain("ant_colony");
 		expect(renderedCall.text).toContain("×3");
 		expect(renderedCall.text).toContain("$1");
@@ -478,12 +509,19 @@ describe("ant-colony extension commands", () => {
 			bold: (text: string) => text,
 		};
 
-		const progress = progressRenderer?.({ content: "[COLONY_SIGNAL:FAILED] colony failed loudly" }, theme);
+		const progress = progressRenderer?.(
+			{
+				content: "[COLONY_SIGNAL:FAILED] colony failed loudly",
+			},
+			theme,
+		);
 		expect(progress?.text).toContain("failed");
 		expect(progress?.text).toContain("colony failed loudly");
 
 		const report = reportRenderer?.(
-			{ content: "done\n**Duration:** 4s\n- ✅ Completed task\n- input: 20\n- output: 10" },
+			{
+				content: "done\n**Duration:** 4s\n- ✅ Completed task\n- input: 20\n- output: 10",
+			},
 			theme,
 		);
 		expect(report.children.length).toBeGreaterThan(0);

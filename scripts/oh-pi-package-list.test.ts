@@ -2,12 +2,12 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EXPERIMENTAL_PACKAGES, INSTALLER_PACKAGES, SWITCHER_PACKAGES } from "../packages/oh-pi/bin/package-list.mts";
 import {
 	EXPERIMENTAL_PACKAGES as RUNTIME_EXPERIMENTAL_PACKAGES,
 	INSTALLER_PACKAGES as RUNTIME_INSTALLER_PACKAGES,
 	SWITCHER_PACKAGES as RUNTIME_SWITCHER_PACKAGES,
 } from "../packages/oh-pi/bin/package-list.mjs";
+import { EXPERIMENTAL_PACKAGES, INSTALLER_PACKAGES, SWITCHER_PACKAGES } from "../packages/oh-pi/bin/package-list.mts";
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptsDir, "..");

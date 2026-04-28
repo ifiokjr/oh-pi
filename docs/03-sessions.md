@@ -2,8 +2,7 @@
 
 ## 1. Session Storage
 
-Sessions are stored as JSONL (JSON Lines) files using a tree structure. Each entry has an `id` and
-`parentId`, supporting in-place branching.
+Sessions are stored as JSONL (JSON Lines) files using a tree structure. Each entry has an `id` and `parentId`, supporting in-place branching.
 
 ### File Location
 
@@ -164,7 +163,6 @@ Or manually: `/compact [instructions]`
 
 When switching branches via `/tree`, you can optionally summarize the abandoned branch.
 
-Flow: find common ancestor → collect entries from old leaf to ancestor → LLM generates summary →
-append BranchSummaryEntry.
+Flow: find common ancestor → collect entries from old leaf to ancestor → LLM generates summary → append BranchSummaryEntry.
 
 File operation tracking accumulates across multiple compaction/branch summary cycles.

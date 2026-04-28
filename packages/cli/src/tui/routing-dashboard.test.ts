@@ -17,8 +17,20 @@ function makeProviders(): ProviderConfig[] {
 			apiKey: "OPENAI_API_KEY",
 			defaultModel: "gpt-4o",
 			discoveredModels: [
-				{ id: "gpt-4o", reasoning: false, input: ["text", "image"], contextWindow: 128000, maxTokens: 16384 },
-				{ id: "gpt-5-mini", reasoning: true, input: ["text", "image"], contextWindow: 128000, maxTokens: 16384 },
+				{
+					id: "gpt-4o",
+					reasoning: false,
+					input: ["text", "image"],
+					contextWindow: 128000,
+					maxTokens: 16384,
+				},
+				{
+					id: "gpt-5-mini",
+					reasoning: true,
+					input: ["text", "image"],
+					contextWindow: 128000,
+					maxTokens: 16384,
+				},
 			],
 		},
 		{
@@ -90,7 +102,12 @@ describe("suggestOptionalRoutingPackages", () => {
 	});
 
 	it("returns an empty list when nothing is recommended", () => {
-		expect(suggestOptionalRoutingPackages(["openai"], { mode: "off", categories: {} })).toEqual([]);
+		expect(
+			suggestOptionalRoutingPackages(["openai"], {
+				mode: "off",
+				categories: {},
+			}),
+		).toEqual([]);
 		expect(suggestOptionalRoutingPackages(["openai"])).toEqual([]);
 	});
 });
@@ -173,7 +190,13 @@ describe("buildRoutingDashboard", () => {
 
 	it("falls back to the session default when a configured category has no matching provider", () => {
 		const dashboard = buildRoutingDashboard({
-			providers: [{ name: "openai", apiKey: "OPENAI_API_KEY", defaultModel: "gpt-4o" }],
+			providers: [
+				{
+					name: "openai",
+					apiKey: "OPENAI_API_KEY",
+					defaultModel: "gpt-4o",
+				},
+			],
 			packageStates: [],
 			config: {
 				mode: "off",

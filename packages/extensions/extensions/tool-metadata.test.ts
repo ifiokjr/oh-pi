@@ -80,13 +80,25 @@ describe("tool-metadata extension", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.getContextUsage = vi
 			.fn()
-			.mockReturnValueOnce({ percent: 12.5, tokens: 24_500, contextWindow: 200_000 })
-			.mockReturnValueOnce({ percent: 13.1, tokens: 26_200, contextWindow: 200_000 });
+			.mockReturnValueOnce({
+				percent: 12.5,
+				tokens: 24_500,
+				contextWindow: 200_000,
+			})
+			.mockReturnValueOnce({
+				percent: 13.1,
+				tokens: 26_200,
+				contextWindow: 200_000,
+			});
 		toolMetadataExtension(harness.pi as never);
 
 		await harness.emitAsync(
 			"tool_call",
-			{ toolCallId: "tool-1", toolName: "bash", input: { command: "pnpm test" } },
+			{
+				toolCallId: "tool-1",
+				toolName: "bash",
+				input: { command: "pnpm test" },
+			},
 			harness.ctx,
 		);
 		await vi.advanceTimersByTimeAsync(2300);

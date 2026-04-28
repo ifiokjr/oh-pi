@@ -130,7 +130,15 @@ function toMarkdown(report: RuntimeChurnReport): string {
 				.join(" + ") || "none";
 
 		lines.push(
-			`| ${result.label} | ${result.group} | ${mountedUi} | ${toPerMinute(result.widgetRenderRequests, result.windowMs).toFixed(2)} | ${toPerMinute(result.footerRenderRequests, result.windowMs).toFixed(2)} | ${toPerMinute(result.statusUpdates, result.windowMs).toFixed(2)} | ${toPerMinute(result.notifications, result.windowMs).toFixed(2)} |`,
+			`| ${result.label} | ${result.group} | ${mountedUi} | ${toPerMinute(
+				result.widgetRenderRequests,
+				result.windowMs,
+			).toFixed(2)} | ${toPerMinute(result.footerRenderRequests, result.windowMs).toFixed(
+				2,
+			)} | ${toPerMinute(result.statusUpdates, result.windowMs).toFixed(2)} | ${toPerMinute(
+				result.notifications,
+				result.windowMs,
+			).toFixed(2)} |`,
 		);
 
 		if (result.note) {

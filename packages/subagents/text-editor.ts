@@ -214,7 +214,10 @@ export function handleEditorInput(
 	}
 
 	if (matchesKey(data, "end")) {
-		return { ...state, cursor: starts[cursorPos.line] + (wrapped[cursorPos.line]?.length ?? 0) };
+		return {
+			...state,
+			cursor: starts[cursorPos.line] + (wrapped[cursorPos.line]?.length ?? 0),
+		};
 	}
 
 	if (matchesKey(data, "ctrl+home")) {

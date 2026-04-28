@@ -1,16 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-	strip,
-	fillToolBackground,
-	preserveToolBackground,
-	isLowContrastShikiFg,
-	normalizeShikiContrast,
-	lnum,
-	rule,
-	termW,
-	resolveBaseBackground,
-	parseAnsiRgb,
 	FG_MUTED,
+	fillToolBackground,
+	isLowContrastShikiFg,
+	lnum,
+	normalizeShikiContrast,
+	parseAnsiRgb,
+	preserveToolBackground,
+	resolveBaseBackground,
+	rule,
+	strip,
+	termW,
 } from "../src/theme.js";
 
 describe("strip", () => {
@@ -98,7 +98,9 @@ describe("termW", () => {
 
 describe("resolveBaseBackground", () => {
 	it("updates BG_BASE when theme provides bg", () => {
-		resolveBaseBackground({ getBgAnsi: (key) => (key === "toolSuccessBg" ? "\x1b[48;2;30;30;30m" : undefined) });
+		resolveBaseBackground({
+			getBgAnsi: (key) => (key === "toolSuccessBg" ? "\x1b[48;2;30;30;30m" : undefined),
+		});
 		// If called again with same state, it should early return
 		resolveBaseBackground({ getBgAnsi: () => undefined });
 	});

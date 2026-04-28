@@ -93,8 +93,16 @@ async function maybeInstallOptionalPackages(
 			initialValue: "user",
 			message: "Install selected optional packages for which scope?",
 			options: [
-				{ value: "user", label: "User", hint: "Install into your user pi settings for all repos" },
-				{ value: "project", label: "Project", hint: "Install into .pi/settings.json for this repo only" },
+				{
+					value: "user",
+					label: "User",
+					hint: "Install into your user pi settings for all repos",
+				},
+				{
+					value: "project",
+					label: "Project",
+					hint: "Install into .pi/settings.json for this repo only",
+				},
 			],
 		}),
 	);
@@ -171,9 +179,21 @@ export async function setupAdaptiveRouting(
 			initialValue: currentConfig?.mode ?? "off",
 			message: "Prompt routing mode for the optional adaptive-routing package:",
 			options: [
-				{ hint: "Only delegated startup assignments; no per-prompt auto routing", label: "Off", value: "off" },
-				{ hint: "Suggest routes without switching models automatically", label: "Shadow", value: "shadow" },
-				{ hint: "Automatically switch models before each turn", label: "Auto", value: "auto" },
+				{
+					hint: "Only delegated startup assignments; no per-prompt auto routing",
+					label: "Off",
+					value: "off",
+				},
+				{
+					hint: "Suggest routes without switching models automatically",
+					label: "Shadow",
+					value: "shadow",
+				},
+				{
+					hint: "Automatically switch models before each turn",
+					label: "Auto",
+					value: "auto",
+				},
 			],
 		}),
 	);

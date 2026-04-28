@@ -5,8 +5,15 @@ const selectLanguage = vi.fn(async () => undefined);
 const confirmApply = vi.fn(async () => undefined);
 const selectMode = vi.fn(async () => "quick");
 const selectPreset = vi.fn(async () => ({ agents: "preset-agent" }));
-const runConfigWizard = vi.fn(async (_env, initial) => ({ ...initial, providerMode: "custom", providers: [] }));
-const setupProviders = vi.fn(async () => ({ providers: [{ name: "openai", apiKey: "set" }], providerMode: "custom" }));
+const runConfigWizard = vi.fn(async (_env, initial) => ({
+	...initial,
+	providerMode: "custom",
+	providers: [],
+}));
+const setupProviders = vi.fn(async () => ({
+	providers: [{ name: "openai", apiKey: "set" }],
+	providerMode: "custom",
+}));
 const setupAdaptiveRouting = vi.fn(async () => ({ enabled: false }));
 const welcome = vi.fn();
 const detectEnv = vi.fn(async () => ({ existingProviders: ["anthropic"] }));
@@ -62,7 +69,11 @@ describe("cli setup flows", () => {
 
 	it("runs the preset flow through preset selection and the config wizard", async () => {
 		selectMode.mockResolvedValue("preset");
-		runConfigWizard.mockResolvedValue({ providerMode: "custom", providers: [], agents: "preset-agent" });
+		runConfigWizard.mockResolvedValue({
+			providerMode: "custom",
+			providers: [],
+			agents: "preset-agent",
+		});
 
 		const { run } = await import("./index.js");
 		await run();

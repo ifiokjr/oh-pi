@@ -46,7 +46,10 @@ const executionMocks = vi.hoisted(() => {
 		mkdtempSync: vi.fn(() => "/tmp/pi-subagent-task-dir"),
 		writeFileSync: vi.fn(),
 		rmSync: vi.fn(),
-		writePrompt: vi.fn(() => ({ dir: "/tmp/pi-prompt", path: "/tmp/pi-prompt/system.md" })),
+		writePrompt: vi.fn(() => ({
+			dir: "/tmp/pi-prompt",
+			path: "/tmp/pi-prompt/system.md",
+		})),
 		getFinalOutput: vi.fn((messages: any[]) => messages.map((message) => message.content?.[0]?.text ?? "").join("\n")),
 		findLatestSessionFile: vi.fn(() => "/tmp/session/run.jsonl"),
 		detectSubagentError: vi.fn(() => ({ hasError: false })),
@@ -61,11 +64,18 @@ const executionMocks = vi.hoisted(() => {
 			(skills: Array<{ name: string }>) => `INJECT:${skills.map((skill) => skill.name).join(",")}`,
 		),
 		resolveSkills: vi.fn((skills: string[]) => ({
-			resolved: skills.filter((skill) => skill !== "missing").map((name) => ({ name })),
+			resolved: skills
+				.filter((skill) => skill !== "missing")
+				.map((name) => ({
+					name,
+				})),
 			missing: skills.filter((skill) => skill === "missing"),
 		})),
 		getPiSpawnCommand: vi.fn((args: string[]) => ({ command: "pi", args })),
-		createJsonlWriter: vi.fn(() => ({ writeLine: vi.fn(), close: vi.fn(async () => {}) })),
+		createJsonlWriter: vi.fn(() => ({
+			writeLine: vi.fn(),
+			close: vi.fn(async () => {}),
+		})),
 		ensureArtifactsDir: vi.fn(),
 		getArtifactPaths: vi.fn(() => ({
 			inputPath: "/tmp/artifacts/input.md",
@@ -184,13 +194,23 @@ beforeEach(() => {
 		return proc;
 	});
 	executionMocks.resolveSkills.mockImplementation((skills: string[]) => ({
-		resolved: skills.filter((skill) => skill !== "missing").map((name) => ({ name })),
+		resolved: skills
+			.filter((skill) => skill !== "missing")
+			.map((name) => ({
+				name,
+			})),
 		missing: skills.filter((skill) => skill === "missing"),
 	}));
 	executionMocks.detectSubagentError.mockReturnValue({ hasError: false });
 	executionMocks.findLatestSessionFile.mockReturnValue("/tmp/session/run.jsonl");
-	executionMocks.createJsonlWriter.mockReturnValue({ writeLine: vi.fn(), close: vi.fn(async () => {}) });
-	executionMocks.truncateOutput.mockReturnValue({ truncated: true, output: "trimmed" });
+	executionMocks.createJsonlWriter.mockReturnValue({
+		writeLine: vi.fn(),
+		close: vi.fn(async () => {}),
+	});
+	executionMocks.truncateOutput.mockReturnValue({
+		truncated: true,
+		output: "trimmed",
+	});
 });
 
 describe("applyThinkingSuffix", () => {
@@ -213,7 +233,13 @@ describe("runSync", () => {
 	it("resolves skills against task cwd, not runtime cwd", async () => {
 		const runPromise = runSync(
 			"/runtime-dir",
-			[{ name: "reviewer", model: "anthropic/claude-sonnet-4", skills: ["ecsc-reviewer"] }],
+			[
+				{
+					name: "reviewer",
+					model: "anthropic/claude-sonnet-4",
+					skills: ["ecsc-reviewer"],
+				},
+			],
 			"reviewer",
 			"Inspect",
 			{ cwd: "/legal/project", share: false },
@@ -263,7 +289,11 @@ describe("runSync", () => {
 
 		const proc = executionMocks.procs[0];
 		emitStdoutLines(proc, [
-			JSON.stringify({ type: "tool_execution_start", toolName: "bash", args: { cmd: "ls" } }),
+			JSON.stringify({
+				type: "tool_execution_start",
+				toolName: "bash",
+				args: { cmd: "ls" },
+			}),
 			JSON.stringify({ type: "tool_execution_end" }),
 			JSON.stringify({
 				type: "message_end",
@@ -271,12 +301,21 @@ describe("runSync", () => {
 					role: "assistant",
 					model: "openai/gpt-5:high",
 					content: [{ type: "text", text: "Hello\nWorld" }],
-					usage: { input: 10, output: 5, cacheRead: 1, cacheWrite: 2, cost: { total: 1.25 } },
+					usage: {
+						input: 10,
+						output: 5,
+						cacheRead: 1,
+						cacheWrite: 2,
+						cost: { total: 1.25 },
+					},
 				},
 			}),
 			JSON.stringify({
 				type: "tool_result_end",
-				message: { role: "assistant", content: [{ type: "text", text: "Tool result" }] },
+				message: {
+					role: "assistant",
+					content: [{ type: "text", text: "Tool result" }],
+				},
 			}),
 		]);
 		proc.emit("close", 0);
@@ -304,7 +343,10 @@ describe("runSync", () => {
 				"/tmp/pi-prompt/system.md",
 				"@/tmp/pi-prompt/task.md",
 			]),
-			expect.objectContaining({ cwd: "/workspace", stdio: ["ignore", "pipe", "pipe"] }),
+			expect.objectContaining({
+				cwd: "/workspace",
+				stdio: ["ignore", "pipe", "pipe"],
+			}),
 		);
 		expect(executionMocks.writeFileSync).toHaveBeenCalledWith(
 			"/tmp/pi-prompt/task.md",
@@ -327,9 +369,20 @@ describe("runSync", () => {
 				jsonlPath: "/tmp/artifacts/run.jsonl",
 			},
 			truncation: { truncated: true, output: "trimmed" },
-			progressSummary: { toolCount: 1, tokens: 15, durationMs: expect.any(Number) },
+			progressSummary: {
+				toolCount: 1,
+				tokens: 15,
+				durationMs: expect.any(Number),
+			},
 		});
-		expect(result.usage).toMatchObject({ input: 10, output: 5, cacheRead: 1, cacheWrite: 2, cost: 1.25, turns: 1 });
+		expect(result.usage).toMatchObject({
+			input: 10,
+			output: 5,
+			cacheRead: 1,
+			cacheWrite: 2,
+			cost: 1.25,
+			turns: 1,
+		});
 		expect(result.progress).toMatchObject({
 			status: "completed",
 			currentTool: undefined,
@@ -346,9 +399,17 @@ describe("runSync", () => {
 		expect(executionMocks.writeArtifact).toHaveBeenCalledWith("/tmp/artifacts/output.md", "Hello\nWorld\nTool result");
 		expect(executionMocks.writeMetadata).toHaveBeenCalledWith(
 			"/tmp/artifacts/metadata.json",
-			expect.objectContaining({ runId: "run-1", agent: "scout", exitCode: 0, skills: ["git"] }),
+			expect.objectContaining({
+				runId: "run-1",
+				agent: "scout",
+				exitCode: 0,
+				skills: ["git"],
+			}),
 		);
-		expect(executionMocks.rmSync).toHaveBeenCalledWith("/tmp/pi-prompt", { recursive: true, force: true });
+		expect(executionMocks.rmSync).toHaveBeenCalledWith("/tmp/pi-prompt", {
+			recursive: true,
+			force: true,
+		});
 	});
 
 	it("captures parse errors, surfaces detected internal failures, and handles abort signals", async () => {
@@ -384,7 +445,10 @@ describe("runSync", () => {
 			parseErrors: 1,
 			error: "tool_result failed (exit 9): Tool crashed",
 		});
-		expect(result.progress).toMatchObject({ status: "failed", error: "tool_result failed (exit 9): Tool crashed" });
+		expect(result.progress).toMatchObject({
+			status: "failed",
+			error: "tool_result failed (exit 9): Tool crashed",
+		});
 		vi.useRealTimers();
 	});
 });

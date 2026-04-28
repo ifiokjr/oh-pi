@@ -832,7 +832,10 @@ export class QnATuiComponent<TQuestion extends QnAQuestion> implements Component
 			lines.push(padToWidth(boxLine(truncateToWidth(confirmMsg, contentWidth))));
 			const separator = this.cyan(" · ");
 			const formatHint = (shortcut: string, action: string) => `${this.bold(shortcut)} ${this.italic(action)}`;
-			const confirmControls = `${formatHint("Enter", "submit")}${separator}${formatHint("Esc", "back")}${separator}${formatHint("Ctrl+C", "cancel")}`;
+			const confirmControls = `${formatHint("Enter", "submit")}${separator}${formatHint(
+				"Esc",
+				"back",
+			)}${separator}${formatHint("Ctrl+C", "cancel")}`;
 			lines.push(padToWidth(boxLine(truncateToWidth(confirmControls, contentWidth))));
 		} else {
 			lines.push(padToWidth(this.dim(`├${horizontalLine(boxWidth - 2)}┤`)));

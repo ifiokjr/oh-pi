@@ -33,10 +33,22 @@ vi.mock("@mariozechner/pi-ai", () => ({
 vi.mock("@sinclair/typebox", () => ({
 	Type: {
 		Object: (schema: unknown) => schema,
-		String: (options?: Record<string, unknown>) => ({ type: "string", ...options }),
-		Number: (options?: Record<string, unknown>) => ({ type: "number", ...options }),
-		Boolean: (options?: Record<string, unknown>) => ({ type: "boolean", ...options }),
-		Optional: (value: unknown) => ({ optional: true, ...((value as object | undefined) ?? {}) }),
+		String: (options?: Record<string, unknown>) => ({
+			type: "string",
+			...options,
+		}),
+		Number: (options?: Record<string, unknown>) => ({
+			type: "number",
+			...options,
+		}),
+		Boolean: (options?: Record<string, unknown>) => ({
+			type: "boolean",
+			...options,
+		}),
+		Optional: (value: unknown) => ({
+			optional: true,
+			...((value as object | undefined) ?? {}),
+		}),
 	},
 }));
 
@@ -81,13 +93,19 @@ describe("background tasks extension", () => {
 		backgroundTasksExtension(harness.pi as never);
 		const tool = harness.tools.get("bg_task");
 
-		const spawnResult = await tool.execute("tool-1", { action: "spawn", command: "echo hello" });
+		const spawnResult = await tool.execute("tool-1", {
+			action: "spawn",
+			command: "echo hello",
+		});
 		expect(spawnResult.content[0].text).toContain("Started bg-1");
 		expect(getShellConfigMock).toHaveBeenCalledOnce();
 		expect(spawnMock).toHaveBeenCalledWith(
 			"/bin/bash",
 			["-lc", "echo hello"],
-			expect.objectContaining({ cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"] }),
+			expect.objectContaining({
+				cwd: process.cwd(),
+				stdio: ["ignore", "pipe", "pipe"],
+			}),
 		);
 
 		child.stdout.emit("data", Buffer.from("watching\n"));
@@ -98,7 +116,10 @@ describe("background tasks extension", () => {
 		const listResult = await tool.execute("tool-2", { action: "list" });
 		expect(listResult.content[0].text).toContain("bg-1 · running");
 
-		const logResult = await tool.execute("tool-3", { action: "log", id: "bg-1" });
+		const logResult = await tool.execute("tool-3", {
+			action: "log",
+			id: "bg-1",
+		});
 		expect(logResult.content[0].text).toContain("watching");
 
 		child.emit("close", 0);
@@ -139,8 +160,14 @@ describe("background tasks extension", () => {
 		backgroundTasksExtension(harness.pi as never);
 		const tool = harness.tools.get("bg_task");
 
-		await tool.execute("tool-1", { action: "spawn", command: "pnpm test --watch" });
-		const stopResult = await tool.execute("tool-2", { action: "stop", id: "bg-1" });
+		await tool.execute("tool-1", {
+			action: "spawn",
+			command: "pnpm test --watch",
+		});
+		const stopResult = await tool.execute("tool-2", {
+			action: "stop",
+			id: "bg-1",
+		});
 		expect(stopResult.content[0].text).toContain("Stopping bg-1");
 
 		child.emit("close", null);

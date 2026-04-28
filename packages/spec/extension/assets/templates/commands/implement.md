@@ -113,8 +113,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Check if terraform files (\*.tf) exist → create/verify .terraformignore
    - Check if .helmignore needed (helm charts present) → create/verify .helmignore
 
-   **If ignore file already exists**: Verify it contains essential patterns, append missing critical patterns only
-   **If ignore file missing**: Create with full pattern set for detected technology
+   **If ignore file already exists**: Verify it contains essential patterns, append missing critical patterns only **If ignore file missing**: Create with full pattern set for detected technology
 
    **Common Patterns by Technology** (from plan.md tech stack):
    - **Node.js/JavaScript/TypeScript**: `node_modules/`, `dist/`, `build/`, `*.log`, `.env*`

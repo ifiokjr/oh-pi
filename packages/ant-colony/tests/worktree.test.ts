@@ -3,8 +3,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { prepareColonyWorkspace, resumeColonyWorkspace } from "../extensions/ant-colony/worktree.js";
 import { getManagedWorktreeParentDir } from "../extensions/ant-colony/worktree-registry.js";
+import { prepareColonyWorkspace, resumeColonyWorkspace } from "../extensions/ant-colony/worktree.js";
 
 function sharedStorageOptions() {
 	return { mode: "shared" as const, sharedRoot: mkTempDir("colony-storage-") };
@@ -20,8 +20,12 @@ function mkTempDir(prefix: string): string {
 
 function initRepo(dir: string): void {
 	execFileSync("git", ["-C", dir, "init"], { stdio: "pipe" });
-	execFileSync("git", ["-C", dir, "config", "user.name", "Test Bot"], { stdio: "pipe" });
-	execFileSync("git", ["-C", dir, "config", "user.email", "test@example.com"], { stdio: "pipe" });
+	execFileSync("git", ["-C", dir, "config", "user.name", "Test Bot"], {
+		stdio: "pipe",
+	});
+	execFileSync("git", ["-C", dir, "config", "user.email", "test@example.com"], {
+		stdio: "pipe",
+	});
 	fs.writeFileSync(path.join(dir, "README.md"), "# temp\n", "utf-8");
 	execFileSync("git", ["-C", dir, "add", "."], { stdio: "pipe" });
 	execFileSync("git", ["-C", dir, "commit", "-m", "init"], { stdio: "pipe" });
@@ -40,7 +44,11 @@ afterEach(() => {
 describe("worktree workspace isolation", () => {
 	it("falls back to shared workspace outside git repos", () => {
 		const cwd = mkTempDir("colony-no-git-");
-		const workspace = prepareColonyWorkspace({ cwd, runtimeId: "c1", storageOptions: sharedStorageOptions() });
+		const workspace = prepareColonyWorkspace({
+			cwd,
+			runtimeId: "c1",
+			storageOptions: sharedStorageOptions(),
+		});
 
 		expect(workspace.mode).toBe("shared");
 		expect(workspace.executionCwd).toBe(cwd);
@@ -78,10 +86,20 @@ describe("worktree workspace isolation", () => {
 		const storageOptions = sharedStorageOptions();
 		initRepo(repo);
 
-		const initial = prepareColonyWorkspace({ cwd: repo, runtimeId: "c3", goal: "Resume worktree", storageOptions });
+		const initial = prepareColonyWorkspace({
+			cwd: repo,
+			runtimeId: "c3",
+			goal: "Resume worktree",
+			storageOptions,
+		});
 		expect(initial.mode).toBe("worktree");
 
-		const resumed = resumeColonyWorkspace({ cwd: repo, runtimeId: "c4", savedWorkspace: initial, storageOptions });
+		const resumed = resumeColonyWorkspace({
+			cwd: repo,
+			runtimeId: "c4",
+			savedWorkspace: initial,
+			storageOptions,
+		});
 		expect(resumed.mode).toBe("worktree");
 		expect(resumed.executionCwd).toBe(initial.executionCwd);
 	}, 20_000);

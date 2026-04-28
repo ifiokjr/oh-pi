@@ -1,3 +1,4 @@
+import { resolvePiAgentDir } from "@ifi/oh-pi-core";
 import { execSync } from "node:child_process";
 import {
 	copyFileSync,
@@ -11,7 +12,6 @@ import {
 	symlinkSync,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { resolvePiAgentDir } from "@ifi/oh-pi-core";
 import type { OhPConfigWithRouting } from "../types.js";
 import {
 	writeAdaptiveRoutingConfig,
@@ -151,7 +151,10 @@ export function cleanupManagedConfig(agentDir: string) {
  */
 export function installPi() {
 	try {
-		execSync("npm install -g @mariozechner/pi-coding-agent", { stdio: "pipe", timeout: 120_000 });
+		execSync("npm install -g @mariozechner/pi-coding-agent", {
+			stdio: "pipe",
+			timeout: 120_000,
+		});
 	} catch {
 		throw new Error("Failed to install pi-coding-agent");
 	}
