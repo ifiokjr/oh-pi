@@ -13,6 +13,20 @@ interface PromptTurnDiagnostics {
 	responsePreview: string;
 }
 
+interface NestedPromptDiagnostics {
+	promptPreview: string;
+	startedAt: number;
+	startedAtLabel: string;
+	completedAt: number;
+	completedAtLabel: string;
+	durationMs: number;
+	durationLabel: string;
+	turnCount: number;
+	toolCount: number;
+	turns: PromptTurnDiagnostics[];
+	children: NestedPromptDiagnostics[];
+}
+
 export interface PromptCompletionDiagnostics {
 	promptPreview: string;
 	startedAt: number;
@@ -23,10 +37,12 @@ export interface PromptCompletionDiagnostics {
 	durationLabel: string;
 	turnCount: number;
 	toolCount: number;
+	childPromptCount: number;
 	status: "completed" | "aborted" | "error" | "unknown";
 	statusLabel: string;
 	stopReason: string | null;
 	turns: PromptTurnDiagnostics[];
+	children: NestedPromptDiagnostics[];
 }
 
 interface DiagnosticsStateEntry {
@@ -39,6 +55,12 @@ interface ActivePromptRun {
 	startedAt: number;
 	startedAtLabel: string;
 	turns: PromptTurnDiagnostics[];
+	children: ActivePromptRun[];
+}
+
+interface PendingUserPrompt {
+	preview: string;
+	receivedAt: number;
 }
 
 interface ActiveToolRun {
@@ -80,6 +102,9 @@ const WIDGET_KEY = "diagnostics";
 const WIDGET_REFRESH_MS = 5000;
 const PROMPT_PREVIEW_MAX_LENGTH = 96;
 const RESPONSE_PREVIEW_MAX_LENGTH = 88;
+const PENDING_USER_PROMPT_MAX_COUNT = 8;
+const PENDING_USER_PROMPT_MAX_AGE_MS = 30 * 60_000;
+const EMPTY_PROMPT_PREVIEW = "(empty prompt)";
 
 function pluralize(count: number, noun: string): string {
 	return `${count} ${noun}${count === 1 ? "" : "s"}`;
@@ -150,7 +175,55 @@ function summarizePrompt(prompt: string | undefined, images: unknown): string {
 		return imageCount === 1 ? "1 image prompt" : `${imageCount} image prompt`;
 	}
 
-	return "(empty prompt)";
+	return EMPTY_PROMPT_PREVIEW;
+}
+
+function hasUserPromptContent(prompt: string | undefined, images: unknown): boolean {
+	return (
+		summarizeText(prompt ?? "", PROMPT_PREVIEW_MAX_LENGTH).length > 0 || (Array.isArray(images) && images.length > 0)
+	);
+}
+
+function prunePendingUserPrompts(pendingUserPrompts: PendingUserPrompt[], now: number): void {
+	let write = 0;
+	for (let read = 0; read < pendingUserPrompts.length; read += 1) {
+		const prompt = pendingUserPrompts[read];
+		if (prompt && now - prompt.receivedAt <= PENDING_USER_PROMPT_MAX_AGE_MS) {
+			pendingUserPrompts[write] = prompt;
+			write += 1;
+		}
+	}
+	pendingUserPrompts.length = write;
+	if (pendingUserPrompts.length <= PENDING_USER_PROMPT_MAX_COUNT) {
+		return;
+	}
+
+	const dropCount = pendingUserPrompts.length - PENDING_USER_PROMPT_MAX_COUNT;
+	write = 0;
+	for (let read = dropCount; read < pendingUserPrompts.length; read += 1) {
+		const prompt = pendingUserPrompts[read];
+		if (prompt) {
+			pendingUserPrompts[write] = prompt;
+			write += 1;
+		}
+	}
+	pendingUserPrompts.length = write;
+}
+
+function consumePendingUserPrompt(
+	pendingUserPrompts: PendingUserPrompt[],
+	preview: string,
+	now: number,
+): PendingUserPrompt | null {
+	prunePendingUserPrompts(pendingUserPrompts, now);
+	for (let index = 0; index < pendingUserPrompts.length; index += 1) {
+		const prompt = pendingUserPrompts[index];
+		if (prompt?.preview === preview) {
+			pendingUserPrompts.splice(index, 1);
+			return prompt;
+		}
+	}
+	return pendingUserPrompts.length === 1 ? (pendingUserPrompts.shift() ?? null) : null;
 }
 
 function countToolResults(toolResults: unknown): number {
@@ -235,7 +308,7 @@ function findLastAssistantMessage(messages: unknown): AgentMessageLike | null {
 
 function findPromptPreviewFromMessages(messages: unknown): string {
 	if (!Array.isArray(messages)) {
-		return "(empty prompt)";
+		return EMPTY_PROMPT_PREVIEW;
 	}
 
 	for (const message of messages) {
@@ -250,19 +323,81 @@ function findPromptPreviewFromMessages(messages: unknown): string {
 		}
 	}
 
-	return "(empty prompt)";
+	return EMPTY_PROMPT_PREVIEW;
+}
+
+function getActivePromptRun(activePromptRuns: Array<ActivePromptRun | null>): ActivePromptRun | null {
+	for (let index = activePromptRuns.length - 1; index >= 0; index -= 1) {
+		const run = activePromptRuns[index];
+		if (run) {
+			return run;
+		}
+	}
+	return null;
+}
+
+function getCurrentAgentPromptRun(activePromptRuns: Array<ActivePromptRun | null>): ActivePromptRun | null {
+	return activePromptRuns[activePromptRuns.length - 1] ?? null;
+}
+
+function countActiveChildPrompts(run: ActivePromptRun): number {
+	let count = 0;
+	for (const child of run.children) {
+		count += 1 + countActiveChildPrompts(child);
+	}
+	return count;
+}
+
+function buildNestedPromptDiagnostics(run: ActivePromptRun, completedAt: number): NestedPromptDiagnostics {
+	let toolCount = 0;
+	for (const turn of run.turns) toolCount += turn.toolCount;
+	const durationMs = Math.max(0, completedAt - run.startedAt);
+	const children = run.children.map((child) => buildNestedPromptDiagnostics(child, completedAt));
+	let childTurnCount = 0;
+	for (const child of children) {
+		childTurnCount += child.turnCount;
+		toolCount += child.toolCount;
+	}
+
+	return {
+		children,
+		completedAt,
+		completedAtLabel: formatTimestamp(completedAt),
+		durationLabel: formatDuration(durationMs),
+		durationMs,
+		promptPreview: run.promptPreview,
+		startedAt: run.startedAt,
+		startedAtLabel: run.startedAtLabel,
+		toolCount,
+		turnCount: run.turns.length + childTurnCount,
+		turns: [...run.turns],
+	};
+}
+
+function countNestedPrompts(children: NestedPromptDiagnostics[]): number {
+	let count = 0;
+	for (const child of children) {
+		count += 1 + countNestedPrompts(child.children);
+	}
+	return count;
 }
 
 function buildPromptSummaryText(details: PromptCompletionDiagnostics): string {
+	const childPromptCount = typeof details.childPromptCount === "number" ? details.childPromptCount : 0;
 	const timing = [
 		`${details.statusLabel} ${details.completedAtLabel}`,
 		`started ${details.startedAtLabel}`,
 		`duration ${details.durationLabel}`,
 		pluralize(details.turnCount, "turn"),
 		pluralize(details.toolCount, "tool"),
-	].join(" · ");
+	];
+	if (childPromptCount > 0) {
+		timing.push(pluralize(childPromptCount, "nested prompt"));
+	}
 
-	return `Prompt ${timing}\n${details.promptPreview}`;
+	const timingText = timing.join(" · ");
+
+	return `Prompt ${timingText}\n${details.promptPreview}`;
 }
 
 function buildPromptCompletion(
@@ -272,10 +407,19 @@ function buildPromptCompletion(
 ): PromptCompletionDiagnostics {
 	const lastAssistant = findLastAssistantMessage(messages);
 	const classification = classifyStopReason(lastAssistant?.stopReason ?? null);
-	const toolCount = run.turns.reduce((sum, turn) => sum + turn.toolCount, 0);
+	let toolCount = 0;
+	for (const turn of run.turns) toolCount += turn.toolCount;
+	const children = run.children.map((child) => buildNestedPromptDiagnostics(child, completedAt));
+	let childTurnCount = 0;
+	for (const child of children) {
+		childTurnCount += child.turnCount;
+		toolCount += child.toolCount;
+	}
 	const durationMs = Math.max(0, completedAt - run.startedAt);
 
 	return {
+		childPromptCount: countNestedPrompts(children),
+		children,
 		completedAt,
 		completedAtLabel: formatTimestamp(completedAt),
 		durationLabel: formatDuration(durationMs),
@@ -287,7 +431,7 @@ function buildPromptCompletion(
 		statusLabel: classification.statusLabel,
 		stopReason: lastAssistant?.stopReason ?? null,
 		toolCount,
-		turnCount: run.turns.length,
+		turnCount: run.turns.length + childTurnCount,
 		turns: [...run.turns],
 	};
 }
@@ -305,6 +449,8 @@ function renderPromptCompletionMessage(
 		return render(String(message.content ?? "Prompt diagnostics"));
 	}
 
+	const childPromptCount = typeof details.childPromptCount === "number" ? details.childPromptCount : 0;
+	const children = Array.isArray(details.children) ? details.children : [];
 	const lines = [
 		`${theme.fg(classification.color, theme.bold(`⏱ Prompt ${details.statusLabel}`))}`,
 		`${theme.fg("muted", "Prompt")}: ${details.promptPreview}`,
@@ -312,9 +458,12 @@ function renderPromptCompletionMessage(
 		`${theme.fg("muted", "Completed")}: ${details.completedAtLabel}`,
 		`${theme.fg("muted", "Duration")}: ${details.durationLabel} · ${pluralize(details.turnCount, "turn")} · ${pluralize(details.toolCount, "tool")}`,
 	];
+	if (childPromptCount > 0) {
+		lines.push(`${theme.fg("muted", "Nested")}: ${pluralize(childPromptCount, "prompt")}`);
+	}
 
 	if (!expanded) {
-		if (details.turns.length > 0) {
+		if (details.turns.length > 0 || childPromptCount > 0) {
 			lines.push(theme.fg("dim", "Expand to inspect per-turn completion timestamps."));
 		}
 		return render(lines.join("\n"));
@@ -323,7 +472,9 @@ function renderPromptCompletionMessage(
 	if (details.turns.length === 0) {
 		lines.push("");
 		lines.push(theme.fg("dim", "No assistant turns were recorded for this prompt."));
-		return render(lines.join("\n"));
+		if (children.length === 0) {
+			return render(lines.join("\n"));
+		}
 	}
 
 	lines.push("");
@@ -334,6 +485,17 @@ function renderPromptCompletionMessage(
 			`${theme.fg("dim", `#${turn.turnIndex + 1}`)} ${turn.completedAtLabel} · ${turn.elapsedLabel} · ${pluralize(turn.toolCount, "tool")}${stopReasonSuffix}`,
 		);
 		lines.push(`  ${theme.fg("muted", turn.responsePreview)}`);
+	}
+
+	if (children.length > 0) {
+		lines.push("");
+		lines.push(theme.fg("accent", theme.bold("Nested prompts")));
+		for (const child of children) {
+			lines.push(
+				`${theme.fg("dim", "↳")} ${child.startedAtLabel} → ${child.completedAtLabel} · ${child.durationLabel} · ${pluralize(child.turnCount, "turn")} · ${pluralize(child.toolCount, "tool")}`,
+			);
+			lines.push(`  ${theme.fg("muted", child.promptPreview)}`);
+		}
 	}
 
 	return render(lines.join("\n"));
@@ -377,7 +539,9 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 	let currentPrompt: ActivePromptRun | null = null;
 	let lastCompletion: PromptCompletionDiagnostics | null = null;
 	let requestWidgetRender: (() => void) | null = null;
+	const activePromptRuns: Array<ActivePromptRun | null> = [];
 	const activeToolRuns = new Map<string, ActiveToolRun>();
+	const pendingUserPrompts: PendingUserPrompt[] = [];
 
 	const persistEnabledState = () => {
 		pi.appendEntry(DIAGNOSTICS_STATE_TYPE, {
@@ -392,13 +556,15 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 			const startedAt = currentPrompt?.startedAt ?? activeToolSummary?.earliestStartedAt ?? Date.now();
 			const startedAtLabel = currentPrompt?.startedAtLabel ?? formatTimestamp(startedAt);
 			const promptPreview = currentPrompt?.promptPreview ?? activeToolSummary?.promptPreview ?? "(unknown prompt)";
+			const childPromptCount = currentPrompt ? countActiveChildPrompts(currentPrompt) : 0;
 			const recordedTurns = currentPrompt ? ` · ${pluralize(currentPrompt.turns.length, "turn")} recorded` : "";
+			const nestedPrompts = childPromptCount > 0 ? ` · ${pluralize(childPromptCount, "nested prompt")}` : "";
 			const runningTools = activeToolSummary
 				? ` · ${pluralize(activeToolRuns.size, "tool")} running (${activeToolSummary.toolNames})`
 				: "";
 			return [
 				`${theme.fg("accent", theme.bold("⏱ Diagnostics"))} ${theme.fg("success", "running")} · ${startedAtLabel} · ${formatDuration(Date.now() - startedAt)} elapsed`,
-				`${theme.fg("muted", promptPreview)}${recordedTurns}${runningTools}`,
+				`${theme.fg("muted", promptPreview)}${recordedTurns}${nestedPrompts}${runningTools}`,
 			];
 		}
 
@@ -483,9 +649,30 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		}
 		lastCompletion = restoreLastCompletion(entries);
 		currentPrompt = null;
+		activePromptRuns.length = 0;
 		activeToolRuns.clear();
+		pendingUserPrompts.length = 0;
 		syncWidget(ctx);
 		requestWidgetRender?.();
+	};
+
+	const startPromptRun = (promptPreview: string, startedAt: number): ActivePromptRun => {
+		const run: ActivePromptRun = {
+			children: [],
+			promptPreview,
+			startedAt,
+			startedAtLabel: formatTimestamp(startedAt),
+			turns: [],
+		};
+		const parent = getActivePromptRun(activePromptRuns);
+		if (parent) {
+			parent.children.push(run);
+		} else {
+			currentPrompt = run;
+		}
+		activePromptRuns.push(run);
+		requestWidgetRender?.();
+		return run;
 	};
 
 	const applyToggle = (ctx: ExtensionContext, nextEnabled: boolean, source: "command" | "shortcut") => {
@@ -528,19 +715,53 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		restoreSessionState(ctx);
 	});
 
+	pi.on("input", (event) => {
+		if (!enabled || !hasUserPromptContent(event.text, event.images) || event.source === "extension") {
+			return { action: "continue" };
+		}
+
+		const now = Date.now();
+		pendingUserPrompts.push({ preview: summarizePrompt(event.text, event.images), receivedAt: now });
+		prunePendingUserPrompts(pendingUserPrompts, now);
+		return { action: "continue" };
+	});
+
 	pi.on("before_agent_start", (event, ctx) => {
 		activeCtx = ctx;
+		const now = Date.now();
+		const promptPreview = summarizePrompt(event.prompt, event.images);
 		if (!enabled) {
+			pendingUserPrompts.length = 0;
+			activePromptRuns.push(null);
+			return;
+		}
+		if (!hasUserPromptContent(event.prompt, event.images)) {
+			activePromptRuns.push(null);
+			return;
+		}
+		const pendingPrompt = consumePendingUserPrompt(pendingUserPrompts, promptPreview, now);
+		if (!pendingPrompt) {
+			activePromptRuns.push(null);
 			return;
 		}
 
-		currentPrompt = {
-			promptPreview: summarizePrompt(event.prompt, event.images),
-			startedAt: Date.now(),
-			startedAtLabel: formatTimestamp(Date.now()),
-			turns: [],
-		};
-		requestWidgetRender?.();
+		startPromptRun(pendingPrompt.preview, now);
+	});
+
+	pi.on("message_start", (event, ctx) => {
+		activeCtx = ctx;
+		if (!(enabled && currentPrompt && event.message?.role === "user")) {
+			return;
+		}
+
+		const now = Date.now();
+		const promptPreview = summarizeContent(event.message.content, PROMPT_PREVIEW_MAX_LENGTH) || EMPTY_PROMPT_PREVIEW;
+		const pendingPrompt = consumePendingUserPrompt(pendingUserPrompts, promptPreview, now);
+		if (!pendingPrompt) {
+			return;
+		}
+
+		startPromptRun(pendingPrompt.preview, now);
 	});
 
 	pi.on("tool_execution_start", (event, ctx) => {
@@ -554,8 +775,13 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 			return;
 		}
 
+		const activePrompt = getCurrentAgentPromptRun(activePromptRuns);
+		if (!activePrompt) {
+			return;
+		}
+
 		activeToolRuns.set(toolCallId, {
-			promptPreview: currentPrompt?.promptPreview ?? "(unknown prompt)",
+			promptPreview: activePrompt.promptPreview,
 			startedAt: Date.now(),
 			toolName: getToolName(event),
 		});
@@ -573,15 +799,16 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 
 	pi.on("turn_end", (event, ctx) => {
 		activeCtx = ctx;
-		if (!(enabled && currentPrompt && event.message?.role === "assistant")) {
+		const activePrompt = getCurrentAgentPromptRun(activePromptRuns);
+		if (!(enabled && activePrompt && event.message?.role === "assistant")) {
 			return;
 		}
 
 		const completedAt = Date.now();
 		const stopReason = typeof event.message.stopReason === "string" ? event.message.stopReason : null;
 		const toolCount = countToolResults(event.toolResults);
-		const elapsedMs = Math.max(0, completedAt - currentPrompt.startedAt);
-		currentPrompt.turns.push({
+		const elapsedMs = Math.max(0, completedAt - activePrompt.startedAt);
+		activePrompt.turns.push({
 			completedAt,
 			completedAtLabel: formatTimestamp(completedAt),
 			elapsedLabel: formatDuration(elapsedMs),
@@ -589,8 +816,11 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 			responsePreview: summarizeResponsePreview(event.message.content, toolCount, stopReason),
 			stopReason,
 			toolCount,
-			turnIndex: typeof event.turnIndex === "number" ? event.turnIndex : currentPrompt.turns.length,
+			turnIndex: typeof event.turnIndex === "number" ? event.turnIndex : activePrompt.turns.length,
 		});
+		if (activePrompt !== currentPrompt && stopReason !== "toolUse") {
+			activePromptRuns.pop();
+		}
 		requestWidgetRender?.();
 	});
 
@@ -598,20 +828,28 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		activeCtx = ctx;
 		if (!enabled) {
 			currentPrompt = null;
+			activePromptRuns.length = 0;
+			requestWidgetRender?.();
+			return;
+		}
+
+		const run = activePromptRuns.pop();
+		if (!run) {
+			requestWidgetRender?.();
+			return;
+		}
+		if (!currentPrompt || (run !== currentPrompt && !activePromptRuns.includes(currentPrompt))) {
+			currentPrompt = null;
+			activePromptRuns.length = 0;
 			requestWidgetRender?.();
 			return;
 		}
 
 		const completedAt = Date.now();
-		const run = currentPrompt ?? {
-			promptPreview: findPromptPreviewFromMessages(event.messages),
-			startedAt: completedAt,
-			startedAtLabel: formatTimestamp(completedAt),
-			turns: [],
-		};
-		const completion = buildPromptCompletion(run, event.messages, completedAt);
+		const completion = buildPromptCompletion(currentPrompt, event.messages, completedAt);
 		lastCompletion = completion;
 		currentPrompt = null;
+		activePromptRuns.length = 0;
 		requestWidgetRender?.();
 		pi.sendMessage({
 			content: buildPromptSummaryText(completion),
@@ -623,7 +861,9 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 
 	pi.on("session_shutdown", () => {
 		currentPrompt = null;
+		activePromptRuns.length = 0;
 		activeToolRuns.clear();
+		pendingUserPrompts.length = 0;
 		requestWidgetRender = null;
 	});
 

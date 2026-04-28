@@ -29,6 +29,8 @@ function makeCompletion(overrides: Partial<PromptCompletionDiagnostics> = {}): P
 		durationLabel: "7.3s",
 		turnCount: 2,
 		toolCount: 1,
+		childPromptCount: 0,
+		children: [],
 		status: "completed",
 		statusLabel: "completed",
 		stopReason: "stop",
@@ -151,6 +153,7 @@ describe("diagnostics extension", () => {
 				startedAt: Date.UTC(2026, 3, 16, 11, 0, 0),
 				startedAtLabel: "2026-04-16 11:00:00",
 				turns: makeCompletion().turns,
+				children: [],
 			};
 			const completion = diagnosticsInternals.buildPromptCompletion(
 				run,
@@ -209,6 +212,19 @@ describe("diagnostics extension", () => {
 			);
 			expect(renderText(fallback)).toContain("Prompt diagnostics");
 
+			const legacyDetails = makeCompletion() as Omit<PromptCompletionDiagnostics, "childPromptCount" | "children"> & {
+				childPromptCount?: number;
+				children?: unknown[];
+			};
+			delete legacyDetails.childPromptCount;
+			delete legacyDetails.children;
+			const legacyExpanded = diagnosticsInternals.renderPromptCompletionMessage(
+				{ details: legacyDetails },
+				true,
+				theme as never,
+			);
+			expect(renderText(legacyExpanded)).toContain("Turn completions");
+
 			const collapsed = diagnosticsInternals.renderPromptCompletionMessage(
 				{ details: makeCompletion() },
 				false,
@@ -232,6 +248,38 @@ describe("diagnostics extension", () => {
 			expect(rendered).toContain("Turn completions");
 			expect(rendered).toContain("#1");
 			expect(rendered).toContain("toolUse");
+
+			const nestedDetails = makeCompletion({
+				childPromptCount: 1,
+				children: [
+					{
+						promptPreview: "Actually prioritize tests",
+						startedAt: Date.UTC(2026, 3, 16, 11, 0, 2),
+						startedAtLabel: "2026-04-16 11:00:02",
+						completedAt: Date.UTC(2026, 3, 16, 11, 0, 7),
+						completedAtLabel: "2026-04-16 11:00:07",
+						durationMs: 5_000,
+						durationLabel: "5s",
+						turnCount: 1,
+						toolCount: 0,
+						turns: [],
+						children: [],
+					},
+				],
+			});
+			const nestedCollapsed = diagnosticsInternals.renderPromptCompletionMessage(
+				{ details: nestedDetails },
+				false,
+				theme as never,
+			);
+			const nestedExpanded = diagnosticsInternals.renderPromptCompletionMessage(
+				{ details: nestedDetails },
+				true,
+				theme as never,
+			);
+			expect(renderText(nestedCollapsed)).toContain("Nested: 1 prompt");
+			expect(renderText(nestedExpanded)).toContain("Nested prompts");
+			expect(renderText(nestedExpanded)).toContain("Actually prioritize tests");
 		});
 	});
 
@@ -274,6 +322,11 @@ describe("diagnostics extension", () => {
 		await vi.advanceTimersByTimeAsync(1_000);
 		expect(requestRender).not.toHaveBeenCalled();
 
+		harness.emit(
+			"input",
+			{ type: "input", text: "Investigate the flaky test timeout in CI.", images: [], source: "interactive" },
+			harness.ctx,
+		);
 		harness.emit(
 			"before_agent_start",
 			{ type: "before_agent_start", prompt: "Investigate the flaky test timeout in CI.", images: [] },
@@ -389,6 +442,16 @@ describe("diagnostics extension", () => {
 
 		requestRender.mockClear();
 		harness.emit(
+			"input",
+			{ type: "input", text: "Run the failing tests.", images: [], source: "interactive" },
+			harness.ctx,
+		);
+		harness.emit(
+			"before_agent_start",
+			{ type: "before_agent_start", prompt: "Run the failing tests.", images: [] },
+			harness.ctx,
+		);
+		harness.emit(
 			"tool_execution_start",
 			{ type: "tool_execution_start", toolCallId: "tool-1", toolName: "bash", args: { command: "pnpm test" } },
 			harness.ctx,
@@ -405,7 +468,7 @@ describe("diagnostics extension", () => {
 			{ type: "tool_execution_end", toolCallId: "tool-1", toolName: "bash", result: "ok" },
 			harness.ctx,
 		);
-		expect(renderText(widget!)).toContain("errored");
+		expect(renderText(widget!)).toContain("running");
 
 		widget?.dispose();
 	});
@@ -470,7 +533,274 @@ describe("diagnostics extension", () => {
 		expect(harness.pi.appendEntry).toHaveBeenCalled();
 	});
 
-	it("builds a fallback completion when agent_end arrives without an active prompt", () => {
+	it("ignores extension and empty prompt completions", () => {
+		const harness = createExtensionHarness();
+		harness.ctx.ui.setWidget = vi.fn();
+		diagnosticsExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+
+		harness.emit("input", { type: "input", text: "", images: [], source: "extension" }, harness.ctx);
+		harness.emit("before_agent_start", { type: "before_agent_start", prompt: "", images: [] }, harness.ctx);
+		harness.emit(
+			"agent_end",
+			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			harness.ctx,
+		);
+
+		harness.emit("input", { type: "input", text: "Scheduled follow-up", images: [], source: "extension" }, harness.ctx);
+		harness.emit(
+			"before_agent_start",
+			{ type: "before_agent_start", prompt: "Scheduled follow-up", images: [] },
+			harness.ctx,
+		);
+		harness.emit(
+			"agent_end",
+			{
+				type: "agent_end",
+				messages: [{ role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Done" }] }],
+			},
+			harness.ctx,
+		);
+
+		expect(harness.messages).toHaveLength(0);
+	});
+
+	it("nests an interrupted user prompt under the active prompt completion", () => {
+		const harness = createExtensionHarness();
+		harness.ctx.ui.setWidget = vi.fn();
+		diagnosticsExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+
+		harness.emit(
+			"input",
+			{ type: "input", text: "Implement the feature", images: [], source: "interactive" },
+			harness.ctx,
+		);
+		harness.emit(
+			"before_agent_start",
+			{ type: "before_agent_start", prompt: "Implement the feature", images: [] },
+			harness.ctx,
+		);
+		harness.emit(
+			"message_start",
+			{ type: "message_start", message: { role: "user", content: [{ type: "text", text: "Implement the feature" }] } },
+			harness.ctx,
+		);
+		harness.emit(
+			"turn_end",
+			{
+				type: "turn_end",
+				turnIndex: 0,
+				message: { role: "assistant", stopReason: "toolUse", content: [{ type: "text", text: "Starting work." }] },
+				toolResults: [{ toolName: "read" }],
+			},
+			harness.ctx,
+		);
+
+		harness.emit(
+			"input",
+			{ type: "input", text: "Actually prioritize tests", images: [], source: "interactive" },
+			harness.ctx,
+		);
+		harness.emit(
+			"message_start",
+			{
+				type: "message_start",
+				message: { role: "user", content: [{ type: "text", text: "Actually prioritize tests" }] },
+			},
+			harness.ctx,
+		);
+		harness.emit(
+			"turn_end",
+			{
+				type: "turn_end",
+				turnIndex: 1,
+				message: { role: "assistant", stopReason: "toolUse", content: [{ type: "text", text: "Tests first." }] },
+				toolResults: [{ toolName: "bash" }],
+			},
+			harness.ctx,
+		);
+		harness.emit(
+			"turn_end",
+			{
+				type: "turn_end",
+				turnIndex: 2,
+				message: { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Feature done." }] },
+				toolResults: [],
+			},
+			harness.ctx,
+		);
+		harness.emit(
+			"agent_end",
+			{
+				type: "agent_end",
+				messages: [{ role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Feature done." }] }],
+			},
+			harness.ctx,
+		);
+
+		expect(harness.messages).toHaveLength(1);
+		const message = harness.messages[0] as { content: string; details: PromptCompletionDiagnostics };
+		const completion = message.details;
+		expect(message.content).toContain("1 nested prompt");
+		expect(completion.promptPreview).toBe("Implement the feature");
+		expect(completion.childPromptCount).toBe(1);
+		expect(completion.children[0]?.promptPreview).toBe("Actually prioritize tests");
+		expect(completion.children[0]?.turnCount).toBe(2);
+		expect(completion.turnCount).toBe(3);
+		expect(completion.toolCount).toBe(2);
+	});
+
+	it("uses the original input preview when prompt expansion changes before_agent_start text", () => {
+		const harness = createExtensionHarness();
+		harness.ctx.ui.setWidget = vi.fn();
+		diagnosticsExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+
+		harness.emit(
+			"input",
+			{ type: "input", text: "/skill:debug-helper diagnose CI", images: [], source: "interactive" },
+			harness.ctx,
+		);
+		harness.emit(
+			"before_agent_start",
+			{
+				type: "before_agent_start",
+				prompt: '<skill name="debug-helper">Lots of instructions</skill>\n\ndiagnose CI',
+				images: [],
+			},
+			harness.ctx,
+		);
+		harness.emit(
+			"turn_end",
+			{
+				type: "turn_end",
+				turnIndex: 0,
+				message: { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Done." }] },
+				toolResults: [],
+			},
+			harness.ctx,
+		);
+		harness.emit(
+			"agent_end",
+			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			harness.ctx,
+		);
+
+		expect(harness.messages).toHaveLength(1);
+		const completion = (harness.messages[0] as { details: PromptCompletionDiagnostics }).details;
+		expect(completion.promptPreview).toBe("/skill:debug-helper diagnose CI");
+	});
+
+	it("accepts rpc input as user-authored but ignores stale or evicted pending input", async () => {
+		const staleHarness = createExtensionHarness();
+		staleHarness.ctx.ui.setWidget = vi.fn();
+		diagnosticsExtension(staleHarness.pi as never);
+		staleHarness.emit("session_start", { type: "session_start" }, staleHarness.ctx);
+		staleHarness.emit("input", { type: "input", text: "Old prompt", images: [], source: "rpc" }, staleHarness.ctx);
+		await vi.advanceTimersByTimeAsync(30 * 60_000 + 1);
+		staleHarness.emit(
+			"before_agent_start",
+			{ type: "before_agent_start", prompt: "Old prompt", images: [] },
+			staleHarness.ctx,
+		);
+		staleHarness.emit(
+			"agent_end",
+			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			staleHarness.ctx,
+		);
+		expect(staleHarness.messages).toHaveLength(0);
+
+		const boundedHarness = createExtensionHarness();
+		boundedHarness.ctx.ui.setWidget = vi.fn();
+		diagnosticsExtension(boundedHarness.pi as never);
+		boundedHarness.emit("session_start", { type: "session_start" }, boundedHarness.ctx);
+		for (let index = 0; index < 9; index += 1) {
+			boundedHarness.emit(
+				"input",
+				{ type: "input", text: `Prompt ${index}`, images: [], source: "rpc" },
+				boundedHarness.ctx,
+			);
+		}
+		boundedHarness.emit(
+			"before_agent_start",
+			{ type: "before_agent_start", prompt: "Prompt 0", images: [] },
+			boundedHarness.ctx,
+		);
+		boundedHarness.emit(
+			"agent_end",
+			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			boundedHarness.ctx,
+		);
+		expect(boundedHarness.messages).toHaveLength(0);
+
+		boundedHarness.emit(
+			"before_agent_start",
+			{ type: "before_agent_start", prompt: "Prompt 8", images: [] },
+			boundedHarness.ctx,
+		);
+		boundedHarness.emit(
+			"turn_end",
+			{
+				type: "turn_end",
+				turnIndex: 0,
+				message: { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Done." }] },
+				toolResults: [],
+			},
+			boundedHarness.ctx,
+		);
+		boundedHarness.emit(
+			"agent_end",
+			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			boundedHarness.ctx,
+		);
+		expect(boundedHarness.messages).toHaveLength(1);
+		const completion = (boundedHarness.messages[0] as { details: PromptCompletionDiagnostics }).details;
+		expect(completion.promptPreview).toBe("Prompt 8");
+	});
+
+	it("does not let internal prompts reset an active user prompt", () => {
+		const harness = createExtensionHarness();
+		harness.ctx.ui.setWidget = vi.fn();
+		diagnosticsExtension(harness.pi as never);
+		harness.emit("session_start", { type: "session_start" }, harness.ctx);
+
+		harness.emit("input", { type: "input", text: "User task", images: [], source: "interactive" }, harness.ctx);
+		harness.emit("before_agent_start", { type: "before_agent_start", prompt: "User task", images: [] }, harness.ctx);
+		harness.emit("input", { type: "input", text: "Scheduled task", images: [], source: "extension" }, harness.ctx);
+		harness.emit(
+			"before_agent_start",
+			{ type: "before_agent_start", prompt: "Scheduled task", images: [] },
+			harness.ctx,
+		);
+		harness.emit(
+			"agent_end",
+			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			harness.ctx,
+		);
+		expect(harness.messages).toHaveLength(0);
+
+		harness.emit(
+			"turn_end",
+			{
+				type: "turn_end",
+				turnIndex: 0,
+				message: { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Done." }] },
+				toolResults: [],
+			},
+			harness.ctx,
+		);
+		harness.emit(
+			"agent_end",
+			{ type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+			harness.ctx,
+		);
+		expect(harness.messages).toHaveLength(1);
+		const completion = (harness.messages[0] as { details: PromptCompletionDiagnostics }).details;
+		expect(completion.promptPreview).toBe("User task");
+	});
+
+	it("ignores agent_end when no user-authored prompt is active", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.ui.setWidget = vi.fn();
 		diagnosticsExtension(harness.pi as never);
@@ -488,11 +818,7 @@ describe("diagnostics extension", () => {
 			harness.ctx,
 		);
 
-		expect((harness.messages[0] as { details: PromptCompletionDiagnostics }).details).toMatchObject({
-			promptPreview: "Summarize the release plan.",
-			status: "aborted",
-			turnCount: 0,
-		});
+		expect(harness.messages).toHaveLength(0);
 	});
 
 	it("ignores non-assistant turns and stops logging after diagnostics is turned off", async () => {
@@ -501,6 +827,7 @@ describe("diagnostics extension", () => {
 		diagnosticsExtension(harness.pi as never);
 		harness.emit("session_start", { type: "session_start" }, harness.ctx);
 
+		harness.emit("input", { type: "input", text: "", images: ["img"], source: "interactive" }, harness.ctx);
 		harness.emit("before_agent_start", { type: "before_agent_start", prompt: undefined, images: ["img"] }, harness.ctx);
 		await harness.commands.get("diagnostics")?.handler("status", harness.ctx);
 		expect(harness.notifications.at(-1)?.msg).toContain("Running: 1 image prompt");
