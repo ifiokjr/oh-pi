@@ -2,4 +2,4 @@
 default: patch
 ---
 
-diagnostics: only report user-authored prompt completions and nest interrupted user prompts
+diagnostics: only report meaningful top-level prompt completions, preserve idle extension prompts, add history, and nest interrupted user prompts

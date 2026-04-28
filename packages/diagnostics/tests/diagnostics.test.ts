@@ -202,6 +202,18 @@ describe("diagnostics extension", () => {
 				]),
 			).toMatchObject({ promptPreview: "Most recent completion" });
 			expect(diagnosticsInternals.restoreLastCompletion([])).toBeNull();
+			expect(diagnosticsInternals.shouldEmitPromptCompletion(makeCompletion())).toBe(true);
+			expect(
+				diagnosticsInternals.shouldEmitPromptCompletion(
+					makeCompletion({
+						childPromptCount: 0,
+						promptPreview: "(empty prompt)",
+						toolCount: 0,
+						turnCount: 0,
+						turns: [],
+					}),
+				),
+			).toBe(false);
 		});
 
 		it("renders fallback, collapsed, and expanded completion messages", () => {
@@ -281,6 +293,46 @@ describe("diagnostics extension", () => {
 			expect(renderText(nestedExpanded)).toContain("Nested prompts");
 			expect(renderText(nestedExpanded)).toContain("Actually prioritize tests");
 		});
+
+		it("collects and renders prompt diagnostics history", () => {
+			const first = makeCompletion({ completedAt: 1, promptPreview: "First run" });
+			const second = makeCompletion({ completedAt: 2, promptPreview: "Second run" });
+			const entries = [
+				{ type: "custom_message", customType: "pi-diagnostics:prompt", details: first },
+				{ type: "custom_message", customType: "other", details: makeCompletion({ promptPreview: "Ignored" }) },
+				{ type: "message", message: { role: "custom", customType: "pi-diagnostics:prompt", details: second } },
+			];
+
+			expect(diagnosticsInternals.parseHistoryCount(undefined)).toBe(10);
+			expect(diagnosticsInternals.parseHistoryCount("0")).toBe(10);
+			expect(diagnosticsInternals.parseHistoryCount("100")).toBe(50);
+			expect(diagnosticsInternals.parseCommandArgs("")).toEqual({ action: "status", countArg: undefined });
+			expect(diagnosticsInternals.parseCommandArgs("history 3")).toEqual({ action: "history", countArg: "3" });
+			expect(diagnosticsInternals.isPromptHistoryDiagnostics({ displayedCount: 1, items: [] })).toBe(true);
+			expect(diagnosticsInternals.isPromptHistoryDiagnostics({ items: [] })).toBe(false);
+
+			const history = diagnosticsInternals.collectPromptHistory(entries, 1);
+			expect(history).toMatchObject({ displayedCount: 1, requestedCount: 1, totalCount: 2 });
+			expect(history.items[0]?.promptPreview).toBe("Second run");
+
+			const collapsed = diagnosticsInternals.renderPromptHistoryMessage({ details: history }, false, theme as never);
+			expect(renderText(collapsed)).toContain("Diagnostics history");
+			expect(renderText(collapsed)).toContain("Second run");
+
+			const fallback = diagnosticsInternals.renderPromptHistoryMessage(
+				{ content: "History fallback" },
+				false,
+				theme as never,
+			);
+			expect(renderText(fallback)).toContain("History fallback");
+
+			const empty = diagnosticsInternals.renderPromptHistoryMessage(
+				{ details: diagnosticsInternals.collectPromptHistory([], 10) },
+				false,
+				theme as never,
+			);
+			expect(renderText(empty)).toContain("No prompt diagnostics have been recorded");
+		});
 	});
 
 	it("registers the diagnostics command, shortcut, and message renderer", () => {
@@ -290,6 +342,7 @@ describe("diagnostics extension", () => {
 		expect(harness.commands.has("diagnostics")).toBe(true);
 		expect(harness.shortcuts.has("ctrl+shift+d")).toBe(true);
 		expect(harness.messageRenderers.has("pi-diagnostics:prompt")).toBe(true);
+		expect(harness.messageRenderers.has("pi-diagnostics:history")).toBe(true);
 		const rendered = harness.messageRenderers.get("pi-diagnostics:prompt")?.(
 			{ details: makeCompletion() },
 			{ expanded: false },
@@ -496,8 +549,13 @@ describe("diagnostics extension", () => {
 		);
 		expect(command.getArgumentCompletions("zzz")).toBeNull();
 
+		await command.handler("", harness.ctx);
+		expect(harness.notifications.at(-1)?.msg).toContain("Last completed");
 		await command.handler("status", harness.ctx);
 		expect(harness.notifications.at(-1)?.msg).toContain("Last completed");
+
+		await command.handler("history 2", harness.ctx);
+		expect(harness.messages.at(-1)).toMatchObject({ customType: "pi-diagnostics:history", display: true });
 
 		const freshHarness = createExtensionHarness();
 		freshHarness.ctx.ui.setWidget = vi.fn();
@@ -533,7 +591,7 @@ describe("diagnostics extension", () => {
 		expect(harness.pi.appendEntry).toHaveBeenCalled();
 	});
 
-	it("ignores extension and empty prompt completions", () => {
+	it("tracks idle extension prompts but ignores empty or active extension completions", () => {
 		const harness = createExtensionHarness();
 		harness.ctx.ui.setWidget = vi.fn();
 		diagnosticsExtension(harness.pi as never);
@@ -562,7 +620,10 @@ describe("diagnostics extension", () => {
 			harness.ctx,
 		);
 
-		expect(harness.messages).toHaveLength(0);
+		expect(harness.messages).toHaveLength(1);
+		expect((harness.messages[0] as { details: PromptCompletionDiagnostics }).details.promptPreview).toBe(
+			"Scheduled follow-up",
+		);
 	});
 
 	it("nests an interrupted user prompt under the active prompt completion", () => {

@@ -50,6 +50,13 @@ interface DiagnosticsStateEntry {
 	updatedAt?: number;
 }
 
+interface PromptHistoryDiagnostics {
+	displayedCount: number;
+	items: PromptCompletionDiagnostics[];
+	requestedCount: number;
+	totalCount: number;
+}
+
 interface ActivePromptRun {
 	promptPreview: string;
 	startedAt: number;
@@ -97,6 +104,7 @@ type ThemeLike = Theme;
 const COMMAND = "diagnostics";
 const SHORTCUT = "ctrl+shift+d";
 const DIAGNOSTICS_MESSAGE_TYPE = "pi-diagnostics:prompt";
+const DIAGNOSTICS_HISTORY_MESSAGE_TYPE = "pi-diagnostics:history";
 const DIAGNOSTICS_STATE_TYPE = "pi-diagnostics:state";
 const WIDGET_KEY = "diagnostics";
 const WIDGET_REFRESH_MS = 5000;
@@ -104,7 +112,11 @@ const PROMPT_PREVIEW_MAX_LENGTH = 96;
 const RESPONSE_PREVIEW_MAX_LENGTH = 88;
 const PENDING_USER_PROMPT_MAX_COUNT = 8;
 const PENDING_USER_PROMPT_MAX_AGE_MS = 30 * 60_000;
+const HISTORY_DEFAULT_COUNT = 10;
+const HISTORY_MAX_COUNT = 50;
+const HISTORY_COLLAPSED_COUNT = 5;
 const EMPTY_PROMPT_PREVIEW = "(empty prompt)";
+const ARGUMENT_SPLIT_REGEX = /\s+/;
 
 function pluralize(count: number, noun: string): string {
 	return `${count} ${noun}${count === 1 ? "" : "s"}`;
@@ -138,6 +150,15 @@ function isPromptCompletionDiagnostics(value: unknown): value is PromptCompletio
 
 function isDiagnosticsStateEntry(value: unknown): value is DiagnosticsStateEntry {
 	return Boolean(value) && typeof value === "object" && typeof (value as { enabled?: unknown }).enabled === "boolean";
+}
+
+function isPromptHistoryDiagnostics(value: unknown): value is PromptHistoryDiagnostics {
+	return (
+		Boolean(value) &&
+		typeof value === "object" &&
+		Array.isArray((value as { items?: unknown }).items) &&
+		typeof (value as { displayedCount?: unknown }).displayedCount === "number"
+	);
 }
 
 function getMessageDetails(entry: SessionEntryLike): unknown {
@@ -501,6 +522,51 @@ function renderPromptCompletionMessage(
 	return render(lines.join("\n"));
 }
 
+function renderPromptHistoryMessage(
+	message: { content?: unknown; details?: unknown },
+	expanded: boolean,
+	theme: ThemeLike,
+) {
+	const details = isPromptHistoryDiagnostics(message.details) ? message.details : undefined;
+	const render = (text: string) => new Text(text, 1, 0, (segment: string) => theme.bg("customMessageBg", segment));
+	if (!details) {
+		return render(String(message.content ?? "Prompt diagnostics history"));
+	}
+
+	const lines = [theme.fg("accent", theme.bold("⏱ Diagnostics history"))];
+	if (details.items.length === 0) {
+		lines.push(theme.fg("dim", "No prompt diagnostics have been recorded in this session branch."));
+		return render(lines.join("\n"));
+	}
+
+	lines.push(
+		theme.fg(
+			"muted",
+			`Showing ${pluralize(details.displayedCount, "run")} of ${pluralize(details.totalCount, "recorded run")}.`,
+		),
+	);
+
+	const limit = expanded ? details.items.length : Math.min(details.items.length, HISTORY_COLLAPSED_COUNT);
+	for (let index = 0; index < limit; index += 1) {
+		const item = details.items[index];
+		if (!item) {
+			continue;
+		}
+		const childPromptCount = typeof item.childPromptCount === "number" ? item.childPromptCount : 0;
+		const childPrompts = childPromptCount > 0 ? ` · ${pluralize(childPromptCount, "nested prompt")}` : "";
+		lines.push(
+			`${theme.fg("dim", `#${index + 1}`)} ${item.statusLabel} ${item.completedAtLabel} · ${item.durationLabel} · ${pluralize(item.turnCount, "turn")} · ${pluralize(item.toolCount, "tool")}${childPrompts}`,
+		);
+		lines.push(`  ${theme.fg("muted", item.promptPreview)}`);
+	}
+
+	if (!expanded && details.items.length > limit) {
+		lines.push(theme.fg("dim", `Expand to show ${pluralize(details.items.length - limit, "more diagnostics run")}.`));
+	}
+
+	return render(lines.join("\n"));
+}
+
 function getBranchEntries(ctx: ExtensionContext): SessionEntryLike[] {
 	const entries = ctx.sessionManager?.getBranch?.();
 	return Array.isArray(entries) ? (entries as SessionEntryLike[]) : [];
@@ -531,6 +597,66 @@ function restoreLastCompletion(entries: SessionEntryLike[]): PromptCompletionDia
 		}
 	}
 	return null;
+}
+
+function parseHistoryCount(value: string | undefined): number {
+	if (!value) {
+		return HISTORY_DEFAULT_COUNT;
+	}
+
+	const parsed = Number.parseInt(value, 10);
+	if (!Number.isFinite(parsed) || parsed <= 0) {
+		return HISTORY_DEFAULT_COUNT;
+	}
+
+	return Math.min(parsed, HISTORY_MAX_COUNT);
+}
+
+function collectPromptHistory(entries: SessionEntryLike[], requestedCount: number): PromptHistoryDiagnostics {
+	const items: PromptCompletionDiagnostics[] = [];
+	let totalCount = 0;
+	for (let index = entries.length - 1; index >= 0; index -= 1) {
+		const entry = entries[index];
+		if (!entry || getMessageCustomType(entry) !== DIAGNOSTICS_MESSAGE_TYPE) {
+			continue;
+		}
+
+		const details = getMessageDetails(entry);
+		if (!isPromptCompletionDiagnostics(details)) {
+			continue;
+		}
+
+		totalCount += 1;
+		if (items.length < requestedCount) {
+			items.push(details);
+		}
+	}
+
+	return {
+		displayedCount: items.length,
+		items,
+		requestedCount,
+		totalCount,
+	};
+}
+
+function shouldEmitPromptCompletion(completion: PromptCompletionDiagnostics): boolean {
+	return !(
+		completion.promptPreview === EMPTY_PROMPT_PREVIEW &&
+		completion.turnCount === 0 &&
+		completion.toolCount === 0 &&
+		completion.childPromptCount === 0
+	);
+}
+
+function parseCommandArgs(args: string): { action: string; countArg: string | undefined } {
+	const trimmedArgs = args.trim().toLowerCase();
+	if (!trimmedArgs) {
+		return { action: "status", countArg: undefined };
+	}
+
+	const [action = "status", countArg] = trimmedArgs.split(ARGUMENT_SPLIT_REGEX);
+	return { action, countArg };
 }
 
 export default function diagnosticsExtension(pi: ExtensionAPI): void {
@@ -695,8 +821,24 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		ctx.ui.notify(`Diagnostics ${currentStatus}. ${currentPromptLine}. ${lastLine}.`, "info");
 	};
 
+	const showHistory = (ctx: ExtensionCommandContext, requestedCount: number) => {
+		const history = collectPromptHistory(getBranchEntries(ctx as ExtensionContext), requestedCount);
+		pi.sendMessage({
+			content:
+				history.displayedCount === 0
+					? "No prompt diagnostics have been recorded in this session branch."
+					: `Diagnostics history: ${pluralize(history.displayedCount, "run")}`,
+			customType: DIAGNOSTICS_HISTORY_MESSAGE_TYPE,
+			details: history,
+			display: true,
+		});
+	};
+
 	pi.registerMessageRenderer(DIAGNOSTICS_MESSAGE_TYPE, (message, { expanded }, theme) =>
 		renderPromptCompletionMessage(message, expanded, theme),
+	);
+	pi.registerMessageRenderer(DIAGNOSTICS_HISTORY_MESSAGE_TYPE, (message, { expanded }, theme) =>
+		renderPromptHistoryMessage(message, expanded, theme),
 	);
 
 	pi.on("session_start", (_event, ctx) => {
@@ -716,7 +858,12 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.on("input", (event) => {
-		if (!enabled || !hasUserPromptContent(event.text, event.images) || event.source === "extension") {
+		const hasActivePrompt = Boolean(currentPrompt || getActivePromptRun(activePromptRuns));
+		if (
+			!enabled ||
+			!hasUserPromptContent(event.text, event.images) ||
+			(event.source === "extension" && hasActivePrompt)
+		) {
 			return { action: "continue" };
 		}
 
@@ -847,9 +994,13 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 
 		const completedAt = Date.now();
 		const completion = buildPromptCompletion(currentPrompt, event.messages, completedAt);
-		lastCompletion = completion;
 		currentPrompt = null;
 		activePromptRuns.length = 0;
+		if (!shouldEmitPromptCompletion(completion)) {
+			requestWidgetRender?.();
+			return;
+		}
+		lastCompletion = completion;
 		requestWidgetRender?.();
 		pi.sendMessage({
 			content: buildPromptSummaryText(completion),
@@ -872,6 +1023,7 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		getArgumentCompletions(prefix) {
 			const options = [
 				{ description: "Show the current diagnostics state", label: "status", value: "status" },
+				{ description: "Show recent prompt diagnostics from this branch", label: "history", value: "history" },
 				{ description: "Toggle diagnostics logging on or off", label: "toggle", value: "toggle" },
 				{ description: "Enable diagnostics logging and widget output", label: "on", value: "on" },
 				{ description: "Disable diagnostics logging and widget output", label: "off", value: "off" },
@@ -880,9 +1032,14 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 			return filtered.length > 0 ? filtered : null;
 		},
 		handler: async (args, ctx) => {
-			const action = (args.trim().toLowerCase() || "status") as "status" | "toggle" | "on" | "off";
+			const { action, countArg } = parseCommandArgs(args);
 			if (action === "status") {
 				showStatus(ctx);
+				return;
+			}
+
+			if (action === "history") {
+				showHistory(ctx, parseHistoryCount(countArg));
 				return;
 			}
 
@@ -920,6 +1077,7 @@ export const diagnosticsInternals = {
 	buildPromptCompletion,
 	buildPromptSummaryText,
 	classifyStopReason,
+	collectPromptHistory,
 	countToolResults,
 	findLastAssistantMessage,
 	findPromptPreviewFromMessages,
@@ -931,9 +1089,14 @@ export const diagnosticsInternals = {
 	getMessageDetails,
 	isDiagnosticsStateEntry,
 	isPromptCompletionDiagnostics,
+	isPromptHistoryDiagnostics,
+	parseCommandArgs,
+	parseHistoryCount,
 	renderPromptCompletionMessage,
+	renderPromptHistoryMessage,
 	restoreEnabledState,
 	restoreLastCompletion,
+	shouldEmitPromptCompletion,
 	summarizePrompt,
 	summarizeResponsePreview,
 };
