@@ -43,6 +43,8 @@ const OVERLAY_MAX_HEIGHT = "80%";
 const SAFE_MODE_REASON_MAX_LENGTH = 96;
 const STARTUP_CONFIG_LOAD_DELAY_MS = 250;
 const STARTUP_WARMUP_SAMPLE_COUNT = 1;
+const STALE_SAMPLE_MIN_ELAPSED_MS = 60_000;
+const STALE_SAMPLE_MIN_LAG_MS = 30_000;
 /**
 <!-- {=extensionsWatchdogConfigPathDocs} -->
 
@@ -94,6 +96,22 @@ export const DEFAULT_WATCHDOG_THRESHOLDS: WatchdogThresholds = {
 
 function toMilliseconds(value: number): number {
 	return Number.isFinite(value) ? value / 1_000_000 : 0;
+}
+
+function isStaleEventLoopSample(input: {
+	elapsedMs: number;
+	eventLoopMaxMs: number;
+	sampleIntervalMs: number;
+}): boolean {
+	const staleElapsedMs = Math.max(STALE_SAMPLE_MIN_ELAPSED_MS, input.sampleIntervalMs * 3);
+	const staleLagMs = Math.max(STALE_SAMPLE_MIN_LAG_MS, input.sampleIntervalMs * 2);
+	const expectedTimerDriftMs = Math.max(input.sampleIntervalMs * 2, 1000);
+
+	return (
+		input.elapsedMs >= staleElapsedMs &&
+		input.eventLoopMaxMs >= staleLagMs &&
+		input.eventLoopMaxMs >= input.elapsedMs - expectedTimerDriftMs
+	);
 }
 
 /** Amortized O(1) bounded push — trims with copyWithin only when array has doubled past limit. */
@@ -514,13 +532,22 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		lastCpuUsage = cpuNow;
 		lastSampleAt = now;
 
+		const eventLoopMaxNs = Number(histogram.max);
+		const eventLoopMeanNs = Number(histogram.mean);
+		const eventLoopP99Ns = Number(histogram.percentile(99));
+		const staleEventLoopSample = isStaleEventLoopSample({
+			elapsedMs,
+			eventLoopMaxMs: toMilliseconds(eventLoopMaxNs),
+			sampleIntervalMs,
+		});
+
 		latestSample = createWatchdogSample({
 			coreCount,
 			cpuUsage: cpuDelta,
 			elapsedMs,
-			eventLoopMaxNs: Number(histogram.max),
-			eventLoopMeanNs: Number(histogram.mean),
-			eventLoopP99Ns: Number(histogram.percentile(99)),
+			eventLoopMaxNs: staleEventLoopSample ? 0 : eventLoopMaxNs,
+			eventLoopMeanNs: staleEventLoopSample ? 0 : eventLoopMeanNs,
+			eventLoopP99Ns: staleEventLoopSample ? 0 : eventLoopP99Ns,
 			memoryUsage: process.memoryUsage(),
 			safeModeEnabled: getSafeModeState().enabled,
 			timestamp: now,

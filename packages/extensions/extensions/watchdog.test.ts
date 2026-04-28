@@ -321,6 +321,29 @@ describe("watchdog extension", () => {
 		expect(ctx._notifications.some((item) => item.msg.includes("Performance watchdog"))).toBe(false);
 	});
 
+	it("ignores stale event-loop samples after long timer gaps", async () => {
+		const pi = createMockPi();
+		const ctx = createMockCtx();
+		watchdogExtension(pi as any);
+
+		mockCpuUsageSequence([
+			{ user: 0, system: 0 },
+			{ user: 0, system: 0 },
+		]);
+		mockMemoryUsage();
+		histogram.mean = 173_007_000_000;
+		histogram.max = 173_007_000_000;
+		histogram.percentile.mockReturnValue(173_007_000_000);
+
+		await pi._emit("session_start", {}, ctx);
+		vi.setSystemTime(Date.now() + 178_000);
+		await pi._commands.get("watchdog").handler("sample", ctx);
+
+		expect(ctx._statuses.get("watchdog")).toBeUndefined();
+		expect(ctx._notifications.some((item) => item.msg.includes("Performance watchdog"))).toBe(false);
+		expect(getSafeModeState().enabled).toBe(false);
+	});
+
 	it("auto-enables safe mode after repeated laggy samples", async () => {
 		const pi = createMockPi();
 		const ctx = createMockCtx();
