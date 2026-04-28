@@ -48,6 +48,7 @@ const OVERLAY_WIDTH = 84;
 const OVERLAY_MAX_HEIGHT = "80%";
 const SAFE_MODE_REASON_MAX_LENGTH = 96;
 const STARTUP_CONFIG_LOAD_DELAY_MS = 250;
+const STARTUP_WARMUP_SAMPLE_COUNT = 1;
 /**
 <!-- {=extensionsWatchdogConfigPathDocs} -->
 
@@ -413,6 +414,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	let consecutiveAlerts = 0;
 	let alertNotificationCount = 0;
 	let latestAlertMessage: string | null = null;
+	let startupWarmupSamplesRemaining = 0;
 	let enabled = true;
 	let timer: ReturnType<typeof setInterval> | null = null;
 	let lastCpuUsage = process.cpuUsage();
@@ -497,7 +499,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		startupConfigTimer.unref?.();
 	};
 
-	const takeSample = () => {
+	const takeSample = (options: { skipStartupWarmup?: boolean } = {}) => {
 		if (!enabled) {
 			setAlertStatus(undefined);
 			return latestSample;
@@ -526,6 +528,13 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		});
 		histogram.reset();
 		pushBounded(sampleHistory, latestSample, SAMPLE_HISTORY_LIMIT);
+
+		if (!options.skipStartupWarmup && startupWarmupSamplesRemaining > 0) {
+			startupWarmupSamplesRemaining -= 1;
+			consecutiveAlerts = 0;
+			setAlertStatus(undefined);
+			return latestSample;
+		}
 
 		const alert = evaluateWatchdogSample(latestSample, thresholds);
 		if (!alert) {
@@ -591,6 +600,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		lastAlertAt = 0;
 		alertNotificationCount = 0;
 		latestAlertMessage = null;
+		startupWarmupSamplesRemaining = 0;
 		sampleHistory.length = 0;
 		alertHistory.length = 0;
 		setAlertStatus(undefined);
@@ -598,7 +608,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 
 	const notifyStatus = (ctx: ExtensionCommandContext | ExtensionContext) => {
 		loadConfigNow();
-		takeSample();
+		takeSample({ skipStartupWarmup: true });
 		const culprit = getExtensionDiagnostics()[0];
 		const culpritSummary = formatLikelyCulpritSummary(culprit);
 		ctx.ui.notify(
@@ -645,7 +655,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 		activeCtx = ctx;
 		loadConfigNow();
 		setSafeModeStatus();
-		takeSample();
+		takeSample({ skipStartupWarmup: true });
 		await ctx.ui.custom(
 			(tui, theme, _keybindings, done) => ({
 				render(width: number) {
@@ -666,7 +676,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 						return;
 					}
 					if (data === "r") {
-						takeSample();
+						takeSample({ skipStartupWarmup: true });
 						tui.requestRender();
 						return;
 					}
@@ -677,7 +687,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 							source: "manual",
 						});
 						setSafeModeStatus(state);
-						takeSample();
+						takeSample({ skipStartupWarmup: true });
 						tui.requestRender();
 					}
 				},
@@ -719,7 +729,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 					return;
 				}
 				case "sample": {
-					latestSample = takeSample();
+					latestSample = takeSample({ skipStartupWarmup: true });
 					ctx.ui.notify(formatWatchdogStatus(latestSample), "info");
 					return;
 				}
@@ -805,6 +815,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	pi.on("session_start", (_event, ctx) => {
 		activeCtx = ctx;
 		resetCounters();
+		startupWarmupSamplesRemaining = STARTUP_WARMUP_SAMPLE_COUNT;
 		setSafeModeStatus();
 		ensureTimer();
 		scheduleStartupConfigLoad();

@@ -291,6 +291,32 @@ describe("watchdog extension", () => {
 		expect(seen).toHaveLength(1);
 	});
 
+	it("ignores the first automatic startup sample", async () => {
+		const pi = createMockPi();
+		const ctx = createMockCtx();
+		watchdogExtension(pi as any);
+
+		mockCpuUsageSequence([
+			{ user: 0, system: 0 },
+			{ user: 0, system: 0 },
+			{ user: 4_500_000, system: 0 },
+		]);
+		mockMemoryUsage({
+			rss: 1400 * 1024 * 1024,
+			heapUsed: 900 * 1024 * 1024,
+			heapTotal: 1000 * 1024 * 1024,
+		});
+		histogram.mean = 30_000_000;
+		histogram.max = 320_000_000;
+		histogram.percentile.mockReturnValue(180_000_000);
+
+		await pi._emit("session_start", {}, ctx);
+		await vi.advanceTimersByTimeAsync(5000);
+
+		expect(ctx._statuses.get("watchdog")).toBeUndefined();
+		expect(ctx._notifications.some((item) => item.msg.includes("Performance watchdog"))).toBe(false);
+	});
+
 	it("auto-enables safe mode after repeated laggy samples", async () => {
 		const pi = createMockPi();
 		const ctx = createMockCtx();
@@ -312,7 +338,7 @@ describe("watchdog extension", () => {
 		histogram.percentile.mockReturnValue(180_000_000);
 
 		await pi._emit("session_start", {}, ctx);
-		await vi.advanceTimersByTimeAsync(10_000);
+		await vi.advanceTimersByTimeAsync(15_000);
 
 		expect(getSafeModeState().enabled).toBe(true);
 		expect(ctx._statuses.get("watchdog")).toContain("event-loop");
