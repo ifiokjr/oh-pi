@@ -120,7 +120,7 @@ describe("provider catalog extension", () => {
 		};
 		vi.stubGlobal(
 			"fetch",
-			vi.fn<() => Promise<Response>>().mockImplementation(async (url: string) => {
+			vi.fn<(url: string) => Promise<Response>>().mockImplementation(async (url: string) => {
 				if (typeof url === "string" && url.includes("models.dev")) {
 					return jsonResponse(sampleCatalog);
 				}
