@@ -167,10 +167,10 @@ export async function setupAdaptiveRouting(
 		await p.confirm({
 			initialValue: currentConfig ? true : providerNames.length > 1,
 			message: currentConfig
-				? "Edit startup provider assignments for session, subagents, and ant-colony?"
+				? "Edit startup provider assignments for session and subagents?"
 				: providerNames.length > 1
-					? "Configure startup provider assignments for session, subagents, and ant-colony?"
-					: `Use ${providerNames[0]} for delegated subagent and colony routing?`,
+					? "Configure startup provider assignments for session and subagents?"
+					: `Use ${providerNames[0]} for delegated subagent routing?`,
 		}),
 	);
 	if (!shouldConfigure) {

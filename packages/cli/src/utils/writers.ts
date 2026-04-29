@@ -7,16 +7,6 @@ import type { AdaptiveRoutingSetupConfig, OhPConfigWithRouting } from "../types.
 import { ensureDir, syncDir } from "./install.js";
 import { resources } from "./resources.js";
 
-const ANT_COLONY_AUTOTRIGGER_GUIDE = `## Ant Colony Auto-Trigger
-If the ant_colony tool is available, automatically use it when the task is complex:
-- 3 or more files likely need changes
-- 2 or more independent workstreams exist
-- large refactor / migration / feature implementation
-
-For simple one-file tasks, execute directly without colony overhead.
-After launching ant_colony, use passive mode: wait for COLONY_SIGNAL updates and do not poll bg_colony_status unless the user explicitly asks for a manual snapshot.
-`;
-
 function readJson<T>(file: string): T | null {
 	try {
 		return JSON.parse(readFileSync(file, "utf8")) as T;
@@ -219,10 +209,6 @@ export function writeAgents(agentDir: string, config: OhPConfigWithRouting) {
 			content = `## Language\nAlways respond in ${lang}. Use the user's language for all conversations and explanations. Code, commands, and technical terms can remain in English.\n\n${content}`;
 		}
 
-		if (config.extensions.includes("ant-colony") && config.agents !== "colony-operator") {
-			content = `${content.trimEnd()}\n\n${ANT_COLONY_AUTOTRIGGER_GUIDE}`;
-		}
-
 		writeFileSync(join(agentDir, "AGENTS.md"), content);
 	} catch {
 		/* Template not found, skip */
@@ -264,12 +250,14 @@ function copyPlanExtension(extDir: string) {
 export function writeExtensions(agentDir: string, config: OhPConfigWithRouting) {
 	const extDir = join(agentDir, "extensions");
 	ensureDir(extDir);
-	for (const ext of config.extensions) {
-		if (ext === "ant-colony") {
-			copyDedicatedExtension(extDir, "ant-colony", resources.antColonyDir());
-			continue;
+	const allowed = new Set(config.extensions);
+	// Remove stale extension directories that are no longer in the config
+	for (const entry of readdirSync(extDir, { withFileTypes: true })) {
+		if (entry.isDirectory() && !allowed.has(entry.name)) {
+			rmSync(join(extDir, entry.name), { force: true, recursive: true });
 		}
-
+	}
+	for (const ext of config.extensions) {
 		if (ext === "plan") {
 			copyPlanExtension(extDir);
 			continue;

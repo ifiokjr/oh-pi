@@ -36,7 +36,6 @@ describe("git-install package manifest", () => {
 		const rootManifest = readPackageJson("package.json");
 		const extensionPackages = [
 			"packages/extensions/package.json",
-			"packages/ant-colony/package.json",
 			"packages/background-tasks/package.json",
 			"packages/diagnostics/package.json",
 			"packages/subagents/package.json",

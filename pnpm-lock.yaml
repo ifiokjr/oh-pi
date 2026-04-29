@@ -240,27 +240,6 @@ importers:
         specifier: '*'
         version: 0.34.49
 
-  packages/ant-colony:
-    dependencies:
-      '@ifi/oh-pi-core':
-        specifier: 0.5.1
-        version: link:../core
-      '@mariozechner/pi-agent-core':
-        specifier: '>=0.56.1'
-        version: 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-ai':
-        specifier: '>=0.56.1'
-        version: 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-coding-agent':
-        specifier: '>=0.56.1'
-        version: 0.56.1(ws@8.20.0)(zod@3.25.76)
-      '@mariozechner/pi-tui':
-        specifier: '>=0.56.1'
-        version: 0.56.1
-      '@sinclair/typebox':
-        specifier: '*'
-        version: 0.34.49
-
   packages/background-tasks:
     dependencies:
       '@mariozechner/pi-agent-core':
@@ -287,9 +266,6 @@ importers:
       '@ifi/oh-pi-agents':
         specifier: 0.5.1
         version: link:../agents
-      '@ifi/oh-pi-ant-colony':
-        specifier: 0.5.1
-        version: link:../ant-colony
       '@ifi/oh-pi-core':
         specifier: 0.5.1
         version: link:../core

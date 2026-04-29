@@ -1,7 +1,0 @@
-{
-	"extends": "../../tsconfig.base.json",
-	"compilerOptions": {
-		"noEmit": true
-	},
-	"include": ["extensions/ant-colony/worktree.ts", "extensions/ant-colony/types.ts", "tests/worktree.test.ts"]
-}

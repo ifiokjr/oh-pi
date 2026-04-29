@@ -837,6 +837,50 @@ Async events:
 
 `notify.ts` consumes `subagent:complete` as the canonical completion channel.
 
+## Dynamic Agents (On-the-fly Creation)
+
+`dynamic-agent.ts` lets you create and run ephemeral agents without writing a `.md` file. This is useful for programmatic agent creation where the host constructs a task-specific agent dynamically and runs it immediately.
+
+```typescript
+import { runDynamicAgent } from "@ifi/pi-extension-subagents/dynamic-agent.js";
+
+const result = await runDynamicAgent(
+  "/workspace",
+  {
+    name: "bug-finder",
+    systemPrompt: "You are a code review agent. Find bugs in the provided code.",
+    model: "anthropic/claude-sonnet-4",
+    modelPolicy: "inherit",
+    tools: ["read", "bash", "grep"],
+    skills: ["context7"],
+  },
+  "Review src/utils.ts for edge cases",
+  {
+    currentModel: "anthropic/claude-sonnet-4",
+    availableModels: [
+      { provider: "anthropic", id: "claude-sonnet-4", fullId: "anthropic/claude-sonnet-4", ... }
+    ],
+    onUsage: (usage) => console.log("Tokens used:", usage.input + usage.output),
+  },
+);
+```
+
+### Model Resolution
+
+The `modelPolicy` field controls how the agent's model is resolved:
+
+| Policy                | Behavior                                                                                           |
+| --------------------- | -------------------------------------------------------------------------------------------------- |
+| `"inherit"` (default) | Use the explicit `model` if it exists in `availableModels`. Otherwise fall back to `currentModel`. |
+| `"scoped-only"`       | Same as inherit, but throws if the requested model is unavailable (no silent fallback).            |
+| `"adaptive"`          | Falls back to `currentModel`; future versions may use adaptive routing.                            |
+
+### API
+
+- **`createDynamicAgent(spec)`** — Convert a `DynamicAgentSpec` into an `AgentConfig` compatible with the existing runner. Returns an ephemeral config with `source: "builtin"` and `filePath: "<dynamic>"`.
+- **`resolveDynamicModel(spec, options)`** — Pure function that resolves the effective model string based on the spec and available scoped models. Used internally by `runDynamicAgent`; exposed for unit testing and custom orchestrators.
+- **`runDynamicAgent(cwd, spec, task, options)`** — Create an ephemeral agent from `spec`, resolve its model, run it via `runSync`, then return the result. Optionally calls `onUsage` with final usage data for budget tracking across subagent calls.
+
 ## Files
 
 ```

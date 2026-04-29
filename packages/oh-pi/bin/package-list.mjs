@@ -8,7 +8,6 @@
 export const INSTALLER_PACKAGES = [
 	"@ifi/oh-pi-extensions",
 	"@ifi/pi-background-tasks",
-	"@ifi/oh-pi-ant-colony",
 	"@ifi/pi-diagnostics",
 	"@ifi/pi-extension-subagents",
 	"@ifi/pi-plan",

@@ -14,7 +14,6 @@ export const publishedPackages = [
 	{ dir: "packages/agents", name: "@ifi/oh-pi-agents" },
 	{ dir: "packages/analytics-db", name: "@ifi/pi-analytics-db" },
 	{ dir: "packages/analytics-extension", name: "@ifi/pi-analytics-extension" },
-	{ dir: "packages/ant-colony", name: "@ifi/oh-pi-ant-colony" },
 	{ dir: "packages/background-tasks", name: "@ifi/pi-background-tasks" },
 	{ dir: "packages/cursor", name: "@ifi/pi-provider-cursor" },
 	{ dir: "packages/diagnostics", name: "@ifi/pi-diagnostics" },

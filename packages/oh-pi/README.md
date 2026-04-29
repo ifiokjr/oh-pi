@@ -1,6 +1,6 @@
 # @ifi/oh-pi
 
-> All-in-one setup for pi-coding-agent — extensions, prompts, skills, themes, remote sharing, and ant-colony workflows.
+> All-in-one setup for pi-coding-agent — extensions, prompts, skills, themes, remote sharing, and dynamic subagent workflows.
 
 ## Install
 
@@ -82,7 +82,6 @@ oh-pi repo
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `@ifi/oh-pi-extensions`       | 13 core session features including git-guard, auto-session-name, custom-footer, tool-metadata, scheduler, usage-tracker, btw/qq, watchdog, bg-process, external-editor, and worktree |
 | `@ifi/pi-background-tasks`    | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, log tails, and the `bg_task` tool                                                                                        |
-| `@ifi/oh-pi-ant-colony`       | Multi-agent swarm extension (`ant_colony`, `/colony*`, colony panel, isolated worktrees, pheromone/task orchestration)                                                               |
 | `@ifi/pi-diagnostics`         | Prompt completion timestamps, durations, per-turn timing, widget, and `/diagnostics`                                                                                                 |
 | `@ifi/pi-extension-subagents` | Subagent orchestration runtime (`subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`, `/agents`)                                                                             |
 | `@ifi/pi-plan`                | Planning mode extension (`/plan`, `Alt+P`, `task_agents`, `steer_task_agent`, `set_plan`)                                                                                            |

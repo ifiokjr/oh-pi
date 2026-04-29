@@ -184,13 +184,6 @@ export const EXTENSIONS = [
 	{
 		default: false,
 		get label() {
-			return `${icon("ant")} Ant Colony — Autonomous multi-agent swarm with adaptive concurrency`;
-		},
-		name: "ant-colony",
-	},
-	{
-		default: false,
-		get label() {
 			return `${icon("map")} Plan Mode — Branch-aware planning and delegated research via /plan`;
 		},
 		name: "plan",

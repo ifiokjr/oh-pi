@@ -6,8 +6,8 @@
 	"scripts": {
 		"build": "pnpm --filter @ifi/oh-pi-core build && pnpm -r --filter=!@ifi/oh-pi-core run build",
 		"build:fast": "pnpm --filter @ifi/oh-pi-core run build:fast && pnpm -r --filter=!@ifi/oh-pi-core run build:fast",
-		"typecheck": "pnpm --filter @ifi/oh-pi-core build && pnpm -r --filter @ifi/oh-pi-ant-colony --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli --filter @ifi/pi-spec --filter @ifi/pi-web-client --filter @ifi/pi-web-server run typecheck",
-		"verify:completion": "pnpm exec vitest run packages/ant-colony/tests/commands.test.ts",
+		"typecheck": "pnpm --filter @ifi/oh-pi-core build && pnpm -r --filter @ifi/oh-pi-core --filter @ifi/oh-pi-cli --filter @ifi/pi-spec --filter @ifi/pi-web-client --filter @ifi/pi-web-server run typecheck",
+		"verify:completion": "pnpm exec vitest run packages/subagents/tests/commands.test.ts",
 		"security:allowlist": "node ./scripts/security/check-dependency-allowlist.mjs",
 		"security:audit:prod": "node ./scripts/security/run-pnpm-audit.mjs --prod --audit-level=high",
 		"security:audit:dev": "node ./scripts/security/run-pnpm-audit.mjs -D --audit-level=high",
@@ -98,7 +98,6 @@
 			"./packages/extensions/extensions/tool-metadata.ts",
 			"./packages/extensions/extensions/usage-tracker.ts",
 			"./packages/extensions/extensions/worktree.ts",
-			"./packages/ant-colony/extensions/ant-colony/index.ts",
 			"./packages/background-tasks/index.ts",
 			"./packages/diagnostics/index.ts",
 			"./packages/subagents/index.ts",

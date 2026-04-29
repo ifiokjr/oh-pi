@@ -5,7 +5,6 @@ Default runtime/content packages installed by `npx @ifi/oh-pi`:
 
 - `@ifi/oh-pi-extensions`
 - `@ifi/pi-background-tasks`
-- `@ifi/oh-pi-ant-colony`
 - `@ifi/pi-diagnostics`
 - `@ifi/pi-extension-subagents`
 - `@ifi/pi-plan`
@@ -20,7 +19,6 @@ Default runtime/content packages installed by `npx @ifi/oh-pi`:
 export const INSTALLER_PACKAGES = [
 	"@ifi/oh-pi-extensions",
 	"@ifi/pi-background-tasks",
-	"@ifi/oh-pi-ant-colony",
 	"@ifi/pi-diagnostics",
 	"@ifi/pi-extension-subagents",
 	"@ifi/pi-plan",

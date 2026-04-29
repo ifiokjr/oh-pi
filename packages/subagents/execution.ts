@@ -568,5 +568,9 @@ export async function runSync(
 		}
 	}
 
+	if (options.onUsage) {
+		options.onUsage(result.usage);
+	}
+
 	return result;
 }

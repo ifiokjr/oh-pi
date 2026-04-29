@@ -42,7 +42,6 @@
 	"dependencies": {
 		"@clack/prompts": "^1.2.0",
 		"@ifi/oh-pi-agents": "0.5.1",
-		"@ifi/oh-pi-ant-colony": "0.5.1",
 		"@ifi/oh-pi-core": "0.5.1",
 		"@ifi/oh-pi-extensions": "0.5.1",
 		"@ifi/oh-pi-prompts": "0.5.1",
