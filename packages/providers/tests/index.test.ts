@@ -141,7 +141,10 @@ describe("provider catalog extension", () => {
 		} as never;
 
 		let pickerFactory: any;
-		harness.ctx.ui.select = vi.fn(async () => null) as never;
+		harness.ctx.ui.select = vi.fn(async () => {
+			// Return a label that matches the first provider option
+			return `${provider.name} — ${provider.id} · login`;
+		}) as never;
 		harness.ctx.ui.custom = vi.fn((factory: any) => {
 			pickerFactory = factory;
 			return Promise.resolve(provider);
@@ -153,30 +156,11 @@ describe("provider catalog extension", () => {
 		const command = harness.commands.get("providers:login");
 		await command.handler("", harness.ctx);
 
-		expect(harness.ctx.ui.select).not.toHaveBeenCalled();
-		expect(harness.ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {
-			overlay: true,
-			overlayOptions: {
-				anchor: "center",
-				width: "80%",
-				maxHeight: "75%",
-			},
-		});
-
-		const component = pickerFactory(
-			{ requestRender: vi.fn() },
-			{
-				fg: (_color: string, text: string) => text,
-				bold: (text: string) => text,
-			},
-			{},
-			() => undefined,
+		expect(harness.ctx.ui.select).toHaveBeenCalledWith(
+			expect.stringContaining("Select provider to log in"),
+			expect.arrayContaining([expect.stringContaining("OpenRouter")]),
 		);
-		const rendered = component.render(120).join("\n");
-		expect(rendered).toContain("Select provider to log in");
-		expect(rendered).toContain("type / to search");
-		expect(rendered).not.toContain("Next 10");
-		expect(rendered).not.toContain("Previous 10");
+		expect(harness.ctx.ui.custom).not.toHaveBeenCalled();
 
 		expect(harness.providers.has(provider.id)).toBe(true);
 		expect(stored.get(provider.id)).toMatchObject({
@@ -184,6 +168,100 @@ describe("provider catalog extension", () => {
 			providerId: provider.id,
 		});
 		expect(refresh).toHaveBeenCalledTimes(1);
+	});
+
+	it("persists models from stored credentials into the provider registration on session_start", async () => {
+		const provider = getSupportedProvider("moonshotai");
+		const harness = createExtensionHarness();
+		const storedModels = [
+			{
+				id: "moonshot-v1",
+				name: "Moonshot V1",
+				contextWindow: 131072,
+				maxTokens: 16384,
+				input: ["text" as const],
+				reasoning: true,
+				cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			},
+		];
+		harness.ctx.modelRegistry = {
+			authStorage: {
+				get: vi.fn((providerId: string) =>
+					providerId === provider.id
+						? {
+								type: "oauth",
+								refresh: "moonshot-key",
+								access: "moonshot-key",
+								expires: Date.now() + 60_000,
+								providerId: provider.id,
+								models: storedModels,
+								lastModelRefresh: Date.now(),
+							}
+						: undefined,
+				),
+				set: vi.fn(),
+			},
+			refresh: vi.fn(),
+			registerProvider: vi.fn((name, config) => harness.pi.registerProvider(name, config)),
+		} as never;
+
+		providerCatalogExtension(harness.pi as never);
+		await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
+
+		expect(harness.providers.has(provider.id)).toBe(true);
+		// Verify the models from the stored credential were passed to registerProvider
+		const registerCalls = (harness.ctx.modelRegistry as { registerProvider: ReturnType<typeof vi.fn> }).registerProvider;
+		expect(registerCalls).toHaveBeenCalled();
+		const providerConfig = registerCalls.mock.calls.find((call: [string, unknown]) => call[0] === provider.id)?.[1] as { models?: unknown[] } | undefined;
+		expect(providerConfig?.models).toBeDefined();
+		expect((providerConfig?.models as unknown[])?.length).toBeGreaterThan(0);
+	});
+
+	it("returns null when provider selection is cancelled", async () => {
+		const provider = SUPPORTED_PROVIDERS[10];
+		if (!provider) {
+			throw new Error("Expected at least 11 providers in the catalog.");
+		}
+		const sampleCatalog = {
+			[provider.id]: {
+				models: {
+					"demo-model": {
+						id: "demo-model",
+						name: "Demo Model",
+						reasoning: true,
+						attachment: true,
+						limit: { context: 262144, output: 32768 },
+						modalities: { input: ["text", "image"], output: ["text"] },
+					},
+				},
+			},
+		};
+		vi.stubGlobal(
+			"fetch",
+			vi
+				.fn<() => Promise<Response>>()
+					.mockImplementationOnce(async () => jsonResponse(sampleCatalog)),
+		);
+
+		const harness = createExtensionHarness();
+		harness.ctx.modelRegistry = {
+			authStorage: {
+				get: vi.fn(() => undefined),
+				set: vi.fn(),
+			},
+			refresh: vi.fn(),
+			registerProvider: vi.fn((name: string, config: unknown) => harness.pi.registerProvider(name, config)),
+		} as never;
+
+		// Simulate user cancelling the selection
+		harness.ctx.ui.select = vi.fn(async () => undefined) as never;
+
+		providerCatalogExtension(harness.pi as never);
+		const command = harness.commands.get("providers:login");
+		await command.handler("", harness.ctx);
+
+		// Provider should NOT be registered since selection was cancelled
+		expect(harness.providers.has(provider.id)).toBe(false);
 	});
 
 	it("routes list, info, models, and refresh-models subcommands", async () => {

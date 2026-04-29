@@ -6,7 +6,6 @@ import type {
 } from "@mariozechner/pi-coding-agent";
 
 /* C8 ignore file */
-import * as sharedQna from "@ifi/pi-shared-qna";
 
 import type { ProviderCatalogCredentials, ProviderCatalogModel } from "./catalog.js";
 import type { SupportedProviderDefinition } from "./config.js";
@@ -19,26 +18,6 @@ import {
 } from "./auth.js";
 import { getCatalogModels, getCredentialModels, resolveProviderModels } from "./catalog.js";
 import { getEnvApiKey, resolveApiKeyConfig, SUPPORTED_PROVIDERS } from "./config.js";
-
-interface ScrollSelectOption<T> {
-	value: T;
-	label: string;
-}
-
-interface ProviderScrollableSelectConfig<T> {
-	title: string;
-	options: ScrollSelectOption<T>[];
-	footerHint?: string;
-	search?: {
-		title: string;
-		placeholder: string;
-		getOptions(query: string): ScrollSelectOption<T>[];
-		emptyMessage(query: string): string;
-	};
-	maxVisibleOptions?: number;
-	overlayWidth?: string;
-	overlayMaxHeight?: string;
-}
 
 type ProviderAuthReader = Pick<ExtensionContext["modelRegistry"]["authStorage"], "get">;
 type ProviderAuthWriter = Pick<ExtensionContext["modelRegistry"]["authStorage"], "get" | "set">;
@@ -451,91 +430,36 @@ async function resolveProviderSelection(
 		return matchedProviders[0] ?? null;
 	}
 
-	return await selectProviderFromOverlay(ctx, matchedProviders);
+	return await selectProviderFromScrollableList(ctx, matchedProviders);
 }
 
-async function selectProviderFromOverlay(
+async function selectProviderFromScrollableList(
 	ctx: ProviderCommandContext,
 	providers: readonly SupportedProviderDefinition[],
 ): Promise<SupportedProviderDefinition | null> {
-	const options = buildProviderPickerOptions(providers, ctx);
-	return await openProviderScrollableSelect(ctx.ui, {
-		footerHint: typeof ctx.ui.input === "function" ? "type / to search" : undefined,
-		maxVisibleOptions: 12,
-		options,
-		overlayMaxHeight: "75%",
-		overlayWidth: "80%",
-		search:
-			typeof ctx.ui.input === "function"
-				? {
-						title: "Provider search",
-						placeholder: "Type a provider id or name",
-						getOptions(query: string) {
-							if (!query) {
-								return options;
-							}
-
-							return buildProviderPickerOptions(findProviders(query), ctx);
-						},
-						emptyMessage(query: string) {
-							return `No provider matched "${query}".`;
-						},
-					}
-				: undefined,
-		title: `Select provider to log in (${providers.length} total)`,
-	});
-}
-
-async function openProviderScrollableSelect<T>(
-	ui: Pick<ExtensionCommandContext["ui"], "custom" | "input">,
-	config: ProviderScrollableSelectConfig<T>,
-): Promise<T | null> {
-	const sharedOpenScrollableSelect = (sharedQna as { openScrollableSelect?: unknown }).openScrollableSelect;
-	if (typeof sharedOpenScrollableSelect === "function") {
-		return await (
-			sharedOpenScrollableSelect as (
-				ui: Pick<ExtensionCommandContext["ui"], "custom" | "input">,
-				config: ProviderScrollableSelectConfig<T>,
-			) => Promise<T | null>
-		)(ui, config);
+	if (typeof ctx.ui.select !== "function") {
+		return providers[0] ?? null;
 	}
-	if (typeof ui.custom !== "function") {
-		return config.options[0]?.value ?? null;
-	}
-	return await ui.custom(
-		(_tui, _theme, _keybindings, _done) => ({
-			dispose() {
-				// No-op fallback cleanup.
-			},
-			handleInput() {
-				// Fallback picker relies on the surrounding ui.custom implementation.
-			},
-			invalidate() {
-				// No-op fallback invalidation.
-			},
-			render(width: number) {
-				return [
-					config.title,
-					...(config.footerHint ? [config.footerHint] : []),
-					...config.options.slice(0, config.maxVisibleOptions ?? 12).map((option) => `- ${option.label}`),
-				].map((line) => line.slice(0, width));
-			},
-		}),
-		{
-			overlay: true,
-			overlayOptions: {
-				anchor: "center",
-				maxHeight: (config.overlayMaxHeight ?? "75%") as never,
-				width: (config.overlayWidth ?? "80%") as never,
-			},
-		},
+
+	const optionLabels = buildProviderPickerOptions(providers, ctx);
+	const labelToProvider = new Map(optionLabels.map((opt) => [opt.label, opt.value]));
+
+	const selected = await ctx.ui.select(
+		`Select provider to log in (${providers.length} total)`,
+		optionLabels.map((opt) => opt.label),
 	);
+
+	if (!selected) {
+		return null;
+	}
+
+	return labelToProvider.get(selected) ?? null;
 }
 
 function buildProviderPickerOptions(
 	providers: readonly SupportedProviderDefinition[],
 	ctx: ProviderStatusContext,
-): ScrollSelectOption<SupportedProviderDefinition>[] {
+): { label: string; value: SupportedProviderDefinition }[] {
 	return providers.map((provider) => ({
 		label: formatProviderPickerOption(provider, ctx),
 		value: provider,
@@ -652,9 +576,22 @@ function registerPersistedProviders(pi: ExtensionAPI): void {
 	pi.on("session_start", (_event, ctx: ProviderRegistryContext) => {
 		let changed = false;
 		for (const provider of SUPPORTED_PROVIDERS) {
-			if (!(hasStoredCredential(ctx, provider.id) || getEnvApiKey(provider))) {
+			const credential = getStoredCredential(ctx, provider.id);
+			const envKey = getEnvApiKey(provider);
+			if (!credential && !envKey) {
 				continue;
 			}
+
+			// Populate runtimeState.models from stored credentials so models
+			// persist across pi instances.
+			if (credential && !runtimeState.models.has(provider.id)) {
+				const storedModels = getCredentialModels(credential);
+				if (storedModels.length > 0) {
+					runtimeState.models.set(provider.id, storedModels);
+					runtimeState.lastRefresh.set(provider.id, credential.lastModelRefresh ?? Date.now());
+				}
+			}
+
 			const wasRegistered = runtimeState.registered.has(provider.id);
 			registerProvider(ctx.modelRegistry, provider);
 			changed ||= !wasRegistered;
