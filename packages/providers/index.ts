@@ -6,6 +6,8 @@ import type {
 } from "@mariozechner/pi-coding-agent";
 /* C8 ignore file */
 
+import { AuthStorage } from "@mariozechner/pi-coding-agent";
+
 import type { ProviderCatalogCredentials, ProviderCatalogModel } from "./catalog.js";
 import type { SupportedProviderDefinition } from "./config.js";
 
@@ -74,7 +76,7 @@ function registerProvider(registrar: ProviderRegistrar, provider: SupportedProvi
 function registerProvidersCommand(pi: ExtensionAPI): void {
 	const providersCommand = {
 		description:
-			"Inspect, log in to, or refresh the OpenCode-backed multi-provider catalog: /providers, /providers:status, /providers:list [query], /providers:info <provider>, /providers:models <provider>, /providers:login [provider], /providers:refresh-models [provider|all]",
+			"Inspect, log in to, or refresh the OpenCode-backed multi-provider catalog: /providers, /providers:status, /providers:list [query], /providers:info <provider>, /providers:models <provider>, /providers:login [provider], /providers:logout [provider], /providers:refresh-models [provider|all]",
 		// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This explicit command router keeps each provider subcommand readable.
 		async handler(args: string, ctx: ExtensionCommandContext) {
 			const trimmed = args.trim();
@@ -441,152 +443,30 @@ async function resolveProviderSelection(
 	return await selectProviderFromScrollableList(ctx, matchedProviders);
 }
 
-const PROVIDER_MAX_VISIBLE = 8;
-
-function fuzzyMatchProviders(
-	providers: readonly SupportedProviderDefinition[],
-	query: string,
-	ctx: ProviderStatusContext,
-): SupportedProviderDefinition[] {
-	if (!query) return [...providers];
-	const lower = query.toLowerCase();
-	return providers.filter((p) => {
-		const searchText = `${p.name} ${p.id} ${p.env.join(" ")} ${p.api} ${p.baseUrl}`.toLowerCase();
-		return searchText.includes(lower);
-	});
-}
-
 async function selectProviderFromScrollableList(
 	ctx: ProviderCommandContext,
 	providers: readonly SupportedProviderDefinition[],
 ): Promise<SupportedProviderDefinition | null> {
-	if (typeof ctx.ui.custom !== "function") {
+	if (typeof ctx.ui.select !== "function") {
 		return providers[0] ?? null;
 	}
 
-	return new Promise((resolve) => {
-		let selectedIndex = 0;
-		let searchQuery = "";
-		let filteredProviders = [...providers];
-
-		const updateFiltered = () => {
-			filteredProviders = fuzzyMatchProviders(providers, searchQuery, ctx);
-			selectedIndex = Math.max(0, Math.min(selectedIndex, filteredProviders.length - 1));
-		};
-
-		ctx.ui.custom(
-			(_tui, _theme, keybindings, done) => ({
-				dispose() {},
-				handleInput(keyData: unknown) {
-					const kb = keybindings as { matches(data: unknown, action: string): boolean };
-
-					// Up arrow
-					if (kb.matches(keyData, "tui.select.up")) {
-						if (filteredProviders.length > 0) {
-							selectedIndex = selectedIndex === 0 ? filteredProviders.length - 1 : selectedIndex - 1;
-						}
-
-						return;
-					}
-
-					// Down arrow
-					if (kb.matches(keyData, "tui.select.down")) {
-						if (filteredProviders.length > 0) {
-							selectedIndex = selectedIndex === filteredProviders.length - 1 ? 0 : selectedIndex + 1;
-						}
-
-						return;
-					}
-
-					// Enter - confirm selection
-					if (kb.matches(keyData, "tui.select.confirm")) {
-						const selected = filteredProviders[selectedIndex];
-						if (selected) {
-							done(null as never);
-							resolve(selected);
-						}
-						return;
-					}
-
-					// Escape - cancel
-					if (kb.matches(keyData, "tui.select.cancel")) {
-						done(null as never);
-						resolve(null);
-						return;
-					}
-
-					// Backspace
-					const data = keyData as { sequence?: string; name?: string };
-					if (data?.name === "backspace") {
-						searchQuery = searchQuery.slice(0, -1);
-						updateFiltered();
-
-						return;
-					}
-
-					// Regular character input for search
-					if (data?.sequence && data.sequence.length === 1 && data.sequence >= " ") {
-						searchQuery += data.sequence;
-						updateFiltered();
-
-						return;
-					}
-				},
-				invalidate() {},
-				render(width: number) {
-					const lines: string[] = [];
-					const title = `Select provider to log in (${filteredProviders.length}/${providers.length})`;
-					lines.push(title.slice(0, width));
-
-					// Search input line
-					const searchLine = searchQuery ? `  Search: ${searchQuery}█` : "  Search: (type to filter)";
-					lines.push(searchLine.slice(0, width));
-
-					// Provider list with height limiting
-					const startIndex = Math.max(
-						0,
-						Math.min(
-							selectedIndex - Math.floor(PROVIDER_MAX_VISIBLE / 2),
-							filteredProviders.length - PROVIDER_MAX_VISIBLE,
-						),
-					);
-					const endIndex = Math.min(startIndex + PROVIDER_MAX_VISIBLE, filteredProviders.length);
-
-					if (filteredProviders.length === 0) {
-						lines.push("  No providers match".slice(0, width));
-					} else {
-						for (let i = startIndex; i < endIndex; i++) {
-							const p = filteredProviders[i];
-							if (!p) continue;
-							const selected = i === selectedIndex;
-							const prefix = selected ? "→ " : "  ";
-							const status = hasStoredCredential(ctx, p.id) ? " ✓ logged in" : getEnvApiKey(p) ? " • env key" : "";
-							const line = `${prefix}${p.name} — ${p.id}${status}`;
-							lines.push(line.slice(0, width));
-						}
-					}
-
-					// Scroll indicator
-					if (startIndex > 0 || endIndex < filteredProviders.length) {
-						lines.push(`  (${selectedIndex + 1}/${filteredProviders.length}) ↑↓ scroll`.slice(0, width));
-					}
-
-					// Footer hint
-					lines.push("  Enter to select · Esc to cancel".slice(0, width));
-
-					return lines;
-				},
-			}),
-			{
-				overlay: true,
-				overlayOptions: {
-					anchor: "center",
-					maxHeight: "50%" as never,
-					width: "80%" as never,
-				},
-			},
-		);
+	const options = providers.map((provider) => {
+		const status = hasStoredCredential(ctx, provider.id) ? " ✓ logged in" : getEnvApiKey(provider) ? " • env key" : "";
+		return { label: `${provider.name} — ${provider.id}${status}`, value: provider.id };
 	});
+
+	const selectedId = await ctx.ui.select(
+		`Select provider to log in (${providers.length} total)`,
+		options.map((opt) => opt.label),
+	);
+
+	if (!selectedId) {
+		return null;
+	}
+
+	const selectedIndex = options.findIndex((opt) => opt.label === selectedId);
+	return selectedIndex >= 0 ? (providers[selectedIndex] ?? null) : null;
 }
 
 function buildProviderPickerOptions(
@@ -710,6 +590,13 @@ function bootstrapProviders(pi: ExtensionAPI): void {
 		registerProvider(pi, provider);
 	}
 
+	// Also register providers that have models loaded from stored credentials
+	for (const provider of SUPPORTED_PROVIDERS) {
+		if (runtimeState.models.has(provider.id) && !runtimeState.registered.has(provider.id)) {
+			registerProvider(pi, provider);
+		}
+	}
+
 	refreshProviders(
 		pi,
 		{
@@ -725,6 +612,42 @@ function bootstrapProviders(pi: ExtensionAPI): void {
 	);
 }
 
+/**
+ * Load models from stored credentials at extension load time.
+ * This must happen before resolveModelScope runs (which is during
+ * createAgentSessionServices, before session_start fires).
+ */
+function loadPersistedModels(): void {
+	// Skip in test environments to avoid reading from the real auth.json file
+	if (process.env.VITEST || process.env.NODE_ENV === "test") {
+		return;
+	}
+
+	try {
+		const authStorage = AuthStorage.create();
+		for (const provider of SUPPORTED_PROVIDERS) {
+			if (runtimeState.models.has(provider.id)) {
+				continue;
+			}
+			try {
+				const credential = authStorage.get(provider.id);
+				if (credential && typeof credential === "object" && (credential as { type?: string }).type === "oauth") {
+					const cred = credential as ProviderCatalogCredentials;
+					const storedModels = getCredentialModels(cred);
+					if (storedModels.length > 0) {
+						runtimeState.models.set(provider.id, storedModels);
+						runtimeState.lastRefresh.set(provider.id, cred.lastModelRefresh ?? Date.now());
+					}
+				}
+			} catch {
+				// Ignore errors reading credentials for individual providers
+			}
+		}
+	} catch {
+		// Ignore errors creating AuthStorage
+	}
+}
+
 function registerPersistedProviders(pi: ExtensionAPI): void {
 	pi.on("session_start", (_event, ctx: ProviderRegistryContext) => {
 		let changed = false;
@@ -736,7 +659,7 @@ function registerPersistedProviders(pi: ExtensionAPI): void {
 			}
 
 			// Populate runtimeState.models from stored credentials so models
-			// persist across pi instances.
+			// persist across pi instances. Skip if already loaded by loadPersistedModels.
 			if (credential && !runtimeState.models.has(provider.id)) {
 				const storedModels = getCredentialModels(credential);
 				if (storedModels.length > 0) {
@@ -774,6 +697,7 @@ export function resetProviderCatalogRuntimeStateForTests(): void {
 }
 
 export default function providerCatalogExtension(pi: ExtensionAPI): void {
+	loadPersistedModels();
 	bootstrapProviders(pi);
 	registerPersistedProviders(pi);
 	registerProvidersCommand(pi);
