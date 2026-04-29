@@ -148,7 +148,7 @@ export const turns = sqliteTable(
 		contextUsedTokens: integer("context_used_tokens"),
 		contextPercentUsed: real("context_percent_used"),
 
-		// Source (session, ant-colony, etc.)
+		// Source (session, background tasks, etc.)
 		source: text("source").default("session").notNull(),
 		sourceScope: text("source_scope"),
 

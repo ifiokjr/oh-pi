@@ -33,7 +33,6 @@ function resolvePackagePathWithFallback(pkg: string, subpath: string, fallbackRe
 /** Resource path mapping — resolves paths into installed workspace packages. */
 export const resources = {
 	agent: (name: string) => join(resolvePackagePath("@ifi/oh-pi-agents", "agents"), `${name}.md`),
-	antColonyDir: () => resolvePackagePath("@ifi/oh-pi-ant-colony", "extensions/ant-colony"),
 	diagnosticsDir: () => resolvePackagePathWithFallback("@ifi/pi-diagnostics", ".", "../../../diagnostics"),
 	extension: (name: string) => join(resolvePackagePath("@ifi/oh-pi-extensions", "extensions"), name),
 	extensionFile: (name: string) => join(resolvePackagePath("@ifi/oh-pi-extensions", "extensions"), `${name}.ts`),

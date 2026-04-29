@@ -63,7 +63,6 @@ export default defineConfig({
 			"packages/cli/src/**/*.test.ts",
 			"packages/diagnostics/tests/**/*.test.ts",
 			"packages/extensions/extensions/**/*.test.ts",
-			"packages/ant-colony/tests/**/*.test.ts",
 			"packages/subagents/tests/**/*.test.ts",
 			"packages/plan/tests/**/*.test.ts",
 			"packages/shared-qna/tests/**/*.test.ts",

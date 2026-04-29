@@ -118,7 +118,7 @@ describe("writeAgents", () => {
 			dir,
 			makeConfig({
 				agents: "general-developer",
-				extensions: ["ant-colony"],
+				extensions: ["auto-update"],
 			}),
 		);
 
@@ -147,8 +147,8 @@ describe("writeAgents", () => {
 		writeAgents(
 			dir,
 			makeConfig({
-				agents: "colony-operator",
-				extensions: ["ant-colony"],
+				agents: "general-developer",
+				extensions: ["auto-update"],
 			}),
 		);
 

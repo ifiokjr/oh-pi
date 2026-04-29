@@ -231,6 +231,8 @@ export interface RunSyncOptions {
 	/** Idle timeout in ms — kill the agent if it produces no output for this long.
 	 *  Default: 15 min. Set to 0 to disable. Override per-agent via frontmatter: `idleTimeoutMs: 1800000`. */
 	idleTimeoutMs?: number;
+	/** Called when usage data is finalized (for budget tracking across subagent calls) */
+	onUsage?: (usage: SingleResult["usage"]) => void;
 }
 
 export interface ExtensionConfig {

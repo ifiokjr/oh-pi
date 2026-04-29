@@ -6,7 +6,7 @@ import { t } from "@ifi/oh-pi-core";
 interface Preset extends Omit<OhPConfig, "providers"> {}
 
 /**
- * Registry of built-in configuration presets (Full Power / Clean / Colony).
+ * Registry of built-in configuration presets (Clean / Full).
  * Each entry maps a preset key to its i18n label/hint keys and a full {@link Preset} config object.
  */
 export const PRESETS: Record<string, { labelKey: string; hintKey: string; config: Preset }> = {
@@ -22,27 +22,15 @@ export const PRESETS: Record<string, { labelKey: string; hintKey: string; config
 		hintKey: "preset.cleanHint",
 		labelKey: "preset.clean",
 	},
-	colony: {
-		config: {
-			agents: "colony-operator",
-			extensions: ["ant-colony", "auto-session-name", "compact-header"],
-			keybindings: "default",
-			prompts: ["review", "fix", "explain", "commit"],
-			theme: "dark",
-			thinking: "medium",
-		},
-		hintKey: "preset.colonyHint",
-		labelKey: "preset.colony",
 	},
 	full: {
 		config: {
-			agents: "colony-operator",
+			agents: "general-developer",
 			extensions: [
 				"git-guard",
 				"auto-session-name",
 				"custom-footer",
 				"compact-header",
-				"ant-colony",
 				"auto-update",
 				"bg-process",
 			],

@@ -8,7 +8,7 @@ describe("PRESETS", () => {
 		expect(full).toBeDefined();
 		expect(full?.extensions).not.toContain("safe-guard");
 		expect(full?.extensions).toContain("bg-process");
-		expect(full?.extensions).toContain("ant-colony");
+		expect(full?.extensions).not.toContain("ant-colony");
 	});
 
 	it("keeps the clean preset extension-free", () => {

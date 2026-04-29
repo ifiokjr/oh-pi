@@ -218,7 +218,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 
 	/** Per-model accumulated usage. Key = model ID. */
 	const models = new Map<string, ModelUsage>();
-	/** Per-source accumulated usage (session, ant-colony background, etc.). */
+	/** Per-source accumulated usage (session, background tasks, etc.). */
 	const sources = new Map<string, SourceUsage>();
 	/** Recent turn snapshots for pace calc. */
 	const turnHistory: TurnSnapshot[] = [];
@@ -1780,7 +1780,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 			recordUsage(event.message as unknown as AssistantMessage);
 			checkThresholds(ctx);
 			triggerProbe(ctx); // Refresh rate limits after each turn
-			broadcastUsageData(); // Notify other extensions (ant-colony budget planner)
+			broadcastUsageData(); // Notify other extensions (budget planner)
 		}
 	});
 
