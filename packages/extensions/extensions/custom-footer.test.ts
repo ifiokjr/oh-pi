@@ -530,15 +530,16 @@ describe("custom-footer extension", () => {
 	});
 
 	describe("worktree folder display in footer", () => {
-		function makeWorktreeContext(overrides: {
-			branch?: string | null;
-			isManaged?: boolean;
-			worktreeRoot?: string;
-			repoRoot?: string;
-		} = {}) {
+		function makeWorktreeContext(
+			overrides: {
+				branch?: string | null;
+				isManaged?: boolean;
+				worktreeRoot?: string;
+				repoRoot?: string;
+			} = {},
+		) {
 			const repoRoot = overrides.repoRoot ?? "/Users/dev/oh-pi";
-			const worktreeRoot =
-				overrides.worktreeRoot ?? "/Users/dev/.pi/worktrees/feat-worktree-footer-show-path";
+			const worktreeRoot = overrides.worktreeRoot ?? "/Users/dev/.pi/worktrees/feat-worktree-footer-show-path";
 			const branch = "branch" in overrides ? overrides.branch : "feat/my-branch";
 			return {
 				cwd: worktreeRoot,
@@ -563,7 +564,7 @@ describe("custom-footer extension", () => {
 								createdAt: new Date().toISOString(),
 								owner: { instanceId: "test-instance" },
 							}
-							: null,
+						: null,
 				},
 			} as const;
 		}
@@ -573,12 +574,8 @@ describe("custom-footer extension", () => {
 		});
 
 		async function renderWithWorktreeContext(worktreeCtx: ReturnType<typeof makeWorktreeContext>) {
-			vi.spyOn(worktreeShared, "getCachedRepoWorktreeContext").mockReturnValue(
-				worktreeCtx as never,
-			);
-			vi.spyOn(worktreeShared, "refreshRepoWorktreeContext").mockResolvedValue(
-				worktreeCtx as never,
-			);
+			vi.spyOn(worktreeShared, "getCachedRepoWorktreeContext").mockReturnValue(worktreeCtx as never);
+			vi.spyOn(worktreeShared, "refreshRepoWorktreeContext").mockResolvedValue(worktreeCtx as never);
 
 			const pi = createMockPi();
 			customFooter(pi as never);

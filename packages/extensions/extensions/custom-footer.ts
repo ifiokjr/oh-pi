@@ -333,9 +333,7 @@ export default function (pi: ExtensionAPI) {
 								const wtBranch = worktreeContext.current?.branch;
 								const wtFolder = path.basename(worktreeContext.currentWorktreeRoot);
 								const wtLabel =
-									wtBranch && wtBranch !== wtFolder
-										? `${wtFolder} (${wtBranch})`
-										: wtBranch ?? wtFolder;
+									wtBranch && wtBranch !== wtFolder ? `${wtFolder} (${wtBranch})` : (wtBranch ?? wtFolder);
 								return theme.fg(
 									worktreeContext.current?.isManaged ? "warning" : "muted",
 									`wt ${wtLabel}${worktreeContext.current?.isManaged ? " pi" : ""}`,
