@@ -14,9 +14,4 @@ describe("PRESETS", () => {
 	it("keeps the clean preset extension-free", () => {
 		expect(PRESETS.clean?.config.extensions).toEqual([]);
 	});
-
-	it("keeps the colony preset focused on colony-related defaults", () => {
-		expect(PRESETS.colony?.config.extensions).toEqual(["ant-colony", "auto-session-name", "compact-header"]);
-		expect(PRESETS.colony?.config.extensions).not.toContain("safe-guard");
-	});
 });

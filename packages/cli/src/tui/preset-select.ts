@@ -22,18 +22,10 @@ export const PRESETS: Record<string, { labelKey: string; hintKey: string; config
 		hintKey: "preset.cleanHint",
 		labelKey: "preset.clean",
 	},
-	},
 	full: {
 		config: {
 			agents: "general-developer",
-			extensions: [
-				"git-guard",
-				"auto-session-name",
-				"custom-footer",
-				"compact-header",
-				"auto-update",
-				"bg-process",
-			],
+			extensions: ["git-guard", "auto-session-name", "custom-footer", "compact-header", "auto-update", "bg-process"],
 			keybindings: "default",
 			prompts: ["review", "fix", "explain", "commit", "test", "refactor", "optimize", "security", "document", "pr"],
 			theme: "dark",

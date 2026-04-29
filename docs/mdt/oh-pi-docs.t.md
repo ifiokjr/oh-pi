@@ -87,42 +87,6 @@ Workflow steps that hand work back into pi for feature execution. These ordered 
 
 <!-- {/piSpecWorkflowStepsDocs} -->
 
-<!-- {@antColonySharedStorageOverview} -->
-
-Ant-colony stores runtime state outside the repository by default under the shared pi agent directory, mirroring the workspace path so each repo gets its own isolated storage root. Project-local `.ant-colony/` storage remains available as an explicit opt-in for legacy workflows.
-
-<!-- {/antColonySharedStorageOverview} -->
-
-<!-- {@antColonyResolveStorageOptionsDocs} -->
-
-Resolve the effective ant-colony storage mode and shared root. Explicit options win, then environment variables, then extension config, and shared storage is the default when no override is provided.
-
-<!-- {/antColonyResolveStorageOptionsDocs} -->
-
-<!-- {@antColonyGetColonyStateParentDirDocs} -->
-
-Resolve the parent directory for persisted colony state. Shared mode stores state under the workspace-mirrored shared root in `colonies/`, while project mode keeps using the legacy local `.ant-colony/` directory.
-
-<!-- {/antColonyGetColonyStateParentDirDocs} -->
-
-<!-- {@antColonyGetColonyWorktreeParentDirDocs} -->
-
-Resolve the parent directory for isolated colony worktrees. Shared mode keeps them under the workspace-mirrored shared root in `worktrees/`, while project mode places them under the legacy project-local `.ant-colony/worktrees/` path.
-
-<!-- {/antColonyGetColonyWorktreeParentDirDocs} -->
-
-<!-- {@antColonyMigrateLegacyProjectColoniesDocs} -->
-
-Best-effort migration for legacy project-local colony state. When shared mode is active, existing `.ant-colony/{colony-id}/` directories are copied into the shared store so resumable colonies keep working without leaving runtime state in the repo.
-
-<!-- {/antColonyMigrateLegacyProjectColoniesDocs} -->
-
-<!-- {@antColonyPrepareColonyWorkspaceDocs} -->
-
-Prepare the execution workspace for a colony run. When worktree isolation is enabled and git supports it, the colony gets a fresh isolated worktree on an `ant-colony/...` branch; otherwise it falls back to the shared working directory and records the reason.
-
-<!-- {/antColonyPrepareColonyWorkspaceDocs} -->
-
 <!-- {@subagentsProjectAgentStorageOverview} -->
 
 Subagents stores project-scope agents and chains in shared pi storage by default under a workspace-mirrored path, so repositories stay clean while still supporting parent-workspace lookup for nested projects. Legacy repo-local `.pi/agents/` storage remains available as an explicit project-mode override.

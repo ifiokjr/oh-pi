@@ -209,7 +209,6 @@ export function writeAgents(agentDir: string, config: OhPConfigWithRouting) {
 			content = `## Language\nAlways respond in ${lang}. Use the user's language for all conversations and explanations. Code, commands, and technical terms can remain in English.\n\n${content}`;
 		}
 
-
 		writeFileSync(join(agentDir, "AGENTS.md"), content);
 	} catch {
 		/* Template not found, skip */
@@ -259,7 +258,6 @@ export function writeExtensions(agentDir: string, config: OhPConfigWithRouting) 
 		}
 	}
 	for (const ext of config.extensions) {
-
 		if (ext === "plan") {
 			copyPlanExtension(extDir);
 			continue;

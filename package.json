@@ -98,7 +98,7 @@
 			"./packages/extensions/extensions/tool-metadata.ts",
 			"./packages/extensions/extensions/usage-tracker.ts",
 			"./packages/extensions/extensions/worktree.ts",
-						"./packages/background-tasks/index.ts",
+			"./packages/background-tasks/index.ts",
 			"./packages/diagnostics/index.ts",
 			"./packages/subagents/index.ts",
 			"./packages/subagents/notify.ts",

@@ -276,7 +276,8 @@ export const messages: Record<Locale, Record<string, string>> = {
 		"preset.cleanHint": "Configuration minimale, aucune extension",
 
 		"preset.full": "⚫ Complet",
-		"preset.fullHint": "Extensions recommandées et bg-process (safe-guard reste en opt-in)", "Choisir un préréglage :",
+		"preset.fullHint": "Extensions recommandées et bg-process (safe-guard reste en opt-in)",
+		"preset.select": "Choisir un préréglage :",
 		"provider.addFallback": "Ajouter un fournisseur de secours ? (avancé)",
 		"provider.apiKey": "Clé API pour {label} :",
 		"provider.apiKeyRequired": "La clé API ne peut pas être vide",

@@ -7,9 +7,13 @@
  */
 
 import { randomUUID } from "node:crypto";
+
 import type { AgentConfig } from "./agents.js";
-import { runSync } from "./execution.js";
+import type { AvailableModelRef } from "./model-routing.js";
 import type { RunSyncOptions, SingleResult } from "./types.js";
+
+import { runSync } from "./execution.js";
+import { findAvailableModel } from "./model-routing.js";
 
 let dynamicAgentCounter = 0;
 
@@ -30,10 +34,62 @@ export interface DynamicAgentSpec {
 	extensions?: string[];
 	/** Explicit model override (provider/id or just id) */
 	model?: string;
+	/** Model resolution policy */
+	modelPolicy?: "inherit" | "scoped-only" | "adaptive";
 	/** Thinking level suffix (e.g. "medium", "high") */
 	thinking?: string;
 	/** Idle timeout in ms (default: 15 min) */
 	idleTimeoutMs?: number;
+}
+
+export interface RunDynamicOptions extends Omit<RunSyncOptions, "modelOverride" | "skills"> {
+	/** List of models the host has scoped */
+	availableModels?: AvailableModelRef[];
+	/** The host's current model (e.g. "anthropic/claude-sonnet-4") */
+	currentModel?: string;
+	/** Called when usage data is finalized (for budget tracking across subagent calls) */
+	onUsage?: (usage: SingleResult["usage"]) => void;
+}
+
+/**
+ * Resolve a model for a dynamic agent based on spec and available models.
+ *
+ * | Policy | Behavior |
+ * |---|---|
+ * | `"inherit"` (default) | Use explicit `model` if in `availableModels`, else fall back to `currentModel`. |
+ * | `"scoped-only"` | Same, but throws if requested model is unavailable. |
+ * | `"adaptive"` | Falls back to `currentModel`; future versions may use adaptive routing. |
+ */
+export function resolveDynamicModel(
+	spec: DynamicAgentSpec,
+	options: Pick<RunDynamicOptions, "availableModels" | "currentModel">,
+): string | undefined {
+	const { availableModels, currentModel } = options;
+	const policy = spec.modelPolicy ?? "inherit";
+
+	// Try explicit model first
+	if (spec.model) {
+		if (availableModels?.length) {
+			const validated = findAvailableModel(spec.model, availableModels);
+			if (validated) return validated;
+		}
+		if (policy === "scoped-only") {
+			throw new Error(
+				`Dynamic agent "${spec.name ?? "unnamed"}" requested model "${spec.model}" is not in the scoped model list`,
+			);
+		}
+		// "inherit" | "adaptive" → fall through to currentModel fallback
+	}
+
+	// Fallback to currentModel (if availableModels provided, validate it too)
+	if (currentModel) {
+		if (availableModels?.length) {
+			return findAvailableModel(currentModel, availableModels) ?? undefined;
+		}
+		return currentModel;
+	}
+
+	return undefined;
 }
 
 /**
@@ -61,11 +117,6 @@ export function createDynamicAgent(spec: DynamicAgentSpec): AgentConfig {
 	};
 }
 
-export interface RunDynamicOptions extends Omit<RunSyncOptions, "modelOverride" | "skills"> {
-	/** Called when usage data is finalized (for budget tracking across subagent calls) */
-	onUsage?: (usage: SingleResult["usage"]) => void;
-}
-
 /**
  * Create an ephemeral agent from a spec and run it immediately via runSync.
  * The agent config is discarded after execution; only the result is returned.
@@ -76,7 +127,13 @@ export async function runDynamicAgent(
 	task: string,
 	options: RunDynamicOptions = { runId: randomUUID() },
 ): Promise<SingleResult> {
-	const agent = createDynamicAgent(spec);
+	const resolvedModel = resolveDynamicModel(spec, options);
+
+	const agent = createDynamicAgent({
+		...spec,
+		model: resolvedModel ?? spec.model,
+	});
+
 	const result = await runSync(runtimeCwd, [agent], agent.name, task, {
 		...options,
 		// modelOverride and skills are baked into the dynamic agent config
