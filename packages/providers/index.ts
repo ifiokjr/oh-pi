@@ -456,7 +456,7 @@ async function selectProviderFromScrollableList(
 
 	return new Promise((resolve) => {
 		let selectedIndex = 0;
-		let filteredProviders = [...providers];
+		let filteredProviders: SupportedProviderDefinition[] = [...providers];
 
 		const container = new Container();
 		const searchInput = new Input();
@@ -497,10 +497,6 @@ async function selectProviderFromScrollableList(
 				: [...providers];
 			selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, filteredProviders.length - 1)));
 			updateList();
-		};
-
-		searchInput.onChange = (value: string) => {
-			filterProviders(value);
 		};
 
 		searchInput.onSubmit = () => {
@@ -564,16 +560,16 @@ async function selectProviderFromScrollableList(
 
 				// Backspace
 				if (data === "\u007f" || data === "\b") {
-					const current = searchInput.value;
-					searchInput.value = current.slice(0, -1);
-					filterProviders(searchInput.value);
+					const current = searchInput.getValue();
+					searchInput.setValue(current.slice(0, -1));
+					filterProviders(searchInput.getValue());
 					return;
 				}
 
 				// Regular character input for search
 				if (data.length === 1 && data >= " ") {
-					searchInput.value += data;
-					filterProviders(searchInput.value);
+					searchInput.setValue(searchInput.getValue() + data);
+					filterProviders(searchInput.getValue());
 					return;
 				}
 			},
