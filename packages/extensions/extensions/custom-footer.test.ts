@@ -528,4 +528,180 @@ describe("custom-footer extension", () => {
 		expect(rendered).toContain("watchdog");
 		expect(rendered).toContain("cpu 12%");
 	});
+
+	describe("worktree folder display in footer", () => {
+		function makeWorktreeContext(
+			overrides: {
+				branch?: string | null;
+				isManaged?: boolean;
+				worktreeRoot?: string;
+				repoRoot?: string;
+			} = {},
+		) {
+			const repoRoot = overrides.repoRoot ?? "/Users/dev/oh-pi";
+			const worktreeRoot = overrides.worktreeRoot ?? "/Users/dev/.pi/worktrees/feat-worktree-footer-show-path";
+			const branch = "branch" in overrides ? overrides.branch : "feat/my-branch";
+			return {
+				cwd: worktreeRoot,
+				repoRoot,
+				currentWorktreeRoot: worktreeRoot,
+				mainWorktreeRoot: repoRoot,
+				commonDir: `${repoRoot}/.git`,
+				gitDir: `${worktreeRoot}/.git`,
+				currentBranch: branch ?? null,
+				isLinkedWorktree: true,
+				current: {
+					path: worktreeRoot,
+					branch: branch ?? null,
+					isMain: false,
+					isManaged: overrides.isManaged ?? false,
+					metadata: overrides.isManaged
+						? {
+								id: "test-id",
+								branch: branch ?? "(detached)",
+								worktreePath: worktreeRoot,
+								purpose: "test purpose",
+								createdAt: new Date().toISOString(),
+								owner: { instanceId: "test-instance" },
+							}
+						: null,
+				},
+			} as const;
+		}
+
+		afterEach(() => {
+			vi.restoreAllMocks();
+		});
+
+		async function renderWithWorktreeContext(worktreeCtx: ReturnType<typeof makeWorktreeContext>) {
+			vi.spyOn(worktreeShared, "getCachedRepoWorktreeContext").mockReturnValue(worktreeCtx as never);
+			vi.spyOn(worktreeShared, "refreshRepoWorktreeContext").mockResolvedValue(worktreeCtx as never);
+
+			const pi = createMockPi();
+			customFooter(pi as never);
+
+			let footerFactory: any;
+			const ctx = {
+				model: { id: "claude-sonnet", provider: "anthropic" },
+				getContextUsage: () => ({ percent: 12 }),
+				sessionManager: { getBranch: () => [] },
+				ui: {
+					setFooter(factory: any) {
+						footerFactory = factory;
+					},
+				},
+			};
+
+			await pi._emit("session_start", {}, ctx);
+			const component = footerFactory(
+				{ requestRender: vi.fn() },
+				{ fg: (_color: string, text: string) => text },
+				{ onBranchChange: () => () => undefined, getGitBranch: () => "main" },
+			);
+			return component.render(300)[0] as string;
+		}
+
+		it("shows branch name when folder basename matches branch", async () => {
+			const rendered = await renderWithWorktreeContext(
+				makeWorktreeContext({
+					branch: "my-feature",
+					worktreeRoot: "/Users/dev/.pi/worktrees/my-feature",
+				}),
+			);
+			expect(rendered).toContain("wt my-feature");
+			expect(rendered).not.toContain("(");
+		});
+
+		it("shows folder and branch when branch has slashes", async () => {
+			const rendered = await renderWithWorktreeContext(
+				makeWorktreeContext({
+					branch: "feat/my-branch",
+					worktreeRoot: "/Users/dev/.pi/worktrees/feat-my-branch",
+				}),
+			);
+			expect(rendered).toContain("wt feat-my-branch (feat/my-branch)");
+		});
+
+		it("shows folder and branch when they differ", async () => {
+			const rendered = await renderWithWorktreeContext(
+				makeWorktreeContext({
+					branch: "feat/some-feature",
+					worktreeRoot: "/Users/dev/.pi/worktrees/my-worktree-folder",
+				}),
+			);
+			expect(rendered).toContain("wt my-worktree-folder (feat/some-feature)");
+		});
+
+		it("shows folder name when detached (no branch)", async () => {
+			const rendered = await renderWithWorktreeContext(
+				makeWorktreeContext({
+					branch: null,
+					worktreeRoot: "/Users/dev/.pi/worktrees/detached-head",
+				}),
+			);
+			expect(rendered).toContain("wt detached-head");
+			expect(rendered).not.toContain("(");
+		});
+
+		it("appends ' pi' suffix for managed worktrees with matching folder name", async () => {
+			const rendered = await renderWithWorktreeContext(
+				makeWorktreeContext({
+					branch: "my-feature",
+					isManaged: true,
+					worktreeRoot: "/Users/dev/.pi/worktrees/my-feature",
+				}),
+			);
+			expect(rendered).toContain("wt my-feature pi");
+		});
+
+		it("shows folder, branch, and pi suffix for managed worktrees with different folder name", async () => {
+			const rendered = await renderWithWorktreeContext(
+				makeWorktreeContext({
+					branch: "feat/some-feature",
+					isManaged: true,
+					worktreeRoot: "/Users/dev/.pi/worktrees/my-folder",
+				}),
+			);
+			expect(rendered).toContain("wt my-folder (feat/some-feature) pi");
+		});
+
+		it("does not show worktree indicator for main checkout", async () => {
+			vi.spyOn(worktreeShared, "getCachedRepoWorktreeContext").mockReturnValue({
+				cwd: "/Users/dev/oh-pi",
+				repoRoot: "/Users/dev/oh-pi",
+				currentWorktreeRoot: "/Users/dev/oh-pi",
+				mainWorktreeRoot: "/Users/dev/oh-pi",
+				commonDir: "/Users/dev/oh-pi/.git",
+				gitDir: "/Users/dev/oh-pi/.git",
+				currentBranch: "main",
+				isLinkedWorktree: false,
+				current: null,
+			} as never);
+			vi.spyOn(worktreeShared, "refreshRepoWorktreeContext").mockResolvedValue(null as never);
+
+			const pi = createMockPi();
+			customFooter(pi as never);
+
+			let footerFactory: any;
+			const ctx = {
+				model: { id: "claude-sonnet", provider: "anthropic" },
+				getContextUsage: () => ({ percent: 12 }),
+				sessionManager: { getBranch: () => [] },
+				ui: {
+					setFooter(factory: any) {
+						footerFactory = factory;
+					},
+				},
+			};
+
+			await pi._emit("session_start", {}, ctx);
+			const component = footerFactory(
+				{ requestRender: vi.fn() },
+				{ fg: (_color: string, text: string) => text },
+				{ onBranchChange: () => () => undefined, getGitBranch: () => "main" },
+			);
+			const rendered = component.render(300)[0] as string;
+			expect(rendered).not.toContain("wt ");
+		});
+	});
 });

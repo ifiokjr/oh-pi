@@ -329,12 +329,16 @@ export default function (pi: ExtensionAPI) {
 					const worktreeContext = getWorktreeContext();
 					const repoStr = worktreeContext ? theme.fg("muted", `repo ${path.basename(worktreeContext.repoRoot)}`) : "";
 					const worktreeStr = worktreeContext?.isLinkedWorktree
-						? theme.fg(
-								worktreeContext.current?.isManaged ? "warning" : "muted",
-								`wt ${
-									worktreeContext.current?.branch ?? path.basename(worktreeContext.currentWorktreeRoot)
-								}${worktreeContext.current?.isManaged ? " pi" : ""}`,
-							)
+						? (() => {
+								const wtBranch = worktreeContext.current?.branch;
+								const wtFolder = path.basename(worktreeContext.currentWorktreeRoot);
+								const wtLabel =
+									wtBranch && wtBranch !== wtFolder ? `${wtFolder} (${wtBranch})` : (wtBranch ?? wtFolder);
+								return theme.fg(
+									worktreeContext.current?.isManaged ? "warning" : "muted",
+									`wt ${wtLabel}${worktreeContext.current?.isManaged ? " pi" : ""}`,
+								);
+							})()
 						: "";
 
 					const branch = worktreeContext?.current?.branch ?? footerData.getGitBranch();
