@@ -210,9 +210,12 @@ describe("provider catalog extension", () => {
 
 		expect(harness.providers.has(provider.id)).toBe(true);
 		// Verify the models from the stored credential were passed to registerProvider
-		const registerCalls = (harness.ctx.modelRegistry as { registerProvider: ReturnType<typeof vi.fn> }).registerProvider;
+		const registerCalls = (harness.ctx.modelRegistry as { registerProvider: ReturnType<typeof vi.fn> })
+			.registerProvider;
 		expect(registerCalls).toHaveBeenCalled();
-		const providerConfig = registerCalls.mock.calls.find((call: [string, unknown]) => call[0] === provider.id)?.[1] as { models?: unknown[] } | undefined;
+		const providerConfig = registerCalls.mock.calls.find((call: [string, unknown]) => call[0] === provider.id)?.[1] as
+			| { models?: unknown[] }
+			| undefined;
 		expect(providerConfig?.models).toBeDefined();
 		expect((providerConfig?.models as unknown[])?.length).toBeGreaterThan(0);
 	});
@@ -238,9 +241,7 @@ describe("provider catalog extension", () => {
 		};
 		vi.stubGlobal(
 			"fetch",
-			vi
-				.fn<() => Promise<Response>>()
-					.mockImplementationOnce(async () => jsonResponse(sampleCatalog)),
+			vi.fn<() => Promise<Response>>().mockImplementationOnce(async () => jsonResponse(sampleCatalog)),
 		);
 
 		const harness = createExtensionHarness();

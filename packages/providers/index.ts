@@ -4,7 +4,6 @@ import type {
 	ExtensionContext,
 	ProviderConfig,
 } from "@mariozechner/pi-coding-agent";
-
 /* C8 ignore file */
 
 import type { ProviderCatalogCredentials, ProviderCatalogModel } from "./catalog.js";
