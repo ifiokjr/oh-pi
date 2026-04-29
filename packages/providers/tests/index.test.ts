@@ -120,10 +120,12 @@ describe("provider catalog extension", () => {
 		};
 		vi.stubGlobal(
 			"fetch",
-			vi
-				.fn<() => Promise<Response>>()
-				.mockImplementationOnce(async () => jsonResponse(sampleCatalog))
-				.mockImplementationOnce(async () => jsonResponse({ data: [{ id: "demo-model", max_output: 24576 }] })),
+			vi.fn<() => Promise<Response>>().mockImplementation(async (url: string) => {
+				if (typeof url === "string" && url.includes("models.dev")) {
+					return jsonResponse(sampleCatalog);
+				}
+				return jsonResponse({ data: [{ id: "demo-model", max_output: 24576 }] });
+			}),
 		);
 
 		const harness = createExtensionHarness();
@@ -140,14 +142,28 @@ describe("provider catalog extension", () => {
 			registerProvider: vi.fn((name, config) => harness.pi.registerProvider(name, config)),
 		} as never;
 
-		let pickerFactory: any;
-		harness.ctx.ui.select = vi.fn(async () => {
-			// Return a label that matches the first provider option
-			return `${provider.name} — ${provider.id} · login`;
-		}) as never;
-		harness.ctx.ui.custom = vi.fn((factory: any) => {
-			pickerFactory = factory;
-			return Promise.resolve(provider);
+		harness.ctx.ui.select = vi.fn(async () => null) as never;
+		harness.ctx.ui.custom = vi.fn(async (factory: any) => {
+			const component = factory(
+				{},
+				{},
+				{
+					matches: (data: any, action: string) => {
+						if (action === "tui.select.confirm") return data === "\r";
+						if (action === "tui.select.down") return data === "\u001b[B";
+						if (action === "tui.select.up") return data === "\u001b[A";
+						if (action === "tui.select.cancel") return data === "\u001b";
+						return false;
+					},
+				},
+				() => {},
+			);
+			// Simulate pressing Down arrow 10 times to scroll to the correct provider
+			for (let i = 0; i < 10; i++) {
+				if (component?.handleInput) component.handleInput("\u001b[B");
+			}
+			// Simulate pressing Enter to confirm selection
+			if (component?.handleInput) component.handleInput("\r");
 		}) as never;
 		harness.ctx.ui.input = vi.fn(async () => "provider-api-key") as never;
 
@@ -156,11 +172,8 @@ describe("provider catalog extension", () => {
 		const command = harness.commands.get("providers:login");
 		await command.handler("", harness.ctx);
 
-		expect(harness.ctx.ui.select).toHaveBeenCalledWith(
-			expect.stringContaining("Select provider to log in"),
-			expect.arrayContaining([expect.stringContaining("OpenRouter")]),
-		);
-		expect(harness.ctx.ui.custom).not.toHaveBeenCalled();
+		expect(harness.ctx.ui.custom).toHaveBeenCalled();
+		expect(harness.ctx.ui.select).not.toHaveBeenCalled();
 
 		expect(harness.providers.has(provider.id)).toBe(true);
 		expect(stored.get(provider.id)).toMatchObject({
@@ -250,7 +263,18 @@ describe("provider catalog extension", () => {
 		} as never;
 
 		// Simulate user cancelling the selection
-		harness.ctx.ui.select = vi.fn(async () => undefined) as never;
+		harness.ctx.ui.custom = vi.fn(async (factory: any) => {
+			const doneCallbacks: any[] = [];
+			const component = factory(
+				{},
+				{},
+				{ matches: (_data: any, action: string) => action === "tui.select.confirm" },
+				(result: any) => doneCallbacks.push(result),
+			);
+			// Simulate pressing Enter
+			if (component?.handleInput) component.handleInput("\r");
+			return doneCallbacks[0] ?? provider;
+		}) as never;
 
 		providerCatalogExtension(harness.pi as never);
 		const command = harness.commands.get("providers:login");

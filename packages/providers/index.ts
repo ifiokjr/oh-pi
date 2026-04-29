@@ -91,6 +91,15 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 				return;
 			}
 
+			if (action === "logout") {
+				const provider = await resolveProviderSelection(query, ctx);
+				if (!provider) {
+					return;
+				}
+				await logoutProviderFromCommand(ctx, provider);
+				return;
+			}
+
 			if (action === "refresh-models") {
 				const providers = query && query.toLowerCase() !== "all" ? findProviders(query) : SUPPORTED_PROVIDERS;
 				if (providers.length === 0) {
@@ -432,27 +441,152 @@ async function resolveProviderSelection(
 	return await selectProviderFromScrollableList(ctx, matchedProviders);
 }
 
+const PROVIDER_MAX_VISIBLE = 8;
+
+function fuzzyMatchProviders(
+	providers: readonly SupportedProviderDefinition[],
+	query: string,
+	ctx: ProviderStatusContext,
+): SupportedProviderDefinition[] {
+	if (!query) return [...providers];
+	const lower = query.toLowerCase();
+	return providers.filter((p) => {
+		const searchText = `${p.name} ${p.id} ${p.env.join(" ")} ${p.api} ${p.baseUrl}`.toLowerCase();
+		return searchText.includes(lower);
+	});
+}
+
 async function selectProviderFromScrollableList(
 	ctx: ProviderCommandContext,
 	providers: readonly SupportedProviderDefinition[],
 ): Promise<SupportedProviderDefinition | null> {
-	if (typeof ctx.ui.select !== "function") {
+	if (typeof ctx.ui.custom !== "function") {
 		return providers[0] ?? null;
 	}
 
-	const optionLabels = buildProviderPickerOptions(providers, ctx);
-	const labelToProvider = new Map(optionLabels.map((opt) => [opt.label, opt.value]));
+	return new Promise((resolve) => {
+		let selectedIndex = 0;
+		let searchQuery = "";
+		let filteredProviders = [...providers];
 
-	const selected = await ctx.ui.select(
-		`Select provider to log in (${providers.length} total)`,
-		optionLabels.map((opt) => opt.label),
-	);
+		const updateFiltered = () => {
+			filteredProviders = fuzzyMatchProviders(providers, searchQuery, ctx);
+			selectedIndex = Math.max(0, Math.min(selectedIndex, filteredProviders.length - 1));
+		};
 
-	if (!selected) {
-		return null;
-	}
+		ctx.ui.custom(
+			(_tui, _theme, keybindings, done) => ({
+				dispose() {},
+				handleInput(keyData: unknown) {
+					const kb = keybindings as { matches(data: unknown, action: string): boolean };
 
-	return labelToProvider.get(selected) ?? null;
+					// Up arrow
+					if (kb.matches(keyData, "tui.select.up")) {
+						if (filteredProviders.length > 0) {
+							selectedIndex = selectedIndex === 0 ? filteredProviders.length - 1 : selectedIndex - 1;
+						}
+
+						return;
+					}
+
+					// Down arrow
+					if (kb.matches(keyData, "tui.select.down")) {
+						if (filteredProviders.length > 0) {
+							selectedIndex = selectedIndex === filteredProviders.length - 1 ? 0 : selectedIndex + 1;
+						}
+
+						return;
+					}
+
+					// Enter - confirm selection
+					if (kb.matches(keyData, "tui.select.confirm")) {
+						const selected = filteredProviders[selectedIndex];
+						if (selected) {
+							done(null as never);
+							resolve(selected);
+						}
+						return;
+					}
+
+					// Escape - cancel
+					if (kb.matches(keyData, "tui.select.cancel")) {
+						done(null as never);
+						resolve(null);
+						return;
+					}
+
+					// Backspace
+					const data = keyData as { sequence?: string; name?: string };
+					if (data?.name === "backspace") {
+						searchQuery = searchQuery.slice(0, -1);
+						updateFiltered();
+
+						return;
+					}
+
+					// Regular character input for search
+					if (data?.sequence && data.sequence.length === 1 && data.sequence >= " ") {
+						searchQuery += data.sequence;
+						updateFiltered();
+
+						return;
+					}
+				},
+				invalidate() {},
+				render(width: number) {
+					const lines: string[] = [];
+					const title = `Select provider to log in (${filteredProviders.length}/${providers.length})`;
+					lines.push(title.slice(0, width));
+
+					// Search input line
+					const searchLine = searchQuery ? `  Search: ${searchQuery}█` : "  Search: (type to filter)";
+					lines.push(searchLine.slice(0, width));
+
+					// Provider list with height limiting
+					const startIndex = Math.max(
+						0,
+						Math.min(
+							selectedIndex - Math.floor(PROVIDER_MAX_VISIBLE / 2),
+							filteredProviders.length - PROVIDER_MAX_VISIBLE,
+						),
+					);
+					const endIndex = Math.min(startIndex + PROVIDER_MAX_VISIBLE, filteredProviders.length);
+
+					if (filteredProviders.length === 0) {
+						lines.push("  No providers match".slice(0, width));
+					} else {
+						for (let i = startIndex; i < endIndex; i++) {
+							const p = filteredProviders[i];
+							if (!p) continue;
+							const selected = i === selectedIndex;
+							const prefix = selected ? "→ " : "  ";
+							const status = hasStoredCredential(ctx, p.id) ? " ✓ logged in" : getEnvApiKey(p) ? " • env key" : "";
+							const line = `${prefix}${p.name} — ${p.id}${status}`;
+							lines.push(line.slice(0, width));
+						}
+					}
+
+					// Scroll indicator
+					if (startIndex > 0 || endIndex < filteredProviders.length) {
+						lines.push(`  (${selectedIndex + 1}/${filteredProviders.length}) ↑↓ scroll`.slice(0, width));
+					}
+
+					// Footer hint
+					lines.push("  Enter to select · Esc to cancel".slice(0, width));
+
+					return lines;
+				},
+			}),
+			{
+				overlay: true,
+				overlayOptions: {
+					anchor: "center",
+					maxHeight: "50%" as never,
+					width: "80%" as never,
+				},
+			},
+		);
+	});
 }
 
 function buildProviderPickerOptions(
@@ -510,6 +644,26 @@ async function loginProviderFromCommand(
 		runtimeState.lastError.set(provider.id, message);
 		ctx.ui.notify(`Failed to log in to ${provider.name}: ${message}`, "error");
 	}
+}
+
+async function logoutProviderFromCommand(
+	ctx: ProviderCommandContext,
+	provider: SupportedProviderDefinition,
+): Promise<void> {
+	const credential = getStoredCredential(ctx, provider.id);
+	if (!credential) {
+		ctx.ui.notify(`${provider.name} is not logged in.`, "warning");
+		return;
+	}
+
+	ctx.modelRegistry.authStorage.set(provider.id, undefined as never);
+	runtimeState.models.delete(provider.id);
+	runtimeState.lastRefresh.delete(provider.id);
+	runtimeState.lastError.delete(provider.id);
+	runtimeState.registered.delete(provider.id);
+
+	ctx.modelRegistry.refresh?.();
+	ctx.ui.notify(`Logged out of ${provider.name}.`, "info");
 }
 
 function promptProviderInput(ctx: ProviderCommandContext, title: string, placeholder?: string): Promise<string> {
