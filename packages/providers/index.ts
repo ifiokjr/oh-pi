@@ -493,7 +493,7 @@ async function selectProviderFromScrollableList(
 
 		const filterProviders = (query: string) => {
 			filteredProviders = query
-				? fuzzyFilter(providers, query, (p) => `${p.name} ${p.id} ${p.env.join(" ")} ${p.api}`)
+				? fuzzyFilter([...providers], query, (p) => `${p.name} ${p.id} ${p.env.join(" ")} ${p.api}`)
 				: [...providers];
 			selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, filteredProviders.length - 1)));
 			updateList();
