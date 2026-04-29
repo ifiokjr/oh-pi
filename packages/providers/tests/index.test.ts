@@ -209,15 +209,10 @@ describe("provider catalog extension", () => {
 		await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
 
 		expect(harness.providers.has(provider.id)).toBe(true);
-		// Verify the models from the stored credential were passed to registerProvider
-		const registerCalls = (harness.ctx.modelRegistry as { registerProvider: ReturnType<typeof vi.fn> })
-			.registerProvider;
-		expect(registerCalls).toHaveBeenCalled();
-		const providerConfig = registerCalls.mock.calls.find((call: [string, unknown]) => call[0] === provider.id)?.[1] as
-			| { models?: unknown[] }
-			| undefined;
-		expect(providerConfig?.models).toBeDefined();
-		expect((providerConfig?.models as unknown[])?.length).toBeGreaterThan(0);
+		// Models from stored credentials should be available
+		const providerModels = harness.providers.get(provider.id)?.models;
+		expect(providerModels).toBeDefined();
+		expect(providerModels?.length).toBeGreaterThan(0);
 	});
 
 	it("returns null when provider selection is cancelled", async () => {
