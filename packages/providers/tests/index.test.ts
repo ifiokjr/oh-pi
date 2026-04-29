@@ -142,11 +142,16 @@ describe("provider catalog extension", () => {
 			registerProvider: vi.fn((name, config) => harness.pi.registerProvider(name, config)),
 		} as never;
 
-		harness.ctx.ui.select = vi.fn(async (_title: string, options: string[]) => {
-			// Return the label that matches the provider we want to select
-			return options.find((opt) => opt.includes(provider.id)) ?? options[10] ?? options[0];
+		harness.ctx.ui.select = vi.fn(async () => null) as never;
+		harness.ctx.ui.custom = vi.fn(async (factory: any) => {
+			const component = factory({}, {}, {}, () => {});
+			// Simulate typing the provider ID to filter
+			for (const char of provider.id) {
+				if (component?.handleInput) component.handleInput(char);
+			}
+			// Simulate pressing Enter to confirm selection
+			if (component?.handleInput) component.handleInput("\r");
 		}) as never;
-		harness.ctx.ui.custom = vi.fn(async () => null) as never;
 		harness.ctx.ui.input = vi.fn(async () => "provider-api-key") as never;
 
 		providerCatalogExtension(harness.pi as never);
@@ -154,8 +159,8 @@ describe("provider catalog extension", () => {
 		const command = harness.commands.get("providers:login");
 		await command.handler("", harness.ctx);
 
-		expect(harness.ctx.ui.select).toHaveBeenCalled();
-		expect(harness.ctx.ui.custom).not.toHaveBeenCalled();
+		expect(harness.ctx.ui.custom).toHaveBeenCalled();
+		expect(harness.ctx.ui.select).not.toHaveBeenCalled();
 
 		expect(harness.providers.has(provider.id)).toBe(true);
 		expect(stored.get(provider.id)).toMatchObject({
@@ -246,7 +251,11 @@ describe("provider catalog extension", () => {
 
 		// Simulate user cancelling the selection
 		harness.ctx.ui.select = vi.fn(async () => null) as never;
-		harness.ctx.ui.custom = vi.fn(async () => null) as never;
+		harness.ctx.ui.custom = vi.fn(async (factory: any) => {
+			const component = factory({}, {}, {}, () => {});
+			// Simulate pressing Escape to cancel
+			if (component?.handleInput) component.handleInput("\u001b");
+		}) as never;
 
 		providerCatalogExtension(harness.pi as never);
 		const command = harness.commands.get("providers:login");

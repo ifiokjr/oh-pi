@@ -7,6 +7,7 @@ import type {
 /* C8 ignore file */
 
 import { AuthStorage } from "@mariozechner/pi-coding-agent";
+import { Container, fuzzyFilter, Input, Spacer, TruncatedText } from "@mariozechner/pi-tui";
 
 import type { ProviderCatalogCredentials, ProviderCatalogModel } from "./catalog.js";
 import type { SupportedProviderDefinition } from "./config.js";
@@ -443,30 +444,147 @@ async function resolveProviderSelection(
 	return await selectProviderFromScrollableList(ctx, matchedProviders);
 }
 
+const PROVIDER_MAX_VISIBLE = 8;
+
 async function selectProviderFromScrollableList(
 	ctx: ProviderCommandContext,
 	providers: readonly SupportedProviderDefinition[],
 ): Promise<SupportedProviderDefinition | null> {
-	if (typeof ctx.ui.select !== "function") {
+	if (typeof ctx.ui.custom !== "function") {
 		return providers[0] ?? null;
 	}
 
-	const options = providers.map((provider) => {
-		const status = hasStoredCredential(ctx, provider.id) ? " ✓ logged in" : getEnvApiKey(provider) ? " • env key" : "";
-		return { label: `${provider.name} — ${provider.id}${status}`, value: provider.id };
+	return new Promise((resolve) => {
+		let selectedIndex = 0;
+		let filteredProviders = [...providers];
+
+		const container = new Container();
+		const searchInput = new Input();
+		const listContainer = new Container();
+
+		const updateList = () => {
+			listContainer.clear();
+			const startIndex = Math.max(
+				0,
+				Math.min(selectedIndex - Math.floor(PROVIDER_MAX_VISIBLE / 2), filteredProviders.length - PROVIDER_MAX_VISIBLE),
+			);
+			const endIndex = Math.min(startIndex + PROVIDER_MAX_VISIBLE, filteredProviders.length);
+
+			for (let i = startIndex; i < endIndex; i++) {
+				const p = filteredProviders[i];
+				if (!p) continue;
+				const selected = i === selectedIndex;
+				const prefix = selected ? "→ " : "  ";
+				const status = hasStoredCredential(ctx, p.id) ? " ✓ logged in" : getEnvApiKey(p) ? " • env key" : "";
+				const line = `${prefix}${p.name} — ${p.id}${status}`;
+				listContainer.addChild(new TruncatedText(line, 1, 0));
+			}
+
+			if (startIndex > 0 || endIndex < filteredProviders.length) {
+				listContainer.addChild(
+					new TruncatedText(`  (${selectedIndex + 1}/${filteredProviders.length}) ↑↓ scroll`, 1, 0),
+				);
+			}
+
+			if (filteredProviders.length === 0) {
+				listContainer.addChild(new TruncatedText("  No providers match", 1, 0));
+			}
+		};
+
+		const filterProviders = (query: string) => {
+			filteredProviders = query
+				? fuzzyFilter(providers, query, (p) => `${p.name} ${p.id} ${p.env.join(" ")} ${p.api}`)
+				: [...providers];
+			selectedIndex = Math.max(0, Math.min(selectedIndex, Math.max(0, filteredProviders.length - 1)));
+			updateList();
+		};
+
+		searchInput.onChange = (value: string) => {
+			filterProviders(value);
+		};
+
+		searchInput.onSubmit = () => {
+			const selected = filteredProviders[selectedIndex];
+			if (selected) {
+				resolve(selected);
+			}
+		};
+
+		// Build the container
+		container.addChild(
+			new TruncatedText(`Select provider to log in (${filteredProviders.length}/${providers.length})`, 1, 0),
+		);
+		container.addChild(new Spacer(1));
+		container.addChild(searchInput);
+		container.addChild(new Spacer(1));
+		container.addChild(listContainer);
+		container.addChild(new Spacer(1));
+		container.addChild(new TruncatedText("  Enter to select · Esc to cancel", 1, 0));
+
+		// Initial render
+		filterProviders("");
+
+		ctx.ui.custom((_tui, _theme, _keybindings, done) => ({
+			dispose() {},
+			handleInput(data: string) {
+				// Up arrow
+				if (data === "\u001b[A" || data === "\u001bOA") {
+					if (filteredProviders.length > 0) {
+						selectedIndex = selectedIndex === 0 ? filteredProviders.length - 1 : selectedIndex - 1;
+						updateList();
+					}
+					return;
+				}
+
+				// Down arrow
+				if (data === "\u001b[B" || data === "\u001bOB") {
+					if (filteredProviders.length > 0) {
+						selectedIndex = selectedIndex === filteredProviders.length - 1 ? 0 : selectedIndex + 1;
+						updateList();
+					}
+					return;
+				}
+
+				// Enter - confirm selection
+				if (data === "\r" || data === "\n") {
+					const selected = filteredProviders[selectedIndex];
+					if (selected) {
+						done(selected);
+						resolve(selected);
+					}
+					return;
+				}
+
+				// Escape - cancel
+				if (data === "\u001b") {
+					done(null as never);
+					resolve(null);
+					return;
+				}
+
+				// Backspace
+				if (data === "\u007f" || data === "\b") {
+					const current = searchInput.value;
+					searchInput.value = current.slice(0, -1);
+					filterProviders(searchInput.value);
+					return;
+				}
+
+				// Regular character input for search
+				if (data.length === 1 && data >= " ") {
+					searchInput.value += data;
+					filterProviders(searchInput.value);
+					return;
+				}
+			},
+			invalidate() {
+				container.invalidate();
+			},
+			render(width: number) {
+				return container.render(width);
+			},
+		}));
 	});
-
-	const selectedId = await ctx.ui.select(
-		`Select provider to log in (${providers.length} total)`,
-		options.map((opt) => opt.label),
-	);
-
-	if (!selectedId) {
-		return null;
-	}
-
-	const selectedIndex = options.findIndex((opt) => opt.label === selectedId);
-	return selectedIndex >= 0 ? (providers[selectedIndex] ?? null) : null;
 }
 
 function buildProviderPickerOptions(

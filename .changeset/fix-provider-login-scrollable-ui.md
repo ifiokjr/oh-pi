@@ -2,8 +2,12 @@
 default: patch
 ---
 
-fix(providers): use scrollable searchable list for provider login and add logout command
+fix(providers): use proper TUI components for provider login with height limiting and fuzzy search
 
-Replaced `ui.select` with `ui.custom` for the `/providers:login` provider picker, implementing a proper scrollable searchable list with height limiting (max 8 visible items), fuzzy filtering, and keyboard navigation matching pi's native OAuth selector UX.
+Replaced `ui.select` with `ui.custom` using proper TUI components (`Container`, `Input`, `TruncatedText`, `Spacer`, `fuzzyFilter`) from `@mariozechner/pi-tui`. This provides:
 
-Added `/providers:logout` command to remove stored provider credentials and clear cached state.
+- Height limiting: max 8 visible providers at a time (like pi's native `OAuthSelectorComponent`)
+- Fuzzy search: type to filter providers by name, ID, env vars, or API type
+- Keyboard navigation: Up/Down arrows (with wrap), Enter to confirm, Escape to cancel, Backspace to delete search
+- Scroll indicators: shows position when list exceeds visible area
+- Consistent UX with pi's built-in `/login` command
