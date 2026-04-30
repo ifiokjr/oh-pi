@@ -1,29 +1,44 @@
-# @ifi/pi-web-server
+# `@ifi/pi-web-server`
 
-Embeddable HTTP + WebSocket server for remote pi session management.
+> Embeddable HTTP + WebSocket server for pi remote session sharing.
 
-## What it does
+## Why use this?
 
-`@ifi/pi-web-server` provides the server-side building blocks for exposing a pi session over HTTP and WebSocket transports.
+When you want pi sessions to be viewable remotely, you need a server. This package provides the server-side primitives — HTTP routing, WebSocket streaming, and token-based access control — that `@ifi/pi-web-remote` uses to expose pi sessions.
 
-It includes support for:
+Use it directly if you're embedding pi remote access into your own application or service.
 
-- token-based access
-- LAN/tunnel-aware connection flows
-- remote session transport primitives
-- embedding in first-party or custom tooling
-
-## Install
+## Installation
 
 ```bash
 pnpm add @ifi/pi-web-server
 ```
 
+> This is a compiled library (`dist/` output). Consumed as a dependency, not installed as a pi package.
+
+## What it provides
+
+- **HTTP server:** Serves the remote session UI and API endpoints
+- **WebSocket transport:** Real-time streaming of session events (messages, tool calls, status)
+- **Token-based access:** Secure session sharing with access tokens
+- **LAN/tunnel awareness:** Connection URLs that work on local networks and via tunnels (Tailscale, etc.)
+- **Embeddable:** Import into your own Node.js application
+
 ## Use case
 
-Use this package if you want to embed remote pi access into your own app or service, or if you are building on top of the oh-pi remote workflow.
+- Building a custom remote session viewer
+- Embedding pi remote access into a developer portal
+- Creating a managed pi service with session sharing
 
 ## Related packages
 
-- `@ifi/pi-web-client` — remote client library
-- `@ifi/pi-web-remote` — pi extension that exposes the feature as `/remote`
+| Package                    | Role                                                            |
+| -------------------------- | --------------------------------------------------------------- |
+| `@ifi/pi-web-client`       | Client library that connects to this server                     |
+| `@ifi/pi-web-remote`       | Pi extension that wires this server into pi's `/remote` command |
+| `@ifi/pi-remote-tailscale` | Tailscale tunnel integration for secure remote access           |
+
+## Notes
+
+- This package compiles to `dist/` — run `pnpm build` if modifying it
+- Depends on `express` and `ws` for HTTP + WebSocket handling

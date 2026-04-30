@@ -70,7 +70,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 Examples:
 
 ```
-feat(ant-colony): add planning recovery loop
+feat(subagents): add chain and parallel execution
 fix(spawner): handle 429 rate limits gracefully
 docs: update README with new extension list
 ```

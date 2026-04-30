@@ -6,7 +6,7 @@
 
 **One command to supercharge [pi-coding-agent](https://github.com/badlogic/pi-mono).**
 
-Like oh-my-zsh for pi — but with an autonomous ant colony.
+Like oh-my-zsh for pi.
 
 [![CI](https://github.com/ifiokjr/oh-pi/actions/workflows/ci.yml/badge.svg)](https://github.com/ifiokjr/oh-pi/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/ifiokjr/oh-pi/graph/badge.svg?branch=main)](https://codecov.io/gh/ifiokjr/oh-pi) [![license](https://img.shields.io/github/license/ifiokjr/oh-pi)](./LICENSE) [![node](https://img.shields.io/node/v/@ifi/oh-pi)](https://nodejs.org)
 
@@ -52,7 +52,6 @@ oh-pi repo
 │   ├── extensions
 │   ├── background-tasks
 │   ├── diagnostics
-│   ├── ant-colony
 │   ├── subagents
 │   ├── plan
 │   ├── spec
@@ -106,7 +105,6 @@ This is a monorepo. Install everything at once with `npx @ifi/oh-pi`, or pick in
 | [`@ifi/oh-pi-extensions`](./packages/extensions)                    | Core extension pack with 13 session features                               | `pi install npm:@ifi/oh-pi-extensions`              |
 | [`@ifi/pi-background-tasks`](./packages/background-tasks)           | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, and `bg_task`  | `pi install npm:@ifi/pi-background-tasks`           |
 | [`@ifi/pi-diagnostics`](./packages/diagnostics)                     | Prompt completion timing extension                                         | `pi install npm:@ifi/pi-diagnostics`                |
-| [`@ifi/oh-pi-ant-colony`](./packages/ant-colony)                    | Multi-agent swarm extension                                                | `pi install npm:@ifi/oh-pi-ant-colony`              |
 | [`@ifi/pi-extension-subagents`](./packages/subagents)               | Full-featured subagent delegation runtime                                  | `pi install npm:@ifi/pi-extension-subagents`        |
 | [`@ifi/pi-plan`](./packages/plan)                                   | Branch-aware planning mode extension                                       | `pi install npm:@ifi/pi-plan`                       |
 | [`@ifi/pi-spec`](./packages/spec)                                   | Native spec-driven workflow with `/spec`                                   | `pi install npm:@ifi/pi-spec`                       |
@@ -361,7 +359,7 @@ Adaptive routing now ships as its own package so users can opt into routing beha
 pi install npm:@ifi/pi-extension-adaptive-routing
 ```
 
-It adds `/route` controls, local routing telemetry, and delegated startup categories that subagents and ant-colony can use for provider assignment when no explicit model override is set.
+It adds `/route` controls, local routing telemetry, and delegated startup categories that subagents can use for provider assignment when no explicit model override is set.
 
 ### 💰 Usage Tracker (`usage-tracker`) — **default: off**
 
@@ -428,81 +426,6 @@ Continuously samples runtime health so heavy sessions stay usable.
 
 **Behavior:** tracks CPU, memory, and event-loop lag; records recent samples and alerts; and can escalate into safe mode when repeated alerts suggest sustained UI churn. The optional config file lives at `~/.pi/agent/extensions/watchdog/config.json`.
 
-### 🐜 Ant Colony (`ant-colony`) — **default: off**
-
-The headline feature. A multi-agent swarm modeled after real ant ecology — deeply integrated into pi's SDK. See the [Ant Colony section](#-ant-colony-1) below for full documentation.
-
----
-
-## 🐜 Ant Colony
-
-A multi-agent swarm modeled after real ant ecology — deeply integrated into pi's SDK.
-
-```
-You: "Refactor auth from sessions to JWT"
-
-oh-pi:
-  🔍 Scout ants explore codebase (haiku — fast, cheap)
-  📋 Task pool generated from discoveries
-  ⚒️  Worker ants execute in parallel (sonnet — capable)
-  🛡️ Soldier ants review all changes (sonnet — thorough)
-  ✅ Done — report auto-injected into conversation
-```
-
-### Colony Lifecycle
-
-`SCOUTING → (if needed) PLANNING_RECOVERY → WORKING → REVIEWING → DONE`
-
-### Architecture
-
-Each ant is an in-process `AgentSession` (pi SDK), not a child process:
-
-```
-pi (main process)
-  └─ ant_colony tool
-       └─ queen.ts → runColony()
-            └─ spawnAnt() → createAgentSession()
-                 ├─ session.subscribe() → real-time token stream
-                 ├─ Zero startup overhead (shared process)
-                 └─ Shared auth & model registry
-```
-
-### Why Ants?
-
-| Real Ants             | oh-pi                                              |
-| --------------------- | -------------------------------------------------- |
-| Scout finds food      | Scout scans codebase, identifies targets           |
-| Pheromone trail       | `.ant-colony/pheromone.jsonl` — shared discoveries |
-| Worker carries food   | Worker executes task on assigned files             |
-| Soldier guards nest   | Soldier reviews changes, requests fixes            |
-| More food → more ants | More tasks → higher concurrency (auto-adapted)     |
-| Pheromone evaporates  | 10-minute half-life — stale info fades             |
-
-### Adaptive Concurrency
-
-```
-Cold start     →  ceil(max/2) ants (fast ramp-up)
-Exploration    →  +1 each wave, monitoring throughput
-Throughput ↓   →  lock optimal, stabilize
-CPU > 85%      →  reduce immediately
-429 rate limit →  -1 concurrency + backoff (2s→5s→10s cap)
-Tasks done     →  scale down to minimum
-```
-
-### Real-time UI
-
-- **Status bar** — tasks done, active ants, tool calls, output tokens, cost, elapsed time
-- **Ctrl+Shift+A** — overlay panel with task list, active ant streams, colony log
-- `/colony-stop` to abort a running colony
-
-### Auto-trigger
-
-The LLM automatically deploys the colony when appropriate:
-
-- **≥3 files** need changes → colony
-- **Parallel workstreams** possible → colony
-- **Single file** change → direct execution (no overhead)
-
 ---
 
 ## Setup Modes
@@ -515,11 +438,11 @@ The LLM automatically deploys the colony when appropriate:
 
 ### Presets
 
-|                | Theme      | Thinking | Includes                                         |
-| -------------- | ---------- | -------- | ------------------------------------------------ |
-| ⚫ Full Power  | oh-pi Dark | high     | Recommended extensions + bg-process + ant-colony |
-| 🔴 Clean       | Default    | off      | No extensions, just core                         |
-| 🐜 Colony Only | oh-pi Dark | medium   | Ant-colony with minimal setup                    |
+|               | Theme      | Thinking | Includes                               |
+| ------------- | ---------- | -------- | -------------------------------------- |
+| ⚫ Full Power | oh-pi Dark | high     | Recommended extensions + bg-process    |
+| 🔴 Clean      | Default    | off      | No extensions, just core               |
+| 🚀 Subagents  | oh-pi Dark | medium   | Subagent chains and parallel execution |
 
 ### Providers
 
@@ -681,7 +604,6 @@ Managed local switching covers these packages:
 
 - `@ifi/oh-pi-extensions`
 - `@ifi/pi-background-tasks`
-- `@ifi/oh-pi-ant-colony`
 - `@ifi/pi-diagnostics`
 - `@ifi/pi-extension-subagents`
 - `@ifi/pi-plan`
@@ -785,7 +707,6 @@ oh-pi/
 │   ├── extensions/             13 core pi extensions (raw .ts)
 │   ├── background-tasks/       Reactive background shell task package (raw .ts)
 │   ├── diagnostics/            Prompt completion timing extension (raw .ts)
-│   ├── ant-colony/             Multi-agent swarm extension (raw .ts)
 │   ├── subagents/              Subagent orchestration package (raw .ts)
 │   ├── plan/                   Planning mode extension (raw .ts)
 │   ├── spec/                   Native spec-driven workflow package (raw .ts)

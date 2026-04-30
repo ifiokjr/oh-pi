@@ -1,8 +1,47 @@
-# @ifi/pi-plan
+# `@ifi/pi-plan`
 
-Planning mode extension for pi.
+> Structured planning mode for pi — think before you code.
 
-Built on top of the planning workflow from [`sids/pi-extensions/plan-md`](https://github.com/sids/pi-extensions/tree/main/plan-md) and adapted for oh-pi.
+## Why use this?
+
+Direct implementation works for small tasks, but complex features benefit from planning first:
+
+- **Avoid rework:** Plan the architecture before writing code
+- **Capture decisions:** The plan file documents _why_ you made certain choices
+- **Resume later:** Planning state persists across sessions
+
+Plan mode turns planning into a first-class pi workflow with its own tools, banners, and file management.
+
+## What planning feels like
+
+```
+/plan
+
+┌─ Start Plan Mode ──────────────────────────┐
+│                                             │
+│  Empty branch    Start a new planning       │
+│                  branch from scratch        │
+│                                             │
+│  Current branch  Continue from where the    │
+│                  conversation left off      │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+While active, a banner stays visible:
+
+```
+┌ PLAN MODE ─ /home/user/projects/app/session-abc.plan.md ─────┐
+│ [plan-mode tools are active: task_agents, request_user_input] │
+└───────────────────────────────────────────────────────────────┘
+```
+
+Exiting plan mode shows a summary:
+
+```
+Plan mode ended.
+Plan saved to: /home/user/projects/app/session-abc.plan.md
+```
 
 ## Installation
 
@@ -10,67 +49,53 @@ Built on top of the planning workflow from [`sids/pi-extensions/plan-md`](https:
 pi install npm:@ifi/pi-plan
 ```
 
-Or install it as part of the full oh-pi bundle:
-
-```bash
-npx @ifi/oh-pi
-```
-
-Or use the package installer directly:
-
-```bash
-npx @ifi/pi-plan
-npx @ifi/pi-plan --local
-```
-
-To remove:
-
-```bash
-npx @ifi/pi-plan --remove
-```
-
-## What it does
-
-- `/plan` starts planning when inactive and opens plan-mode actions when already active.
-- `Alt+P` runs the same plan-mode toggle flow as `/plan` without sending `/plan` as chat text.
-- Start location picker (shown when the session has branchable history):
-  - `Empty branch`
-  - `Current branch`
-- If a session plan already exists with content, startup offers:
-  - `Continue planning`
-  - `Empty branch` / `Current branch` when branchable history is available
-  - `Start fresh` when no branchable history is available
-- `/plan` accepts an optional location argument:
-  - file path → use that exact file as the plan file
-  - directory path → create `<timestamp>-<sessionId>.plan.md` in that directory
-- Shows a persistent banner while active with the active plan file path.
-- Running `/plan` while active shows:
-  - `Exit`
-  - `Exit & summarize branch`
-- Running `/plan <location>` while active moves the current plan file to the resolved location.
-- Exiting plan mode prefills the editor only when the active plan file has content.
-- After exit, a `Plan mode ended.` message is shown with the plan file and an expandable plan preview when available.
+> Installed by default with `npx @ifi/oh-pi`.
 
 ## Commands
 
-- `/plan [location]`
+| Command             | Action                                              |
+| ------------------- | --------------------------------------------------- |
+| `/plan`             | Enter plan mode (or show actions if already active) |
+| `/plan [file-path]` | Use a specific file as the plan file                |
+| `/plan [directory]` | Create a timestamped plan file in that directory    |
 
-## Tools in plan mode
+## Shortcut
 
-Plan mode adds planning-specific tools only while active:
+`Alt+P` — toggle plan mode without typing `/plan`.
 
-- `task_agents` — run isolated research tasks using the bundled subagent runtime (concurrency: 1-4)
-- `steer_task_agent` — rerun one task from a previous `task_agents` run with extra guidance
-- `request_user_input` — ask clarifying questions with optional choices and optional freeform answers
-- `set_plan` — overwrite the active plan file with the complete latest plan text
+## Tools available in plan mode
 
-When plan mode ends, these tools are removed again.
+Only while plan mode is active, these tools are exposed:
+
+| Tool                 | Purpose                                                |
+| -------------------- | ------------------------------------------------------ |
+| `task_agents`        | Run parallel research tasks (1-4 concurrent subagents) |
+| `steer_task_agent`   | Rerun a specific research task with extra guidance     |
+| `request_user_input` | Ask you clarifying questions with optional choices     |
+| `set_plan`           | Overwrite the plan file with the latest full plan text |
+
+When plan mode ends, these tools disappear.
+
+## Plan mode vs. subagent planner
+
+|                 | Plan mode (`/plan`)                 | Subagent planner                         |
+| --------------- | ----------------------------------- | ---------------------------------------- |
+| **Scope**       | Interactive session state           | Isolated subagent run                    |
+| **Persistence** | Plan file on disk                   | Passed as text between steps             |
+| **Tools**       | `task_agents`, `request_user_input` | Full agent tool access                   |
+| **Best for**    | Architecting features interactively | Delegate a planning pass to a specialist |
+
+## Customization
+
+The default plan-mode prompt lives at `packages/plan/prompts/PLAN.prompt.md`. Override it globally by creating `~/.pi/agent/PLAN.prompt.md`. If the override file is missing or blank, the bundled prompt is used.
+
+## Plan file management
+
+- Default plan file: replaces the session extension with `.plan.md` in the session directory
+- Plan files persist after exiting — resume later with `/plan`
+- While active, `/plan <location>` moves the current plan file
 
 ## Notes
 
-- By default, plan mode uses one plan file per session in the same directory as the session file, replacing the session extension with `.plan.md`.
-- `/plan [location]` can override the plan file path.
-- Plan files are kept after exiting so planning can be resumed later.
-- The default plan-mode prompt is stored in `packages/plan/prompts/PLAN.prompt.md`.
-- You can override that prompt globally by creating `~/.pi/agent/PLAN.prompt.md`.
-- If the override file is missing or blank, the bundled prompt is used.
+- Ships raw TypeScript — no build step needed
+- Plan mode does not automatically trigger implementation — it's for thinking, not coding

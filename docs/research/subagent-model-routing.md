@@ -2,7 +2,7 @@
 
 ## Why this exists
 
-The current subagent and ant-colony model selection flow is still mostly static:
+The current subagent model selection flow is still mostly static:
 
 - explicit runtime override wins
 - otherwise a frontmatter model wins

@@ -48,7 +48,6 @@ Individual packages can also be installed directly:
 ```bash
 pi install npm:@ifi/oh-pi-extensions
 pi install npm:@ifi/pi-extension-adaptive-routing
-pi install npm:@ifi/oh-pi-ant-colony
 pi install npm:@ifi/oh-pi-themes
 pi install npm:@ifi/oh-pi-prompts
 pi install npm:@ifi/oh-pi-skills

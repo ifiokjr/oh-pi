@@ -1,31 +1,45 @@
-# @ifi/pi-web-client
+# `@ifi/pi-web-client`
 
-Platform-agnostic TypeScript client for remote pi sessions.
+> Platform-agnostic TypeScript client for connecting to pi remote sessions.
 
-## What it does
+## Why use this?
 
-`@ifi/pi-web-client` is a lightweight client library for connecting to pi remote session servers. It is designed to work in:
+When pi is sharing a session via `/remote`, a web server streams the conversation. This library lets you build your own UI — browser, mobile, or desktop — that connects to that server and displays the session.
 
-- browsers
-- Node.js
-- React Native
-- other TypeScript runtimes with WebSocket support
+Use it when the built-in remote web UI doesn't match your needs.
 
-## Install
+## Installation
 
 ```bash
 pnpm add @ifi/pi-web-client
 ```
 
+> This is a compiled library (`dist/` output). Consumed as a dependency, not installed as a pi package.
+
+## What it provides
+
+- WebSocket-based session streaming client
+- Works in browsers, Node.js, React Native, and any TypeScript runtime with WebSocket support
+- Handles connection lifecycle: connect, reconnect, disconnect
+- Event-based API for receiving session updates (messages, tool calls, status changes)
+
 ## Use case
 
-Use this package when you want to build your own web or mobile UI for a remote pi instance.
+Build your own:
 
-## API surface
-
-The package exposes a small client-facing API from its compiled `dist/` output.
+- Custom browser dashboard for remote pi sessions
+- Mobile app to follow pi sessions on your phone
+- Internal tooling that embeds pi session views
 
 ## Related packages
 
-- `@ifi/pi-web-server` — embeddable remote server
-- `@ifi/pi-web-remote` — pi extension that starts remote sharing from inside pi
+| Package                    | Role                                       |
+| -------------------------- | ------------------------------------------ |
+| `@ifi/pi-web-server`       | The server this client connects to         |
+| `@ifi/pi-web-remote`       | Pi extension that starts the remote server |
+| `@ifi/pi-remote-tailscale` | Secure remote sharing via Tailscale        |
+
+## Notes
+
+- This package compiles to `dist/` — run `pnpm build` if modifying it
+- No runtime dependency on pi itself — works as a standalone library

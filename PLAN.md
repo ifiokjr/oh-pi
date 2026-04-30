@@ -4,17 +4,14 @@
 
 ## 0. Problem Mapping (from retrospective)
 
-1. **Unclear positioning**: The boundary between oh-pi (config portal) and ant-colony (advanced multi-agent) isn't sharp enough.
+1. **Unclear positioning**: The boundary between oh-pi (config portal) and subagents (delegated execution) isn't sharp enough.
 2. **Storage ceiling**: Pheromones depend on local JSONL — bottleneck for long sessions and multi-instance scenarios.
 3. **SDK coupling risk**: `spawner` has deep direct dependency on the pi SDK; upstream breaking changes are high risk.
 4. **Missing "wow" moment**: Docs are thorough, but first-time UX lacks a strong demo closure.
-5. **No hard evidence**: The benefit boundary between single agent and colony lacks reproducible experiment data.
-6. **Scattered growth**: Multi-language rollout started before community focus — feedback density is too low.
+5. **Scattered growth**: Multi-language rollout started before community focus — feedback density is too low.
 
 ## 1. Execution Principles
 
-- **Narrow first, then wide**: Polish the entry experience before amplifying the colony narrative.
-- **Evidence before expansion**: Without benchmark data, don't expand "colony is better than single agent" messaging.
 - **Small bets, quick feedback**: Weekly docs/UX releases; milestone-based capability releases.
 - **One community first**: Focus energy on one developer community to build feedback density.
 
@@ -35,9 +32,7 @@
 
 ### Phase C: Prove (Weeks 5–8)
 
-- Design and run single-agent vs colony benchmarks across task complexity levels
 - Publish reproducible evaluation scripts
-- Use benchmark results to refine "when to use colony" guidance
 
 ## 3. Success Criteria
 
