@@ -1,40 +1,54 @@
-# @ifi/oh-pi-agents
+# `@ifi/oh-pi-agents`
 
-AGENTS.md templates for pi.
+> AGENTS.md templates for pi — pre-built role profiles that set pi's behavior.
 
-This package contains reusable agent profile templates such as:
+## Why use this?
 
-- `general-developer`
-- `fullstack-developer`
-- `security-researcher`
-- `data-ai-engineer`
-- `colony-operator`
+An `AGENTS.md` file tells pi how to behave in your project. It defines coding conventions, workflow rules, and domain context. These templates give you proven starting points for common roles without writing from scratch.
 
-## What this package is for
+## Templates
 
-`@ifi/oh-pi-agents` is a content package used by the oh-pi configurator and installer. It helps seed `AGENTS.md`-style instructions for pi projects and user setups.
+| Template | Focus | Best for |
+| -------- | ----- | -------- |
+| `general-developer` | Safe defaults | Everyday development, any project |
+| `fullstack-developer` | Architecture + quality | Full-stack apps with frontend + backend |
+| `security-researcher` | Security testing workflow | Security audits and vulnerability research |
+| `data-ai-engineer` | Data + ML pipelines | Data engineering, AI/ML projects |
 
-## Install
+## Installation
 
-Most users should install the full bundle instead:
+These templates are consumed by `@ifi/oh-pi-cli` and the oh-pi installer. Most users should install the full bundle:
 
 ```bash
 npx @ifi/oh-pi
 ```
 
-This package is typically consumed by `@ifi/oh-pi-cli` and is not usually installed directly.
+The templates are not typically installed as a standalone pi package.
 
-## Contents
+## Usage
 
-Templates live under:
+The oh-pi CLI (`pnpm oh-pi-cli`) lets you pick a template during setup. The template is copied to your project as `AGENTS.md`, where pi reads it on startup.
 
-```text
+To manually use a template:
+
+1. Copy the relevant markdown file from `packages/agents/agents/<template>.md`
+2. Paste it into `AGENTS.md` in your project root
+3. Customize the sections to match your stack and preferences
+
+## Package layout
+
+```
 agents/
+├── general-developer.md
+├── fullstack-developer.md
+├── security-researcher.md
+└── data-ai-engineer.md
 ```
 
-Each file is a markdown template intended to be copied into a pi environment or project workflow.
+Each file is a markdown template designed to be copied and customized.
 
-## Related packages
+## Related
 
-- `@ifi/oh-pi` — full installer bundle
-- `@ifi/oh-pi-cli` — interactive configurator
+- [`@ifi/oh-pi`](../oh-pi) — full installer bundle
+- [`@ifi/oh-pi-cli`](../cli) — interactive TUI configurator that uses these templates
+- [Pi AGENTS.md docs](https://github.com/badlogic/pi-mono) — how AGENTS.md works in pi

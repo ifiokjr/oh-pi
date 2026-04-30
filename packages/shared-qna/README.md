@@ -1,35 +1,57 @@
-# @ifi/pi-shared-qna
+# `@ifi/pi-shared-qna`
 
-Shared question-and-answer TUI helpers for pi extensions.
+> Shared TUI Q&A helpers for pi extensions — one place for pi-tui loading logic.
 
-This package vendors the `shared/qna-tui.ts` component from [`sids/pi-extensions`](https://github.com/sids/pi-extensions) into the oh-pi monorepo so other first-party packages can reuse it without depending on third-party pi packages at runtime.
+## Why use this?
 
-## Shared `pi-tui` loader
+Multiple first-party oh-pi packages need the pi TUI library (`@mariozechner/pi-tui`). This package centralizes the loading strategy so each package doesn't duplicate the same fallback-resolution code.
 
-<!-- {=sharedQnaPiTuiLoaderOverview} -->
+If you're writing a pi extension that uses the TUI, depend on this package instead of importing `@mariozechner/pi-tui` directly — it handles resolution edge cases automatically.
 
-`@ifi/pi-shared-qna` centralizes `@mariozechner/pi-tui` loading so first-party packages reuse one fallback strategy instead of embedding Bun-global lookup logic in multiple runtime modules.
+## Installation
 
-The shared loader tries the normal package resolution path first, then falls back to Bun global install locations when a project is running outside a conventional dependency layout.
+```bash
+pnpm add @ifi/pi-shared-qna
+```
 
-<!-- {/sharedQnaPiTuiLoaderOverview} -->
+> This is a library consumed by other packages. Not installed as a standalone pi package.
+
+## API
 
 ### `getPiTuiFallbackPaths(options?)`
 
-<!-- {=sharedQnaGetPiTuiFallbackPathsDocs} -->
+Returns ordered Bun-global fallback paths for `@mariozechner/pi-tui`.
 
-Return the ordered list of Bun global fallback paths to try for `@mariozechner/pi-tui`.
+```ts
+import { getPiTuiFallbackPaths } from "@ifi/pi-shared-qna";
 
-The list prefers an explicit `BUN_INSTALL` root when provided and always includes the default `~/.bun/install/global/node_modules/@mariozechner/pi-tui` fallback without duplicates.
+const paths = getPiTuiFallbackPaths();
+// [
+//   "~/.bun/install/global/node_modules/@mariozechner/pi-tui"
+// ]
+```
 
-<!-- {/sharedQnaGetPiTuiFallbackPathsDocs} -->
+Prefers explicit `BUN_INSTALL` root when set, avoids duplicates.
 
 ### `requirePiTuiModule(options?)`
 
-<!-- {=sharedQnaRequirePiTuiModuleDocs} -->
+Loads `@mariozechner/pi-tui` with shared fallback strategy.
 
-Load `@mariozechner/pi-tui` with a shared fallback strategy.
+```ts
+import { requirePiTuiModule } from "@ifi/pi-shared-qna";
 
-The loader first tries the normal package import path, then walks the Bun-global fallback list, and finally throws a helpful error that names every checked location when none of them resolve.
+const piTui = await requirePiTuiModule();
+// Returns the pi-tui module, trying normal resolution first,
+// then Bun-global fallbacks, with helpful error if all fail.
+```
 
-<!-- {/sharedQnaRequirePiTuiModuleDocs} -->
+## How it works
+
+1. Try normal package resolution (`import "@mariozechner/pi-tui"`)
+2. If that fails, walk Bun-global fallback paths
+3. If all fail, throw error listing every checked location
+
+## Related
+
+- [`@mariozechner/pi-tui`](https://www.npmjs.com/package/@mariozechner/pi-tui) — the pi TUI library itself
+- [`@ifi/oh-pi-extensions`](../extensions) — uses this for TUI-based widgets

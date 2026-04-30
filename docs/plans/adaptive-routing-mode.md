@@ -55,7 +55,7 @@ The system should use a **cheap classifier model** to estimate task characterist
 
 - No mid-stream or mid-turn model switching.
 - No fully learned router trained on historical traces.
-- No subagent or ant-colony routing in the first release.
+- No subagent routing in the first release.
 - No attempt to fabricate exact quota data for providers that only expose estimated or opaque usage.
 - No silent hidden routing with zero explanation.
 

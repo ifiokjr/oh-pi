@@ -33,7 +33,6 @@ oh-pi repo
 │   ├── extensions
 │   ├── background-tasks
 │   ├── diagnostics
-│   ├── ant-colony
 │   ├── subagents
 │   ├── plan
 │   ├── spec
@@ -87,7 +86,6 @@ Default runtime/content packages installed by `npx @ifi/oh-pi`:
 
 - `@ifi/oh-pi-extensions`
 - `@ifi/pi-background-tasks`
-- `@ifi/oh-pi-ant-colony`
 - `@ifi/pi-diagnostics`
 - `@ifi/pi-extension-subagents`
 - `@ifi/pi-plan`
@@ -140,7 +138,6 @@ Most runtime packages in this repo ship raw TypeScript and can be loaded directl
 | [`@ifi/oh-pi-extensions`](../packages/extensions)                    | Yes                 | commands, tools, widgets, footer, tool interception                                     | The core QoL extension pack: git safety, session naming, status UI, scheduling, usage, watchdog, worktrees, side-conversations, and more |
 | [`@ifi/pi-background-tasks`](../packages/background-tasks)           | Yes                 | `bg_task`, `bg_status`, `/bg`, `Ctrl+Shift+B`                                           | Reactive background shell task management with log tails, watches, wakeups, and a richer tracked-task model                              |
 | [`@ifi/pi-diagnostics`](../packages/diagnostics)                     | Yes                 | widget, session messages, `/diagnostics`, `Ctrl+Shift+D`                                | Prompt start/end timestamps, total duration, and per-turn timing                                                                         |
-| [`@ifi/oh-pi-ant-colony`](../packages/ant-colony)                    | Yes                 | `ant_colony` tool, `/colony*`, `Ctrl+Shift+A`                                           | Multi-agent swarm with scouts/workers/soldiers, isolated worktrees, pheromones, adaptive concurrency, and review passes                  |
 | [`@ifi/pi-extension-subagents`](../packages/subagents)               | Yes                 | `subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`, `/agents`, `Ctrl+Shift+A` | Rich delegated execution with built-in agents, reusable chains, background runs, and a TUI manager                                       |
 | [`@ifi/pi-plan`](../packages/plan)                                   | Yes                 | `/plan`, `Alt+P`, plan-mode tools                                                       | Branch-aware planning workflow with persistent plan files and delegated research tasks                                                   |
 | [`@ifi/pi-spec`](../packages/spec)                                   | Yes                 | `/spec` and `spec:*` subcommands                                                        | Native spec-first workflow with deterministic `.specify/` and `specs/###-feature-name/` artifacts                                        |
@@ -202,7 +199,6 @@ It provides:
 - rolling 30-day persisted history so the view survives restarts
 - session totals and per-model breakdowns
 - agent-callable `usage_report` output for quota/cost questions
-- integration with ant-colony usage streams so colony cost is visible too
 
 ### Watchdog details
 
@@ -255,45 +251,7 @@ Use it when you want to answer questions like:
 - “Did the slowdown happen in one long turn or several short turns?”
 - “How long did this full interaction take end-to-end?”
 
-## `@ifi/oh-pi-ant-colony`: autonomous swarm execution
-
-Ant-colony is the flagship large-task execution feature.
-
-### Core behaviors
-
-- scout/worker/soldier castes with different responsibilities
-- adaptive concurrency instead of a fixed worker count
-- shared pheromone communication instead of direct ant-to-ant chat
-- per-task file locking so conflicting edits do not happen simultaneously
-- optional isolated git worktrees by default, with shared-cwd fallback
-- resumable colony state under shared storage
-- auto-triggering for large multi-file or parallelizable tasks
-- streaming usage into the usage tracker
-- delegated routing categories when adaptive routing is installed
-
-### Primary surfaces
-
-- `ant_colony` tool
-- `/colony <goal>`
-- `/colony-count`
-- `/colony-status [id]`
-- `/colony-stop [id|all]`
-- `/colony-resume [colonyId]`
-- `Ctrl+Shift+A` colony panel
-
-### Best-fit use cases
-
-Use ant-colony for:
-
-- multi-file refactors
-- migrations
-- parallelizable test-writing sweeps
-- coordinated review/rework loops
-- large feature additions that benefit from scouting + implementation + review phases
-
-## `@ifi/pi-extension-subagents`: delegated execution runtime
-
-Subagents is the other major execution system, but it is more explicit and user-directed than ant-colony.
+Subagents is the primary execution system for coordinating multiple AI agents.
 
 ### Major capabilities
 
@@ -303,7 +261,7 @@ Subagents is the other major execution system, but it is more explicit and user-
 - reusable agent definitions stored as markdown with YAML frontmatter
 - reusable `.chain.md` pipelines
 - background execution with async status inspection
-- built-in agents such as `scout`, `planner`, `worker`, `reviewer`, `researcher`, `artist`, and `frontend-designer`
+- built-in agents such as `scout`, `planner`, `worker`, `reviewer`, `context-builder`, `researcher`, `artist`, `frontend-designer`, and `multimodal-summariser`
 - TUI-based create/edit/browse/run flows in the Agents Manager
 - management actions for creating, updating, and deleting agents/chains
 - project-scope agent storage in shared pi storage by default, with legacy repo-local mode available as an opt-in
@@ -320,7 +278,7 @@ Subagents is the other major execution system, but it is more explicit and user-
 - `/agents`
 - `Ctrl+Shift+A`
 
-### When to prefer subagents over ant-colony
+### When to use subagents
 
 Prefer subagents when you want:
 
@@ -412,7 +370,7 @@ This package sits on top of the lower-level `@ifi/pi-web-server` and `@ifi/pi-we
 Purpose:
 
 - shadow-routing or auto-routing decisions for prompts
-- delegated startup categories for subagents and ant-colony when no explicit model override is set
+- delegated startup categories for subagents when no explicit model override is set
 - telemetry and explainability around why a model/provider was picked
 
 Primary commands:
@@ -574,7 +532,6 @@ The AGENTS template pack currently ships 5 templates.
 | `fullstack-developer` | Full-stack application architecture, quality, and git conventions |
 | `security-researcher` | Security testing/reporting workflow and ethics                    |
 | `data-ai-engineer`    | Data pipelines, AI/ML reproducibility, and infra discipline       |
-| `colony-operator`     | When and how to delegate work to ant-colony                       |
 
 ## Contributor-facing packages and libraries
 
@@ -595,7 +552,7 @@ The AGENTS template pack currently ships 5 templates.
 - **Safer day-to-day pi sessions** → `@ifi/oh-pi-extensions`
 - **Long-lived watchers, servers, and log tails** → `@ifi/pi-background-tasks`
 - **Timing and completion visibility** → `@ifi/pi-diagnostics`
-- **Large parallel work** → `@ifi/oh-pi-ant-colony`
+- **Large parallel work** → `@ifi/pi-extension-subagents` (chains, parallel fan-out)
 - **Named specialists and reusable pipelines** → `@ifi/pi-extension-subagents`
 - **Structured planning without implementing yet** → `@ifi/pi-plan`
 - **Spec-first product development** → `@ifi/pi-spec`

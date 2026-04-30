@@ -55,10 +55,10 @@
 ║                          ║ Extension API      ║                               ║
 ║                          ▼                    ▼                               ║
 ║                                                                              ║
-║  ┌──────────── ant-colony/ layer (Multi-Agent Swarm System) ────────────┐   ║
+║  ┌──────────── subagents/ layer (Delegated Execution Runtime) ─────────┐   ║
 ║  │                                                                       │   ║
 ║  │              ┌───────────────────┐                                    │   ║
-║  │              │ ant-colony/       │ ◄── Extension entry (600 ln)       │   ║
+║  │              │ subagents/        │ ◄── Extension entry                │   ║
 ║  │              │   index.ts        │                                    │   ║
 ║  │              └───────┬───────────┘                                    │   ║
 ║  │                      │                                                │   ║
@@ -131,28 +131,28 @@ src/utils/writers.ts
   ├──▶ src/utils/resources.ts   (resources)
   └──▶ src/utils/install.ts     (ensureDir, syncDir)
 
-ant-colony/index.ts
-  ├──▶ ant-colony/queen.ts      (runColony, resumeColony, QueenCallbacks)
-  ├──▶ ant-colony/nest.ts       (Nest)
-  ├──▶ ant-colony/types.ts      (ColonyState, ColonyMetrics, AntStreamEvent)
-  └──▶ ant-colony/ui.ts         (formatDuration, formatCost, formatTokens, statusIcon, casteIcon)
+subagents/index.ts
+  ├──▶ subagents/queen.ts      (runColony, resumeColony, QueenCallbacks)
+  ├──▶ subagents/nest.ts       (Nest)
+  ├──▶ subagents/types.ts      (ColonyState, ColonyMetrics, AntStreamEvent)
+  └──▶ subagents/ui.ts         (formatDuration, formatCost, formatTokens, statusIcon, casteIcon)
 
-ant-colony/queen.ts              ◄── Highest fan-out (5 internal deps)
-  ├──▶ ant-colony/types.ts
-  ├──▶ ant-colony/nest.ts
-  ├──▶ ant-colony/spawner.ts
-  ├──▶ ant-colony/concurrency.ts
-  └──▶ ant-colony/deps.ts
+subagents/queen.ts              ◄── Highest fan-out (5 internal deps)
+  ├──▶ subagents/types.ts
+  ├──▶ subagents/nest.ts
+  ├──▶ subagents/spawner.ts
+  ├──▶ subagents/concurrency.ts
+  └──▶ subagents/deps.ts
 
-ant-colony/spawner.ts
-  ├──▶ ant-colony/types.ts
-  ├──▶ ant-colony/nest.ts
-  ├──▶ ant-colony/prompts.ts
-  └──▶ ant-colony/parser.ts
+subagents/spawner.ts
+  ├──▶ subagents/types.ts
+  ├──▶ subagents/nest.ts
+  ├──▶ subagents/prompts.ts
+  └──▶ subagents/parser.ts
 
-ant-colony/parser.ts
-  ├──▶ ant-colony/types.ts
-  └──▶ ant-colony/spawner.ts    (makePheromoneId)
+subagents/parser.ts
+  ├──▶ subagents/types.ts
+  └──▶ subagents/spawner.ts    (makePheromoneId)
 ```
 
 ---
@@ -161,13 +161,13 @@ ant-colony/parser.ts
 
 | Module                  |  Fan-In   | Fan-Out | Lines | Role                             |
 | ----------------------- | :-------: | :-----: | :---: | -------------------------------- |
-| `ant-colony/types.ts`   |   **8**   |    0    |  144  | Pure leaf, foundational types    |
+| `subagents/types.ts`   |   **8**   |    0    |  144  | Pure leaf, foundational types    |
 | `src/types.ts`          |   **5**   |    0    |  69   | Pure leaf, interface definitions |
 | `src/registry.ts`       |   **3**   |    1    |  77   | Runtime constant registry        |
-| `ant-colony/nest.ts`    |     3     |    1    |  298  | Shared state management          |
-| `ant-colony/queen.ts`   |     1     |  **5**  |  640  | Highest fan-out, scheduling core |
-| `ant-colony/spawner.ts` |     2     |  **4**  |  309  | Agent lifecycle management       |
-| `ant-colony/index.ts`   | 0 (entry) |    4    |  600  | Extension registration entry     |
+| `subagents/nest.ts`    |     3     |    1    |  298  | Shared state management          |
+| `subagents/queen.ts`   |     1     |  **5**  |  640  | Highest fan-out, scheduling core |
+| `subagents/spawner.ts` |     2     |  **4**  |  309  | Agent lifecycle management       |
+| `subagents/index.ts`   | 0 (entry) |    4    |  600  | Extension registration entry     |
 | `src/index.ts`          | 0 (entry) | 3+9 tui |  96   | TUI flow orchestration           |
 
 ---
@@ -188,7 +188,7 @@ ant-colony/parser.ts
 | `src/utils/writers.ts`   |  152  |     ✅     | 8 independent writer functions                     |
 | `src/utils/resources.ts` |  19   |     ✅     | Pure function, zero side effects                   |
 
-### ant-colony/ layer (10 modules, ~2,421 lines)
+### subagents/ layer (10 modules, ~2,421 lines)
 
 | Module           | Lines | Assessment | Notes                                                                        |
 | ---------------- | :---: | :--------: | ---------------------------------------------------------------------------- |
@@ -208,7 +208,7 @@ ant-colony/parser.ts
 ## 4. Two-Layer Decoupling Analysis
 
 ```
-src/ layer (19 modules, ~1,732 lines)    ant-colony/ layer (10 modules, ~2,421 lines)
+src/ layer (19 modules, ~1,732 lines)    subagents/ layer (10 modules, ~2,421 lines)
 ┌─────────┐                              ┌──────────────┐
 │ TUI      │ ══ Zero imports ═══════════ │ Multi-Agent  │
 │ Config   │                              │ Swarm System │
@@ -225,7 +225,7 @@ src/ layer (19 modules, ~1,732 lines)    ant-colony/ layer (10 modules, ~2,421 l
 └─────────────────────────────────────────────────────┘
 ```
 
-**Key finding**: src/ and ant-colony/ have **zero direct imports** — fully bridged via the pi Extension API. This is excellent architectural decoupling — both layers can evolve independently. The only coupling point is `install.ts` physically copying extension files to the user directory.
+**Key finding**: src/ and subagents/ have **zero direct imports** — fully bridged via the pi Extension API. This is excellent architectural decoupling — both layers can evolve independently. The only coupling point is `install.ts` physically copying extension files to the user directory.
 
 ---
 

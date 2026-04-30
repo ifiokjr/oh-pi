@@ -89,16 +89,6 @@ Available built-in tools: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`
 | `-h`, `--help`                  | Help                          |
 | `-v`, `--version`               | Version                       |
 
-### Ant Colony Workspace Behavior (Worktree Default)
-
-Ant-colony executions use an **isolated git worktree by default**.
-
-- Default: run colony work in a separate workspace/worktree instead of directly editing your current cwd.
-- Fallback: when a worktree cannot be created (for example, unsupported repo state/environment limitations), colony execution falls back to shared cwd behavior so runs can still proceed.
-- Workspace metadata: colony runs persist/report workspace information so you can see where edits were made.
-- Resume/re-attach: resumed colony runs use saved workspace hints and re-attach to an existing worktree when possible.
-
-For behavior rationale and release intent, see `.changeset/ant-colony-worktree-usage.md`.
 
 ### Common Examples
 
@@ -122,7 +112,6 @@ pnpm verify:completion
 
 What it does:
 
-- Runs a focused Vitest suite at `packages/ant-colony/tests/commands.test.ts`
 - Verifies `/colony-status`, `/colony-stop`, and `/colony-resume` completion wiring
 - Avoids interactive/TUI startup and shell-specific behavior
 

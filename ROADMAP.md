@@ -7,12 +7,12 @@
 ### Primary Positioning
 
 - **oh-pi**: One-click configuration and onboarding portal (install, initialize, theme/extension/skill assembly)
-- **ant-colony**: Optional advanced multi-agent extension (parallel execution of complex tasks)
+- oh-pi packages provide extensions, skills, themes, prompts, subagents, and config tooling.
 
 ### Communication Principles
 
 1. Homepage leads with "30-second setup success"
-2. Then shows "2-minute ant colony value demo"
+2. Then shows the full feature catalog
 3. Architecture and biomimicry details come last
 
 ## 2) Near-Term Milestones

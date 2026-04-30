@@ -14,7 +14,7 @@ This package is intentionally separate from `@ifi/oh-pi` so users can opt into r
 
 - adds `/route` controls for shadow and auto routing
 - persists local routing telemetry
-- exposes delegated routing categories that subagents and ant-colony can read from startup config
+- exposes delegated routing categories that subagents can read from startup config
 - lets you describe provider assignments by category instead of hard-coding Anthropic/OpenAI defaults into agents
 
 ## Config
@@ -75,7 +75,7 @@ In addition to prompt routing, the config can declare delegated categories for s
 }
 ```
 
-Subagents and ant-colony use these categories only when they do not already have an explicit runtime or per-role model override. The delegated selector is runtime-aware: it filters down to currently available models, applies provider/model disable lists, prefers higher-headroom providers when usage data is available, and uses context-fit plus public benchmark metadata to rank candidates.
+Subagents use these categories only when they do not already have an explicit runtime or per-role model override. The delegated selector is runtime-aware: it filters down to currently available models, applies provider/model disable lists, prefers higher-headroom providers when usage data is available, and uses context-fit plus public benchmark metadata to rank candidates.
 
 Use `/route why ...` to inspect a delegated pick for a specific category or role override and see the ranked reasons plus rejected candidates.
 

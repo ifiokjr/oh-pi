@@ -241,7 +241,6 @@ oh-pi repo
 │   ├── extensions
 │   ├── background-tasks
 │   ├── diagnostics
-│   ├── ant-colony
 │   ├── subagents
 │   ├── plan
 │   ├── spec
@@ -279,7 +278,6 @@ Default runtime/content packages installed by `npx @ifi/oh-pi`:
 
 - `@ifi/oh-pi-extensions`
 - `@ifi/pi-background-tasks`
-- `@ifi/oh-pi-ant-colony`
 - `@ifi/pi-diagnostics`
 - `@ifi/pi-extension-subagents`
 - `@ifi/pi-plan`
@@ -348,7 +346,6 @@ Managed local switching covers these packages:
 
 - `@ifi/oh-pi-extensions`
 - `@ifi/pi-background-tasks`
-- `@ifi/oh-pi-ant-colony`
 - `@ifi/pi-diagnostics`
 - `@ifi/pi-extension-subagents`
 - `@ifi/pi-plan`

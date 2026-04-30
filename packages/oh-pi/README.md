@@ -44,7 +44,6 @@ oh-pi repo
 │   ├── extensions
 │   ├── background-tasks
 │   ├── diagnostics
-│   ├── ant-colony
 │   ├── subagents
 │   ├── plan
 │   ├── spec

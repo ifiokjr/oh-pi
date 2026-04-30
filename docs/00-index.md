@@ -106,7 +106,6 @@ oh-pi repo
 │   ├── extensions
 │   ├── background-tasks
 │   ├── diagnostics
-│   ├── ant-colony
 │   ├── subagents
 │   ├── plan
 │   ├── spec
@@ -155,7 +154,6 @@ Suggested path for a new contributor:
 ## Selected design specs and future plans
 
 - `docs/plans/adaptive-routing-mode.md` — main adaptive-routing spec
-- `docs/plans/subagent-and-colony-adaptive-routing.md` — delegated routing for subagents and ant-colony
 - `docs/plans/benchmark-informed-adaptive-routing.md` — benchmark platform and strategy-routing future plan
 
 ## Value for oh-pi
