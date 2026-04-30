@@ -262,6 +262,8 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 			const parallelTemplates = stepTemplates as string[];
 			const concurrency = step.concurrency ?? MAX_CONCURRENCY;
 			const failFast = step.failFast ?? false;
+			const continueOnError = step.continueOnError ?? false;
+			const effectiveFailFast = failFast && !continueOnError;
 
 			// Create subdirectories for parallel outputs
 			const agentNames = step.parallel.map((t) => t.agent);
@@ -287,7 +289,7 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 
 			// Execute parallel tasks
 			const parallelResults = await mapConcurrent(step.parallel, concurrency, async (task, taskIndex) => {
-				if (aborted && failFast) {
+				if (aborted && effectiveFailFast) {
 					// Return a placeholder for skipped tasks
 					return {
 						agent: task.agent,
@@ -375,7 +377,7 @@ export async function executeChain(params: ChainExecutionParams): Promise<ChainE
 					skills: behavior.skills === false ? [] : behavior.skills,
 				});
 
-				if (r.exitCode !== 0 && failFast) {
+				if (r.exitCode !== 0 && effectiveFailFast) {
 					aborted = true;
 				}
 				recordRun(task.agent, cleanTask, r.exitCode, r.progressSummary?.durationMs ?? 0);

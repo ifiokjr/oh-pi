@@ -7,7 +7,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { resolveExternalAgent } from "../external-agents.js";
+import { clearExternalAgentCache, resolveExternalAgent } from "../external-agents.js";
 
 describe("resolveExternalAgent", () => {
 	let tmpDir: string;
@@ -17,6 +17,7 @@ describe("resolveExternalAgent", () => {
 		originalCwd = process.cwd();
 		tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-external-agents-"));
 		process.chdir(tmpDir);
+		clearExternalAgentCache();
 	});
 
 	afterEach(() => {
@@ -227,6 +228,91 @@ describe("resolveExternalAgent", () => {
 			expect(result).toBeDefined();
 			expect(result!.source).toBe("pi-project");
 			expect(result!.config.systemPrompt).toBe("found via walk");
+		});
+	});
+
+	// -------------------------------------------------------------------
+	// Caching
+	// -------------------------------------------------------------------
+
+	describe("caching", () => {
+		it("caches resolved agents", () => {
+			const agentsDir = path.join(tmpDir, ".pi", "agents");
+			fs.mkdirSync(agentsDir, { recursive: true });
+			fs.writeFileSync(path.join(agentsDir, "cached.md"), "cached agent");
+
+			// First call resolves from disk
+			const result1 = resolveExternalAgent("cached", tmpDir);
+			expect(result1).toBeDefined();
+			expect(result1!.config.systemPrompt).toBe("cached agent");
+
+			// Second call should hit cache
+			const result2 = resolveExternalAgent("cached", tmpDir);
+			expect(result2).toBeDefined();
+			expect(result2!.config.systemPrompt).toBe("cached agent");
+
+			// Modify the file
+			fs.writeFileSync(path.join(agentsDir, "cached.md"), "updated agent");
+
+			// Should detect mtime change and re-resolve
+			const result3 = resolveExternalAgent("cached", tmpDir);
+			expect(result3).toBeDefined();
+			expect(result3!.config.systemPrompt).toBe("updated agent");
+		});
+	});
+
+	// -------------------------------------------------------------------
+	// Auto-save
+	// -------------------------------------------------------------------
+
+	describe("auto-save", () => {
+		it("saves discovered external agents to .pi/agents/", () => {
+			const vscodeDir = path.join(tmpDir, ".vscode");
+			fs.mkdirSync(vscodeDir, { recursive: true });
+			fs.writeFileSync(
+				path.join(vscodeDir, "agents.json"),
+				JSON.stringify({
+					agents: [
+						{
+							name: "auto-scout",
+							systemPrompt: "Auto-saved scout.",
+							description: "Auto-discovery",
+						},
+					],
+				}),
+			);
+
+			// Clear cache to ensure fresh resolution
+			clearExternalAgentCache();
+
+			// Resolve triggers auto-save
+			const result = resolveExternalAgent("auto-scout", tmpDir);
+			expect(result).toBeDefined();
+			expect(result!.source).toBe("vscode");
+
+			// .pi/agents/auto-scout.md should now exist
+			const savedPath = path.join(tmpDir, ".pi", "agents", "auto-scout.md");
+			expect(fs.existsSync(savedPath)).toBe(true);
+			const savedContent = fs.readFileSync(savedPath, "utf-8");
+			expect(savedContent).toContain("Auto-saved scout.");
+			expect(savedContent).toContain("autoSavedFrom: vscode");
+		});
+
+		it("does not auto-save pi-project agents", () => {
+			const piDir = path.join(tmpDir, ".pi", "agents");
+			fs.mkdirSync(piDir, { recursive: true });
+			fs.writeFileSync(path.join(piDir, "native.md"), "Native pi agent");
+
+			clearExternalAgentCache();
+
+			const result = resolveExternalAgent("native", tmpDir);
+			expect(result).toBeDefined();
+			expect(result!.source).toBe("pi-project");
+
+			// Should NOT create a double-save
+			const savedPath = path.join(tmpDir, ".pi", "agents", "native.md");
+			const content = fs.readFileSync(savedPath, "utf-8");
+			expect(content).toBe("Native pi agent");
 		});
 	});
 });

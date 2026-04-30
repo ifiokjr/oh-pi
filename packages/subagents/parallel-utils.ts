@@ -23,6 +23,7 @@ export interface ParallelStepGroup {
 	parallel: RunnerSubagentStep[];
 	concurrency?: number;
 	failFast?: boolean;
+	continueOnError?: boolean;
 }
 
 export type RunnerStep = RunnerSubagentStep | ParallelStepGroup;

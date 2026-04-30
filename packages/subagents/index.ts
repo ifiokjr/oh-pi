@@ -45,7 +45,7 @@ import { executeChain } from "./chain-execution.js";
 import { registerSubagentCommands } from "./command-registration.js";
 import { createDynamicAgent } from "./dynamic-agent.js";
 import { runSync } from "./execution.js";
-import { resolveExternalAgent } from "./external-agents.js";
+import { parseStringList, resolveExternalAgent } from "./external-agents.js";
 import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
 import { renderSubagentResult, renderWidget } from "./render.js";
 import { recordRun } from "./run-history.js";
@@ -78,11 +78,65 @@ const STARTUP_CLEANUP_DELAY_MS = 250;
  *
  * Dynamic agents are pushed to the agents array so downstream calls see them.
  */
+/** Build a helpful error message when no agent is found. */
+function buildAgentNotFoundMessage(name: string, agents: AgentConfig[], cwd: string): string {
+	const lines: string[] = [`Agent "${name}" not found.`];
+
+	// Suggest similar agent names (Levenshtein distance ≤ 3)
+	const agentNames = agents.map((a) => a.name);
+	const similar = agentNames.filter((n) => levenshteinDistance(n, name) <= 3);
+	if (similar.length) {
+		lines.push(`Did you mean: ${similar.join(", ")}?`);
+	}
+
+	// Check if external config files exist
+	const hasExternal = [".vscode/agents.json", ".claude/agents/", ".opencode/agents/"].some((dir) => {
+		try {
+			return fs.statSync(path.join(cwd, dir)).isDirectory();
+		} catch {
+			return false;
+		}
+	});
+	if (hasExternal) {
+		lines.push(
+			"External agent config files exist in this workspace. Check for typos or use systemPrompt to create an agent inline.",
+		);
+	}
+
+	lines.push("Tip: Pass systemPrompt to create this agent on-the-fly.");
+
+	return lines.join("\n");
+}
+
+/** Compute Levenshtein distance between two strings. */
+function levenshteinDistance(a: string, b: string): number {
+	const matrix: number[][] = [];
+	for (let i = 0; i <= b.length; i++) {
+		matrix[i] = [i];
+	}
+	for (let j = 0; j <= a.length; j++) {
+		matrix[0][j] = j;
+	}
+	for (let i = 1; i <= b.length; i++) {
+		for (let j = 1; j <= a.length; j++) {
+			matrix[i][j] =
+				b[i - 1] === a[j - 1]
+					? matrix[i - 1][j - 1]
+					: Math.min(matrix[i - 1][j - 1], matrix[i][j - 1], matrix[i - 1][j]) + 1;
+		}
+	}
+	return matrix[b.length][a.length];
+}
+
 function resolveAgentWithFallback(
 	name: string,
 	agents: AgentConfig[],
 	cwd: string,
 	systemPrompt?: string,
+	modelOverride?: string,
+	toolsOverride?: string,
+	skillsOverride?: string,
+	thinkingOverride?: string,
 ): AgentConfig | undefined {
 	// 1. Pre-defined agent
 	const found = agents.find((a) => a.name === name);
@@ -97,7 +151,14 @@ function resolveAgentWithFallback(
 
 	// 3. Inline dynamic creation
 	if (systemPrompt) {
-		const dynamic = createDynamicAgent({ name, systemPrompt });
+		const dynamic = createDynamicAgent({
+			name,
+			systemPrompt,
+			model: modelOverride,
+			tools: toolsOverride ? parseStringList(toolsOverride) : undefined,
+			skills: skillsOverride ? parseStringList(skillsOverride) : undefined,
+			thinking: thinkingOverride,
+		});
 		agents.push(dynamic);
 		return dynamic;
 	}
@@ -319,13 +380,22 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 					if (isParallelStep(step)) {
 						for (const task of step.parallel) {
 							if (
-								!resolveAgentWithFallback(task.agent, agents, ctx.cwd, (task as { systemPrompt?: string }).systemPrompt)
+								!resolveAgentWithFallback(
+									task.agent,
+									agents,
+									ctx.cwd,
+									(task as { systemPrompt?: string }).systemPrompt,
+									undefined,
+									undefined,
+									undefined,
+									undefined,
+								)
 							) {
 								return {
 									content: [
 										{
 											type: "text",
-											text: `Unknown agent: ${task.agent} (step ${i + 1})`,
+											text: `Agent "${task.agent}" not found in step ${i + 1}. Did you mean one of: ${agents.map((a) => a.name).join(", ")}`,
 										},
 									],
 									isError: true,
@@ -334,12 +404,23 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 							}
 						}
 					} else {
-						if (!resolveAgentWithFallback(step.agent, agents, ctx.cwd, (step as SequentialStep).systemPrompt)) {
+						if (
+							!resolveAgentWithFallback(
+								step.agent,
+								agents,
+								ctx.cwd,
+								(step as SequentialStep).systemPrompt,
+								undefined,
+								undefined,
+								undefined,
+								undefined,
+							)
+						) {
 							return {
 								content: [
 									{
 										type: "text",
-										text: `Unknown agent: ${step.agent} (step ${i + 1})`,
+										text: `Agent "${step.agent}" not found in step ${i + 1}. Did you mean one of: ${agents.map((a) => a.name).join(", ")}`,
 									},
 								],
 								isError: true,
@@ -404,7 +485,16 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				}
 
 				if (hasSingle) {
-					const a = resolveAgentWithFallback(params.agent!, agents, ctx.cwd, params.systemPrompt);
+					const a = resolveAgentWithFallback(
+						params.agent!,
+						agents,
+						ctx.cwd,
+						params.systemPrompt,
+						params.modelOverride,
+						params.toolsOverride,
+						params.skillsOverride,
+						params.thinkingOverride,
+					);
 					if (!a) {
 						return {
 							content: [{ type: "text", text: `Unknown: ${params.agent}` }],
@@ -519,10 +609,14 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 						agents,
 						ctx.cwd,
 						(t as { systemPrompt?: string }).systemPrompt,
+						undefined,
+						undefined,
+						undefined,
+						undefined,
 					);
 					if (!config) {
 						return {
-							content: [{ type: "text", text: `Unknown agent: ${t.agent}` }],
+							content: [{ type: "text", text: buildAgentNotFoundMessage(t.agent, agents, ctx.cwd) }],
 							isError: true,
 							details: { mode: "parallel" as const, results: [] },
 						};
@@ -742,10 +836,19 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 			if (hasSingle) {
 				// Look up agent config for output handling
-				const agentConfig = resolveAgentWithFallback(params.agent!, agents, ctx.cwd, params.systemPrompt);
+				const agentConfig = resolveAgentWithFallback(
+					params.agent!,
+					agents,
+					ctx.cwd,
+					params.systemPrompt,
+					params.modelOverride,
+					params.toolsOverride,
+					params.skillsOverride,
+					params.thinkingOverride,
+				);
 				if (!agentConfig) {
 					return {
-						content: [{ type: "text", text: `Unknown agent: ${params.agent}` }],
+						content: [{ type: "text", text: buildAgentNotFoundMessage(params.agent!, agents, ctx.cwd) }],
 						isError: true,
 						details: { mode: "single", results: [] },
 					};

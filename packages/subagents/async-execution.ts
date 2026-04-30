@@ -192,6 +192,7 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 			return {
 				concurrency: s.concurrency,
 				failFast: s.failFast,
+				continueOnError: s.continueOnError,
 				parallel: s.parallel.map((t) =>
 					buildSeqStep({
 						agent: t.agent,

@@ -558,6 +558,8 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 			const group = step;
 			const concurrency = group.concurrency ?? MAX_PARALLEL_CONCURRENCY;
 			const failFast = group.failFast ?? false;
+			const continueOnError = group.continueOnError ?? false;
+			const effectiveFailFast = failFast && !continueOnError;
 			const groupStartFlatIndex = flatIndex;
 			let aborted = false;
 
@@ -586,7 +588,7 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 			);
 
 			const parallelResults = await mapConcurrent(group.parallel, concurrency, async (task, taskIdx) => {
-				if (aborted && failFast) {
+				if (aborted && effectiveFailFast) {
 					return {
 						agent: task.agent,
 						exitCode: -1 as number | null,
@@ -650,7 +652,7 @@ async function runSubagent(config: SubagentRunConfig): Promise<void> {
 					}),
 				);
 
-				if (singleResult.exitCode !== 0 && failFast) {
+				if (singleResult.exitCode !== 0 && effectiveFailFast) {
 					aborted = true;
 				}
 				return { ...singleResult, skipped: false };

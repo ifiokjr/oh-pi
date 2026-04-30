@@ -19,6 +19,104 @@ import type { DynamicAgentSpec } from "./dynamic-agent.js";
 
 import { createDynamicAgent } from "./dynamic-agent.js";
 
+// ---------------------------------------------------------------------------
+// External agent resolution cache (bounded LRU)
+// ---------------------------------------------------------------------------
+
+interface CacheEntry {
+	result: ExternalAgentResult | null;
+	mtime: number;
+	filePath: string;
+}
+
+const MAX_CACHE_SIZE = 100;
+const resolutionCache = new Map<string, CacheEntry>();
+const autoSavedAgents = new Set<string>(); // key: name:cwd
+
+function cacheKey(name: string, cwd: string): string {
+	return `${name}:${path.resolve(cwd)}`;
+}
+
+function isCacheValid(entry: CacheEntry): boolean {
+	try {
+		const stats = fs.statSync(entry.filePath);
+		return stats.mtimeMs === entry.mtime;
+	} catch {
+		return false;
+	}
+}
+
+function getCachedResult(name: string, cwd: string): ExternalAgentResult | null | undefined {
+	const key = cacheKey(name, cwd);
+	const entry = resolutionCache.get(key);
+	if (!entry) return undefined;
+	if (!isCacheValid(entry)) {
+		resolutionCache.delete(key);
+		return undefined;
+	}
+	return entry.result;
+}
+
+function setCachedResult(name: string, cwd: string, result: ExternalAgentResult | null, filePath: string) {
+	const key = cacheKey(name, cwd);
+	let mtime = 0;
+	try {
+		mtime = fs.statSync(filePath).mtimeMs;
+	} catch {}
+
+	// Evict oldest if at capacity
+	if (resolutionCache.size >= MAX_CACHE_SIZE && !resolutionCache.has(key)) {
+		const firstKey = resolutionCache.keys().next().value;
+		if (firstKey !== undefined) resolutionCache.delete(firstKey);
+	}
+
+	resolutionCache.set(key, { result, mtime, filePath });
+}
+
+/**
+ * Clear the external agent resolution cache.
+ * Useful for testing or when config files change externally.
+ */
+export function clearExternalAgentCache(): void {
+	resolutionCache.clear();
+	autoSavedAgents.clear();
+}
+
+// ---------------------------------------------------------------------------
+// Auto-save discovered external agents to .pi/agents/
+// ---------------------------------------------------------------------------
+
+function maybeAutoSaveAgent(name: string, cwd: string, result: ExternalAgentResult): void {
+	if (result.source === "pi-project") return; // Already in pi project
+
+	const key = `${name}:${path.resolve(cwd)}`;
+	if (autoSavedAgents.has(key)) return;
+	autoSavedAgents.add(key);
+
+	try {
+		const agentsDir = path.join(cwd, ".pi", "agents");
+		fs.mkdirSync(agentsDir, { recursive: true });
+
+		const config = result.config;
+		const lines: string[] = [];
+		lines.push("---");
+		if (config.description) lines.push(`description: ${config.description}`);
+		if (config.tools?.length) lines.push(`tools: [${config.tools.join(", ")}]`);
+		if (config.skills?.length) lines.push(`skills: [${config.skills.join(", ")}]`);
+		if (config.model) lines.push(`model: ${config.model}`);
+		if (config.thinking) lines.push(`thinking: ${config.thinking}`);
+		lines.push(`autoSavedFrom: ${result.source}`);
+		lines.push("---");
+		lines.push("");
+		lines.push(config.systemPrompt || "");
+
+		const filePath = path.join(agentsDir, `${name}.md`);
+		fs.writeFileSync(filePath, lines.join("\n"), "utf-8");
+	} catch {
+		// Best-effort auto-save; ignore failures
+	}
+}
+
 /**
  * Supported external agent sources.
  */
@@ -188,7 +286,7 @@ function parseSimpleFrontmatter(raw: string): Record<string, string> {
 }
 
 /** Parse a string like "[read, bash, grep]" or "read, bash, grep" into an array. */
-function parseStringList(raw: string): string[] {
+export function parseStringList(raw: string): string[] {
 	const stripped = raw.replace(/^\[|\]$/g, "").trim();
 	if (!stripped) return [];
 	return stripped
@@ -232,33 +330,63 @@ function resolveMarkdownDirAgent(
  * Returns undefined if no external definition is found.
  */
 export function resolveExternalAgent(name: string, cwd: string): ExternalAgentResult | undefined {
+	// Check cache first
+	const cached = getCachedResult(name, cwd);
+	if (cached !== undefined) {
+		if (cached) maybeAutoSaveAgent(name, cwd, cached);
+		return cached ?? undefined;
+	}
+
+	let filePathForCache = "";
+
 	// 1. .pi/agents/<name>.md
 	for (const dir of searchUp(cwd, ".pi")) {
 		const agentsDir = path.join(dir, ".pi", "agents");
 		const result = resolveMarkdownDirAgent(name, agentsDir, "pi-project");
-		if (result) return result;
+		if (result) {
+			setCachedResult(name, cwd, result, result.filePath);
+			return result;
+		}
+		filePathForCache = path.join(agentsDir, `${name}.md`);
 	}
 
 	// 2. .vscode/agents.json
 	for (const dir of searchUp(cwd, ".vscode")) {
 		const result = resolveVSCodeAgent(name, dir);
-		if (result) return result;
+		if (result) {
+			setCachedResult(name, cwd, result, result.filePath);
+			maybeAutoSaveAgent(name, cwd, result);
+			return result;
+		}
+		filePathForCache = path.join(dir, ".vscode", "agents.json");
 	}
 
 	// 3. .claude/agents/<name>.md
 	for (const dir of searchUp(cwd, ".claude")) {
 		const agentsDir = path.join(dir, ".claude", "agents");
 		const result = resolveMarkdownDirAgent(name, agentsDir, "claude-code");
-		if (result) return result;
+		if (result) {
+			setCachedResult(name, cwd, result, result.filePath);
+			maybeAutoSaveAgent(name, cwd, result);
+			return result;
+		}
+		filePathForCache = path.join(agentsDir, `${name}.md`);
 	}
 
 	// 4. .opencode/agents/<name>.md
 	for (const dir of searchUp(cwd, ".opencode")) {
 		const agentsDir = path.join(dir, ".opencode", "agents");
 		const result = resolveMarkdownDirAgent(name, agentsDir, "open-code");
-		if (result) return result;
+		if (result) {
+			setCachedResult(name, cwd, result, result.filePath);
+			maybeAutoSaveAgent(name, cwd, result);
+			return result;
+		}
+		filePathForCache = path.join(agentsDir, `${name}.md`);
 	}
 
+	// Cache miss
+	setCachedResult(name, cwd, null, filePathForCache || path.join(cwd, ".vscode", "agents.json"));
 	return undefined;
 }
 

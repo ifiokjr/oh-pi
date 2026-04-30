@@ -66,6 +66,7 @@ export interface ParallelStep {
 	parallel: ParallelTaskItem[];
 	concurrency?: number;
 	failFast?: boolean;
+	continueOnError?: boolean;
 }
 
 /** Union type for chain steps */
