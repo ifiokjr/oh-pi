@@ -22,7 +22,7 @@ import * as path from "node:path";
 import type { ManagerResult } from "./agent-manager.js";
 import type { AgentConfig, AgentScope } from "./agents.js";
 import type { ChainClarifyResult, ModelInfo } from "./chain-clarify.js";
-import type { ChainStep, SequentialStep } from "./settings.js";
+import type { ChainStep } from "./settings.js";
 import type {
 	AgentProgress,
 	ArtifactConfig,
@@ -43,13 +43,15 @@ import { ensureAccessibleDir, expandTildePath, getSubagentSessionRoot, loadSubag
 import { ChainClarifyComponent } from "./chain-clarify.js";
 import { executeChain } from "./chain-execution.js";
 import { registerSubagentCommands } from "./command-registration.js";
+import { createDynamicAgent } from "./dynamic-agent.js";
 import { runSync } from "./execution.js";
+import { resolveExternalAgent } from "./external-agents.js";
 import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
 import { renderSubagentResult, renderWidget } from "./render.js";
 import { recordRun } from "./run-history.js";
 import { createSubagentRuntimeMonitor } from "./runtime-monitor.js";
 import { StatusParams, SubagentParams } from "./schemas.js";
-import { cleanupOldChainDirs, getStepAgents, isParallelStep, resolveStepBehavior } from "./settings.js";
+import { cleanupOldChainDirs, isParallelStep, resolveStepBehavior } from "./settings.js";
 import { finalizeSingleOutput, injectSingleOutputInstruction, resolveSingleOutputPath } from "./single-output.js";
 import { discoverAvailableSkills, normalizeSkillInput } from "./skills.js";
 import {
@@ -66,7 +68,42 @@ import { findByPrefix, getFinalOutput, mapConcurrent, readStatus } from "./utils
 
 const STARTUP_CLEANUP_DELAY_MS = 250;
 
-// ExtensionConfig is now imported from ./types.js
+/**
+ * Resolve an agent by name with fallback to external configs and inline creation.
+ *
+ * Search order:
+ * 1. Pre-defined agents (from .md files or builtins)
+ * 2. External agent configs (.vscode/agents.json, .claude/agents/, .opencode/agents/)
+ * 3. Inline dynamic creation via systemPrompt
+ *
+ * Dynamic agents are pushed to the agents array so downstream calls see them.
+ */
+function resolveAgentWithFallback(
+	name: string,
+	agents: AgentConfig[],
+	cwd: string,
+	systemPrompt?: string,
+): AgentConfig | undefined {
+	// 1. Pre-defined agent
+	const found = agents.find((a) => a.name === name);
+	if (found) return found;
+
+	// 2. External agent config
+	const external = resolveExternalAgent(name, cwd);
+	if (external) {
+		agents.push(external.config);
+		return external.config;
+	}
+
+	// 3. Inline dynamic creation
+	if (systemPrompt) {
+		const dynamic = createDynamicAgent({ name, systemPrompt });
+		agents.push(dynamic);
+		return dynamic;
+	}
+
+	return undefined;
+}
 
 export default function registerSubagentExtension(pi: ExtensionAPI): void {
 	ensureAccessibleDir(RESULTS_DIR);
@@ -276,17 +313,33 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 						details: { mode: "chain" as const, results: [] },
 					};
 				}
-				// Validate all agents exist
+				// Validate all agents exist (with external / inline fallback)
 				for (let i = 0; i < params.chain.length; i++) {
 					const step = params.chain[i] as ChainStep;
-					const stepAgents = getStepAgents(step);
-					for (const agentName of stepAgents) {
-						if (!agents.find((a) => a.name === agentName)) {
+					if (isParallelStep(step)) {
+						for (const task of step.parallel) {
+							if (
+								!resolveAgentWithFallback(task.agent, agents, ctx.cwd, (task as { systemPrompt?: string }).systemPrompt)
+							) {
+								return {
+									content: [
+										{
+											type: "text",
+											text: `Unknown agent: ${task.agent} (step ${i + 1})`,
+										},
+									],
+									isError: true,
+									details: { mode: "chain" as const, results: [] },
+								};
+							}
+						}
+					} else {
+						if (!resolveAgentWithFallback(step.agent, agents, ctx.cwd, (step as SequentialStep).systemPrompt)) {
 							return {
 								content: [
 									{
 										type: "text",
-										text: `Unknown agent: ${agentName} (step ${i + 1})`,
+										text: `Unknown agent: ${step.agent} (step ${i + 1})`,
 									},
 								],
 								isError: true,
@@ -351,7 +404,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				}
 
 				if (hasSingle) {
-					const a = agents.find((x) => x.name === params.agent);
+					const a = resolveAgentWithFallback(params.agent!, agents, ctx.cwd, params.systemPrompt);
 					if (!a) {
 						return {
 							content: [{ type: "text", text: `Unknown: ${params.agent}` }],
@@ -461,7 +514,12 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				// Validate all agents exist
 				const agentConfigs: AgentConfig[] = [];
 				for (const t of params.tasks) {
-					const config = agents.find((a) => a.name === t.agent);
+					const config = resolveAgentWithFallback(
+						t.agent,
+						agents,
+						ctx.cwd,
+						(t as { systemPrompt?: string }).systemPrompt,
+					);
 					if (!config) {
 						return {
 							content: [{ type: "text", text: `Unknown agent: ${t.agent}` }],
@@ -684,7 +742,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 
 			if (hasSingle) {
 				// Look up agent config for output handling
-				const agentConfig = agents.find((a) => a.name === params.agent);
+				const agentConfig = resolveAgentWithFallback(params.agent!, agents, ctx.cwd, params.systemPrompt);
 				if (!agentConfig) {
 					return {
 						content: [{ type: "text", text: `Unknown agent: ${params.agent}` }],

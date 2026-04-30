@@ -20,6 +20,11 @@ export const TaskItem = Type.Object({
 	),
 	skill: Type.Optional(SkillOverride),
 	task: Type.String(),
+	systemPrompt: Type.Optional(
+		Type.String({
+			description: "System prompt for creating this agent on-the-fly if 'agent' name doesn't match a pre-defined agent",
+		}),
+	),
 });
 
 // Sequential chain step (single agent)
@@ -45,6 +50,11 @@ export const SequentialStepSchema = Type.Object({
 				"Task template with variables: {task}=original request, {previous}=prior step's text response, {chain_dir}=shared folder. Required for first step, defaults to '{previous}' for subsequent steps.",
 		}),
 	),
+	systemPrompt: Type.Optional(
+		Type.String({
+			description: "System prompt for creating this agent on-the-fly if 'agent' name doesn't match a pre-defined agent",
+		}),
+	),
 });
 
 // Parallel task item (within a parallel step)
@@ -67,6 +77,11 @@ export const ParallelTaskSchema = Type.Object({
 	task: Type.Optional(
 		Type.String({
 			description: "Task template with {task}, {previous}, {chain_dir} variables. Defaults to {previous}.",
+		}),
+	),
+	systemPrompt: Type.Optional(
+		Type.String({
+			description: "System prompt for creating this agent on-the-fly if 'agent' name doesn't match a pre-defined agent",
 		}),
 	),
 });
@@ -101,6 +116,12 @@ export const SubagentParams = Type.Object({
 		}),
 	),
 	task: Type.Optional(Type.String({ description: "Task (SINGLE mode)" })),
+	systemPrompt: Type.Optional(
+		Type.String({
+			description:
+				"System prompt for creating agent on-the-fly when the named agent doesn't exist. Use this instead of pre-defining agents. Supports {cwd} variable for current working directory.",
+		}),
+	),
 	// Management action (when present, tool operates in management mode)
 	action: Type.Optional(
 		Type.String({
