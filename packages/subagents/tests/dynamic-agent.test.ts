@@ -352,22 +352,49 @@ describe("runDynamicAgent", () => {
 
 	it("creates a worktree without runId (defaults runId)", async () => {
 		findAvailableModel.mockReturnValue("anthropic/claude-sonnet-4");
-		createOwnerMetadata.mockReturnValue({ instanceId: "owner-no-run", hostname: "test", pid: 1234, createdFromCwd: "/workspace", sessionFile: null, sessionId: null, sessionName: null });
-		createManagedWorktree.mockReturnValue({ worktreePath: "/wt/no-run", branch: "no-run", createdBranch: true, metadata: { id: "wt-nr", repoRoot: "/repo", worktreePath: "/wt/no-run", branch: "no-run", purpose: "test", createdAt: "2024", lastSeenAt: null, owner: { instanceId: "", hostname: "", pid: 0, createdFromCwd: "", sessionFile: null, sessionId: null, sessionName: null }, createdFromBranch: null, createdFromRef: "HEAD" } });
+		createOwnerMetadata.mockReturnValue({
+			instanceId: "owner-no-run",
+			hostname: "test",
+			pid: 1234,
+			createdFromCwd: "/workspace",
+			sessionFile: null,
+			sessionId: null,
+			sessionName: null,
+		});
+		createManagedWorktree.mockReturnValue({
+			worktreePath: "/wt/no-run",
+			branch: "no-run",
+			createdBranch: true,
+			metadata: {
+				id: "wt-nr",
+				repoRoot: "/repo",
+				worktreePath: "/wt/no-run",
+				branch: "no-run",
+				purpose: "test",
+				createdAt: "2024",
+				lastSeenAt: null,
+				owner: {
+					instanceId: "",
+					hostname: "",
+					pid: 0,
+					createdFromCwd: "",
+					sessionFile: null,
+					sessionId: null,
+					sessionName: null,
+				},
+				createdFromBranch: null,
+				createdFromRef: "HEAD",
+			},
+		});
 		runSync.mockResolvedValue({
 			usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, cost: 0 },
 			exitCode: 0,
 		});
 
 		// Omit runId so options.runId ?? undefined is hit
-		const result = await runDynamicAgent(
-			"/workspace",
-			{ systemPrompt: "test" },
-			"task",
-			{
-				worktree: { branch: "no-run", purpose: "no runId test" },
-			},
-		);
+		const result = await runDynamicAgent("/workspace", { systemPrompt: "test" }, "task", {
+			worktree: { branch: "no-run", purpose: "no runId test" },
+		});
 
 		expect(createOwnerMetadata).toHaveBeenCalledOnce();
 		expect(result.worktreePath).toBe("/wt/no-run");
