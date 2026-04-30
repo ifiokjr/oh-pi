@@ -90,6 +90,11 @@ export const ParallelTaskSchema = Type.Object({
 export const ParallelStepSchema = Type.Object({
 	concurrency: Type.Optional(Type.Number({ description: "Max concurrent tasks (default: 4)" })),
 	failFast: Type.Optional(Type.Boolean({ description: "Stop on first failure (default: false)" })),
+	continueOnError: Type.Optional(
+		Type.Boolean({
+			description: "Collect partial results when individual tasks fail (default: false, overrides failFast when true)",
+		}),
+	),
 	parallel: Type.Array(ParallelTaskSchema, {
 		minItems: 1,
 		description: "Tasks to run in parallel",
@@ -120,6 +125,26 @@ export const SubagentParams = Type.Object({
 		Type.String({
 			description:
 				"System prompt for creating agent on-the-fly when the named agent doesn't exist. Use this instead of pre-defining agents. Supports {cwd} variable for current working directory.",
+		}),
+	),
+	modelOverride: Type.Optional(
+		Type.String({
+			description: "Model override for the dynamically created agent (e.g. 'anthropic/claude-sonnet-4')",
+		}),
+	),
+	toolsOverride: Type.Optional(
+		Type.String({
+			description: "Comma-separated tool names to enable for the dynamically created agent",
+		}),
+	),
+	skillsOverride: Type.Optional(
+		Type.String({
+			description: "Comma-separated skill names to inject for the dynamically created agent",
+		}),
+	),
+	thinkingOverride: Type.Optional(
+		Type.String({
+			description: "Thinking level suffix for the dynamically created agent (e.g. 'medium', 'high')",
 		}),
 	),
 	// Management action (when present, tool operates in management mode)

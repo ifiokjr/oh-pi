@@ -422,7 +422,9 @@ describe("subagent entrypoint", () => {
 			ctx,
 		);
 		expect(unknownAgent.isError).toBe(true);
-		expect(unknownAgent.content[0]?.text).toBe("Unknown agent: unknown (step 1)");
+		expect(unknownAgent.content[0]?.text).toBe(
+			'Agent "unknown" not found in step 1. Did you mean one of: scout, planner, reviewer',
+		);
 
 		const emptyParallel = await tool.execute(
 			"c4",
@@ -510,7 +512,9 @@ describe("subagent entrypoint", () => {
 			ctx,
 		);
 		expect(unknownAgent.isError).toBe(true);
-		expect(unknownAgent.content[0]?.text).toBe("Unknown agent: unknown");
+		expect(unknownAgent.content[0]?.text).toBe(
+			'Agent "unknown" not found.\nTip: Pass systemPrompt to create this agent on-the-fly.',
+		);
 
 		ctx.ui.custom = vi.fn().mockResolvedValue({
 			confirmed: true,
@@ -560,7 +564,9 @@ describe("subagent entrypoint", () => {
 
 		const unknownAgent = await tool.execute("s0", { agent: "unknown", task: "inspect" }, undefined, undefined, ctx);
 		expect(unknownAgent.isError).toBe(true);
-		expect(unknownAgent.content[0]?.text).toBe("Unknown agent: unknown");
+		expect(unknownAgent.content[0]?.text).toBe(
+			'Agent "unknown" not found.\nTip: Pass systemPrompt to create this agent on-the-fly.',
+		);
 
 		ctx.ui.custom = vi.fn().mockResolvedValueOnce(undefined);
 		const cancelled = await tool.execute(
