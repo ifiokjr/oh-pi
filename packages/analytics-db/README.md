@@ -13,17 +13,17 @@ schema.
 
 ## Schema overview
 
-| Table             | Purpose                                   |
-| ----------------- | ----------------------------------------- |
+| Table             | Purpose                                              |
+| ----------------- | ---------------------------------------------------- |
 | `sessions`        | One row per pi session (start/end/duration/codebase) |
-| `turns`           | One row per turn (model/provider/tokens/cost)       |
+| `turns`           | One row per turn (model/provider/tokens/cost)        |
 | `codebases`       | Normalized codebase lookup (path hashed for privacy) |
-| `models`          | Normalized model catalog                            |
-| `providers`       | Normalized provider catalog                         |
-| `session_hourly`  | Pre-aggregated hourly stats                         |
-| `session_daily`   | Pre-aggregated daily stats                          |
-| `session_weekly`  | Pre-aggregated weekly stats                         |
-| `session_monthly` | Pre-aggregated monthly stats                        |
+| `models`          | Normalized model catalog                             |
+| `providers`       | Normalized provider catalog                          |
+| `session_hourly`  | Pre-aggregated hourly stats                          |
+| `session_daily`   | Pre-aggregated daily stats                           |
+| `session_weekly`  | Pre-aggregated weekly stats                          |
+| `session_monthly` | Pre-aggregated monthly stats                         |
 
 ## Exports
 
@@ -50,20 +50,20 @@ await runMigrations();
 
 // Create a session
 const sessionId = await createSession({
-  sessionId: `sess-${Date.now()}`,
-  codebaseHash: "abc123def456",
-  codebasePath: "/home/user/projects/my-app",
+	sessionId: `sess-${Date.now()}`,
+	codebaseHash: "abc123def456",
+	codebasePath: "/home/user/projects/my-app",
 });
 
 // Record a turn
 await recordTurn({
-  turnId: `turn-${Date.now()}`,
-  sessionId,
-  modelId: "claude-sonnet-4",
-  providerId: "anthropic",
-  inputTokens: 4500,
-  outputTokens: 1200,
-  costUsd: 0.042,
+	turnId: `turn-${Date.now()}`,
+	sessionId,
+	modelId: "claude-sonnet-4",
+	providerId: "anthropic",
+	inputTokens: 4500,
+	outputTokens: 1200,
+	costUsd: 0.042,
 });
 
 // End a session

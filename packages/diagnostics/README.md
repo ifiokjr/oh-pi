@@ -5,6 +5,7 @@
 ## Why use this?
 
 When pi seems slow, you want to know where the time went:
+
 - "Was the model slow to respond, or did the tools take forever?"
 - "Did one turn dominate the total time?"
 - "Was the 5-minute wait because of 5× 1-minute turns?"

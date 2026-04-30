@@ -18,12 +18,12 @@ your AI spend and usage patterns.
 
 Each time you interact with pi, this extension silently records:
 
-| Data point         | Description                                   |
-| ------------------ | --------------------------------------------- |
-| Session            | Start time, end time, duration, project path  |
-| Turn               | Model, provider, input/output tokens, cost    |
-| Codebase           | Working directory (hashed for privacy)        |
-| Model / Provider   | Auto-inferred from model ID                   |
+| Data point       | Description                                  |
+| ---------------- | -------------------------------------------- |
+| Session          | Start time, end time, duration, project path |
+| Turn             | Model, provider, input/output tokens, cost   |
+| Codebase         | Working directory (hashed for privacy)       |
+| Model / Provider | Auto-inferred from model ID                  |
 
 All data lives in a SQLite database at `~/.pi/agent/analytics.db`.
 
@@ -54,6 +54,7 @@ Shows session counts, total tokens, total cost, and recent activity.
 ```
 
 The dashboard provides charts and tables for:
+
 - **Overview** — total spend, sessions, tokens by period
 - **Models** — cost and token breakdown by model
 - **Codebases** — which projects drive the most usage

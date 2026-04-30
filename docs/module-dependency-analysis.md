@@ -159,16 +159,16 @@ subagents/parser.ts
 
 ## 2. Fan-In/Fan-Out Analysis
 
-| Module                  |  Fan-In   | Fan-Out | Lines | Role                             |
-| ----------------------- | :-------: | :-----: | :---: | -------------------------------- |
+| Module                 |  Fan-In   | Fan-Out | Lines | Role                             |
+| ---------------------- | :-------: | :-----: | :---: | -------------------------------- |
 | `subagents/types.ts`   |   **8**   |    0    |  144  | Pure leaf, foundational types    |
-| `src/types.ts`          |   **5**   |    0    |  69   | Pure leaf, interface definitions |
-| `src/registry.ts`       |   **3**   |    1    |  77   | Runtime constant registry        |
+| `src/types.ts`         |   **5**   |    0    |  69   | Pure leaf, interface definitions |
+| `src/registry.ts`      |   **3**   |    1    |  77   | Runtime constant registry        |
 | `subagents/nest.ts`    |     3     |    1    |  298  | Shared state management          |
 | `subagents/queen.ts`   |     1     |  **5**  |  640  | Highest fan-out, scheduling core |
 | `subagents/spawner.ts` |     2     |  **4**  |  309  | Agent lifecycle management       |
 | `subagents/index.ts`   | 0 (entry) |    4    |  600  | Extension registration entry     |
-| `src/index.ts`          | 0 (entry) | 3+9 tui |  96   | TUI flow orchestration           |
+| `src/index.ts`         | 0 (entry) | 3+9 tui |  96   | TUI flow orchestration           |
 
 ---
 

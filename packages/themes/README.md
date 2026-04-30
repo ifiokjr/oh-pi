@@ -10,14 +10,14 @@ No configuration needed — just pick a theme and pi applies it instantly.
 
 ## Themes
 
-| Theme | Vibe | Dominant colors |
-| ----- | ---- | --------------- |
-| `oh-p-dark` | First-party dark | Cyan accents, purple highlights |
-| `cyberpunk` | Neon terminal | Magenta, electric cyan, dark background |
-| `nord` | Arctic calm | Cool blues, muted grays |
-| `catppuccin-mocha` | Cozy pastel | Lavender, peach, teal on dark |
-| `tokyo-night` | Twilight city | Blue, purple, soft contrast |
-| `gruvbox-dark` | Warm retro | Earthy reds, warm yellows, beige |
+| Theme              | Vibe             | Dominant colors                         |
+| ------------------ | ---------------- | --------------------------------------- |
+| `oh-p-dark`        | First-party dark | Cyan accents, purple highlights         |
+| `cyberpunk`        | Neon terminal    | Magenta, electric cyan, dark background |
+| `nord`             | Arctic calm      | Cool blues, muted grays                 |
+| `catppuccin-mocha` | Cozy pastel      | Lavender, peach, teal on dark           |
+| `tokyo-night`      | Twilight city    | Blue, purple, soft contrast             |
+| `gruvbox-dark`     | Warm retro       | Earthy reds, warm yellows, beige        |
 
 ## Installation
 
@@ -44,7 +44,7 @@ Or configure in `~/.pi/agent/settings.json`:
 
 ```jsonc
 {
-  "theme": "cyberpunk"
+	"theme": "cyberpunk",
 }
 ```
 

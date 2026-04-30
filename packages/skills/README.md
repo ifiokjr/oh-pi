@@ -12,40 +12,40 @@ Skills activate **automatically** — when you say "search the web for X", pi lo
 
 ### 🔧 Tool Skills
 
-| Skill | What it does |
-| ----- | ------------ |
-| `context7` | Query up-to-date library docs via Context7 API |
+| Skill        | What it does                                        |
+| ------------ | --------------------------------------------------- |
+| `context7`   | Query up-to-date library docs via Context7 API      |
 | `web-search` | Search the web via DuckDuckGo (free, no key needed) |
-| `web-fetch` | Extract readable text content from a web page |
+| `web-fetch`  | Extract readable text content from a web page       |
 
 ### 🎨 UI Design System Skills
 
-| Skill | Visual style |
-| ----- | ------------ |
-| `liquid-glass` | Apple WWDC 2025 translucent glass |
-| `glassmorphism` | Frosted glass blur + transparency |
-| `claymorphism` | Soft 3D clay-like surfaces |
-| `neubrutalism` | Bold borders, offset solid shadows |
+| Skill             | Visual style                             |
+| ----------------- | ---------------------------------------- |
+| `liquid-glass`    | Apple WWDC 2025 translucent glass        |
+| `glassmorphism`   | Frosted glass blur + transparency        |
+| `claymorphism`    | Soft 3D clay-like surfaces               |
+| `neubrutalism`    | Bold borders, offset solid shadows       |
 | `frontend-design` | General production-grade frontend design |
 
 ### 🔄 Workflow Skills
 
-| Skill | What it does |
-| ----- | ------------ |
-| `btw` (/qq) | Run side conversations without interrupting main work |
-| `debug-helper` | Analyze errors, logs, crashes, and performance |
-| `git-workflow` | Branching, commits, PRs, and merge/conflict workflows |
-| `quick-setup` | Detect project type and generate `.pi/` config |
-| `grill-me` | Stress-test a plan through adversarial questioning |
-| `request-refactor-plan` | Interview you, create tiny-commit refactor plan, file as issue |
-| `improve-codebase-architecture` | Find architecture improvements that deepen modules |
-| `write-a-skill` | Author new pi-compatible skills correctly |
+| Skill                           | What it does                                                   |
+| ------------------------------- | -------------------------------------------------------------- |
+| `btw` (/qq)                     | Run side conversations without interrupting main work          |
+| `debug-helper`                  | Analyze errors, logs, crashes, and performance                 |
+| `git-workflow`                  | Branching, commits, PRs, and merge/conflict workflows          |
+| `quick-setup`                   | Detect project type and generate `.pi/` config                 |
+| `grill-me`                      | Stress-test a plan through adversarial questioning             |
+| `request-refactor-plan`         | Interview you, create tiny-commit refactor plan, file as issue |
+| `improve-codebase-architecture` | Find architecture improvements that deepen modules             |
+| `write-a-skill`                 | Author new pi-compatible skills correctly                      |
 
 ### 🚀 Bootstrap Skills
 
-| Skill | What it does |
-| ----- | ------------ |
-| `flutter-serverpod-mvp` | Scaffold full-stack Flutter + Serverpod MVPs |
+| Skill                      | What it does                                      |
+| -------------------------- | ------------------------------------------------- |
+| `flutter-serverpod-mvp`    | Scaffold full-stack Flutter + Serverpod MVPs      |
 | `rust-workspace-bootstrap` | Scaffold Rust workspace with knope, devenv, CI/CD |
 
 ## Installation

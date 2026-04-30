@@ -8,7 +8,7 @@
 2. **Storage ceiling**: Pheromones depend on local JSONL — bottleneck for long sessions and multi-instance scenarios.
 3. **SDK coupling risk**: `spawner` has deep direct dependency on the pi SDK; upstream breaking changes are high risk.
 4. **Missing "wow" moment**: Docs are thorough, but first-time UX lacks a strong demo closure.
-6. **Scattered growth**: Multi-language rollout started before community focus — feedback density is too low.
+5. **Scattered growth**: Multi-language rollout started before community focus — feedback density is too low.
 
 ## 1. Execution Principles
 

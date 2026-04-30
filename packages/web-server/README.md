@@ -32,11 +32,11 @@ pnpm add @ifi/pi-web-server
 
 ## Related packages
 
-| Package | Role |
-| ------- | ---- |
-| `@ifi/pi-web-client` | Client library that connects to this server |
-| `@ifi/pi-web-remote` | Pi extension that wires this server into pi's `/remote` command |
-| `@ifi/pi-remote-tailscale` | Tailscale tunnel integration for secure remote access |
+| Package                    | Role                                                            |
+| -------------------------- | --------------------------------------------------------------- |
+| `@ifi/pi-web-client`       | Client library that connects to this server                     |
+| `@ifi/pi-web-remote`       | Pi extension that wires this server into pi's `/remote` command |
+| `@ifi/pi-remote-tailscale` | Tailscale tunnel integration for secure remote access           |
 
 ## Notes
 

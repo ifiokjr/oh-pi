@@ -8,12 +8,12 @@ An `AGENTS.md` file tells pi how to behave in your project. It defines coding co
 
 ## Templates
 
-| Template | Focus | Best for |
-| -------- | ----- | -------- |
-| `general-developer` | Safe defaults | Everyday development, any project |
-| `fullstack-developer` | Architecture + quality | Full-stack apps with frontend + backend |
+| Template              | Focus                     | Best for                                   |
+| --------------------- | ------------------------- | ------------------------------------------ |
+| `general-developer`   | Safe defaults             | Everyday development, any project          |
+| `fullstack-developer` | Architecture + quality    | Full-stack apps with frontend + backend    |
 | `security-researcher` | Security testing workflow | Security audits and vulnerability research |
-| `data-ai-engineer` | Data + ML pipelines | Data engineering, AI/ML projects |
+| `data-ai-engineer`    | Data + ML pipelines       | Data engineering, AI/ML projects           |
 
 ## Installation
 

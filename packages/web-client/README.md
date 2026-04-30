@@ -26,17 +26,18 @@ pnpm add @ifi/pi-web-client
 ## Use case
 
 Build your own:
+
 - Custom browser dashboard for remote pi sessions
 - Mobile app to follow pi sessions on your phone
 - Internal tooling that embeds pi session views
 
 ## Related packages
 
-| Package | Role |
-| ------- | ---- |
-| `@ifi/pi-web-server` | The server this client connects to |
-| `@ifi/pi-web-remote` | Pi extension that starts the remote server |
-| `@ifi/pi-remote-tailscale` | Secure remote sharing via Tailscale |
+| Package                    | Role                                       |
+| -------------------------- | ------------------------------------------ |
+| `@ifi/pi-web-server`       | The server this client connects to         |
+| `@ifi/pi-web-remote`       | Pi extension that starts the remote server |
+| `@ifi/pi-remote-tailscale` | Secure remote sharing via Tailscale        |
 
 ## Notes
 

@@ -89,7 +89,6 @@ Available built-in tools: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`
 | `-h`, `--help`                  | Help                          |
 | `-v`, `--version`               | Version                       |
 
-
 ### Common Examples
 
 ```bash

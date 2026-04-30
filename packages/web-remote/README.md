@@ -5,6 +5,7 @@
 ## Why use this?
 
 Sometimes you want someone else to see what pi is doing in real time:
+
 - **Code review:** Share your session so a colleague can watch pi work through your code
 - **Pair programming:** Let someone follow along as you prompt pi through a design session
 - **Demos:** Show stakeholders your AI-assisted workflow without them installing anything
@@ -49,6 +50,7 @@ oh-pi: Remote session stopped.
 ## What the web UI shows
 
 The browser view mirrors your pi session:
+
 - Current conversation history
 - Tool calls and results as they happen
 - Live status updates
@@ -62,11 +64,11 @@ The browser view mirrors your pi session:
 
 ## Related packages
 
-| Package | Purpose |
-| ------- | ------- |
-| `@ifi/pi-web-server` | The embeddable HTTP + WebSocket server this extension uses |
-| `@ifi/pi-web-client` | TypeScript client library for building custom remote UIs |
-| `@ifi/pi-remote-tailscale` | Secure remote sharing via Tailscale HTTPS with QR codes |
+| Package                    | Purpose                                                    |
+| -------------------------- | ---------------------------------------------------------- |
+| `@ifi/pi-web-server`       | The embeddable HTTP + WebSocket server this extension uses |
+| `@ifi/pi-web-client`       | TypeScript client library for building custom remote UIs   |
+| `@ifi/pi-remote-tailscale` | Secure remote sharing via Tailscale HTTPS with QR codes    |
 
 ## Notes
 

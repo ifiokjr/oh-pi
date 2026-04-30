@@ -5,8 +5,9 @@
 ## Why use this?
 
 Direct implementation works for small tasks, but complex features benefit from planning first:
+
 - **Avoid rework:** Plan the architecture before writing code
-- **Capture decisions:** The plan file documents *why* you made certain choices
+- **Capture decisions:** The plan file documents _why_ you made certain choices
 - **Resume later:** Planning state persists across sessions
 
 Plan mode turns planning into a first-class pi workflow with its own tools, banners, and file management.
@@ -52,11 +53,11 @@ pi install npm:@ifi/pi-plan
 
 ## Commands
 
-| Command | Action |
-| ------- | ------ |
-| `/plan` | Enter plan mode (or show actions if already active) |
-| `/plan [file-path]` | Use a specific file as the plan file |
-| `/plan [directory]` | Create a timestamped plan file in that directory |
+| Command             | Action                                              |
+| ------------------- | --------------------------------------------------- |
+| `/plan`             | Enter plan mode (or show actions if already active) |
+| `/plan [file-path]` | Use a specific file as the plan file                |
+| `/plan [directory]` | Create a timestamped plan file in that directory    |
 
 ## Shortcut
 
@@ -66,23 +67,23 @@ pi install npm:@ifi/pi-plan
 
 Only while plan mode is active, these tools are exposed:
 
-| Tool | Purpose |
-| ---- | ------- |
-| `task_agents` | Run parallel research tasks (1-4 concurrent subagents) |
-| `steer_task_agent` | Rerun a specific research task with extra guidance |
-| `request_user_input` | Ask you clarifying questions with optional choices |
-| `set_plan` | Overwrite the plan file with the latest full plan text |
+| Tool                 | Purpose                                                |
+| -------------------- | ------------------------------------------------------ |
+| `task_agents`        | Run parallel research tasks (1-4 concurrent subagents) |
+| `steer_task_agent`   | Rerun a specific research task with extra guidance     |
+| `request_user_input` | Ask you clarifying questions with optional choices     |
+| `set_plan`           | Overwrite the plan file with the latest full plan text |
 
 When plan mode ends, these tools disappear.
 
 ## Plan mode vs. subagent planner
 
-| | Plan mode (`/plan`) | Subagent planner |
-| --- | --- | --- |
-| **Scope** | Interactive session state | Isolated subagent run |
-| **Persistence** | Plan file on disk | Passed as text between steps |
-| **Tools** | `task_agents`, `request_user_input` | Full agent tool access |
-| **Best for** | Architecting features interactively | Delegate a planning pass to a specialist |
+|                 | Plan mode (`/plan`)                 | Subagent planner                         |
+| --------------- | ----------------------------------- | ---------------------------------------- |
+| **Scope**       | Interactive session state           | Isolated subagent run                    |
+| **Persistence** | Plan file on disk                   | Passed as text between steps             |
+| **Tools**       | `task_agents`, `request_user_input` | Full agent tool access                   |
+| **Best for**    | Architecting features interactively | Delegate a planning pass to a specialist |
 
 ## Customization
 

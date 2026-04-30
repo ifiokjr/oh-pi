@@ -438,11 +438,11 @@ Continuously samples runtime health so heavy sessions stay usable.
 
 ### Presets
 
-|                | Theme      | Thinking | Includes                                         |
-| -------------- | ---------- | -------- | ------------------------------------------------ |
-| ⚫ Full Power  | oh-pi Dark | high     | Recommended extensions + bg-process |
-| 🔴 Clean       | Default    | off      | No extensions, just core                         |
-| 🚀 Subagents   | oh-pi Dark | medium   | Subagent chains and parallel execution           |
+|               | Theme      | Thinking | Includes                               |
+| ------------- | ---------- | -------- | -------------------------------------- |
+| ⚫ Full Power | oh-pi Dark | high     | Recommended extensions + bg-process    |
+| 🔴 Clean      | Default    | off      | No extensions, just core               |
+| 🚀 Subagents  | oh-pi Dark | medium   | Subagent chains and parallel execution |
 
 ### Providers
 
