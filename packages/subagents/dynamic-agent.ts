@@ -6,6 +6,9 @@
  * runner (runSync) and cleaned up automatically.
  */
 
+import type { ManagedWorktreeMetadata } from "@ifi/oh-pi-core";
+
+import { createManagedWorktree, createOwnerMetadata, removeManagedWorktree } from "@ifi/oh-pi-core";
 import { randomUUID } from "node:crypto";
 
 import type { AgentConfig } from "./agents.js";
@@ -42,6 +45,17 @@ export interface DynamicAgentSpec {
 	idleTimeoutMs?: number;
 }
 
+export interface DynamicAgentWorktreeOptions {
+	/** Branch name for the new worktree (required) */
+	branch: string;
+	/** Why this worktree exists (required) */
+	purpose: string;
+	/** Base ref for the new branch (default: HEAD) */
+	baseRef?: string;
+	/** Remove the worktree after execution (default: false) */
+	cleanup?: boolean;
+}
+
 export interface RunDynamicOptions extends Omit<RunSyncOptions, "modelOverride" | "skills"> {
 	/** List of models the host has scoped */
 	availableModels?: AvailableModelRef[];
@@ -49,6 +63,8 @@ export interface RunDynamicOptions extends Omit<RunSyncOptions, "modelOverride" 
 	currentModel?: string;
 	/** Called when usage data is finalized (for budget tracking across subagent calls) */
 	onUsage?: (usage: SingleResult["usage"]) => void;
+	/** Create a managed worktree and run the agent inside it */
+	worktree?: DynamicAgentWorktreeOptions;
 }
 
 /**
@@ -120,28 +136,72 @@ export function createDynamicAgent(spec: DynamicAgentSpec): AgentConfig {
 /**
  * Create an ephemeral agent from a spec and run it immediately via runSync.
  * The agent config is discarded after execution; only the result is returned.
+ *
+ * When `options.worktree` is provided, the agent runs inside a newly created
+ * managed git worktree. If `cleanup: true`, the worktree is removed after
+ * execution regardless of success or failure.
  */
 export async function runDynamicAgent(
 	runtimeCwd: string,
 	spec: DynamicAgentSpec,
 	task: string,
 	options: RunDynamicOptions = { runId: randomUUID() },
-): Promise<SingleResult> {
+): Promise<SingleResult & { worktreePath?: string; worktreeBranch?: string }> {
 	const resolvedModel = resolveDynamicModel(spec, options);
+
+	// If worktree creation is requested, create it before spawning the agent
+	let worktreePath: string | undefined;
+	let worktreeBranch: string | undefined;
+	let worktreeCleanup = false;
+	let worktreeMetadata: ManagedWorktreeMetadata | undefined;
+	if (options.worktree) {
+		const owner = createOwnerMetadata({
+			instanceId: `dynamic-agent-${randomUUID()}`,
+			cwd: runtimeCwd,
+			sessionName: options.runId ?? undefined,
+		});
+
+		const result = createManagedWorktree({
+			cwd: runtimeCwd,
+			branch: options.worktree.branch,
+			purpose: options.worktree.purpose,
+			baseRef: options.worktree.baseRef,
+			owner,
+		});
+
+		worktreePath = result.worktreePath;
+		worktreeBranch = result.branch;
+		worktreeCleanup = options.worktree.cleanup ?? false;
+		worktreeMetadata = result.metadata;
+	}
 
 	const agent = createDynamicAgent({
 		...spec,
 		model: resolvedModel ?? spec.model,
 	});
 
-	const result = await runSync(runtimeCwd, [agent], agent.name, task, {
-		...options,
-		// modelOverride and skills are baked into the dynamic agent config
-	});
+	try {
+		const result = await runSync(worktreePath ?? runtimeCwd, [agent], agent.name, task, {
+			...options,
+			// modelOverride and skills are baked into the dynamic agent config
+		});
 
-	if (options.onUsage) {
-		options.onUsage(result.usage);
+		if (options.onUsage) {
+			options.onUsage(result.usage);
+		}
+
+		return {
+			...result,
+			worktreePath,
+			worktreeBranch,
+		};
+	} finally {
+		if (worktreeMetadata && worktreeCleanup) {
+			try {
+				removeManagedWorktree(worktreeMetadata);
+			} catch {
+				// Best-effort cleanup; ignore failures
+			}
+		}
 	}
-
-	return result;
 }

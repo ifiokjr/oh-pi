@@ -881,6 +881,50 @@ The `modelPolicy` field controls how the agent's model is resolved:
 - **`resolveDynamicModel(spec, options)`** — Pure function that resolves the effective model string based on the spec and available scoped models. Used internally by `runDynamicAgent`; exposed for unit testing and custom orchestrators.
 - **`runDynamicAgent(cwd, spec, task, options)`** — Create an ephemeral agent from `spec`, resolve its model, run it via `runSync`, then return the result. Optionally calls `onUsage` with final usage data for budget tracking across subagent calls.
 
+### Worktrees
+
+Dynamic agents can run inside freshly created managed git worktrees. This is useful when you need the agent to work on an isolated branch without polluting the main checkout.
+
+```typescript
+const result = await runDynamicAgent(
+  "/workspace",
+  {
+    name: "refactor-agent",
+    systemPrompt: "You are a refactoring specialist...",
+    tools: ["read", "edit", "write"],
+  },
+  "Refactor the auth module to use the new API",
+  {
+    currentModel: "anthropic/claude-sonnet-4",
+    availableModels: [...],
+    worktree: {
+      branch: "feat/auth-refactor",
+      purpose: "Isolated refactor of auth module",
+      baseRef: "main",        // optional — defaults to HEAD
+      cleanup: false,       // optional — remove worktree after execution (default: false)
+    },
+  },
+);
+
+// If a worktree was created, the result includes its path and branch:
+if (result.worktreePath) {
+  console.log(`Agent worked in: ${result.worktreePath} (${result.worktreeBranch})`);
+}
+```
+
+| Option    | Type      | Required | Default | Description                                  |
+| --------- | --------- | -------- | ------- | -------------------------------------------- |
+| `branch`  | `string`  | Yes      | —       | Branch name for the new worktree             |
+| `purpose` | `string`  | Yes      | —       | Reason for the worktree (stored in registry) |
+| `baseRef` | `string`  | No       | `HEAD`  | Base ref for the new branch                  |
+| `cleanup` | `boolean` | No       | `false` | Remove worktree after execution              |
+
+**Notes:**
+
+- Worktrees are created via the same `createManagedWorktree` primitive used by the worktree extension, so they appear in `\`pi worktree\` listings and are tracked in the pi worktree registry.
+- The worktree extension is a default extension, so dynamic agents can also create/access worktrees _internally_ via the `\`worktree\`` tool if they need additional isolation.
+- Cleanup runs in a `\`finally\`` block so the worktree is removed even if the agent throws. Cleanup failures are silently ignored (best-effort).
+
 ## Files
 
 ```

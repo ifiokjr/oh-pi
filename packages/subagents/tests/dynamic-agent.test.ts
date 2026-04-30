@@ -2,9 +2,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const runSync = vi.hoisted(() => vi.fn());
 const findAvailableModel = vi.hoisted(() => vi.fn());
+const createManagedWorktree = vi.hoisted(() => vi.fn());
+const createOwnerMetadata = vi.hoisted(() => vi.fn());
+const removeManagedWorktree = vi.hoisted(() => vi.fn());
 
 vi.mock("../execution.js", () => ({ runSync }));
 vi.mock("../model-routing.js", () => ({ findAvailableModel }));
+vi.mock("@ifi/oh-pi-core", () => ({
+	createManagedWorktree,
+	createOwnerMetadata,
+	removeManagedWorktree,
+}));
 
 import { createDynamicAgent, resolveDynamicModel, runDynamicAgent } from "../dynamic-agent.js";
 
@@ -315,7 +323,7 @@ describe("runDynamicAgent", () => {
 		expect(onUsage).toHaveBeenCalledWith(usageData);
 	});
 
-	it("does not call onUsage when not provided", async () => {
+	it("calls onUsage when not provided", async () => {
 		findAvailableModel.mockReturnValue("anthropic/claude-sonnet-4");
 		runSync.mockResolvedValue({
 			usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 },
@@ -326,5 +334,195 @@ describe("runDynamicAgent", () => {
 
 		// onUsage not provided — no error thrown
 		expect(runSync).toHaveBeenCalledOnce();
+	});
+
+	it("creates a worktree and runs the agent inside it", async () => {
+		findAvailableModel.mockReturnValue("anthropic/claude-sonnet-4");
+		createOwnerMetadata.mockReturnValue({
+			instanceId: "owner-123",
+			hostname: "test",
+			pid: 1234,
+			createdFromCwd: "/workspace",
+			sessionFile: null,
+			sessionId: null,
+			sessionName: null,
+		});
+		createManagedWorktree.mockReturnValue({
+			worktreePath: "/wt/test-branch-abc",
+			branch: "test-branch",
+			createdBranch: true,
+			metadata: {},
+		});
+		runSync.mockResolvedValue({
+			usage: { input: 10, output: 5, cacheRead: 0, cacheWrite: 0, cost: 0 },
+			exitCode: 0,
+		});
+		removeManagedWorktree.mockReturnValue({
+			metadata: {},
+			removed: true,
+			removedFromGit: true,
+			removedRegistryEntry: true,
+			note: "ok",
+		});
+
+		const result = await runDynamicAgent("/workspace", { systemPrompt: "test" }, "task", {
+			runId: "run-wt",
+			worktree: { branch: "test-branch", purpose: "test purpose", baseRef: "main" },
+		});
+
+		expect(createOwnerMetadata).toHaveBeenCalledOnce();
+		expect(createManagedWorktree).toHaveBeenCalledWith({
+			cwd: "/workspace",
+			branch: "test-branch",
+			purpose: "test purpose",
+			baseRef: "main",
+			owner: {
+				instanceId: "owner-123",
+				hostname: "test",
+				pid: 1234,
+				createdFromCwd: "/workspace",
+				sessionFile: null,
+				sessionId: null,
+				sessionName: null,
+			},
+		});
+		expect(runSync).toHaveBeenCalledWith(
+			"/wt/test-branch-abc",
+			expect.any(Array),
+			expect.any(String),
+			"task",
+			expect.objectContaining({ runId: "run-wt" }),
+		);
+		expect(result.worktreePath).toBe("/wt/test-branch-abc");
+		expect(result.worktreeBranch).toBe("test-branch");
+		// cleanup defaults to false
+		expect(removeManagedWorktree).not.toHaveBeenCalled();
+	});
+
+	it("cleans up the worktree when cleanup: true", async () => {
+		findAvailableModel.mockReturnValue("anthropic/claude-sonnet-4");
+		createOwnerMetadata.mockReturnValue({
+			instanceId: "owner-456",
+			hostname: "test",
+			pid: 1234,
+			createdFromCwd: "/workspace",
+			sessionFile: null,
+			sessionId: null,
+			sessionName: null,
+		});
+		createManagedWorktree.mockReturnValue({
+			worktreePath: "/wt/cleanup-branch",
+			branch: "cleanup-branch",
+			createdBranch: true,
+			metadata: {
+				id: "wt-456",
+				repoRoot: "/repo",
+				worktreePath: "/wt/cleanup-branch",
+				branch: "cleanup-branch",
+				purpose: "test",
+				createdAt: "2024",
+				lastSeenAt: null,
+				owner: {
+					instanceId: "",
+					hostname: "",
+					pid: 0,
+					createdFromCwd: "",
+					sessionFile: null,
+					sessionId: null,
+					sessionName: null,
+				},
+				createdFromBranch: null,
+				createdFromRef: "HEAD",
+			},
+		});
+		runSync.mockResolvedValue({
+			usage: { input: 5, output: 2, cacheRead: 0, cacheWrite: 0, cost: 0 },
+			exitCode: 0,
+		});
+		removeManagedWorktree.mockReturnValue({
+			metadata: {},
+			removed: true,
+			removedFromGit: true,
+			removedRegistryEntry: true,
+			note: "ok",
+		});
+
+		await runDynamicAgent("/workspace", { systemPrompt: "test" }, "task", {
+			runId: "run-cleanup",
+			worktree: { branch: "cleanup-branch", purpose: "cleanup test", cleanup: true },
+		});
+
+		expect(removeManagedWorktree).toHaveBeenCalledOnce();
+		expect(removeManagedWorktree).toHaveBeenCalledWith(expect.objectContaining({ id: "wt-456" }));
+	});
+
+	it("cleans up the worktree even when runSync throws", async () => {
+		findAvailableModel.mockReturnValue("anthropic/claude-sonnet-4");
+		createOwnerMetadata.mockReturnValue({
+			instanceId: "owner-789",
+			hostname: "test",
+			pid: 1234,
+			createdFromCwd: "/workspace",
+			sessionFile: null,
+			sessionId: null,
+			sessionName: null,
+		});
+		createManagedWorktree.mockReturnValue({
+			worktreePath: "/wt/error-branch",
+			branch: "error-branch",
+			createdBranch: true,
+			metadata: {},
+		});
+		runSync.mockRejectedValue(new Error("runSync failed"));
+		removeManagedWorktree.mockReturnValue({
+			metadata: {},
+			removed: true,
+			removedFromGit: true,
+			removedRegistryEntry: true,
+			note: "ok",
+		});
+
+		await expect(
+			runDynamicAgent("/workspace", { systemPrompt: "test" }, "task", {
+				runId: "run-error",
+				worktree: { branch: "error-branch", purpose: "error test", cleanup: true },
+			}),
+		).rejects.toThrow("runSync failed");
+
+		expect(removeManagedWorktree).toHaveBeenCalledOnce();
+	});
+
+	it("ignores cleanup errors silently", async () => {
+		findAvailableModel.mockReturnValue("anthropic/claude-sonnet-4");
+		createOwnerMetadata.mockReturnValue({
+			instanceId: "owner-000",
+			hostname: "test",
+			pid: 1234,
+			createdFromCwd: "/workspace",
+			sessionFile: null,
+			sessionId: null,
+			sessionName: null,
+		});
+		createManagedWorktree.mockReturnValue({
+			worktreePath: "/wt/bad-branch",
+			branch: "bad-branch",
+			createdBranch: true,
+			metadata: {},
+		});
+		runSync.mockResolvedValue({
+			usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, cost: 0 },
+			exitCode: 0,
+		});
+		removeManagedWorktree.mockImplementation(() => {
+			throw new Error("cleanup failed");
+		});
+
+		const result = await runDynamicAgent("/workspace", { systemPrompt: "test" }, "task", {
+			runId: "run-bad-cleanup",
+			worktree: { branch: "bad-branch", purpose: "bad cleanup", cleanup: true },
+		});
+
+		expect(result.exitCode).toBe(0);
+		expect(removeManagedWorktree).toHaveBeenCalledOnce();
 	});
 });
