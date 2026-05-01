@@ -47,37 +47,56 @@ export default defineConfig({
 	test: {
 		globals: true,
 		coverage: {
-			all: true,
+			// all: true,
 			exclude: coverageExclude,
 			include: coverageInclude,
 			provider: "v8",
 			reporter: ["text", "html", "json-summary", "lcovonly"],
 			reportsDirectory: "./coverage",
 		},
+		projects: [
+			// "packages/*",
+			"packages/*",
+			{
+				extends: true,
+				test: {
+					name: "scripts",
+					include: ["scripts/**/*.test.ts"]
+				}
+			},
+			{
+				extends: true,
+				test: {
+					name: "benchmarks",
+					include: ["benchmarks/**/*.test.ts"]
+				}
+			}
+		],
 		include: [
-			"benchmarks/**/*.test.ts",
-			"scripts/**/*.test.ts",
-			"packages/core/src/**/*.test.ts",
-			"packages/adaptive-routing/**/*.test.ts",
-			"packages/background-tasks/tests/**/*.test.ts",
-			"packages/cli/src/**/*.test.ts",
-			"packages/diagnostics/tests/**/*.test.ts",
-			"packages/extensions/extensions/**/*.test.ts",
-			"packages/subagents/tests/**/*.test.ts",
-			"packages/plan/tests/**/*.test.ts",
-			"packages/shared-qna/tests/**/*.test.ts",
-			"packages/spec/tests/**/*.test.ts",
-			"packages/cursor/tests/**/*.test.ts",
-			"packages/ollama/tests/**/*.test.ts",
-			"packages/providers/tests/**/*.test.ts",
-			"packages/web-server/tests/**/*.test.ts",
-			"packages/web-client/tests/**/*.test.ts",
-			"packages/web-remote/tests/**/*.test.ts",
-			"packages/analytics-db/src/tests/**/*.test.ts",
-			"packages/pi-remote-tailscale/tests/**/*.test.ts",
-			"packages/pi-bash-live-view/tests/**/*.test.ts",
-			"packages/pi-pretty/tests/**/*.test.ts",
+			// "benchmarks/**/*.test.ts",
+			// "scripts/**/*.test.ts",
+			// "packages/core/src/**/*.test.ts",
+			// "packages/adaptive-routing/**/*.test.ts",
+			// "packages/background-tasks/tests/**/*.test.ts",
+			// "packages/cli/src/**/*.test.ts",
+			// "packages/diagnostics/tests/**/*.test.ts",
+			// "packages/extensions/extensions/**/*.test.ts",
+			// "packages/subagents/tests/**/*.test.ts",
+			// "packages/plan/tests/**/*.test.ts",
+			// "packages/shared-qna/tests/**/*.test.ts",
+			// "packages/spec/tests/**/*.test.ts",
+			// "packages/cursor/tests/**/*.test.ts",
+			// "packages/ollama/tests/**/*.test.ts",
+			// "packages/providers/tests/**/*.test.ts",
+			// "packages/web-server/tests/**/*.test.ts",
+			// "packages/web-client/tests/**/*.test.ts",
+			// "packages/web-remote/tests/**/*.test.ts",
+			// "packages/analytics-db/src/tests/**/*.test.ts",
+			// "packages/pi-remote-tailscale/tests/**/*.test.ts",
+			// "packages/pi-bash-live-view/tests/**/*.test.ts",
+			// "packages/pi-pretty/tests/**/*.test.ts",
 		],
 		pool: "forks",
 	},
+
 });
