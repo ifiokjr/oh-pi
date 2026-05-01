@@ -34,6 +34,8 @@ const PORT = Number.parseInt(process.env.PORT ?? "31415", 10);
 const DB_PATH =
 	process.env.ANALYTICS_DB_PATH ?? path.join(process.env.HOME ?? "~", ".pi", "agent", "analytics", "analytics.db");
 
+const __dirname = import.meta.dirname;
+
 // ─── Middleware ────────────────────────────────────────────────────────────────
 
 app.use(cors());
