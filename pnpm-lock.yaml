@@ -18,7 +18,7 @@ overrides:
   hono@<4.12.12: '>=4.12.12'
   hono@>=4.0.0 <=4.12.11: '>=4.12.12'
   '@hono/node-server@<1.19.13': '>=1.19.13'
-  basic-ftp@<=5.2.2: '>=5.3.0'
+  basic-ftp@<=5.3.0: '>=5.3.1'
   protobufjs: 7.5.5
   esbuild@<=0.24.2: '>=0.25.0'
   drizzle-orm@<0.45.2: '>=0.45.2'
@@ -2981,8 +2981,8 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  basic-ftp@5.3.0:
-    resolution: {integrity: sha512-5K9eNNn7ywHPsYnFwjKgYH8Hf8B5emh7JKcPaVjjrMJFQQwGpwowEnZNEtHs7DfR7hCZsmaK3VA4HUK0YarT+w==}
+  basic-ftp@6.0.1:
+    resolution: {integrity: sha512-3ilxa3n4276wGQp/ImRAuz4ALdsj/2Wd3FqoZBZlajDYnByCZ0JMb4+26Rde0wGXIbM0G2HWSfr/Fi8b21KX8g==}
     engines: {node: '>=10.0.0'}
 
   better-sqlite3@12.9.0:
@@ -7454,7 +7454,7 @@ snapshots:
 
   baseline-browser-mapping@2.10.23: {}
 
-  basic-ftp@5.3.0: {}
+  basic-ftp@6.0.1: {}
 
   better-sqlite3@12.9.0:
     dependencies:
@@ -8092,7 +8092,7 @@ snapshots:
 
   get-uri@6.0.5:
     dependencies:
-      basic-ftp: 5.3.0
+      basic-ftp: 6.0.1
       data-uri-to-buffer: 6.0.2
       debug: 4.4.3
     transitivePeerDependencies:
