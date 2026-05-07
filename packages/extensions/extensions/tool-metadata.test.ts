@@ -136,4 +136,22 @@ describe("tool-metadata extension", () => {
 		expect(metadata.durationMs).toBe(0);
 		expect(formatToolMetadataText(metadata)).toContain("tool context");
 	});
+
+	it("skips session context metadata when the extension ctx has gone stale", () => {
+		const metadata = buildToolMetadata(
+			"bash",
+			Date.UTC(2026, 3, 15, 9, 12, 13),
+			Date.UTC(2026, 3, 15, 9, 12, 14),
+			{ command: "echo ok" },
+			[{ type: "text", text: "ok" }],
+			{
+				getContextUsage: () => {
+					throw new Error("This extension ctx is stale after session replacement or reload");
+				},
+			} as never,
+		);
+
+		expect(metadata.contextAtCompletion).toBeNull();
+		expect(formatToolMetadataText(metadata)).not.toContain("session context");
+	});
 });

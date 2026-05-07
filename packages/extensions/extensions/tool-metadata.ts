@@ -66,7 +66,12 @@ export function formatDuration(durationMs: number): string {
 }
 
 function snapshotContextUsage(ctx: Pick<ExtensionContext, "getContextUsage">): ContextUsageSnapshot | null {
-	const usage = ctx.getContextUsage?.();
+	let usage: ReturnType<NonNullable<ExtensionContext["getContextUsage"]>> | undefined;
+	try {
+		usage = ctx.getContextUsage?.();
+	} catch {
+		return null;
+	}
 	if (!usage) {
 		return null;
 	}
