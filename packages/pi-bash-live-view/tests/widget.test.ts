@@ -51,6 +51,28 @@ describe("PTY live widget", () => {
 		).toContain("(waiting for output)");
 	});
 
+	it("bounds rendered line width for cargo progress output", () => {
+		const cargoLine =
+			"Building [=======================> ] 2/607: proc-macro2(build.rs), libc(build.rs), log, bitflags, itoa, libc(build.rs)";
+		const lines = buildWidgetLines(
+			theme,
+			{
+				command: "pnpm build",
+				startedAt: Date.now(),
+				ansiLines: [cargoLine],
+				status: "running",
+				exitCode: null,
+			},
+			{ maxWidth: 80 },
+			Date.now(),
+		);
+
+		for (const line of lines) {
+			expect(line.length).toBeLessThanOrEqual(80);
+		}
+		expect(lines.at(-1)).toBe(`${cargoLine.slice(0, 79)}…`);
+	});
+
 	it("mounts, debounces renders, updates elapsed time, and clears the widget", async () => {
 		const setWidget = vi.fn();
 		const controller = new PtyLiveWidgetController(
