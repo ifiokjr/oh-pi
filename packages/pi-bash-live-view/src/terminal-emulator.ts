@@ -488,7 +488,7 @@ export async function createTerminalEmulator(options: CreateTerminalEmulatorOpti
 		}
 
 		const terminal = new headlessModule.Terminal({
-			allowProposedApi: false,
+			allowProposedApi: true,
 			cols: columns,
 			rows,
 			scrollback: rows * 4,

@@ -115,7 +115,13 @@ describe("terminal emulator", () => {
 	});
 
 	it("uses the injected headless terminal loader when available", async () => {
+		let terminalOptions: unknown;
+
 		class FakeTerminal {
+			constructor(options: unknown) {
+				terminalOptions = options;
+			}
+
 			buffer = {
 				active: {
 					baseY: 1,
@@ -151,6 +157,7 @@ describe("terminal emulator", () => {
 
 		expect(emulator.getPlainText()).toBe("hello");
 		expect(emulator.toAnsiLines(2)).toEqual(["screen-2", "screen-3"]);
+		expect(terminalOptions).toMatchObject({ allowProposedApi: true, cols: 10, rows: 2 });
 		expect(terminalEmulatorInternals.decodeRgb(0x112233)).toEqual([17, 34, 51]);
 		expect(
 			terminalEmulatorInternals.stylesEqual(

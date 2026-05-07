@@ -32,6 +32,7 @@ describe("ollama models", () => {
 		expect(models.some((model) => model.id === "qwen3-vl:235b")).toBe(true);
 		expect(models.some((model) => model.id === "glm-5.1")).toBe(true);
 		expect(models.some((model) => model.id === "kimi-k2.6")).toBe(true);
+		expect(models.some((model) => model.id === "deepseek-v4-pro")).toBe(true);
 	});
 
 	it("normalizes model defaults", () => {
@@ -277,6 +278,42 @@ describe("ollama models", () => {
 		expect(models?.map((model) => model.id)).toEqual(["gpt-oss:120b", "qwen3-vl:235b"]);
 		expect(models?.[1]?.input).toEqual(["text", "image"]);
 		expect(models?.[1]?.reasoning).toBe(true);
+		await backend.close();
+	});
+
+	it("preserves cached cloud metadata when model show metadata is incomplete", async () => {
+		const backend = await createTestOllamaBackend();
+		backend.setModels([{ id: "new-cloud-model", capabilities: ["completion"] }]);
+		backend.setRejectedModelShows(["new-cloud-model"]);
+		process.env.PI_OLLAMA_CLOUD_API_URL = backend.apiUrl;
+		process.env.PI_OLLAMA_CLOUD_MODELS_URL = `${backend.apiUrl}/models`;
+		process.env.PI_OLLAMA_CLOUD_SHOW_URL = `${backend.origin}/api/show`;
+		const models = await discoverOllamaCloudModels("test-key", {
+			cachedModels: new Map([
+				[
+					"new-cloud-model",
+					toOllamaModel({
+						contextWindow: 524_288,
+						family: "cached-family",
+						id: "new-cloud-model",
+						input: ["text", "image"],
+						maxTokens: 65_536,
+						parameterSize: "999B",
+						reasoning: true,
+						source: "cloud",
+					}),
+				],
+			]),
+		});
+
+		expect(models?.[0]).toMatchObject({
+			contextWindow: 524_288,
+			family: "cached-family",
+			input: ["text", "image"],
+			maxTokens: 65_536,
+			parameterSize: "999B",
+			reasoning: true,
+		});
 		await backend.close();
 	});
 

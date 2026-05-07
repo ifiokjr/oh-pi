@@ -106,6 +106,14 @@ const FALLBACK_OLLAMA_CLOUD_MODELS: OllamaProviderModel[] = [
 		source: "cloud",
 	}),
 	toOllamaModel({
+		contextWindow: 1_048_576,
+		id: "deepseek-v4-pro",
+		input: ["text"],
+		maxTokens: 65_536,
+		reasoning: true,
+		source: "cloud",
+	}),
+	toOllamaModel({
 		contextWindow: 262_144,
 		id: "devstral-2:123b",
 		input: ["text"],
@@ -413,17 +421,21 @@ export async function discoverOllamaCloudModelList(
 	});
 	if (modelIds.length === 0) return null;
 	return modelIds
-		.map((id) => normalizeDiscoveredModel(id, null, "cloud", fallbackModels))
+		.map((id) => normalizeDiscoveredModel(id, null, "cloud", fallbackModels, new Map()))
 		.filter((model) => model !== null);
 }
 
 export async function discoverOllamaCloudModels(
 	apiKey?: string,
-	options: { signal?: AbortSignal } = {},
+	options: {
+		signal?: AbortSignal;
+		cachedModels?: ReadonlyMap<string, OllamaProviderModel>;
+	} = {},
 ): Promise<OllamaProviderModel[] | null> {
 	const config = getOllamaCloudRuntimeConfig();
 	const fallbackModels = getFallbackOllamaCloudModels();
 	const publicModels = await discoverOllamaModels(config, {
+		cachedModels: options.cachedModels,
 		fallbackModels,
 		signal: options.signal,
 		source: "cloud",
@@ -433,6 +445,7 @@ export async function discoverOllamaCloudModels(
 	}
 	const authenticatedModels = await discoverOllamaModels(config, {
 		apiKey,
+		cachedModels: options.cachedModels,
 		fallbackModels,
 		signal: options.signal,
 		source: "cloud",
@@ -445,9 +458,11 @@ export async function enrichOllamaCloudCredentials(
 	options: { previous?: OllamaCloudCredentials; signal?: AbortSignal } = {},
 ): Promise<OllamaCloudCredentials> {
 	let models: OllamaProviderModel[] | undefined;
+	const cachedModels = buildCachedModelMap(options.previous?.models);
 	try {
 		models =
 			(await discoverOllamaCloudModels(credentials.access, {
+				cachedModels,
 				signal: options.signal,
 			})) ?? undefined;
 	} catch {
@@ -459,6 +474,17 @@ export async function enrichOllamaCloudCredentials(
 		lastModelRefresh: Date.now(),
 		models: models ?? options.previous?.models ?? getFallbackOllamaCloudModels(),
 	};
+}
+
+function buildCachedModelMap(
+	models: readonly OllamaProviderModel[] | undefined,
+): ReadonlyMap<string, OllamaProviderModel> {
+	if (!models || models.length === 0) return new Map();
+	const map = new Map<string, OllamaProviderModel>();
+	for (const model of models) {
+		map.set(model.id, model);
+	}
+	return map;
 }
 
 export function toProviderModels(models: OllamaProviderModel[]): OllamaProviderModel[] {
@@ -548,6 +574,7 @@ async function discoverOllamaModels(
 		source: OllamaModelSource;
 		apiKey?: string;
 		fallbackModels?: readonly OllamaProviderModel[];
+		cachedModels?: ReadonlyMap<string, OllamaProviderModel>;
 		signal?: AbortSignal;
 	},
 ): Promise<OllamaProviderModel[] | null> {
@@ -556,6 +583,7 @@ async function discoverOllamaModels(
 		return null;
 	}
 
+	const cachedModels = options.cachedModels ?? new Map();
 	const discovered = await mapConcurrent(modelIds, MAX_DISCOVERY_CONCURRENCY, async (id) => {
 		const payload = await fetchJson<OllamaShowResponse>(config.showUrl, {
 			body: JSON.stringify({ model: id, verbose: true }),
@@ -563,7 +591,7 @@ async function discoverOllamaModels(
 			method: "POST",
 			signal: options.signal,
 		}).catch(() => null);
-		return normalizeDiscoveredModel(id, payload, options.source, options.fallbackModels ?? []);
+		return normalizeDiscoveredModel(id, payload, options.source, options.fallbackModels ?? [], cachedModels);
 	});
 	const models = discovered.filter((model): model is OllamaProviderModel => model !== null);
 	return models.length > 0 ? models : null;
@@ -589,33 +617,44 @@ function normalizeDiscoveredModel(
 	payload: OllamaShowResponse | null,
 	source: OllamaModelSource,
 	fallbackModels: readonly OllamaProviderModel[],
+	cachedModels: ReadonlyMap<string, OllamaProviderModel>,
 ): OllamaProviderModel | null {
 	const fallback = fallbackModels.find((model) => model.id === id);
+	const cached = cachedModels.get(id);
 	if (!payload) {
 		return fallback
 			? cloneModel(fallback)
-			: toOllamaModel({
-					id,
-					localAvailability: source === "local" ? "installed" : undefined,
-					source,
-				});
+			: cached
+				? cloneModel(cached)
+				: toOllamaModel({
+						id,
+						localAvailability: source === "local" ? "installed" : undefined,
+						source,
+					});
 	}
 	const capabilities = Array.isArray(payload.capabilities)
 		? payload.capabilities.filter((capability): capability is string => typeof capability === "string")
 		: [];
 	const capabilitySet = new Set(capabilities.map((capability) => capability.toLowerCase()));
-	const contextWindow = extractContextWindow(payload.model_info) ?? fallback?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
+	const rawContext = extractContextWindow(payload.model_info);
+	const contextWindow = rawContext ?? fallback?.contextWindow ?? cached?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
+	const maxTokens =
+		fallback?.maxTokens ??
+		cached?.maxTokens ??
+		(rawContext ? inferMaxTokens(rawContext) : inferMaxTokens(contextWindow));
 	return toOllamaModel({
 		capabilities,
 		contextWindow,
-		family: extractDetailField(payload.details, "family") ?? fallback?.family,
+		family: extractDetailField(payload.details, "family") ?? fallback?.family ?? cached?.family,
 		id,
-		input: capabilitySet.has("vision") ? ["text", "image"] : (fallback?.input ?? ["text"]),
+		input: capabilitySet.has("vision") ? ["text", "image"] : (fallback?.input ?? cached?.input ?? ["text"]),
 		localAvailability: source === "local" ? "installed" : undefined,
-		maxTokens: fallback?.maxTokens ?? inferMaxTokens(contextWindow),
-		parameterSize: extractDetailField(payload.details, "parameter_size") ?? fallback?.parameterSize,
-		quantization: extractDetailField(payload.details, "quantization_level") ?? fallback?.quantization,
-		reasoning: capabilitySet.has("thinking") || fallback?.reasoning,
+		maxTokens,
+		parameterSize:
+			extractDetailField(payload.details, "parameter_size") ?? fallback?.parameterSize ?? cached?.parameterSize,
+		quantization:
+			extractDetailField(payload.details, "quantization_level") ?? fallback?.quantization ?? cached?.quantization,
+		reasoning: capabilitySet.has("thinking") || fallback?.reasoning || cached?.reasoning,
 		source,
 	});
 }
