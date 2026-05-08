@@ -15,7 +15,7 @@ import type { AgentProgress, ArtifactPaths, RunSyncOptions, SingleResult } from 
 import { ensureArtifactsDir, getArtifactPaths, writeArtifact, writeMetadata } from "./artifacts.js";
 import { createJsonlWriter } from "./jsonl-writer.js";
 import { getPiSpawnCommand } from "./pi-spawn.js";
-import { buildSkillInjection, resolveSkills } from "./skills.js";
+import { buildSkillInjection, resolveSkillsAsync } from "./skills.js";
 import { DEFAULT_IDLE_TIMEOUT_MS, DEFAULT_MAX_OUTPUT, getSubagentDepthEnv, truncateOutput } from "./types.js";
 import {
 	detectSubagentError,
@@ -124,7 +124,7 @@ export async function runSync(
 	}
 
 	const skillNames = options.skills ?? agent.skills ?? [];
-	const { resolved: resolvedSkills, missing: missingSkills } = resolveSkills(skillNames, cwd ?? runtimeCwd);
+	const { resolved: resolvedSkills, missing: missingSkills } = await resolveSkillsAsync(skillNames, cwd ?? runtimeCwd);
 
 	// When explicit skills are specified (via options or agent config), disable
 	// Pi's own skill discovery so the spawned process doesn't inject the full

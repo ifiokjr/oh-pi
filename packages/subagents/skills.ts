@@ -2,10 +2,10 @@
  * Skill resolution and caching for subagent extension
  */
 
-import type { Skill } from "@mariozechner/pi-coding-agent";
+import type { ResolvedResource, Skill } from "@mariozechner/pi-coding-agent";
 
 import { expandHomeDir } from "@ifi/oh-pi-core";
-import { loadSkills } from "@mariozechner/pi-coding-agent";
+import { DefaultPackageManager, loadSkills, SettingsManager } from "@mariozechner/pi-coding-agent";
 import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -47,6 +47,11 @@ const skillCache = new Map<string, SkillCacheEntry>();
 const MAX_CACHE_SIZE = 50;
 
 let loadSkillsCache: {
+	cwd: string;
+	skills: CachedSkillEntry[];
+	timestamp: number;
+} | null = null;
+let asyncLoadSkillsCache: {
 	cwd: string;
 	skills: CachedSkillEntry[];
 	timestamp: number;
@@ -291,6 +296,63 @@ function chooseHigherPrioritySkill(
 	return candidate.order < existing.order ? candidate : existing;
 }
 
+function sourceFromPackageMetadata(resource: ResolvedResource): SkillSource {
+	const { scope, origin } = resource.metadata;
+	if (origin === "package") {
+		return scope === "project" ? "project-package" : "user-package";
+	}
+	if (scope === "project") {
+		return "project";
+	}
+	if (scope === "user") {
+		return "user";
+	}
+	return "unknown";
+}
+
+function sourceFromSkill(skill: Skill, cwd: string, resourcesByPath?: Map<string, ResolvedResource>): SkillSource {
+	const resource = resourcesByPath?.get(skill.filePath);
+	if (resource) {
+		return sourceFromPackageMetadata(resource);
+	}
+	const sourceInfo = (skill as { sourceInfo?: { origin?: string; scope?: string } }).sourceInfo;
+	if (sourceInfo) {
+		if (sourceInfo.origin === "package") {
+			return sourceInfo.scope === "project" ? "project-package" : "user-package";
+		}
+		if (sourceInfo.scope === "project") {
+			return "project";
+		}
+		if (sourceInfo.scope === "user") {
+			return "user";
+		}
+	}
+	return inferSkillSource((skill as { source?: unknown }).source, skill.filePath, cwd);
+}
+
+function dedupeLoadedSkills(
+	loadedSkills: Skill[],
+	cwd: string,
+	resourcesByPath?: Map<string, ResolvedResource>,
+): CachedSkillEntry[] {
+	const dedupedByName = new Map<string, CachedSkillEntry>();
+
+	for (let i = 0; i < loadedSkills.length; i++) {
+		const skill = loadedSkills[i] as Skill;
+		const entry: CachedSkillEntry = {
+			description: skill.description,
+			filePath: skill.filePath,
+			name: skill.name,
+			order: i,
+			source: sourceFromSkill(skill, cwd, resourcesByPath),
+		};
+		const current = dedupedByName.get(entry.name);
+		dedupedByName.set(entry.name, chooseHigherPrioritySkill(current, entry));
+	}
+
+	return [...dedupedByName.values()].toSorted((a, b) => a.order - b.order);
+}
+
 function getCachedSkills(cwd: string): CachedSkillEntry[] {
 	const now = Date.now();
 	if (loadSkillsCache && loadSkillsCache.cwd === cwd && now - loadSkillsCache.timestamp < LOAD_SKILLS_CACHE_TTL_MS) {
@@ -298,24 +360,36 @@ function getCachedSkills(cwd: string): CachedSkillEntry[] {
 	}
 
 	const skillPaths = buildSkillPaths(cwd);
-	const loaded = loadSkills({ cwd, includeDefaults: false, skillPaths });
-	const dedupedByName = new Map<string, CachedSkillEntry>();
+	const loaded = loadSkills({ cwd, agentDir: AGENT_DIR, includeDefaults: false, skillPaths });
+	const skills = dedupeLoadedSkills(loaded.skills, cwd);
+	loadSkillsCache = { cwd, skills, timestamp: now };
+	return skills;
+}
 
-	for (let i = 0; i < loaded.skills.length; i++) {
-		const skill = loaded.skills[i] as Skill;
-		const entry: CachedSkillEntry = {
-			description: skill.description,
-			filePath: skill.filePath,
-			name: skill.name,
-			order: i,
-			source: inferSkillSource((skill as { source?: unknown }).source, skill.filePath, cwd),
-		};
-		const current = dedupedByName.get(entry.name);
-		dedupedByName.set(entry.name, chooseHigherPrioritySkill(current, entry));
+async function getCachedSkillsAsync(cwd: string): Promise<CachedSkillEntry[]> {
+	const now = Date.now();
+	if (
+		asyncLoadSkillsCache &&
+		asyncLoadSkillsCache.cwd === cwd &&
+		now - asyncLoadSkillsCache.timestamp < LOAD_SKILLS_CACHE_TTL_MS
+	) {
+		return asyncLoadSkillsCache.skills;
 	}
 
-	const skills = [...dedupedByName.values()].toSorted((a, b) => a.order - b.order);
-	loadSkillsCache = { cwd, skills, timestamp: now };
+	const settingsManager = SettingsManager.create(cwd, AGENT_DIR);
+	const packageManager = new DefaultPackageManager({ agentDir: AGENT_DIR, cwd, settingsManager });
+	const resolvedPaths = await packageManager.resolve(async () => "skip");
+	const enabledResources = resolvedPaths.skills.filter((resource) => resource.enabled);
+	const resourcesByPath = new Map<string, ResolvedResource>();
+	const skillPaths: string[] = [];
+	for (const resource of enabledResources) {
+		skillPaths.push(resource.path);
+		resourcesByPath.set(resource.path, resource);
+	}
+
+	const loaded = loadSkills({ cwd, agentDir: AGENT_DIR, includeDefaults: false, skillPaths });
+	const skills = dedupeLoadedSkills(loaded.skills, cwd, resourcesByPath);
+	asyncLoadSkillsCache = { cwd, skills, timestamp: now };
 	return skills;
 }
 
@@ -376,6 +450,40 @@ export function resolveSkills(skillNames: string[], cwd: string): { resolved: Re
 		}
 
 		const skill = readSkill(trimmed, location.path, location.source);
+		if (skill) {
+			resolved.push(skill);
+		} else {
+			missing.push(trimmed);
+		}
+	}
+
+	return { missing, resolved };
+}
+
+export async function resolveSkillsAsync(
+	skillNames: string[],
+	cwd: string,
+): Promise<{ resolved: ResolvedSkill[]; missing: string[] }> {
+	const available = await getCachedSkillsAsync(cwd);
+	const byName = new Map<string, CachedSkillEntry>();
+	for (const skill of available) {
+		byName.set(skill.name, skill);
+	}
+
+	const resolved: ResolvedSkill[] = [];
+	const missing: string[] = [];
+
+	for (const name of skillNames) {
+		const trimmed = name.trim();
+		if (!trimmed) {
+			continue;
+		}
+		const location = byName.get(trimmed);
+		if (!location) {
+			missing.push(trimmed);
+			continue;
+		}
+		const skill = readSkill(trimmed, location.filePath, location.source);
 		if (skill) {
 			resolved.push(skill);
 		} else {
@@ -447,4 +555,5 @@ export function discoverAvailableSkills(cwd: string): {
 export function clearSkillCache(): void {
 	skillCache.clear();
 	loadSkillsCache = null;
+	asyncLoadSkillsCache = null;
 }

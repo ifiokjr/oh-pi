@@ -22,7 +22,7 @@ import { resolveSubagentModelResolution } from "./model-routing.js";
 import { resolvePiPackageRoot } from "./pi-spawn.js";
 import { isParallelStep, resolveStepBehavior } from "./settings.js";
 import { injectSingleOutputInstruction, resolveSingleOutputPath } from "./single-output.js";
-import { buildSkillInjection, normalizeSkillInput, resolveSkills } from "./skills.js";
+import { buildSkillInjection, normalizeSkillInput, resolveSkillsAsync } from "./skills.js";
 import { ASYNC_DIR, RESULTS_DIR } from "./types.js";
 
 const require = createRequire(import.meta.url);
@@ -123,7 +123,7 @@ function spawnRunner(cfg: object, suffix: string, cwd: string): number | undefin
 /**
  * Execute a chain asynchronously
  */
-export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncExecutionResult {
+export async function executeAsyncChain(id: string, params: AsyncChainParams): Promise<AsyncExecutionResult> {
 	const { chain, agents, ctx, cwd, maxOutput, artifactsDir, artifactConfig, shareEnabled, sessionRoot } = params;
 	const chainSkills = params.chainSkills ?? [];
 
@@ -147,13 +147,13 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 	} catch {}
 
 	/** Build a resolved runner step from a SequentialStep */
-	const buildSeqStep = (s: SequentialStep) => {
+	const buildSeqStep = async (s: SequentialStep) => {
 		const a = agents.find((x) => x.name === s.agent)!;
 		const stepSkillInput = normalizeSkillInput(s.skill);
 		const stepOverrides: StepOverrides = { skills: stepSkillInput };
 		const behavior = resolveStepBehavior(a, stepOverrides, chainSkills);
 		const skillNames = behavior.skills === false ? [] : behavior.skills;
-		const { resolved: resolvedSkills } = resolveSkills(skillNames, s.cwd ?? cwd ?? ctx.cwd);
+		const { resolved: resolvedSkills } = await resolveSkillsAsync(skillNames, s.cwd ?? cwd ?? ctx.cwd);
 
 		let systemPrompt = a.systemPrompt?.trim() || null;
 		if (resolvedSkills.length > 0) {
@@ -187,14 +187,13 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 
 	// Build runner steps — sequential steps become flat objects,
 	// Parallel steps become { parallel: [...], concurrency?, failFast? }
-	const steps: RunnerStep[] = chain.map((s) => {
+	const steps: RunnerStep[] = [];
+	for (const s of chain) {
 		if (isParallelStep(s)) {
-			return {
-				concurrency: s.concurrency,
-				failFast: s.failFast,
-				continueOnError: s.continueOnError,
-				parallel: s.parallel.map((t) =>
-					buildSeqStep({
+			const parallel = [];
+			for (const t of s.parallel) {
+				parallel.push(
+					await buildSeqStep({
 						agent: t.agent,
 						task: t.task,
 						cwd: t.cwd,
@@ -202,11 +201,18 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 						model: t.model,
 						output: t.output,
 					}),
-				),
-			};
+				);
+			}
+			steps.push({
+				concurrency: s.concurrency,
+				failFast: s.failFast,
+				continueOnError: s.continueOnError,
+				parallel,
+			});
+			continue;
 		}
-		return buildSeqStep(s as SequentialStep);
-	});
+		steps.push(await buildSeqStep(s as SequentialStep));
+	}
 
 	const runnerCwd = cwd ?? ctx.cwd;
 	const pid = spawnRunner(
@@ -263,11 +269,11 @@ export function executeAsyncChain(id: string, params: AsyncChainParams): AsyncEx
 /**
  * Execute a single agent asynchronously
  */
-export function executeAsyncSingle(id: string, params: AsyncSingleParams): AsyncExecutionResult {
+export async function executeAsyncSingle(id: string, params: AsyncSingleParams): Promise<AsyncExecutionResult> {
 	const { agent, task, agentConfig, ctx, cwd, maxOutput, artifactsDir, artifactConfig, shareEnabled, sessionRoot } =
 		params;
 	const skillNames = params.skills ?? agentConfig.skills ?? [];
-	const { resolved: resolvedSkills } = resolveSkills(skillNames, cwd ?? ctx.cwd);
+	const { resolved: resolvedSkills } = await resolveSkillsAsync(skillNames, cwd ?? ctx.cwd);
 	let systemPrompt = agentConfig.systemPrompt?.trim() || null;
 	if (resolvedSkills.length > 0) {
 		const injection = buildSkillInjection(resolvedSkills);

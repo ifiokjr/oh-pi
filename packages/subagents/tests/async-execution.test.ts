@@ -40,7 +40,7 @@ const asyncMocks = vi.hoisted(() => {
 			(skills: Array<{ name: string }>) => `INJECT:${skills.map((skill) => skill.name).join(",")}`,
 		),
 		normalizeSkillInput: vi.fn((value: unknown) => value),
-		resolveSkills: vi.fn((skillNames: string[]) => ({
+		resolveSkillsAsync: vi.fn(async (skillNames: string[]) => ({
 			resolved: skillNames.map((name) => ({ name })),
 			missing: [],
 		})),
@@ -80,7 +80,7 @@ vi.mock("../pi-spawn.js", () => ({
 vi.mock("../skills.js", () => ({
 	buildSkillInjection: asyncMocks.buildSkillInjection,
 	normalizeSkillInput: asyncMocks.normalizeSkillInput,
-	resolveSkills: asyncMocks.resolveSkills,
+	resolveSkillsAsync: asyncMocks.resolveSkillsAsync,
 }));
 vi.mock("../types.js", () => ({
 	ASYNC_DIR: "/tmp/pi-async-subagent-runs",
@@ -140,7 +140,7 @@ beforeEach(() => {
 	asyncMocks.resolveStepBehavior.mockImplementation((_agent: any, stepOverrides: any, chainSkills: string[]) => ({
 		skills: stepOverrides.skills ?? chainSkills,
 	}));
-	asyncMocks.resolveSkills.mockImplementation((skillNames: string[]) => ({
+	asyncMocks.resolveSkillsAsync.mockImplementation(async (skillNames: string[]) => ({
 		resolved: skillNames.map((name) => ({ name })),
 		missing: [],
 	}));
@@ -170,9 +170,9 @@ describe("async execution helpers", () => {
 		expect(isAsyncAvailable()).toBe(true);
 	});
 
-	it("builds async single-runner configs, injects output instructions, and emits start events", () => {
+	it("builds async single-runner configs, injects output instructions, and emits start events", async () => {
 		const ctx = createCtx();
-		const result = executeAsyncSingle("run-1", {
+		const result = await executeAsyncSingle("run-1", {
 			agent: "scout",
 			task: "Inspect the repo",
 			agentConfig: {
@@ -240,7 +240,7 @@ describe("async execution helpers", () => {
 			skills: ["git", "context7"],
 			outputPath: "/workspace/report.md",
 		});
-		expect(asyncMocks.resolveSkills).toHaveBeenCalledWith(["git", "context7"], "/workspace");
+		expect(asyncMocks.resolveSkillsAsync).toHaveBeenCalledWith(["git", "context7"], "/workspace");
 		expect(config.steps[0].systemPrompt).toBe("Base system prompt\n\nINJECT:git,context7");
 		expect(ctx.pi.events.emit).toHaveBeenCalledWith("subagent:started", {
 			id: "run-1",
@@ -252,9 +252,9 @@ describe("async execution helpers", () => {
 		});
 	});
 
-	it("fails fast for unknown agents in async chains", () => {
+	it("fails fast for unknown agents in async chains", async () => {
 		const ctx = createCtx();
-		const result = executeAsyncChain("chain-1", {
+		const result = await executeAsyncChain("chain-1", {
 			chain: [{ agent: "missing", task: "Inspect" }],
 			agents: [{ name: "scout" }],
 			ctx,
@@ -267,7 +267,7 @@ describe("async execution helpers", () => {
 		expect(asyncMocks.spawn).not.toHaveBeenCalled();
 	});
 
-	it("builds sequential and parallel async chain configs with resolved skills and outputs", () => {
+	it("builds sequential and parallel async chain configs with resolved skills and outputs", async () => {
 		const ctx = createCtx();
 		asyncMocks.resolveSubagentModelResolution
 			.mockReturnValueOnce({
@@ -281,7 +281,7 @@ describe("async execution helpers", () => {
 				category: undefined,
 			});
 
-		const result = executeAsyncChain("chain-2", {
+		const result = await executeAsyncChain("chain-2", {
 			chain: [
 				{
 					agent: "scout",
@@ -357,9 +357,9 @@ describe("async execution helpers", () => {
 			model: "anthropic/claude-sonnet-4",
 			skills: ["context7"],
 		});
-		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(1, ["git"], "/workspace");
-		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(2, ["shared-skill"], "/workspace/a");
-		expect(asyncMocks.resolveSkills).toHaveBeenNthCalledWith(3, ["context7"], "/workspace");
+		expect(asyncMocks.resolveSkillsAsync).toHaveBeenNthCalledWith(1, ["git"], "/workspace");
+		expect(asyncMocks.resolveSkillsAsync).toHaveBeenNthCalledWith(2, ["shared-skill"], "/workspace/a");
+		expect(asyncMocks.resolveSkillsAsync).toHaveBeenNthCalledWith(3, ["context7"], "/workspace");
 		expect(ctx.pi.events.emit).toHaveBeenCalledWith("subagent:started", {
 			id: "chain-2",
 			pid: 4242,
