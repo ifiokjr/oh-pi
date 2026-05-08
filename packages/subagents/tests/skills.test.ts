@@ -7,6 +7,8 @@ const skillsMocks = vi.hoisted(() => ({
 	execSync: vi.fn(() => "/tmp/global-node-modules\n"),
 	expandHomeDir: vi.fn((value: string) => value.replace(/^~\//, "/tmp/home/")),
 	loadSkills: vi.fn(() => ({ skills: [] })),
+	packageResolve: vi.fn(async () => ({ skills: [] })),
+	settingsCreate: vi.fn(() => ({ settings: {} })),
 	resolveAgentDir: vi.fn(() => "/tmp/pi-agent"),
 }));
 
@@ -19,6 +21,12 @@ vi.mock("@ifi/oh-pi-core", () => ({
 }));
 
 vi.mock("@mariozechner/pi-coding-agent", () => ({
+	DefaultPackageManager: class {
+		resolve = skillsMocks.packageResolve;
+	},
+	SettingsManager: {
+		create: skillsMocks.settingsCreate,
+	},
 	loadSkills: skillsMocks.loadSkills,
 }));
 
@@ -33,6 +41,7 @@ import {
 	normalizeSkillInput,
 	resolveSkillPath,
 	resolveSkills,
+	resolveSkillsAsync,
 } from "../skills.js";
 
 const tempDirs: string[] = [];
@@ -295,5 +304,54 @@ describe("subagent skills", () => {
 			},
 		]);
 		expect(resolved.missing).toEqual(["missing", "broken"]);
+	});
+
+	it("resolves package skills through the default package manager", async () => {
+		const cwd = createTempDir("subagents-package-skills-");
+		const packageSkillFile = path.join(cwd, "node_modules", "@ifi", "oh-pi-skills", "skills", "devenv", "SKILL.md");
+		fs.mkdirSync(path.dirname(packageSkillFile), { recursive: true });
+		fs.writeFileSync(packageSkillFile, "Devenv instructions\n");
+
+		skillsMocks.packageResolve.mockResolvedValue({
+			skills: [
+				{
+					path: packageSkillFile,
+					enabled: true,
+					metadata: { scope: "project", origin: "package" },
+				},
+			],
+		});
+		skillsMocks.loadSkills.mockReturnValue({
+			skills: [
+				{
+					name: "devenv",
+					filePath: packageSkillFile,
+					description: "Use devenv",
+					sourceInfo: { scope: "project", origin: "package" },
+				},
+			],
+		});
+
+		const resolved = await resolveSkillsAsync(["devenv", "missing"], cwd);
+
+		expect(skillsMocks.settingsCreate).toHaveBeenCalledWith(cwd, "/tmp/pi-agent");
+		expect(skillsMocks.packageResolve).toHaveBeenCalledTimes(1);
+		expect(skillsMocks.loadSkills).toHaveBeenCalledWith({
+			cwd,
+			agentDir: "/tmp/pi-agent",
+			includeDefaults: false,
+			skillPaths: [packageSkillFile],
+		});
+		expect(resolved).toEqual({
+			resolved: [
+				{
+					name: "devenv",
+					path: packageSkillFile,
+					content: "Devenv instructions\n",
+					source: "project-package",
+				},
+			],
+			missing: ["missing"],
+		});
 	});
 });
