@@ -8,6 +8,15 @@ vi.mock("@mariozechner/pi-ai", () => ({
 }));
 
 vi.mock("@mariozechner/pi-tui", () => ({
+	Container: class Container {
+		children: any[] = [];
+		addChild(child: any) {
+			this.children.push(child);
+		}
+	},
+	Markdown: class Markdown {
+		constructor(public text: string, public x: number, public y: number, public theme?: unknown) {}
+	},
 	Text: class Text {
 		constructor(public text: string) {}
 	},
@@ -15,6 +24,7 @@ vi.mock("@mariozechner/pi-tui", () => ({
 
 vi.mock("@mariozechner/pi-coding-agent", () => ({
 	buildSessionContext: vi.fn(() => ({ messages: [] })),
+	getMarkdownTheme: () => ({ theme: "markdown" }),
 	AuthStorage: {
 		create: vi.fn(() => ({ source: "auth-storage" })),
 	},
@@ -170,7 +180,7 @@ describe("btw commands and rendering", () => {
 		expect(sendMessage).toHaveBeenCalledWith(
 			expect.objectContaining({
 				customType: "btw-note",
-				content: "Q: What changed?\n\nA: Answer",
+				content: "**Question:** What changed?\n\nAnswer",
 			}),
 		);
 		expect(harness.notifications).toContainEqual({
@@ -318,7 +328,7 @@ describe("btw commands and rendering", () => {
 		const renderer = harness.messageRenderers.get("btw-note");
 		const rendered = renderer(
 			{
-				content: "Q: Why?\n\nA: Because.",
+				content: "**Question:** Why?\n\nBecause.",
 				details: {
 					provider: "anthropic",
 					model: "claude-sonnet-4",
@@ -332,9 +342,58 @@ describe("btw commands and rendering", () => {
 				fg: (_tone: string, text: string) => text,
 			},
 		);
-		expect(rendered.text).toContain("[BTW]");
-		expect(rendered.text).toContain("model: anthropic/claude-sonnet-4");
-		expect(rendered.text).toContain("tokens: in 1 · out 2 · total 3");
+		expect(rendered.children[0].text).toContain("[BTW]");
+		expect(rendered.children[0].text).toContain("model: anthropic/claude-sonnet-4");
+		expect(rendered.children[0].text).toContain("tokens: in 1 · out 2 · total 3");
+		const markdownChild = rendered.children.find((c: any) => c.constructor.name === "Markdown");
+		expect(markdownChild).toBeDefined();
+		expect(markdownChild.text).toContain("Because.");
+	});
+
+	it("does not reset active BTW slots on session_tree", async () => {
+		const harness = createExtensionHarness();
+		harness.ctx.model = model as never;
+		harness.ctx.modelRegistry = {
+			getApiKey: vi.fn().mockResolvedValue("direct-key"),
+		} as never;
+
+		let finishStream: (() => void) | undefined;
+		mockStreamSimple.mockReturnValueOnce(
+			(async function* () {
+				yield { type: "text_delta", delta: "partial" };
+				await new Promise<void>((resolve) => {
+					finishStream = resolve;
+				});
+				yield {
+					type: "done",
+					message: {
+						content: [{ type: "text", text: "Answer" }],
+						provider: "anthropic",
+						model: "claude-sonnet-4",
+						api: "anthropic-messages",
+						usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2 },
+						stopReason: "stop",
+						timestamp: Date.now(),
+					},
+				};
+			})() as never,
+		);
+
+		btwExtension(harness.pi as never);
+
+		const runPromise = harness.commands.get("btw").handler("Question?", harness.ctx);
+
+		await new Promise((r) => setTimeout(r, 0));
+
+		const getBranch = vi.fn(() => []);
+		harness.ctx.sessionManager.getBranch = getBranch;
+
+		harness.emit("session_tree", { type: "session_tree" }, harness.ctx);
+
+		expect(getBranch).not.toHaveBeenCalled();
+
+		finishStream?.();
+		await runPromise;
 	});
 });
 
