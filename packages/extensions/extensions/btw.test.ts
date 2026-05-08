@@ -15,7 +15,12 @@ vi.mock("@mariozechner/pi-tui", () => ({
 		}
 	},
 	Markdown: class Markdown {
-		constructor(public text: string, public x: number, public y: number, public theme?: unknown) {}
+		constructor(
+			public text: string,
+			public x: number,
+			public y: number,
+			public theme?: unknown,
+		) {}
 	},
 	Text: class Text {
 		constructor(public text: string) {}

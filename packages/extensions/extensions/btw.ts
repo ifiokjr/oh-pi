@@ -644,7 +644,9 @@ export default function (pi: ExtensionAPI) {
 		const headerLines = [theme.fg("accent", theme.bold("[BTW]"))];
 
 		if (expanded && details) {
-			headerLines.push(theme.fg("dim", `model: ${details.provider}/${details.model} · thinking: ${details.thinkingLevel}`));
+			headerLines.push(
+				theme.fg("dim", `model: ${details.provider}/${details.model} · thinking: ${details.thinkingLevel}`),
+			);
 			if (details.usage) {
 				headerLines.push(
 					theme.fg(

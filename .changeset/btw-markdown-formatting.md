@@ -1,5 +1,5 @@
 ---
-"@ifi/oh-pi-extensions": patch
+default: patch
 ---
 
 Format `btw` output as Markdown and fix occasional context loss
