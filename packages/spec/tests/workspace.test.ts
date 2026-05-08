@@ -106,9 +106,10 @@ describe("workspace helpers", () => {
 	it("builds workflow paths for an active feature", () => {
 		const repoRoot = "/repo";
 		const paths = buildWorkflowPaths(repoRoot, "007-native-spec");
-		expect(paths.featureSpec).toBe("/repo/specs/007-native-spec/spec.md");
-		expect(paths.planFile).toBe("/repo/specs/007-native-spec/plan.md");
-		expect(paths.constitutionFile).toBe("/repo/.specify/memory/constitution.md");
+		// Normalize path separators for cross-platform compatibility
+		expect(paths.featureSpec?.replace(/\\/g, "/")).toBe("/repo/specs/007-native-spec/spec.md");
+		expect(paths.planFile?.replace(/\\/g, "/")).toBe("/repo/specs/007-native-spec/plan.md");
+		expect(paths.constitutionFile.replace(/\\/g, "/")).toBe("/repo/.specify/memory/constitution.md");
 	});
 
 	it("extracts feature numbers from numbered names", () => {
