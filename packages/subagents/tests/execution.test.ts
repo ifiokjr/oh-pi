@@ -63,7 +63,7 @@ const executionMocks = vi.hoisted(() => {
 		buildSkillInjection: vi.fn(
 			(skills: Array<{ name: string }>) => `INJECT:${skills.map((skill) => skill.name).join(",")}`,
 		),
-		resolveSkills: vi.fn((skills: string[]) => ({
+		resolveSkillsAsync: vi.fn(async (skills: string[]) => ({
 			resolved: skills
 				.filter((skill) => skill !== "missing")
 				.map((name) => ({
@@ -119,7 +119,7 @@ vi.mock("../utils.js", () => ({
 }));
 vi.mock("../skills.js", () => ({
 	buildSkillInjection: executionMocks.buildSkillInjection,
-	resolveSkills: executionMocks.resolveSkills,
+	resolveSkillsAsync: executionMocks.resolveSkillsAsync,
 }));
 vi.mock("../pi-spawn.js", () => ({
 	getPiSpawnCommand: executionMocks.getPiSpawnCommand,
@@ -193,7 +193,7 @@ beforeEach(() => {
 		executionMocks.procs.push(proc);
 		return proc;
 	});
-	executionMocks.resolveSkills.mockImplementation((skills: string[]) => ({
+	executionMocks.resolveSkillsAsync.mockImplementation(async (skills: string[]) => ({
 		resolved: skills
 			.filter((skill) => skill !== "missing")
 			.map((name) => ({
@@ -245,11 +245,12 @@ describe("runSync", () => {
 			{ cwd: "/legal/project", share: false },
 		);
 
+		await vi.waitFor(() => expect(executionMocks.procs).toHaveLength(1));
 		const proc = executionMocks.procs[0];
 		proc.emit("close", 0);
 		await runPromise;
 
-		expect(executionMocks.resolveSkills).toHaveBeenCalledWith(["ecsc-reviewer"], "/legal/project");
+		expect(executionMocks.resolveSkillsAsync).toHaveBeenCalledWith(["ecsc-reviewer"], "/legal/project");
 	});
 
 	it("streams successful runs, writes artifacts, and records truncation + shared sessions", async () => {
@@ -287,6 +288,7 @@ describe("runSync", () => {
 			},
 		);
 
+		await vi.waitFor(() => expect(executionMocks.procs).toHaveLength(1));
 		const proc = executionMocks.procs[0];
 		emitStdoutLines(proc, [
 			JSON.stringify({
@@ -322,7 +324,7 @@ describe("runSync", () => {
 
 		const result = await runPromise;
 
-		expect(executionMocks.resolveSkills).toHaveBeenCalledWith(["git", "missing"], "/workspace");
+		expect(executionMocks.resolveSkillsAsync).toHaveBeenCalledWith(["git", "missing"], "/workspace");
 		expect(executionMocks.spawn).toHaveBeenCalledWith(
 			"pi",
 			expect.arrayContaining([
@@ -429,6 +431,7 @@ describe("runSync", () => {
 			{ signal: controller.signal, share: false },
 		);
 
+		await vi.waitFor(() => expect(executionMocks.procs).toHaveLength(1));
 		const proc = executionMocks.procs[0];
 		emitStdoutLines(proc, ["not-json"]);
 		controller.abort();
@@ -436,7 +439,7 @@ describe("runSync", () => {
 		proc.emit("close", 0);
 
 		const result = await runPromise;
-		expect(executionMocks.resolveSkills).toHaveBeenCalledWith([], "/repo");
+		expect(executionMocks.resolveSkillsAsync).toHaveBeenCalledWith([], "/repo");
 		expect(proc.kill).toHaveBeenCalledWith("SIGTERM");
 		expect(proc.kill).toHaveBeenCalledWith("SIGKILL");
 		expect(result).toMatchObject({
