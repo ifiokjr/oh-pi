@@ -18,8 +18,8 @@ import type { AssistantMessage, Message, ThinkingLevel as AiThinkingLevel } from
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent";
 
 import { completeSimple, streamSimple } from "@mariozechner/pi-ai";
-import { buildSessionContext } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import { buildSessionContext, getMarkdownTheme } from "@mariozechner/pi-coding-agent";
+import { Container, Markdown, Text } from "@mariozechner/pi-tui";
 
 const BTW_MESSAGE_TYPE = "btw-note";
 const BTW_ENTRY_TYPE = "btw-thread-entry";
@@ -30,6 +30,7 @@ const BTW_SYSTEM_PROMPT = [
 	"The main session messages are provided for context only — that work is being handled by another agent.",
 	"Focus on answering the user's side questions, helping them think through ideas, or planning next steps.",
 	"Do not act as if you need to continue unfinished work from the main session unless the user explicitly asks you to prepare something for injection back to it.",
+	"Format your responses using Markdown for readability.",
 ].join(" ");
 const STARTUP_THREAD_RESTORE_DELAY_MS = 250;
 
@@ -264,11 +265,13 @@ function buildBtwContext(ctx: ExtensionCommandContext, question: string, thread:
 }
 
 function buildBtwMessageContent(question: string, answer: string): string {
-	return `Q: ${question}\n\nA: ${answer}`;
+	return `**Question:** ${question}\n\n${answer}`;
 }
 
 function formatThread(thread: BtwDetails[]): string {
-	return thread.map((entry) => `User: ${entry.question.trim()}\nAssistant: ${entry.answer.trim()}`).join("\n\n---\n\n");
+	return thread
+		.map((entry) => `**User:** ${entry.question.trim()}\n\n**Assistant:** ${entry.answer.trim()}`)
+		.join("\n\n---\n\n");
 }
 
 function saveVisibleBtwNote(
@@ -638,12 +641,14 @@ export default function (pi: ExtensionAPI) {
 	pi.registerMessageRenderer(BTW_MESSAGE_TYPE, (message, { expanded }, theme) => {
 		const details = message.details as BtwDetails | undefined;
 		const content = typeof message.content === "string" ? message.content : "[non-text btw message]";
-		const lines = [theme.fg("accent", theme.bold("[BTW]")), content];
+		const headerLines = [theme.fg("accent", theme.bold("[BTW]"))];
 
 		if (expanded && details) {
-			lines.push(theme.fg("dim", `model: ${details.provider}/${details.model} · thinking: ${details.thinkingLevel}`));
+			headerLines.push(
+				theme.fg("dim", `model: ${details.provider}/${details.model} · thinking: ${details.thinkingLevel}`),
+			);
 			if (details.usage) {
-				lines.push(
+				headerLines.push(
 					theme.fg(
 						"dim",
 						`tokens: in ${details.usage.input} · out ${details.usage.output} · total ${details.usage.totalTokens}`,
@@ -652,7 +657,10 @@ export default function (pi: ExtensionAPI) {
 			}
 		}
 
-		return new Text(lines.join("\n"), 1, 1);
+		const container = new Container(1, 1);
+		container.addChild(new Text(headerLines.join("\n"), 0, 0));
+		container.addChild(new Markdown(content, 0, 0, getMarkdownTheme()));
+		return container;
 	});
 
 	// ── Context filter — keep BTW notes out of the main agent ─────────────────
@@ -690,6 +698,7 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.on("session_tree", async (_event, ctx) => {
+		if (slots.some((s) => !s.done)) return;
 		restoreCurrentThread(ctx);
 	});
 
