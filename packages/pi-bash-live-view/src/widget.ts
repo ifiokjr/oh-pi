@@ -1,6 +1,7 @@
 const DEFAULT_WIDGET_KEY_PREFIX = "pi-bash-live-view";
 const DEFAULT_WIDGET_MAX_LINES = 12;
 const DEFAULT_WIDGET_MAX_WIDTH = 100;
+const MIN_WIDGET_MAX_WIDTH = 20;
 const DEFAULT_RENDER_DEBOUNCE_MS = 120;
 const ELAPSED_TICK_MS = 1_000;
 const ANSI_SEQUENCE_REGEX = /\u001B\[[0-?]*[ -/]*[@-~]/g;
@@ -93,6 +94,15 @@ function truncateCommand(command: string, maxLength = 96): string {
 	return truncateVisibleLine(command, maxLength);
 }
 
+function getSafeMaxWidth(maxWidth: number): number {
+	const terminalColumns = process.stdout.columns;
+	if (!Number.isFinite(terminalColumns) || terminalColumns <= 0) {
+		return maxWidth;
+	}
+
+	return Math.max(MIN_WIDGET_MAX_WIDTH, Math.min(maxWidth, terminalColumns));
+}
+
 function toStatusColor(status: WidgetStatus): string {
 	switch (status) {
 		case "completed":
@@ -130,7 +140,7 @@ export function buildWidgetLines(
 	now = Date.now(),
 ): string[] {
 	const maxLines = options.maxLines ?? DEFAULT_WIDGET_MAX_LINES;
-	const maxWidth = options.maxWidth ?? DEFAULT_WIDGET_MAX_WIDTH;
+	const maxWidth = getSafeMaxWidth(options.maxWidth ?? DEFAULT_WIDGET_MAX_WIDTH);
 	const statusColor = toStatusColor(state.status);
 	const header = `${theme.fg("accent", theme.bold("🖥 Bash PTY"))} ${theme.fg(
 		statusColor,
@@ -287,4 +297,5 @@ export const widgetInternals = {
 	truncateVisibleLine,
 	toStatusColor,
 	toStatusLabel,
+	getSafeMaxWidth,
 };

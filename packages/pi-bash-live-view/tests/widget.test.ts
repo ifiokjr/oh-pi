@@ -73,6 +73,31 @@ describe("PTY live widget", () => {
 		expect(lines.at(-1)).toBe(`${cargoLine.slice(0, 79)}…`);
 	});
 
+	it("clamps rendered line width to the current terminal width", () => {
+		const originalColumns = process.stdout.columns;
+		Object.defineProperty(process.stdout, "columns", { configurable: true, value: 52 });
+		try {
+			const lines = buildWidgetLines(
+				theme,
+				{
+					command: "devenv shell lint:clippy",
+					startedAt: Date.now(),
+					ansiLines: ["Building [======================>  ] 616/650: monochange_book"],
+					status: "running",
+					exitCode: null,
+				},
+				{ maxWidth: 100 },
+				Date.now(),
+			);
+
+			for (const line of lines) {
+				expect(line.length).toBeLessThanOrEqual(52);
+			}
+		} finally {
+			Object.defineProperty(process.stdout, "columns", { configurable: true, value: originalColumns });
+		}
+	});
+
 	it("mounts, debounces renders, updates elapsed time, and clears the widget", async () => {
 		const setWidget = vi.fn();
 		const controller = new PtyLiveWidgetController(
