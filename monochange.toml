@@ -1,0 +1,226 @@
+# monochange configuration for oh-pi
+# Migrated from knope — all 29 packages in lockstep under group "all"
+
+[defaults]
+package_type = "npm"
+parent_bump = "patch"
+include_private = true
+
+[defaults.changelog]
+path = "{{ path }}/CHANGELOG.md"
+format = "keep_a_changelog"
+
+[source]
+provider = "github"
+owner = "ifiokjr"
+repo = "oh-pi"
+
+# ── Packages ──────────────────────────────────────────────────────────────
+
+[package."@ifi/pi-extension-adaptive-routing"]
+path = "packages/adaptive-routing"
+type = "npm"
+
+[package."@ifi/oh-pi-agents"]
+path = "packages/agents"
+type = "npm"
+
+[package."@ifi/pi-analytics-dashboard"]
+path = "packages/analytics-dashboard"
+type = "npm"
+publish = { enabled = false }
+
+[package."@ifi/pi-analytics-db"]
+path = "packages/analytics-db"
+type = "npm"
+
+[package."@ifi/pi-analytics-extension"]
+path = "packages/analytics-extension"
+type = "npm"
+
+[package."@ifi/pi-background-tasks"]
+path = "packages/background-tasks"
+type = "npm"
+
+[package."@ifi/oh-pi-cli"]
+path = "packages/cli"
+type = "npm"
+
+[package."@ifi/oh-pi-core"]
+path = "packages/core"
+type = "npm"
+
+[package."@ifi/pi-provider-cursor"]
+path = "packages/cursor"
+type = "npm"
+
+[package."@ifi/pi-diagnostics"]
+path = "packages/diagnostics"
+type = "npm"
+
+[package."@ifi/oh-pi-docs"]
+path = "packages/docs"
+type = "npm"
+publish = { enabled = false }
+
+[package."@ifi/oh-pi-extensions"]
+path = "packages/extensions"
+type = "npm"
+
+[package."@ifi/oh-pi"]
+path = "packages/oh-pi"
+type = "npm"
+
+[package."@ifi/oh-pi-context"]
+path = "packages/oh-pi-context"
+type = "npm"
+
+[package."@ifi/pi-provider-ollama"]
+path = "packages/ollama"
+type = "npm"
+
+[package."@ifi/pi-bash-live-view"]
+path = "packages/pi-bash-live-view"
+type = "npm"
+
+[package."@ifi/pi-pretty"]
+path = "packages/pi-pretty"
+type = "npm"
+
+[package."@ifi/pi-remote-tailscale"]
+path = "packages/pi-remote-tailscale"
+type = "npm"
+
+[package."@ifi/pi-plan"]
+path = "packages/plan"
+type = "npm"
+
+[package."@ifi/oh-pi-prompts"]
+path = "packages/prompts"
+type = "npm"
+
+[package."@ifi/pi-provider-catalog"]
+path = "packages/providers"
+type = "npm"
+
+[package."@ifi/pi-shared-qna"]
+path = "packages/shared-qna"
+type = "npm"
+
+[package."@ifi/oh-pi-skills"]
+path = "packages/skills"
+type = "npm"
+
+[package."@ifi/pi-spec"]
+path = "packages/spec"
+type = "npm"
+
+[package."@ifi/pi-extension-subagents"]
+path = "packages/subagents"
+type = "npm"
+
+[package."@ifi/oh-pi-themes"]
+path = "packages/themes"
+type = "npm"
+
+[package."@ifi/pi-web-client"]
+path = "packages/web-client"
+type = "npm"
+
+[package."@ifi/pi-web-remote"]
+path = "packages/web-remote"
+type = "npm"
+
+[package."@ifi/pi-web-server"]
+path = "packages/web-server"
+type = "npm"
+
+# ── Lockstep group ────────────────────────────────────────────────────────
+
+[group.all]
+packages = [
+  "@ifi/pi-extension-adaptive-routing",
+  "@ifi/oh-pi-agents",
+  "@ifi/pi-analytics-dashboard",
+  "@ifi/pi-analytics-db",
+  "@ifi/pi-analytics-extension",
+  "@ifi/pi-background-tasks",
+  "@ifi/oh-pi-cli",
+  "@ifi/oh-pi-core",
+  "@ifi/pi-provider-cursor",
+  "@ifi/pi-diagnostics",
+  "@ifi/oh-pi-docs",
+  "@ifi/oh-pi-extensions",
+  "@ifi/oh-pi",
+  "@ifi/oh-pi-context",
+  "@ifi/pi-provider-ollama",
+  "@ifi/pi-bash-live-view",
+  "@ifi/pi-pretty",
+  "@ifi/pi-remote-tailscale",
+  "@ifi/pi-plan",
+  "@ifi/oh-pi-prompts",
+  "@ifi/pi-provider-catalog",
+  "@ifi/pi-shared-qna",
+  "@ifi/oh-pi-skills",
+  "@ifi/pi-spec",
+  "@ifi/pi-extension-subagents",
+  "@ifi/oh-pi-themes",
+  "@ifi/pi-web-client",
+  "@ifi/pi-web-remote",
+  "@ifi/pi-web-server",
+]
+release = true
+tag = true
+version_format = "namespaced"
+changelog = { path = "CHANGELOG.md", format = "keep_a_changelog", include = "all" }
+
+# ── Ecosystems ────────────────────────────────────────────────────────────
+
+[ecosystems.npm]
+enabled = true
+lockfile_commands = ["pnpm install --lockfile-only"]
+
+# ── CLI workflows ─────────────────────────────────────────────────────────
+
+[cli.release-pr]
+help_text = "Prepare a release pull request"
+inputs = [
+  { name = "format", type = "choice", choices = ["markdown", "json"], default = "markdown" },
+  { name = "no_verify", type = "boolean", default = false },
+]
+steps = [
+  { name = "plan release", type = "PrepareRelease", allow_empty_changesets = true },
+  { name = "refresh lockfile", type = "Command", command = "pnpm install --lockfile-only", when = "{{ number_of_changesets > 0 }}" },
+  { name = "create release commit", type = "CommitRelease", when = "{{ number_of_changesets > 0 }}" },
+  { name = "open release request", type = "OpenReleaseRequest", when = "{{ number_of_changesets > 0 }}" },
+]
+
+[cli.release]
+help_text = "Bump versions, update changelogs, commit, tag, and push"
+steps = [
+  { name = "security check", type = "Command", command = "pnpm security:check" },
+  { name = "plan release", type = "PrepareRelease" },
+  { name = "refresh lockfile", type = "Command", command = "pnpm install --lockfile-only" },
+  { name = "stage changes", type = "Command", command = "git add ." },
+  { name = "commit release", type = "CommitRelease" },
+  { name = "tag release", type = "TagRelease" },
+  { name = "push release", type = "Command", command = "git push" },
+]
+
+[cli.publish]
+help_text = "Build and publish all public packages to npm"
+steps = [
+  { name = "build", type = "Command", command = "pnpm build" },
+  { name = "publish packages", type = "Command", command = "pnpm -r publish --access public --no-git-checks" },
+]
+
+[cli.change]
+help_text = "Create a new changeset file for the next release"
+inputs = [
+  { name = "package", type = "string_list", required = true },
+  { name = "bump", type = "choice", choices = ["none", "patch", "minor", "major"], default = "patch" },
+  { name = "reason", type = "string", required = true },
+  { name = "type", type = "string" },
+  { name = "caused_by", type = "string_list" },
+]
+steps = [{ name = "create change file", type = "CreateChangeFile" }]

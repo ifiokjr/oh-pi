@@ -1,0 +1,26 @@
+name: changeset-policy
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: changeset-policy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify-affected-packages:
+    name: verify changeset coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: setup monochange
+        uses: ./.github/actions/setup-mc
+
+      - name: verify affected packages have changesets
+        run: mc step:affected-packages --verify
