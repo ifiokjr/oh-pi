@@ -1,0 +1,22 @@
+name: setup monochange
+description: Install the monochange CLI for release workflow automation
+
+runs:
+  using: composite
+  steps:
+    - name: setup pnpm
+      uses: pnpm/action-setup@v4.4.0
+
+    - name: setup node
+      uses: actions/setup-node@v6.3.0
+      with:
+        node-version: 22
+        cache: pnpm
+
+    - name: install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: install monochange
+      shell: bash
+      run: pnpm add -D monochange

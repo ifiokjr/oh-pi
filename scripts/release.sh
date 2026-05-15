@@ -5,15 +5,14 @@ set -euo pipefail
 # Usage: ./scripts/release.sh [--dry-run]
 #
 # Prerequisites:
-#   - knope (https://knope.tech)
+#   - monochange (mc)
 #   - pnpm
 #   - gh (GitHub CLI, authenticated)
 #
 # What it does:
 #   1. Verifies the working tree is clean
 #   2. Runs full CI/security checks (lint, security, typecheck, test, build)
-#   3. Runs `knope release` to bump versions, update CHANGELOG.md, commit, tag, push
-#   4. Creates a GitHub release from the tag
+#   3. Runs `mc release` to bump versions, update changelogs, commit, tag, push
 
 DRY_RUN=""
 if [[ "${1:-}" == "--dry-run" ]]; then
@@ -22,8 +21,8 @@ if [[ "${1:-}" == "--dry-run" ]]; then
 fi
 
 echo "📋 Checking prerequisites..."
-command -v knope >/dev/null 2>&1 || {
-	echo "❌ knope not found. Install: https://knope.tech"
+command -v mc >/dev/null 2>&1 || {
+	echo "❌ monochange (mc) not found. Install: https://github.com/ifiokjr/monochange"
 	exit 1
 }
 command -v pnpm >/dev/null 2>&1 || {
@@ -44,7 +43,7 @@ fi
 echo "📋 Checking for pending changesets..."
 CHANGESET_COUNT=$(find .changeset -name '*.md' ! -name 'README.md' 2>/dev/null | wc -l | tr -d ' ')
 if [[ "$CHANGESET_COUNT" -eq 0 ]]; then
-	echo "⚠️  No changesets found. Run 'knope document-change' first."
+	echo "⚠️  No changesets found. Run 'mc change' first."
 	exit 1
 fi
 
@@ -78,13 +77,12 @@ pnpm build || {
 }
 
 echo ""
-echo "🚀 Running knope release..."
-knope release $DRY_RUN
+echo "🚀 Running monochange release..."
+mc release $DRY_RUN
 
 if [[ -z "$DRY_RUN" ]]; then
 	echo ""
 	echo "✅ Release complete!"
-	echo "   Version: $(knope get-version)"
 	echo "   Check: https://github.com/ifiokjr/oh-pi/releases"
 else
 	echo ""
