@@ -130,7 +130,7 @@ function detectShell(): { key: string; info: ShellProfile } {
 		key: baseName || "unknown",
 		info: {
 			name: baseName || "unknown shell",
-			note: `Could not determine shell type from $SHELL="${shellPath}". ` + `Use standard POSIX syntax.`,
+			note: `Could not determine shell type from $SHELL="${shellPath}". Use standard POSIX syntax.`,
 		},
 	};
 }
