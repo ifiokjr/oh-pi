@@ -193,7 +193,10 @@ describe("btw commands and rendering", () => {
 		btwExtension(harness.pi as never);
 		await harness.commands.get("btw:clear").handler("", harness.ctx);
 
-		expect(appendEntry).toHaveBeenCalledWith("btw-thread-reset", expect.objectContaining({ timestamp: expect.any(Number) }));
+		expect(appendEntry).toHaveBeenCalledWith(
+			"btw-thread-reset",
+			expect.objectContaining({ timestamp: expect.any(Number) }),
+		);
 		expect(harness.notifications).toContainEqual({
 			msg: "Cleared BTW thread.",
 			type: "info",
@@ -278,9 +281,7 @@ describe("btw commands and rendering", () => {
 		// Then inject it
 		await harness.commands.get("btw:inject").handler("", harness.ctx);
 
-		expect(sendUserMessage).toHaveBeenCalledWith(
-			expect.stringContaining("side conversation"),
-		);
+		expect(sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("side conversation"));
 		expect(appendEntry).toHaveBeenCalledWith("btw-thread-reset", expect.any(Object));
 	});
 

@@ -18,6 +18,7 @@
  * Adapted from https://github.com/dbachelder/pi-btw by Dan Bachelder (MIT).
  */
 
+import { type AssistantMessage, type Message, type ThinkingLevel as AiThinkingLevel } from "@mariozechner/pi-ai";
 import {
 	buildSessionContext,
 	createAgentSession,
@@ -31,7 +32,6 @@ import {
 	type ExtensionContext,
 	type ResourceLoader,
 } from "@mariozechner/pi-coding-agent";
-import { type AssistantMessage, type Message, type ThinkingLevel as AiThinkingLevel } from "@mariozechner/pi-ai";
 import {
 	Container,
 	Input,
@@ -172,7 +172,10 @@ function buildSeedMessages(ctx: ExtensionContext, thread: BtwDetails[]): Message
 	const seed: Message[] = [];
 
 	try {
-		const contextMessages = buildSessionContext(ctx.sessionManager.getEntries(), ctx.sessionManager.getLeafId()).messages;
+		const contextMessages = buildSessionContext(
+			ctx.sessionManager.getEntries(),
+			ctx.sessionManager.getLeafId(),
+		).messages;
 		seed.push(...(contextMessages.filter((message) => "role" in message) as Message[]));
 	} catch {
 		// Ignore context seed failures and continue with an empty side thread.
@@ -191,16 +194,14 @@ function buildSeedMessages(ctx: ExtensionContext, thread: BtwDetails[]): Message
 				provider: item.provider,
 				model: item.model,
 				api: ctx.model?.api ?? "openai-responses",
-				usage:
-					item.usage ??
-					{
-						input: 0,
-						output: 0,
-						cacheRead: 0,
-						cacheWrite: 0,
-						totalTokens: 0,
-						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-					},
+				usage: item.usage ?? {
+					input: 0,
+					output: 0,
+					cacheRead: 0,
+					cacheWrite: 0,
+					totalTokens: 0,
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				},
 				stopReason: "stop",
 				timestamp: item.timestamp,
 			},
@@ -211,9 +212,7 @@ function buildSeedMessages(ctx: ExtensionContext, thread: BtwDetails[]): Message
 }
 
 function formatThread(thread: BtwDetails[]): string {
-	return thread
-		.map((item) => `User: ${item.question.trim()}\nAssistant: ${item.answer.trim()}`)
-		.join("\n\n---\n\n");
+	return thread.map((item) => `User: ${item.question.trim()}\nAssistant: ${item.answer.trim()}`).join("\n\n---\n\n");
 }
 
 function formatToolArgs(toolName: string, args: unknown): string {
@@ -243,7 +242,11 @@ function isVisibleBtwMessage(message: { role: string; customType?: string }): bo
 	return message.role === "custom" && message.customType === BTW_MESSAGE_TYPE;
 }
 
-function notify(ctx: ExtensionContext | ExtensionCommandContext, message: string, level: "info" | "warning" | "error"): void {
+function notify(
+	ctx: ExtensionContext | ExtensionCommandContext,
+	message: string,
+	level: "info" | "warning" | "error",
+): void {
 	if (ctx.hasUI) {
 		ctx.ui.notify(message, level);
 	}
@@ -394,9 +397,7 @@ class BtwOverlay extends Container implements Focusable {
 
 		lines.push(this.theme.fg("borderMuted", `├${"─".repeat(innerWidth)}┤`));
 		lines.push(this.frameLine(this.theme.fg("warning", status), innerWidth));
-		lines.push(
-			`${this.theme.fg("borderMuted", "│")}${inputLine}${this.theme.fg("borderMuted", "│")}`,
-		);
+		lines.push(`${this.theme.fg("borderMuted", "│")}${inputLine}${this.theme.fg("borderMuted", "│")}`);
 		lines.push(this.frameLine(this.theme.fg("dim", "Enter submit · Esc close"), innerWidth));
 		lines.push(this.borderLine(innerWidth, "bottom"));
 
@@ -704,7 +705,10 @@ export default function (pi: ExtensionAPI) {
 						pendingAnswer = streamed;
 						pendingError = null;
 					}
-					setOverlayStatus(event.type === "message_end" ? "Finalizing side response..." : "Streaming side response...", true);
+					setOverlayStatus(
+						event.type === "message_end" ? "Finalizing side response..." : "Streaming side response...",
+						true,
+					);
 					return;
 				}
 				case "tool_execution_start": {
@@ -724,9 +728,7 @@ export default function (pi: ExtensionAPI) {
 				}
 				case "tool_execution_end": {
 					const endToolName = (event as { toolName?: string }).toolName ?? "unknown";
-					const tc = pendingToolCalls.find(
-						(t) => t.toolName === endToolName && t.status === "running",
-					);
+					const tc = pendingToolCalls.find((t) => t.toolName === endToolName && t.status === "running");
 					if (tc) {
 						tc.status = (event as { isError?: boolean }).isError ? "error" : "done";
 					}
@@ -1069,10 +1071,7 @@ export default function (pi: ExtensionAPI) {
 
 		if (!question) {
 			if (thread.length > 0 && ctx.hasUI) {
-				const choice = await ctx.ui.select("BTW side chat:", [
-					"Continue previous conversation",
-					"Start fresh",
-				]);
+				const choice = await ctx.ui.select("BTW side chat:", ["Continue previous conversation", "Start fresh"]);
 				if (choice === "Continue previous conversation") {
 					// Dispose session so it's recreated with fresh main context on next submit
 					await disposeSideSession();
@@ -1139,7 +1138,8 @@ export default function (pi: ExtensionAPI) {
 	// ── Register /btw commands ────────────────────────────────────────────────
 
 	pi.registerCommand("btw", {
-		description: "Open a BTW side-chat overlay. `/btw <text>` asks immediately, `/btw` opens the side thread, `/btw --save` persists a visible note.",
+		description:
+			"Open a BTW side-chat overlay. `/btw <text>` asks immediately, `/btw` opens the side thread, `/btw --save` persists a visible note.",
 		handler: btwHandler,
 	});
 
