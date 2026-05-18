@@ -1,10 +1,10 @@
 /**
  * Oh-pi Secret Guard Extension — prevent secrets from reaching the LLM
  *
- * Scans all messages and the system prompt for secret patterns (API keys,
- * tokens, passwords, private keys, env-var values, etc.) and redacts them
- * before they are sent to the model. This prevents accidental leakage of
- * credentials through conversation context, file reads, or tool output.
+ * Scans all messages before they reach the LLM for secret patterns (API keys,
+ * tokens, passwords, private keys, env-var values, etc.) and redacts them.
+ * This prevents accidental leakage of credentials through conversation context,
+ * file reads, or tool output.
  *
  * Detection strategies:
  * 1. **Pattern-based** — regexes for common secret formats (AWS keys, GitHub
@@ -18,6 +18,10 @@
  * Configuration (via PI_SECRET_GUARD env vars):
  * - `PI_SECRET_GUARD_LEVEL` — "off" | "patterns" (default) | "env" | "all"
  * - `PI_SECRET_GUARD_EXTRA_PATTERNS` — JSON array of `{pattern, label}` objects
+ *
+ * Retroactive scrubbing of existing session logs:
+ *   npx tsx ~/.pi/agent/scripts/pi-scrub-secrets.ts           # dry run
+ *   npx tsx ~/.pi/agent/scripts/pi-scrub-secrets.ts --apply   # modify files
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
