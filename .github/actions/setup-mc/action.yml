@@ -3,9 +3,9 @@ description: Install the monochange CLI for release workflow automation
 
 inputs:
   mc-version:
-    description: 'monochange version to install'
+    description: "monochange version to install"
     required: false
-    default: 'latest'
+    default: "latest"
 
 runs:
   using: composite
