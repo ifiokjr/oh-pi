@@ -33,4 +33,4 @@ runs:
         TARBALL="monochange-${RUST_ARCH}-${RUST_OS}-v${MC_VERSION}.tar.gz"
         curl -fsSL "https://github.com/monochange/monochange/releases/download/v${MC_VERSION}/${TARBALL}" | tar xz -C /usr/local/bin
         ln -sf /usr/local/bin/monochange /usr/local/bin/mc
-        mc --version
+        mc --help
