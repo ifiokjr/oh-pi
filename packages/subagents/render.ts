@@ -278,9 +278,10 @@ export function renderSubagentResult(
 
 		if (r.artifactPaths) {
 			c.addChild(new Spacer(1));
-			c.addChild(
-				new Text(truncLine(theme.fg("dim", `Artifacts: ${shortenPath(r.artifactPaths.outputPath)}`), w), 0, 0),
-			);
+			const artifactLabel = theme.fg("dim", `Artifacts: ${shortenPath(r.artifactPaths.outputPath)}`);
+			// Wrap instead of truncate so the full path is always visible
+			const wrapped = wrapTextWithAnsi(artifactLabel, w);
+			c.addChild(new Text(wrapped.join("\n"), 0, 0));
 		}
 		return c;
 	}
@@ -469,7 +470,10 @@ export function renderSubagentResult(
 
 	if (d.artifacts) {
 		c.addChild(new Spacer(1));
-		c.addChild(new Text(truncLine(theme.fg("dim", `Artifacts dir: ${shortenPath(d.artifacts.dir)}`), w), 0, 0));
+		const artifactLabel = theme.fg("dim", `Artifacts dir: ${shortenPath(d.artifacts.dir)}`);
+		// Wrap instead of truncate so the full path is always visible
+		const wrapped = wrapTextWithAnsi(artifactLabel, w);
+		c.addChild(new Text(wrapped.join("\n"), 0, 0));
 	}
 	return c;
 }
