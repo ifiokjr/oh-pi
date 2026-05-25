@@ -27,7 +27,8 @@ describe("workflow prompt builder", () => {
 
 		expect(prompt).toContain("Do NOT run any shell or PowerShell scripts");
 		expect(prompt).toContain("/repo/.specify/templates/commands/implement.md");
-		expect(prompt).toContain("/repo/.specify/memory/pi-agent.md");
+		// Normalize path separators for cross-platform compatibility
+		expect(prompt.replace(/\\/g, "/")).toContain("/repo/.specify/memory/pi-agent.md");
 		expect(prompt).toContain("requirements.md: FAIL (3/4 complete, 1 incomplete)");
 		expect(prompt).toContain("Focus on MVP tasks first");
 	});

@@ -19,7 +19,7 @@ describe("adaptive routing config", () => {
 	let warnSpy: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
-		warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+		warnSpy = vi.spyOn(console, "warn").mockImplementation(() => { });
 	});
 
 	afterEach(() => {
@@ -29,7 +29,7 @@ describe("adaptive routing config", () => {
 
 	it("uses defaults when config is missing", () => {
 		expect(readAdaptiveRoutingConfig()).toEqual(DEFAULT_ADAPTIVE_ROUTING_CONFIG);
-		expect(getAdaptiveRoutingConfigPath()).toBe("/mock-home/.pi/agent/extensions/adaptive-routing/config.json");
+		expect(getAdaptiveRoutingConfigPath().replace(/\\/gm, "/")).toBe("/mock-home/.pi/agent/extensions/adaptive-routing/config.json");
 	});
 
 	it("normalizes invalid config values back to safe defaults", () => {
