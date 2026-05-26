@@ -13,7 +13,7 @@
  * Creates a scrub-manifest.json so you can undo later.
  */
 
-import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { homedir } from "node:os";
 
@@ -338,14 +338,34 @@ function processFile(
 	}
 
 	if (modified && config.apply) {
-		// Back up original
+		// Back up original (copy, not rename, so original survives a crash)
 		const bakPath = filePath + ".bak";
 		if (!existsSync(bakPath)) {
-			renameSync(filePath, bakPath);
-		} else {
-			// Already backed up — just overwrite
+			copyFileSync(filePath, bakPath);
 		}
+
 		writeFileSync(filePath, newLines.join("\n"));
+
+		// Validate: every non-empty line must be valid JSON
+		const written = readFileSync(filePath, "utf-8");
+		const writtenLines = written.split("\n");
+		let invalidLines = 0;
+		for (const wl of writtenLines) {
+			if (wl.trim()) {
+				try {
+					JSON.parse(wl);
+				} catch {
+					invalidLines++;
+				}
+			}
+		}
+
+		if (invalidLines > 0) {
+			console.error(`  ⚠ VALIDATION FAILED: ${invalidLines} invalid JSON lines in ${filePath}`);
+			console.error(`  Restoring backup from ${bakPath}...`);
+			copyFileSync(bakPath, filePath);
+			return { totalRedactions: 0, modified: false };
+		}
 	}
 
 	return { totalRedactions, modified };
