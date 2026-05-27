@@ -1,0 +1,44 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: publish packages to npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4.4.0
+
+      - name: setup node
+        uses: actions/setup-node@v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: build packages
+        run: pnpm build
+
+      - name: publish packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+        run: pnpm -r publish --access public --no-git-checks

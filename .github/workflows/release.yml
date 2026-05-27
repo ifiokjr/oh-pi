@@ -1,0 +1,32 @@
+name: release-pr
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-pr:
+    name: prepare release pull request
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6.0.2
+
+      - name: setup monochange
+        uses: ./.github/actions/setup-mc
+
+      - name: run security check
+        run: pnpm security:check
+
+      - name: prepare release pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mc release-pr
