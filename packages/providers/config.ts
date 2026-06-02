@@ -66,7 +66,10 @@ export function getEnvApiKey(provider: SupportedProviderDefinition): string | un
 }
 
 export function resolveApiKeyConfig(provider: SupportedProviderDefinition): string {
-	return getEnvApiKey(provider) ?? provider.env[0] ?? "API_KEY";
+	const envValue = getEnvApiKey(provider);
+	if (envValue) return envValue;
+	// Pass env var name with $ prefix so Pi's config resolver knows to look it up
+	return `$${provider.env[0] ?? "API_KEY"}`;
 }
 
 export function normalizeProviderBaseUrl(baseUrl: string): string {
