@@ -127,7 +127,7 @@ function registerOllamaLocalProvider(pi: ExtensionAPI): void {
 function registerOllamaCloudProvider(pi: ExtensionAPI): void {
 	pi.registerProvider(OLLAMA_CLOUD_PROVIDER, {
 		api: OLLAMA_API,
-		apiKey: OLLAMA_CLOUD_API_KEY_ENV,
+		apiKey: `$${OLLAMA_CLOUD_API_KEY_ENV}`,
 		baseUrl: getOllamaCloudRuntimeConfig().apiUrl,
 		oauth: createOllamaCloudOAuthProvider(() => cloudEnvDiscoveryState.models),
 		models: toProviderModels(cloudEnvDiscoveryState.models),
