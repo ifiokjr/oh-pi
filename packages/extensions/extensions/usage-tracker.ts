@@ -29,6 +29,7 @@ Key usage-tracker surfaces:
 
 import type { AssistantMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { OverlayHandle } from "@earendil-works/pi-tui";
 
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
@@ -232,6 +233,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	let widgetVisible = true;
 	/** Last provider explicitly opened in the usage dashboard. */
 	let lastSelectedUsageProvider: ProviderKey | null = null;
+	let usageOverlayHandle: OverlayHandle | null = null;
 	/** Cached rate limit probes. */
 	const rateLimits = new Map<string, ProviderRateLimits>();
 	/** Last probe timestamp per provider (for cooldown). */
@@ -773,26 +775,50 @@ export default function usageTracker(pi: ExtensionAPI) {
 	}
 
 	async function openUsageOverlay(ctx: ExtensionContext, provider: ProviderKey | null): Promise<void> {
+		// If overlay is already open, close it (toggle behavior)
+		if (usageOverlayHandle) {
+			usageOverlayHandle.hide();
+			usageOverlayHandle = null;
+			return;
+		}
+
 		lastSelectedUsageProvider = provider;
 
-		await ctx.ui.custom(
-			(_tui, theme, _keybindings, done) => {
-				const lines = generateRichReport(ctx, theme, provider);
-				return {
-					render(width: number) {
-						return lines.map((line) => truncateAnsi(line, width));
+		void ctx.ui
+			.custom<void>(
+				(_tui, theme, keybindings, done) => {
+					const lines = generateRichReport(ctx, theme, provider);
+					return {
+						render(width: number) {
+							return lines.map((line) => truncateAnsi(line, width));
+						},
+						handleInput(data: string) {
+							if (
+								data === "q" ||
+								data === " " ||
+								data === "\r" ||
+								keybindings.matches(data, "tui.select.cancel" as never)
+							) {
+								done();
+							}
+						},
+						// Biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
+						dispose() {},
+					};
+				},
+				{
+					overlay: true,
+					onHandle: (handle) => {
+						usageOverlayHandle = handle;
 					},
-					handleInput(data: string) {
-						if (data === "q" || data === "\x1B" || data === "\r" || data === " ") {
-							done();
-						}
-					},
-					// Biome-ignore lint/suspicious/noEmptyBlockStatements: required by Component interface
-					dispose() {},
-				};
-			},
-			{ overlay: true },
-		);
+				},
+			)
+			.then(() => {
+					usageOverlayHandle = null;
+				})
+				.catch(() => {
+						usageOverlayHandle = null;
+					});
 	}
 
 	function recordUsageSample(sample: UsageSample, options: { persist?: boolean } = {}): void {
@@ -1891,7 +1917,7 @@ export default function usageTracker(pi: ExtensionAPI) {
 	// ─── Keyboard shortcut ────────────────────────────────────────────────
 
 	pi.registerShortcut("ctrl+shift+u", {
-		description: "Show usage dashboard with current-provider rate limits and costs",
+		description: "Toggle usage dashboard overlay",
 		async handler(ctx) {
 			await loadPersistedState();
 			triggerProbeAll(true);

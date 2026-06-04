@@ -370,7 +370,7 @@ describe("usage-tracker extension", () => {
 		it("registers ctrl+shift+u shortcut (overrides built-in deleteToLineStart)", () => {
 			usageTracker(pi as any);
 			expect(pi._shortcuts.has("ctrl+shift+u")).toBe(true);
-			expect(pi._shortcuts.get("ctrl+shift+u").description).toContain("rate limits");
+			expect(pi._shortcuts.get("ctrl+shift+u").description).toContain("Toggle usage dashboard");
 		});
 
 		it("does not load persisted history or rate-limit cache during registration", () => {
@@ -1750,9 +1750,10 @@ describe("usage-tracker extension", () => {
 			);
 
 			await runWithTimers(() => pi._commands.get("usage").handler("", ctx));
-			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {
-				overlay: true,
-			});
+			expect(ctx.ui.custom).toHaveBeenCalledWith(
+				expect.any(Function),
+				expect.objectContaining({ overlay: true }),
+			);
 
 			const rendererFactory = (ctx.ui.custom as ReturnType<typeof vi.fn>).mock.calls[0][0] as (...args: unknown[]) => {
 				render: (width: number) => string[];
@@ -1826,9 +1827,10 @@ describe("usage-tracker extension", () => {
 					expect.stringContaining("OpenAI"),
 				]),
 			);
-			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {
-				overlay: true,
-			});
+			expect(ctx.ui.custom).toHaveBeenCalledWith(
+				expect.any(Function),
+				expect.objectContaining({ overlay: true }),
+			);
 
 			const rendererFactory = (ctx.ui.custom as ReturnType<typeof vi.fn>).mock.calls[0][0] as (...args: unknown[]) => {
 				render: (width: number) => string[];
@@ -1856,9 +1858,10 @@ describe("usage-tracker extension", () => {
 			await runWithTimers(() => pi._commands.get("usage").handler("claude", ctx));
 
 			expect(ctx.ui.select).not.toHaveBeenCalled();
-			expect(ctx.ui.custom).toHaveBeenCalledWith(expect.any(Function), {
-				overlay: true,
-			});
+			expect(ctx.ui.custom).toHaveBeenCalledWith(
+				expect.any(Function),
+				expect.objectContaining({ overlay: true }),
+			);
 		});
 
 		it("surfaces recently viewed providers in the picker", async () => {
@@ -1902,6 +1905,56 @@ describe("usage-tracker extension", () => {
 
 			const pickerOptions = (ctx.ui.select as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as string[];
 			expect(pickerOptions).toEqual(expect.arrayContaining([expect.stringContaining("OpenAI — recently viewed")]));
+		});
+
+		it("closes overlay with Escape via keybindings (tui.select.cancel)", async () => {
+			mockFetch.mockResolvedValue(
+				makeFetchResponse({
+					body: {
+						five_hour: {
+							utilization: 58,
+							resets_at: new Date(Date.now() + 45_000).toISOString(),
+						},
+						seven_day: {
+							utilization: 21,
+							resets_at: new Date(Date.now() + 100_000).toISOString(),
+						},
+					},
+				}),
+			);
+
+			usageTracker(pi as any);
+			pi._emit("session_start", { type: "session_start" }, ctx);
+			vi.advanceTimersByTime(15_000);
+			pi._emit(
+				"turn_end",
+				{
+					type: "turn_end",
+					turnIndex: 1,
+					message: makeAssistantMessage({ costTotal: 0.015 }),
+					toolResults: [],
+				},
+				ctx,
+			);
+
+			await runWithTimers(() => pi._commands.get("usage").handler("openai", ctx));
+
+			const factory = (ctx.ui.custom as ReturnType<typeof vi.fn>).mock.calls[0][0] as (
+				...args: unknown[]
+			) => Component & { handleInput: (data: string) => void };
+			const mockKeybindings = {
+				matches: vi.fn((_data: string, _action: string) => false),
+			};
+			const component = factory(
+				{ requestRender: vi.fn() },
+				{ fg: (_color: string, text: string) => text },
+				mockKeybindings,
+				vi.fn(),
+			);
+
+			// Escape key should be delegated to keybindings.matches
+			component.handleInput("\x1b");
+			expect(mockKeybindings.matches).toHaveBeenCalledWith("\x1b", "tui.select.cancel");
 		});
 	});
 
