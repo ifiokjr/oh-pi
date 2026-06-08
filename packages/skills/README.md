@@ -1,6 +1,6 @@
 # `@ifi/oh-pi-skills`
 
-> 17 on-demand skill packs that teach pi how to handle specific tasks.
+> 19 on-demand skill packs that teach pi how to handle specific tasks.
 
 ## Why use this?
 
@@ -8,25 +8,27 @@ Prompts are great for one-shot tasks, but skills go deeper. A skill is a set of 
 
 Skills activate **automatically** — when you say "search the web for X", pi loads the `web-search` skill. When you ask for a claymorphism design, pi loads the `claymorphism` skill.
 
-## All 17 skills
+## All 19 skills
 
 ### 🔧 Tool Skills
 
 | Skill        | What it does                                        |
 | ------------ | --------------------------------------------------- |
 | `context7`   | Query up-to-date library docs via Context7 API      |
+| `fish`       | Fish shell syntax reference                         |
+| `nushell`    | Nushell syntax reference                            |
+| `pwsh`       | PowerShell syntax reference                         |
 | `web-search` | Search the web via DuckDuckGo (free, no key needed) |
 | `web-fetch`  | Extract readable text content from a web page       |
 
 ### 🎨 UI Design System Skills
 
-| Skill             | Visual style                             |
-| ----------------- | ---------------------------------------- |
-| `liquid-glass`    | Apple WWDC 2025 translucent glass        |
-| `glassmorphism`   | Frosted glass blur + transparency        |
-| `claymorphism`    | Soft 3D clay-like surfaces               |
-| `neubrutalism`    | Bold borders, offset solid shadows       |
-| `frontend-design` | General production-grade frontend design |
+| Skill           | Visual style                       |
+| --------------- | ---------------------------------- |
+| `liquid-glass`  | Apple WWDC 2025 translucent glass  |
+| `glassmorphism` | Frosted glass blur + transparency  |
+| `claymorphism`  | Soft 3D clay-like surfaces         |
+| `neubrutalism`  | Bold borders, offset solid shadows |
 
 ### 🔄 Workflow Skills
 
@@ -34,7 +36,6 @@ Skills activate **automatically** — when you say "search the web for X", pi lo
 | ------------------------------- | -------------------------------------------------------------- |
 | `btw` (/qq)                     | Run side conversations without interrupting main work          |
 | `debug-helper`                  | Analyze errors, logs, crashes, and performance                 |
-| `git-workflow`                  | Branching, commits, PRs, and merge/conflict workflows          |
 | `quick-setup`                   | Detect project type and generate `.pi/` config                 |
 | `grill-me`                      | Stress-test a plan through adversarial questioning             |
 | `request-refactor-plan`         | Interview you, create tiny-commit refactor plan, file as issue |
@@ -72,15 +73,15 @@ skills/
 ├── claymorphism/SKILL.md
 ├── context7/SKILL.md
 ├── debug-helper/SKILL.md
-├── devenv/SKILL.md + REFERENCE.md
 ├── flutter-serverpod-mvp/SKILL.md
-├── frontend-design/SKILL.md
-├── git-workflow/SKILL.md
+├── fish/SKILL.md
 ├── glassmorphism/SKILL.md
 ├── grill-me/SKILL.md
 ├── improve-codebase-architecture/SKILL.md + REFERENCE.md
 ├── liquid-glass/SKILL.md
 ├── neubrutalism/SKILL.md
+├── nushell/SKILL.md
+├── pwsh/SKILL.md
 ├── quick-setup/SKILL.md
 ├── request-refactor-plan/SKILL.md
 ├── rust-workspace-bootstrap/SKILL.md + templates/

@@ -452,7 +452,7 @@ Anthropic · OpenAI · Google Gemini · Groq · OpenRouter · xAI · Mistral
 
 ## Skills
 
-The tables below highlight the most commonly reached-for skills. For the full list of all 17 skills, plus the 5 AGENTS.md templates that ship in this repo, see [docs/feature-catalog.md](./docs/feature-catalog.md).
+The tables below highlight the most commonly reached-for skills. For the full list of all 19 skills, plus the 5 AGENTS.md templates that ship in this repo, see [docs/feature-catalog.md](./docs/feature-catalog.md).
 
 ### 🔧 Tool Skills
 
@@ -477,7 +477,6 @@ The tables below highlight the most commonly reached-for skills. For the full li
 | -------------------------- | -------------------------------------------------- |
 | `quick-setup`              | Detect project type, generate .pi/ config          |
 | `debug-helper`             | Error analysis, log interpretation, profiling      |
-| `git-workflow`             | Branching, commits, PRs, conflict resolution       |
 | `rust-workspace-bootstrap` | Scaffold Rust workspaces with knope, devenv, CI/CD |
 | `flutter-serverpod-mvp`    | Scaffold full-stack Flutter + Serverpod MVPs       |
 
