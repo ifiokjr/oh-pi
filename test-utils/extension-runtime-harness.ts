@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 export function createExtensionHarness() {
 	const handlers = new Map<string, Array<(...args: unknown[]) => unknown>>();
 	const userMessages: string[] = [];
+	const messageOptions: unknown[] = [];
 	const notifications: Array<{ msg: string; type: string }> = [];
 	const statusMap = new Map<string, unknown>();
 	let editorText = "";
@@ -77,9 +78,10 @@ export function createExtensionHarness() {
 		registerTool(tool: any) {
 			tools.set(tool.name, tool);
 		},
-		sendMessage(message: unknown) {
+		sendMessage(message: unknown, options?: unknown) {
 			// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 			messages.push(message as any);
+			messageOptions.push(options);
 		},
 		sendUserMessage(message: string) {
 			userMessages.push(message);
@@ -201,6 +203,7 @@ export function createExtensionHarness() {
 			return results;
 		},
 		flags,
+		messageOptions,
 		messageRenderers,
 		messages,
 		notifications,

@@ -108,9 +108,10 @@ const SHORTCUT = "ctrl+shift+d";
 const DIAGNOSTICS_MESSAGE_TYPE = "pi-diagnostics:prompt";
 const DIAGNOSTICS_HISTORY_MESSAGE_TYPE = "pi-diagnostics:history";
 const DIAGNOSTICS_STATE_TYPE = "pi-diagnostics:state";
-// Pi currently converts custom message content into LLM context. Keep diagnostics text in `details` so the
-// renderer can show it to the user without making the completion summary part of the next prompt.
-const DIAGNOSTICS_VISIBLE_CONTENT_PLACEHOLDER = " ";
+// Pi currently converts custom messages into LLM context and may trigger another turn after `sendMessage`.
+// Keep diagnostics text in `details`, use an empty content array, and send without turn triggering so the
+// renderer can show diagnostics to the user without making the completion summary part of the next prompt.
+const DIAGNOSTICS_VISIBLE_CONTENT_PLACEHOLDER: [] = [];
 const WIDGET_KEY = "diagnostics";
 const WIDGET_REFRESH_MS = 5000;
 const PROMPT_PREVIEW_MAX_LENGTH = 96;
@@ -855,12 +856,15 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 
 	const showHistory = (ctx: ExtensionCommandContext, requestedCount: number) => {
 		const history = collectPromptHistory(getBranchEntries(ctx as ExtensionContext), requestedCount);
-		pi.sendMessage({
-			content: DIAGNOSTICS_VISIBLE_CONTENT_PLACEHOLDER,
-			customType: DIAGNOSTICS_HISTORY_MESSAGE_TYPE,
-			details: history,
-			display: true,
-		});
+		pi.sendMessage(
+			{
+				content: DIAGNOSTICS_VISIBLE_CONTENT_PLACEHOLDER,
+				customType: DIAGNOSTICS_HISTORY_MESSAGE_TYPE,
+				details: history,
+				display: true,
+			},
+			{ triggerTurn: false },
+		);
 	};
 
 	pi.registerMessageRenderer(DIAGNOSTICS_MESSAGE_TYPE, (message, { expanded }, theme) =>
@@ -1034,12 +1038,15 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		}
 		lastCompletion = completion;
 		requestWidgetRender?.();
-		pi.sendMessage({
-			content: DIAGNOSTICS_VISIBLE_CONTENT_PLACEHOLDER,
-			customType: DIAGNOSTICS_MESSAGE_TYPE,
-			details: completion,
-			display: true,
-		});
+		pi.sendMessage(
+			{
+				content: DIAGNOSTICS_VISIBLE_CONTENT_PLACEHOLDER,
+				customType: DIAGNOSTICS_MESSAGE_TYPE,
+				details: completion,
+				display: true,
+			},
+			{ triggerTurn: false },
+		);
 	});
 
 	pi.on("session_shutdown", () => {

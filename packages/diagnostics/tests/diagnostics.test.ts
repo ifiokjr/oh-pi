@@ -573,10 +573,11 @@ describe("diagnostics extension", () => {
 		const message = harness.messages[0] as {
 			customType: string;
 			details: PromptCompletionDiagnostics;
-			content: string;
+			content: unknown;
 		};
 		expect(message.customType).toBe("pi-diagnostics:prompt");
-		expect(message.content).toBe(" ");
+		expect(message.content).toEqual([]);
+		expect(harness.messageOptions[0]).toEqual({ triggerTurn: false });
 		expect(message.details.promptPreview).toContain("Investigate the flaky test timeout");
 		expect(message.details.durationMs).toBe(11_250);
 		expect(message.details.turnCount).toBe(2);
@@ -716,10 +717,11 @@ describe("diagnostics extension", () => {
 
 		await command.handler("history 2", harness.ctx);
 		expect(harness.messages.at(-1)).toMatchObject({
-			content: " ",
+			content: [],
 			customType: "pi-diagnostics:history",
 			display: true,
 		});
+		expect(harness.messageOptions.at(-1)).toEqual({ triggerTurn: false });
 
 		const freshHarness = createExtensionHarness();
 		freshHarness.ctx.ui.setWidget = vi.fn();
@@ -946,11 +948,12 @@ describe("diagnostics extension", () => {
 
 		expect(harness.messages).toHaveLength(1);
 		const message = harness.messages[0] as {
-			content: string;
+			content: unknown;
 			details: PromptCompletionDiagnostics;
 		};
 		const completion = message.details;
-		expect(message.content).toBe(" ");
+		expect(message.content).toEqual([]);
+		expect(harness.messageOptions[0]).toEqual({ triggerTurn: false });
 		expect(completion.promptPreview).toBe("Implement the feature");
 		expect(completion.childPromptCount).toBe(1);
 		expect(completion.children[0]?.promptPreview).toBe("Actually prioritize tests");

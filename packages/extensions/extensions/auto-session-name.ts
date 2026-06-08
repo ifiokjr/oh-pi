@@ -55,15 +55,6 @@ function overlapRatio(a: string, b: string): number {
 	return shared / Math.max(left.size, right.size);
 }
 
-function normalizeSessionFile(sessionFile: string | undefined): string | undefined {
-	const normalized = sessionFile?.trim();
-	return normalized || undefined;
-}
-
-function buildResumeCommandHint(sessionFile: string): string {
-	return [`Session file: ${sessionFile}`, `Resume now: pi --session ${JSON.stringify(sessionFile)}`].join("\n");
-}
-
 function isFocusShift(firstUserText: string, latestUserText: string): boolean {
 	if (!(firstUserText && latestUserText)) {
 		return false;
@@ -110,20 +101,6 @@ export default function autoSessionNameExtension(pi: ExtensionAPI) {
 	let manualNameLocked = false;
 	let compactContinuationQueued = false;
 
-	const emitResumeHint = (reason: "shutdown" | "switch", sessionFile: string | undefined) => {
-		const normalizedSessionFile = normalizeSessionFile(sessionFile);
-		if (!normalizedSessionFile) {
-			return;
-		}
-
-		const prefix = reason === "shutdown" ? "Session saved." : "Session switched.";
-		pi.sendMessage({
-			content: `${prefix}\n${buildResumeCommandHint(normalizedSessionFile)}`,
-			customType: "session-resume-hint",
-			display: true,
-		});
-	};
-
 	pi.on("session_start", () => {
 		const existing = (pi.getSessionName?.() ?? "").trim();
 		lastAutoName = existing;
@@ -162,13 +139,5 @@ export default function autoSessionNameExtension(pi: ExtensionAPI) {
 				compactContinuationQueued = false;
 			}, 1000);
 		}
-	});
-
-	pi.on("session_switch", (_event, ctx) => {
-		emitResumeHint("switch", ctx.sessionManager?.getSessionFile?.());
-	});
-
-	pi.on("session_shutdown", (_event, ctx) => {
-		emitResumeHint("shutdown", ctx.sessionManager?.getSessionFile?.());
 	});
 }

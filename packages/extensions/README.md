@@ -201,4 +201,4 @@ This package ships raw `.ts` extensions for pi to load directly.
 
 ## Auto session naming and compaction continuity
 
-`auto-session-name` now keeps session titles fresh as work focus changes, triggers a `continue` follow-up after compaction, and emits canonical resume hints with `pi --session <session-id>` whenever you switch sessions or exit.
+`auto-session-name` keeps session titles fresh as work focus changes and triggers a `continue` follow-up after compaction.

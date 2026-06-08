@@ -7,6 +7,7 @@ export function createExtensionHarness() {
 	const flags = new Map();
 	const messages = [];
 	const userMessages = [];
+	const messageOptions = [];
 	const notifications = [];
 	const statusMap = new Map();
 	const shortcuts = new Map();
@@ -68,8 +69,9 @@ export function createExtensionHarness() {
 		registerTool(tool) {
 			tools.set(tool.name, tool);
 		},
-		sendMessage(message) {
+		sendMessage(message, options) {
 			messages.push(message);
+			messageOptions.push(options);
 		},
 		sendUserMessage(message) {
 			userMessages.push(message);
@@ -170,6 +172,7 @@ export function createExtensionHarness() {
 			return results;
 		},
 		flags,
+		messageOptions,
 		messageRenderers,
 		messages,
 		notifications,
