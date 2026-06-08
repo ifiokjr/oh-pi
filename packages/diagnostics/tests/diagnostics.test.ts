@@ -576,8 +576,7 @@ describe("diagnostics extension", () => {
 			content: string;
 		};
 		expect(message.customType).toBe("pi-diagnostics:prompt");
-		expect(message.content).toContain("Prompt completed");
-		expect(message.content).toContain("duration 11s");
+		expect(message.content).toBe(" ");
 		expect(message.details.promptPreview).toContain("Investigate the flaky test timeout");
 		expect(message.details.durationMs).toBe(11_250);
 		expect(message.details.turnCount).toBe(2);
@@ -717,6 +716,7 @@ describe("diagnostics extension", () => {
 
 		await command.handler("history 2", harness.ctx);
 		expect(harness.messages.at(-1)).toMatchObject({
+			content: " ",
 			customType: "pi-diagnostics:history",
 			display: true,
 		});
@@ -950,7 +950,7 @@ describe("diagnostics extension", () => {
 			details: PromptCompletionDiagnostics;
 		};
 		const completion = message.details;
-		expect(message.content).toContain("1 nested prompt");
+		expect(message.content).toBe(" ");
 		expect(completion.promptPreview).toBe("Implement the feature");
 		expect(completion.childPromptCount).toBe(1);
 		expect(completion.children[0]?.promptPreview).toBe("Actually prioritize tests");

@@ -88,7 +88,7 @@ oh-pi repo
 | `@ifi/pi-web-remote`          | `/remote` session sharing for browser-oriented remote access                                                                                                                         |
 | `@ifi/oh-pi-themes`           | 6 themes: cyberpunk, nord, gruvbox, tokyo-night, catppuccin-mocha, oh-p-dark                                                                                                         |
 | `@ifi/oh-pi-prompts`          | 10 prompt templates including review, fix, explain, refactor, test, commit, pr, and document                                                                                         |
-| `@ifi/oh-pi-skills`           | 17 skills including web-search, web-fetch, context7, debug-helper, git-workflow, quick-setup, and more                                                                               |
+| `@ifi/oh-pi-skills`           | 19 skills including web-search, web-fetch, context7, debug-helper, shell syntax, quick-setup, and more                                                                               |
 | `@ifi/oh-pi-agents`           | 5 AGENTS.md templates for common roles                                                                                                                                               |
 
 Optional packages that stay opt-in:

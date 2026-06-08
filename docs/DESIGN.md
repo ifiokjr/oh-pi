@@ -200,7 +200,6 @@ MCP: All preset MCP servers
 | `session-analyzer`   | pi-shit   | Session analysis and optimization                       |
 | `youtube-transcript` | pi-shit   | YouTube video transcription                             |
 | `quick-setup`        | oh-pi     | Quick project init (detect stack, generate .pi/ config) |
-| `git-workflow`       | oh-pi     | Git workflow assistant (branch strategy, PR templates)  |
 | `debug-helper`       | oh-pi     | Debug assistant (error analysis, log interpretation)    |
 | `doc-generator`      | oh-pi     | Documentation generation (README, API docs, CHANGELOG)  |
 | `test-writer`        | oh-pi     | Test generation (unit/integration, framework detection) |
@@ -448,7 +447,7 @@ Users can use just the configurator, just the Pi Package, or both.
 - [x] All presets
 - [ ] Theme preview TUI
 - [x] Keybinding scheme selection
-- [ ] Custom Skills (quick-setup, git-workflow, debug-helper)
+- [ ] Custom Skills (quick-setup, debug-helper)
 - [x] Custom Extensions (confirm-destructive, git-checkpoint improved)
 - [ ] MCP bridge extension + preset servers
 - [x] AGENTS.md template selection

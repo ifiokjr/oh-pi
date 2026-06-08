@@ -487,7 +487,7 @@ The prompt template pack ships 10 ready-made slash commands.
 
 ## `@ifi/oh-pi-skills`
 
-The skills pack currently ships 17 skills.
+The skills pack currently ships 19 skills.
 
 | Skill                           | What it is for                                                                        |
 | ------------------------------- | ------------------------------------------------------------------------------------- |
@@ -495,13 +495,15 @@ The skills pack currently ships 17 skills.
 | `claymorphism`                  | Build soft, puffy clay-like interfaces                                                |
 | `context7`                      | Query up-to-date library and framework docs through Context7                          |
 | `debug-helper`                  | Analyze errors, logs, crashes, and performance issues                                 |
+| `fish`                          | Fish shell syntax reference                                                           |
 | `flutter-serverpod-mvp`         | Scaffold and evolve Flutter + Serverpod MVPs                                          |
-| `git-workflow`                  | Branching, commits, PRs, and merge/conflict workflow help                             |
 | `glassmorphism`                 | Build frosted-glass style interfaces                                                  |
 | `grill-me`                      | Stress-test a plan or design through adversarial questioning                          |
 | `improve-codebase-architecture` | Find architecture improvements that deepen modules and improve testability            |
 | `liquid-glass`                  | Build Apple Liquid Glass-inspired interfaces                                          |
 | `neubrutalism`                  | Build bold, thick-bordered, offset-shadow interfaces                                  |
+| `nushell`                       | Nushell syntax reference for shell commands                                           |
+| `pwsh`                          | PowerShell syntax reference                                                           |
 | `quick-setup`                   | Detect project type and generate `.pi/` config                                        |
 | `request-refactor-plan`         | Interview the user, create a tiny-commit refactor plan, and file it as a GitHub issue |
 | `rust-workspace-bootstrap`      | Scaffold a production Rust workspace with knope, devenv, and CI/release workflows     |
