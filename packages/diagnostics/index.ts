@@ -689,6 +689,7 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 	let currentPrompt: ActivePromptRun | null = null;
 	let lastCompletion: PromptCompletionDiagnostics | null = null;
 	let requestWidgetRender: (() => void) | null = null;
+	const completionHistory: PromptCompletionDiagnostics[] = [];
 	const activePromptRuns: Array<ActivePromptRun | null> = [];
 	const activeToolRuns = new Map<string, ActiveToolRun>();
 	const pendingUserPrompts: PendingUserPrompt[] = [];
@@ -807,6 +808,8 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 			enabled = restoredEnabled;
 		}
 		lastCompletion = restoreLastCompletion(entries);
+		completionHistory.length = 0;
+		completionHistory.push(...collectPromptHistory(entries, HISTORY_MAX_COUNT).items);
 		currentPrompt = null;
 		activePromptRuns.length = 0;
 		activeToolRuns.clear();
@@ -854,8 +857,14 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 		ctx.ui.notify(`Diagnostics ${currentStatus}. ${currentPromptLine}. ${lastLine}.`, "info");
 	};
 
-	const showHistory = (ctx: ExtensionCommandContext, requestedCount: number) => {
-		const history = collectPromptHistory(getBranchEntries(ctx as ExtensionContext), requestedCount);
+	const showHistory = (_ctx: ExtensionCommandContext, requestedCount: number) => {
+		const displayedCount = Math.min(requestedCount, completionHistory.length);
+		const history: PromptHistoryDiagnostics = {
+			displayedCount,
+			items: completionHistory.slice(0, displayedCount),
+			requestedCount,
+			totalCount: completionHistory.length,
+		};
 		pi.sendMessage(
 			{
 				content: DIAGNOSTICS_VISIBLE_CONTENT_PLACEHOLDER,
@@ -1037,15 +1046,12 @@ export default function diagnosticsExtension(pi: ExtensionAPI): void {
 			return;
 		}
 		lastCompletion = completion;
+		completionHistory.unshift(completion);
+		completionHistory.length = Math.min(completionHistory.length, HISTORY_MAX_COUNT);
 		requestWidgetRender?.();
-		pi.sendMessage(
-			{
-				content: DIAGNOSTICS_VISIBLE_CONTENT_PLACEHOLDER,
-				customType: DIAGNOSTICS_MESSAGE_TYPE,
-				details: completion,
-				display: true,
-			},
-			{ triggerTurn: false },
+		ctx.ui.notify(
+			`Prompt ${completion.statusLabel} · ${completion.durationLabel} · ${completion.promptPreview}`,
+			"info",
 		);
 	});
 

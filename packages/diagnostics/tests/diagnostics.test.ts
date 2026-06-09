@@ -19,6 +19,16 @@ function renderText(component: { render: (width: number) => string[] }, width = 
 	return component.render(width).join("\n");
 }
 
+function latestHistoryCompletion(harness: ReturnType<typeof createExtensionHarness>): PromptCompletionDiagnostics {
+	harness.commands.get("diagnostics")?.handler("history 1", harness.ctx);
+	const historyMessage = harness.messages.at(-1) as { details: { items: PromptCompletionDiagnostics[] } };
+	const completion = historyMessage.details.items[0];
+	if (!completion) {
+		throw new Error("Expected diagnostics history to include a prompt completion");
+	}
+	return completion;
+}
+
 function makeCompletion(overrides: Partial<PromptCompletionDiagnostics> = {}): PromptCompletionDiagnostics {
 	return {
 		promptPreview: "Investigate the flaky test timeout in CI.",
@@ -569,22 +579,8 @@ describe("diagnostics extension", () => {
 			harness.ctx,
 		);
 
-		expect(harness.messages).toHaveLength(1);
-		const message = harness.messages[0] as {
-			customType: string;
-			details: PromptCompletionDiagnostics;
-			content: unknown;
-		};
-		expect(message.customType).toBe("pi-diagnostics:prompt");
-		expect(message.content).toEqual([]);
-		expect(harness.messageOptions[0]).toEqual({ triggerTurn: false });
-		expect(message.details.promptPreview).toContain("Investigate the flaky test timeout");
-		expect(message.details.durationMs).toBe(11_250);
-		expect(message.details.turnCount).toBe(2);
-		expect(message.details.toolCount).toBe(1);
-		expect(message.details.turns[0]?.completedAtLabel).toMatch(/2026-04-16 \d{2}:00:0[67]/);
-		expect(message.details.turns[0]?.toolCount).toBe(1);
-		expect(message.details.turns[1]?.responsePreview).toContain("Done.");
+		expect(harness.messages).toHaveLength(0);
+		expect(harness.notifications.at(-1)?.msg).toContain("Investigate the flaky test timeout");
 		expect(widget?.render(200).join("\n")).toContain("completed");
 
 		requestRender.mockClear();
@@ -825,10 +821,8 @@ describe("diagnostics extension", () => {
 			harness.ctx,
 		);
 
-		expect(harness.messages).toHaveLength(1);
-		expect((harness.messages[0] as { details: PromptCompletionDiagnostics }).details.promptPreview).toBe(
-			"Scheduled follow-up",
-		);
+		expect(harness.messages).toHaveLength(0);
+		expect(latestHistoryCompletion(harness).promptPreview).toBe("Scheduled follow-up");
 	});
 
 	it("nests an interrupted user prompt under the active prompt completion", () => {
@@ -946,14 +940,8 @@ describe("diagnostics extension", () => {
 			harness.ctx,
 		);
 
-		expect(harness.messages).toHaveLength(1);
-		const message = harness.messages[0] as {
-			content: unknown;
-			details: PromptCompletionDiagnostics;
-		};
-		const completion = message.details;
-		expect(message.content).toEqual([]);
-		expect(harness.messageOptions[0]).toEqual({ triggerTurn: false });
+		expect(harness.messages).toHaveLength(0);
+		const completion = latestHistoryCompletion(harness);
 		expect(completion.promptPreview).toBe("Implement the feature");
 		expect(completion.childPromptCount).toBe(1);
 		expect(completion.children[0]?.promptPreview).toBe("Actually prioritize tests");
@@ -1010,8 +998,8 @@ describe("diagnostics extension", () => {
 			harness.ctx,
 		);
 
-		expect(harness.messages).toHaveLength(1);
-		const completion = (harness.messages[0] as { details: PromptCompletionDiagnostics }).details;
+		expect(harness.messages).toHaveLength(0);
+		const completion = latestHistoryCompletion(harness);
 		expect(completion.promptPreview).toBe("/skill:debug-helper diagnose CI");
 	});
 
@@ -1099,8 +1087,8 @@ describe("diagnostics extension", () => {
 			},
 			boundedHarness.ctx,
 		);
-		expect(boundedHarness.messages).toHaveLength(1);
-		const completion = (boundedHarness.messages[0] as { details: PromptCompletionDiagnostics }).details;
+		expect(boundedHarness.messages).toHaveLength(0);
+		const completion = latestHistoryCompletion(boundedHarness);
 		expect(completion.promptPreview).toBe("Prompt 8");
 	});
 
@@ -1176,8 +1164,8 @@ describe("diagnostics extension", () => {
 			},
 			harness.ctx,
 		);
-		expect(harness.messages).toHaveLength(1);
-		const completion = (harness.messages[0] as { details: PromptCompletionDiagnostics }).details;
+		expect(harness.messages).toHaveLength(0);
+		const completion = latestHistoryCompletion(harness);
 		expect(completion.promptPreview).toBe("User task");
 	});
 
