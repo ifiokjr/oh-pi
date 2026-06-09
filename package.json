@@ -91,7 +91,6 @@
 		"extensions": [
 			"./packages/extensions/extensions/answer.ts",
 			"./packages/extensions/extensions/watchdog.ts",
-			"./packages/extensions/extensions/auto-session-name.ts",
 			"./packages/extensions/extensions/auto-update.ts",
 			"./packages/extensions/extensions/btw.ts",
 			"./packages/extensions/extensions/compact-header.ts",

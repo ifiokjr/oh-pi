@@ -1,7 +1,7 @@
 {
 	"name": "@ifi/oh-pi-extensions",
 	"version": "0.5.1",
-	"description": "Core pi extensions: git-guard, auto-session, custom-footer, shell-format, and more.",
+	"description": "Core pi extensions: git-guard, custom-footer, shell-format, and more.",
 	"keywords": [
 		"pi-package"
 	],
@@ -37,7 +37,6 @@
 		"extensions": [
 			"./extensions/answer.ts",
 			"./extensions/watchdog.ts",
-			"./extensions/auto-session-name.ts",
 			"./extensions/auto-update.ts",
 			"./extensions/btw.ts",
 			"./extensions/compact-header.ts",

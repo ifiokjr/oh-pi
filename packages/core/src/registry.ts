@@ -147,13 +147,6 @@ export const EXTENSIONS = [
 	{
 		default: true,
 		get label() {
-			return `${icon("memo")} Auto Session Name — Dynamic session naming + compact auto-continue`;
-		},
-		name: "auto-session-name",
-	},
-	{
-		default: true,
-		get label() {
 			return `${icon("chart")} Custom Footer — Enhanced status bar with tokens, cost, time, git, cwd`;
 		},
 		name: "custom-footer",

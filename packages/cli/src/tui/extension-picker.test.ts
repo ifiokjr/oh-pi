@@ -33,7 +33,7 @@ function createMockStreams() {
 
 const OPTIONS: ExtensionOption[] = [
 	{ value: "git-guard", label: "Git Guard", default: true },
-	{ value: "auto-session-name", label: "Auto Session Name", default: true },
+	{ value: "custom-footer", label: "Custom Footer", default: true },
 	{ value: "plan", label: "Plan Mode", default: false },
 ];
 
@@ -42,7 +42,7 @@ describe("pickExtensions", () => {
 		const { stdin, stdout } = createMockStreams();
 		(stdin as any).isTTY = false;
 		const result = await pickExtensions(OPTIONS, { stdin, stdout });
-		expect(result).toEqual(["git-guard", "auto-session-name"]);
+		expect(result).toEqual(["git-guard", "custom-footer"]);
 	});
 
 	it("selects all on A and confirms", async () => {
@@ -56,7 +56,7 @@ describe("pickExtensions", () => {
 		}, 10);
 
 		const result = await promise;
-		expect(result).toEqual(["git-guard", "auto-session-name", "plan"]);
+		expect(result).toEqual(["git-guard", "custom-footer", "plan"]);
 	});
 
 	it("deselects all on second A", async () => {
@@ -88,7 +88,7 @@ describe("pickExtensions", () => {
 		const result = await promise;
 		expect(result).toContain("plan");
 		expect(result).toContain("git-guard");
-		expect(result).toContain("auto-session-name");
+		expect(result).toContain("custom-footer");
 	});
 
 	it("toggles off a pre-selected item with space", async () => {
@@ -103,6 +103,6 @@ describe("pickExtensions", () => {
 
 		const result = await promise;
 		expect(result).not.toContain("git-guard");
-		expect(result).toContain("auto-session-name");
+		expect(result).toContain("custom-footer");
 	});
 });

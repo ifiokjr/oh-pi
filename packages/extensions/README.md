@@ -8,7 +8,6 @@ This package includes extensions such as:
 
 - answer / /answer:auto
 - git-guard
-- auto-session-name
 - custom-footer
 - tool-metadata
 - compact-header
@@ -198,7 +197,3 @@ Resolve the watchdog sampling interval in milliseconds, clamping configured valu
 ## Notes
 
 This package ships raw `.ts` extensions for pi to load directly.
-
-## Auto session naming and compaction continuity
-
-`auto-session-name` keeps session titles fresh as work focus changes and triggers a `continue` follow-up after compaction.

@@ -253,12 +253,6 @@ Prevents accidental code loss by auto-creating stash checkpoints before the agen
 
 **How it works:** On `session_start`, checks `git status`. If dirty, creates `git stash` with a timestamped name. On `tool_result` for write/edit operations, tracks changed files.
 
-### 📝 Auto Session Name (`auto-session-name`) — **default: on**
-
-Automatically names sessions based on the first user message. Instead of "Session 2025-03-04T10:33:35", you get "Refactor auth to JWT" or "Fix CI pipeline".
-
-**How it works:** Listens for the first `turn_end` event, extracts a short title from the user's initial prompt, and calls `pi.setSessionName()`.
-
 ### 📊 Custom Footer (`custom-footer`) — **default: on**
 
 Replaces the default pi footer with a rich status bar showing real-time metrics:
@@ -703,7 +697,7 @@ oh-pi/
 ├── packages/
 │   ├── core/                   Shared types, registries, icons, i18n, and path helpers (compiled)
 │   ├── cli/                    Interactive TUI configurator (compiled)
-│   ├── extensions/             13 core pi extensions (raw .ts)
+│   ├── extensions/             12 core pi extensions (raw .ts)
 │   ├── background-tasks/       Reactive background shell task package (raw .ts)
 │   ├── diagnostics/            Prompt completion timing extension (raw .ts)
 │   ├── subagents/              Subagent orchestration package (raw .ts)

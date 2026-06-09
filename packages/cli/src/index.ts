@@ -63,7 +63,7 @@ async function quickFlow(env: EnvInfo): Promise<OhPConfigWithRouting> {
 		...providerSetup,
 		adaptiveRouting,
 		agents: "general-developer",
-		extensions: ["git-guard", "auto-session-name", "custom-footer", "diagnostics", "compact-header", "auto-update"],
+		extensions: ["git-guard", "custom-footer", "diagnostics", "compact-header", "auto-update"],
 		keybindings: "default",
 		prompts: ["review", "fix", "explain", "commit", "test"],
 		theme: "dark",
