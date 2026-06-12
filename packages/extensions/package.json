@@ -47,7 +47,9 @@
 			"./extensions/shell-format.ts",
 			"./extensions/tool-metadata.ts",
 			"./extensions/usage-tracker.ts",
-			"./extensions/worktree.ts"
+			"./extensions/worktree.ts",
+			"./extensions/secret-guard.ts",
+			"./extensions/secret-guard.ts"
 		]
 	}
 }
