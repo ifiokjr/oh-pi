@@ -9,6 +9,6 @@ describe("provider catalog smoke tests", () => {
 		providerCatalogExtension(harness.pi as never);
 
 		expect(harness.commands.has("providers")).toBe(true);
-		expect(harness.commands.has("providers:login")).toBe(true);
+		expect(harness.commands.has("providers login")).toBe(true);
 	});
 });

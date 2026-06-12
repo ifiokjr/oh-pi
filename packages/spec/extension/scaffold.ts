@@ -29,7 +29,7 @@ This project uses the native pi spec workflow inspired by GitHub spec-kit.
 - File templates live in .specify/templates/.
 - The native replacement for agent-specific context files is .specify/memory/pi-agent.md.
 - Feature artifacts live in specs/###-feature-name/.
-`.replaceAll("/spec ", "/spec:");
+`;
 
 const DEFAULT_EXTENSIONS_YML = `settings:
   auto_execute_hooks: true

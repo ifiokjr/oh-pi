@@ -397,72 +397,72 @@ export default function adaptiveRoutingExtension(pi: ExtensionAPI) {
 	}[] = [
 		{
 			description: "Show the current adaptive routing status.",
-			name: "route:status",
+			name: "route status",
 			subcommand: "status",
 		},
 		{
 			description: "Enable adaptive routing auto mode.",
-			name: "route:on",
+			name: "route on",
 			subcommand: "on",
 		},
 		{
 			description: "Enable adaptive routing auto mode.",
-			name: "route:auto",
+			name: "route auto",
 			subcommand: "auto",
 		},
 		{
 			description: "Disable adaptive routing.",
-			name: "route:off",
+			name: "route off",
 			subcommand: "off",
 		},
 		{
 			description: "Suggest route decisions without changing the active model.",
-			name: "route:shadow",
+			name: "route shadow",
 			subcommand: "shadow",
 		},
 		{
 			description: "Explain the latest adaptive route decision.",
-			name: "route:explain",
+			name: "route explain",
 			subcommand: "explain",
 		},
 		{
 			description: "Show delegated routing assignments.",
-			name: "route:assignments",
+			name: "route assignments",
 			subcommand: "assignments",
 		},
 		{
 			description: "Show delegated routing assignments.",
-			name: "route:delegated",
+			name: "route delegated",
 			subcommand: "delegated",
 		},
 		{
 			description: "Inspect why a delegated model was chosen.",
-			name: "route:why",
+			name: "route why",
 			subcommand: "why",
 		},
 		{
 			description: "Lock routing to the current model and thinking level.",
-			name: "route:lock",
+			name: "route lock",
 			subcommand: "lock",
 		},
 		{
 			description: "Clear the adaptive routing lock.",
-			name: "route:unlock",
+			name: "route unlock",
 			subcommand: "unlock",
 		},
 		{
 			description: "Refresh routing config and usage snapshots.",
-			name: "route:refresh",
+			name: "route refresh",
 			subcommand: "refresh",
 		},
 		{
 			description: "Record feedback for the last adaptive routing decision.",
-			name: "route:feedback",
+			name: "route feedback",
 			subcommand: "feedback",
 		},
 		{
 			description: "Show adaptive routing telemetry stats.",
-			name: "route:stats",
+			name: "route stats",
 			subcommand: "stats",
 		},
 	];

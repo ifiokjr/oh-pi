@@ -119,13 +119,13 @@ describe("btw commands and rendering", () => {
 
 		const commands = Array.from(harness.commands.keys()).sort();
 		expect(commands).toContain("btw");
-		expect(commands).toContain("btw:clear");
-		expect(commands).toContain("btw:inject");
-		expect(commands).toContain("btw:summarize");
+		expect(commands).toContain("btw clear");
+		expect(commands).toContain("btw inject");
+		expect(commands).toContain("btw summarize");
 		expect(commands).toContain("qq");
-		expect(commands).toContain("qq:clear");
-		expect(commands).toContain("qq:inject");
-		expect(commands).toContain("qq:summarize");
+		expect(commands).toContain("qq clear");
+		expect(commands).toContain("qq inject");
+		expect(commands).toContain("qq summarize");
 	});
 
 	it("opens overlay when /btw is called without a question if no thread exists", async () => {
@@ -191,7 +191,7 @@ describe("btw commands and rendering", () => {
 		harness.pi.appendEntry = appendEntry;
 
 		btwExtension(harness.pi as never);
-		await harness.commands.get("btw:clear").handler("", harness.ctx);
+		await harness.commands.get("btw clear").handler("", harness.ctx);
 
 		expect(appendEntry).toHaveBeenCalledWith(
 			"btw-thread-reset",
@@ -207,7 +207,7 @@ describe("btw commands and rendering", () => {
 		const harness = createExtensionHarness();
 		btwExtension(harness.pi as never);
 
-		await harness.commands.get("btw:inject").handler("", harness.ctx);
+		await harness.commands.get("btw inject").handler("", harness.ctx);
 
 		expect(harness.notifications).toContainEqual({
 			msg: "No BTW thread to inject.",
@@ -219,7 +219,7 @@ describe("btw commands and rendering", () => {
 		const harness = createExtensionHarness();
 		btwExtension(harness.pi as never);
 
-		await harness.commands.get("btw:summarize").handler("", harness.ctx);
+		await harness.commands.get("btw summarize").handler("", harness.ctx);
 
 		expect(harness.notifications).toContainEqual({
 			msg: "No BTW thread to summarize.",
@@ -279,7 +279,7 @@ describe("btw commands and rendering", () => {
 		// First create a thread entry
 		await harness.commands.get("btw").handler("Investigate auth", harness.ctx);
 		// Then inject it
-		await harness.commands.get("btw:inject").handler("", harness.ctx);
+		await harness.commands.get("btw inject").handler("", harness.ctx);
 
 		expect(sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("side conversation"));
 		expect(appendEntry).toHaveBeenCalledWith("btw-thread-reset", expect.any(Object));

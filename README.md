@@ -316,7 +316,7 @@ Adds centralized git worktree awareness for oh-pi. It detects whether the curren
 
 Adds first-class reminders, recurring follow-ups, and future check-ins to pi.
 
-**Commands:** `/remind in 45m <prompt>` | `/loop 5m <prompt>` | `/loop cron '*/5 * * * *' <prompt>` | `/schedule` | `/schedule:tui` | `/schedule:list` | `/schedule:enable <id>` | `/schedule:disable <id>` | `/schedule:delete <id>` | `/schedule:clear` | `/schedule:clear-other` | `/schedule:adopt <id|all>` | `/schedule:release <id|all>` | `/schedule:clear-foreign`
+**Commands:** `/remind in 45m <prompt>` | `/loop 5m <prompt>` | `/loop cron '*/5 * * * *' <prompt>` | `/schedule` | `/schedule tui` | `/schedule list` | `/schedule enable <id>` | `/schedule disable <id>` | `/schedule delete <id>` | `/schedule clear` | `/schedule clear-other` | `/schedule adopt <id|all>` | `/schedule release <id|all>` | `/schedule clear-foreign`
 
 **Tool:** `schedule_prompt`
 
@@ -326,7 +326,7 @@ Adds first-class reminders, recurring follow-ups, and future check-ins to pi.
 
 Creates a side-conversation widget above the editor so you can ask follow-up questions, think in parallel, or park a tangent without interrupting the main thread.
 
-**Commands:** `/btw` | `/btw:new` | `/btw:clear` | `/btw:inject` | `/btw:summarize` and the alias set `/qq`, `/qq:new`, `/qq:clear`, `/qq:inject`, `/qq:summarize`
+**Commands:** `/btw` | `/btw new` | `/btw clear` | `/btw inject` | `/btw summarize` and the alias set `/qq`, `/qq new`, `/qq clear`, `/qq inject`, `/qq summarize`
 
 **Behavior:** keep a lightweight parallel thread, then either inject the full exchange into the main agent or inject a generated summary instead.
 
@@ -416,7 +416,7 @@ Key usage-tracker surfaces:
 
 Continuously samples runtime health so heavy sessions stay usable.
 
-**Commands:** `/watchdog` | `/watchdog:status` | `/watchdog:startup` | `/watchdog:overlay` | `/watchdog:dashboard` | `/watchdog:config` | `/watchdog:reset` | `/watchdog:on` | `/watchdog:off` | `/watchdog:sample` | `/watchdog:blame` | `/safe-mode [on|off|status]`
+**Commands:** `/watchdog` | `/watchdog status` | `/watchdog startup` | `/watchdog overlay` | `/watchdog dashboard` | `/watchdog config` | `/watchdog reset` | `/watchdog on` | `/watchdog off` | `/watchdog sample` | `/watchdog blame` | `/safe-mode [on|off|status]`
 
 **Behavior:** tracks CPU, memory, and event-loop lag; records recent samples and alerts; and can escalate into safe mode when repeated alerts suggest sustained UI churn. The optional config file lives at `~/.pi/agent/extensions/watchdog/config.json`.
 

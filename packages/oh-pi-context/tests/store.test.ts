@@ -29,7 +29,7 @@ describe("store", () => {
 		indexEntry({
 			sessionId: "s1",
 			projectDir: "/project/a",
-			content: "You install it and run /ctx:search.",
+			content: "You install it and run /ctx search.",
 			role: "assistant",
 			timestamp: Date.now(),
 		});

@@ -666,12 +666,12 @@ describe("answer extension registration", () => {
 		vi.clearAllMocks();
 	});
 
-	it("registers /answer and /answer:auto commands", () => {
+	it("registers /answer and /answer auto commands", () => {
 		const harness = createExtensionHarness();
 		answerExtension(harness.pi as never);
 
 		expect(harness.commands.has("answer")).toBe(true);
-		expect(harness.commands.has("answer:auto")).toBe(true);
+		expect(harness.commands.has("answer auto")).toBe(true);
 	});
 
 	it("restores auto-detect state from session on session_start", async () => {
@@ -684,7 +684,7 @@ describe("answer extension registration", () => {
 		await harness.emitAsync("session_start", { reason: "startup" }, harness.ctx);
 
 		// Toggle should show "disabled" since it's already enabled
-		const cmd = harness.commands.get("answer:auto")!;
+		const cmd = harness.commands.get("answer auto")!;
 		await cmd.handler("", harness.ctx as never);
 		expect(harness.notifications).toEqual([
 			expect.objectContaining({
@@ -700,7 +700,7 @@ describe("answer extension registration", () => {
 
 		await harness.emitAsync("session_start", { reason: "startup" }, harness.ctx);
 
-		const cmd = harness.commands.get("answer:auto")!;
+		const cmd = harness.commands.get("answer auto")!;
 		await cmd.handler("", harness.ctx as never);
 		expect(harness.notifications).toEqual([
 			expect.objectContaining({
@@ -920,9 +920,9 @@ describe("/answer command", () => {
 	});
 });
 
-// ── /answer:auto command ────────────────────────────────────────────────────
+// ── /answer auto command ────────────────────────────────────────────────────
 
-describe("/answer:auto command", () => {
+describe("/answer auto command", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
@@ -931,7 +931,7 @@ describe("/answer:auto command", () => {
 		const harness = createExtensionHarness();
 		answerExtension(harness.pi as never);
 
-		const cmd = harness.commands.get("answer:auto")!;
+		const cmd = harness.commands.get("answer auto")!;
 
 		await cmd.handler("", harness.ctx as never);
 		expect(harness.notifications).toEqual([
@@ -959,7 +959,7 @@ describe("/answer:auto command", () => {
 
 		answerExtension(harness.pi as never);
 
-		const cmd = harness.commands.get("answer:auto")!;
+		const cmd = harness.commands.get("answer auto")!;
 
 		await cmd.handler("", harness.ctx as never);
 
@@ -991,7 +991,7 @@ describe("agent_end auto-detect", () => {
 		answerExtension(harness.pi as never);
 
 		// Enable auto-detect
-		const cmd = harness.commands.get("answer:auto")!;
+		const cmd = harness.commands.get("answer auto")!;
 		await cmd.handler("", harness.ctx as never);
 		harness.notifications.length = 0;
 
@@ -1005,7 +1005,7 @@ describe("agent_end auto-detect", () => {
 		const harness = createExtensionHarness();
 		answerExtension(harness.pi as never);
 
-		const cmd = harness.commands.get("answer:auto")!;
+		const cmd = harness.commands.get("answer auto")!;
 		await cmd.handler("", harness.ctx as never);
 		harness.notifications.length = 0;
 
@@ -1022,7 +1022,7 @@ describe("agent_end auto-detect", () => {
 
 		answerExtension(harness.pi as never);
 
-		const cmd = harness.commands.get("answer:auto")!;
+		const cmd = harness.commands.get("answer auto")!;
 		await cmd.handler("", harness.ctx as never);
 		harness.notifications.length = 0;
 
@@ -1056,7 +1056,7 @@ describe("agent_end auto-detect", () => {
 		answerExtension(harness.pi as never);
 
 		// Enable auto-detect
-		const cmd = harness.commands.get("answer:auto")!;
+		const cmd = harness.commands.get("answer auto")!;
 		await cmd.handler("", harness.ctx as never);
 		harness.notifications.length = 0;
 
@@ -1081,7 +1081,7 @@ describe("agent_end auto-detect", () => {
 
 		answerExtension(harness.pi as never);
 
-		const cmd = harness.commands.get("answer:auto")!;
+		const cmd = harness.commands.get("answer auto")!;
 		await cmd.handler("", harness.ctx as never);
 		harness.notifications.length = 0;
 
@@ -1103,7 +1103,7 @@ describe("agent_end auto-detect", () => {
 
 		answerExtension(harness.pi as never);
 
-		const cmd = harness.commands.get("answer:auto")!;
+		const cmd = harness.commands.get("answer auto")!;
 		await cmd.handler("", harness.ctx as never);
 		harness.notifications.length = 0;
 

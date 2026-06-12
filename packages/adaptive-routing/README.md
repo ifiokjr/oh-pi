@@ -94,11 +94,11 @@ Primary commands:
 
 Alias commands are also registered in `route:<subcommand>` form, for example:
 
-- `/route:status`
-- `/route:shadow`
-- `/route:auto`
-- `/route:off`
-- `/route:explain`
-- `/route:assignments`
-- `/route:why quick-discovery scan the repo`
-- `/route:stats`
+- `/route status`
+- `/route shadow`
+- `/route auto`
+- `/route off`
+- `/route explain`
+- `/route assignments`
+- `/route why quick-discovery scan the repo`
+- `/route stats`

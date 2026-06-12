@@ -89,7 +89,7 @@ Nested objects are merged; project overrides global.
 | `skills`              | Local skill paths                              |
 | `prompts`             | Local template paths                           |
 | `themes`              | Local theme paths                              |
-| `enableSkillCommands` | Register `/skill:name` commands (default true) |
+| `enableSkillCommands` | Register `/skill name` commands (default true) |
 
 ### Environment Variables
 

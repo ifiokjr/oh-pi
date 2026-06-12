@@ -23,20 +23,20 @@ afterEach(() => {
 describe("spec status helpers", () => {
 	it("formats help output with colon-prefixed commands", () => {
 		const help = formatHelpReport();
-		expect(help).toContain("Use `/spec` or `/spec:<subcommand>` with one of these commands:");
-		expect(help).toContain("`/spec:init`");
-		expect(help).toContain("`/spec:constitution <principles>`");
-		expect(help).toContain("`/spec:specify <feature description>`");
-		expect(help).toContain("`/spec:clarify [focus]`");
-		expect(help).toContain("`/spec:checklist [domain]`");
-		expect(help).toContain("`/spec:plan <technical context>`");
-		expect(help).toContain("`/spec:tasks [context]`");
-		expect(help).toContain("`/spec:analyze [focus]`");
-		expect(help).toContain("`/spec:implement [focus]`");
-		expect(help).toContain("`/spec:status`");
-		expect(help).toContain("`/spec:next`");
-		expect(help).toContain("`/spec:list`");
-		expect(help).toContain("Tip: `/spec:status` shows the current workflow status.");
+		expect(help).toContain("Use `/spec` or `/spec <subcommand>` with one of these commands:");
+		expect(help).toContain("`/spec init`");
+		expect(help).toContain("`/spec constitution <principles>`");
+		expect(help).toContain("`/spec specify <feature description>`");
+		expect(help).toContain("`/spec clarify [focus]`");
+		expect(help).toContain("`/spec checklist [domain]`");
+		expect(help).toContain("`/spec plan <technical context>`");
+		expect(help).toContain("`/spec tasks [context]`");
+		expect(help).toContain("`/spec analyze [focus]`");
+		expect(help).toContain("`/spec implement [focus]`");
+		expect(help).toContain("`/spec status`");
+		expect(help).toContain("`/spec next`");
+		expect(help).toContain("`/spec list`");
+		expect(help).toContain("Tip: `/spec status` shows the current workflow status.");
 	});
 
 	it("reports colon-prefixed next steps through the workflow lifecycle", () => {
@@ -48,9 +48,9 @@ describe("spec status helpers", () => {
 			paths: uninitializedPaths,
 		});
 		expect(uninitialized.nextSteps).toEqual([
-			"/spec:init",
-			"/spec:constitution <principles>",
-			"/spec:specify <feature description>",
+			"/spec init",
+			"/spec constitution <principles>",
+			"/spec specify <feature description>",
 		]);
 
 		mkdirSync(join(repoRoot, ".specify"), { recursive: true });
@@ -59,7 +59,7 @@ describe("spec status helpers", () => {
 			currentBranch: "main",
 			paths: uninitializedPaths,
 		});
-		expect(initializedWithoutFeature.nextSteps).toEqual(["/spec:specify <feature description>", "/spec:list"]);
+		expect(initializedWithoutFeature.nextSteps).toEqual(["/spec specify <feature description>", "/spec list"]);
 
 		const featurePaths = buildWorkflowPaths(repoRoot, "001-auth-flow");
 		mkdirSync(featurePaths.featureDir!, { recursive: true });
@@ -72,7 +72,7 @@ describe("spec status helpers", () => {
 			paths: missingSpecPaths,
 			activeFeature: "002-missing-spec",
 		});
-		expect(missingSpec.nextSteps).toEqual(["/spec:specify <feature description>"]);
+		expect(missingSpec.nextSteps).toEqual(["/spec specify <feature description>"]);
 
 		const missingPlan = buildWorkflowStatus({
 			repoRoot,
@@ -81,9 +81,9 @@ describe("spec status helpers", () => {
 			activeFeature: "001-auth-flow",
 		});
 		expect(missingPlan.nextSteps).toEqual([
-			"/spec:clarify",
-			"/spec:checklist quality",
-			"/spec:plan <technical context>",
+			"/spec clarify",
+			"/spec checklist quality",
+			"/spec plan <technical context>",
 		]);
 
 		writeFileSync(featurePaths.planFile!, "# Plan\n", "utf8");
@@ -93,7 +93,7 @@ describe("spec status helpers", () => {
 			paths: featurePaths,
 			activeFeature: "001-auth-flow",
 		});
-		expect(missingTasks.nextSteps).toEqual(["/spec:clarify", "/spec:checklist quality", "/spec:tasks"]);
+		expect(missingTasks.nextSteps).toEqual(["/spec clarify", "/spec checklist quality", "/spec tasks"]);
 
 		writeFileSync(featurePaths.tasksFile!, "# Tasks\n", "utf8");
 		mkdirSync(featurePaths.checklistsDir!, { recursive: true });
@@ -105,10 +105,10 @@ describe("spec status helpers", () => {
 			activeFeature: "001-auth-flow",
 		});
 		expect(incompleteChecklist.nextSteps).toEqual([
-			"/spec:clarify",
-			"/spec:checklist quality",
-			"/spec:analyze",
-			"/spec:implement (after checklist review)",
+			"/spec clarify",
+			"/spec checklist quality",
+			"/spec analyze",
+			"/spec implement (after checklist review)",
 		]);
 
 		writeFileSync(join(featurePaths.checklistsDir!, "quality.md"), "- [x] CHK001\n", "utf8");
@@ -119,11 +119,11 @@ describe("spec status helpers", () => {
 			activeFeature: "001-auth-flow",
 		});
 		expect(completeChecklist.nextSteps).toEqual([
-			"/spec:clarify",
-			"/spec:checklist quality",
-			"/spec:analyze",
-			"/spec:implement",
+			"/spec clarify",
+			"/spec checklist quality",
+			"/spec analyze",
+			"/spec implement",
 		]);
-		expect(formatWorkflowStatus(completeChecklist)).toContain("# /spec:status");
+		expect(formatWorkflowStatus(completeChecklist)).toContain("# /spec status");
 	});
 });

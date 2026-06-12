@@ -55,13 +55,13 @@ description: Skill description — determines when it's loaded. Be specific.
 | `license`                  | ❌       | License                                                                   |
 | `compatibility`            | ❌       | Environment requirements                                                  |
 | `metadata`                 | ❌       | Arbitrary key-value pairs                                                 |
-| `disable-model-invocation` | ❌       | When true, hidden from system prompt; only callable via `/skill:name`     |
+| `disable-model-invocation` | ❌       | When true, hidden from system prompt; only callable via `/skill name`     |
 
 ### Skill Commands
 
 ```bash
-/skill:brave-search           # Load and execute
-/skill:pdf-tools extract      # With arguments
+/skill brave-search           # Load and execute
+/skill pdf-tools extract      # With arguments
 ```
 
 Toggle `enableSkillCommands` in `/settings` or `settings.json`.

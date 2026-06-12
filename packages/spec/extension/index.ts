@@ -123,7 +123,7 @@ async function resolveFeaturePaths(
 ): Promise<WorkflowPaths | undefined> {
 	const featureName = await resolveActiveFeatureName(ctx, repoRoot, currentBranch, hasGit);
 	if (!featureName) {
-		ctx.ui.notify("No active feature found. Run /spec:specify <feature description> first.", "warning");
+		ctx.ui.notify("No active feature found. Run /spec specify <feature description> first.", "warning");
 		return undefined;
 	}
 	return buildWorkflowPaths(repoRoot, featureName);
@@ -180,12 +180,12 @@ function handleInit(pi: ExtensionAPI, repoRoot: string, created: string[]): void
 	sendReport(
 		pi,
 		[
-			"# /spec:init",
+			"# /spec init",
 			"",
 			`- Repository root: ${repoRoot}`,
 			formatCreatedFiles(created),
 			"",
-			"Next: `/spec:constitution <principles>` or `/spec:specify <feature description>`.",
+			"Next: `/spec constitution <principles>` or `/spec specify <feature description>`.",
 		].join("\n"),
 	);
 }
@@ -235,7 +235,7 @@ function handleSpecify(
 	input: string,
 ): void {
 	if (!input) {
-		ctx.ui.notify("/spec:specify requires a feature description.", "warning");
+		ctx.ui.notify("/spec specify requires a feature description.", "warning");
 		return;
 	}
 
@@ -324,7 +324,7 @@ async function handleWorkflowStep(
 	}
 
 	queueWorkflow(pi, step, env.currentBranch, featurePaths, input);
-	ctx.ui.notify(`Queued /spec:${step} workflow.`, "info");
+	ctx.ui.notify(`Queued /spec ${step} workflow.`, "info");
 }
 
 export default function specExtension(pi: ExtensionAPI) {
@@ -335,7 +335,7 @@ export default function specExtension(pi: ExtensionAPI) {
 
 	const specCommand = {
 		description:
-			"Native spec-kit workflow for pi (/spec:init|constitution|specify|clarify|checklist|plan|tasks|analyze|implement)",
+			"Native spec-kit workflow for pi (/spec init|constitution|specify|clarify|checklist|plan|tasks|analyze|implement)",
 		getArgumentCompletions(prefix: string) {
 			const trimmed = prefix.trimStart();
 			if (trimmed.includes(" ")) {
@@ -389,8 +389,8 @@ export default function specExtension(pi: ExtensionAPI) {
 	pi.registerCommand("spec", specCommand);
 
 	for (const subcommand of SPEC_SUBCOMMANDS) {
-		pi.registerCommand(`spec:${subcommand}`, {
-			description: `Alias for /spec:${subcommand}.`,
+		pi.registerCommand(`spec ${subcommand}`, {
+			description: `Alias for /spec ${subcommand}.`,
 			handler: (args, ctx) => specCommand.handler(args ? `${subcommand} ${args}` : subcommand, ctx),
 		});
 	}

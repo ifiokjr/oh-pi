@@ -77,7 +77,7 @@ function registerProvider(registrar: ProviderRegistrar, provider: SupportedProvi
 function registerProvidersCommand(pi: ExtensionAPI): void {
 	const providersCommand = {
 		description:
-			"Inspect, log in to, or refresh the OpenCode-backed multi-provider catalog: /providers, /providers:status, /providers:list [query], /providers:info <provider>, /providers:models <provider>, /providers:login [provider], /providers:logout [provider], /providers:refresh-models [provider|all]",
+			"Inspect, log in to, or refresh the OpenCode-backed multi-provider catalog: /providers, /providers status, /providers list [query], /providers info <provider>, /providers models <provider>, /providers login [provider], /providers logout [provider], /providers refresh-models [provider|all]",
 		// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: This explicit command router keeps each provider subcommand readable.
 		async handler(args: string, ctx: ExtensionCommandContext) {
 			const trimmed = args.trim();
@@ -106,7 +106,7 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 			if (action === "refresh-models") {
 				const providers = query && query.toLowerCase() !== "all" ? findProviders(query) : SUPPORTED_PROVIDERS;
 				if (providers.length === 0) {
-					ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
+					ctx.ui.notify(`No provider matched "${query}". Run /providers list first.`, "warning");
 					return;
 				}
 				const refreshed = await refreshProviders(ctx.modelRegistry, ctx, providers);
@@ -122,12 +122,12 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 
 			if (action === "info") {
 				if (!query) {
-					ctx.ui.notify("Usage: /providers:info <provider>", "warning");
+					ctx.ui.notify("Usage: /providers info <provider>", "warning");
 					return;
 				}
 				const provider = findProviders(query)[0];
 				if (!provider) {
-					ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
+					ctx.ui.notify(`No provider matched "${query}". Run /providers list first.`, "warning");
 					return;
 				}
 				ctx.ui.notify(await renderProviderInfo(provider, ctx), "info");
@@ -136,12 +136,12 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 
 			if (action === "models") {
 				if (!query) {
-					ctx.ui.notify("Usage: /providers:models <provider>", "warning");
+					ctx.ui.notify("Usage: /providers models <provider>", "warning");
 					return;
 				}
 				const provider = findProviders(query)[0];
 				if (!provider) {
-					ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
+					ctx.ui.notify(`No provider matched "${query}". Run /providers list first.`, "warning");
 					return;
 				}
 				ctx.ui.notify(await renderProviderModels(provider, ctx), "info");
@@ -157,32 +157,32 @@ function registerProvidersCommand(pi: ExtensionAPI): void {
 	const aliases: { name: string; subcommand: string; description: string }[] = [
 		{
 			description: "Show multi-provider catalog status.",
-			name: "providers:status",
+			name: "providers status",
 			subcommand: "status",
 		},
 		{
 			description: "List supported providers and environment variables.",
-			name: "providers:list",
+			name: "providers list",
 			subcommand: "list",
 		},
 		{
 			description: "Open the provider picker and log in with an API key.",
-			name: "providers:login",
+			name: "providers login",
 			subcommand: "login",
 		},
 		{
 			description: "Inspect one provider's API mode, URLs, env vars, and model count.",
-			name: "providers:info",
+			name: "providers info",
 			subcommand: "info",
 		},
 		{
 			description: "List the current or fallback model catalog for one provider.",
-			name: "providers:models",
+			name: "providers models",
 			subcommand: "models",
 		},
 		{
 			description: "Refresh configured providers from live discovery when possible.",
-			name: "providers:refresh-models",
+			name: "providers refresh-models",
 			subcommand: "refresh-models",
 		},
 	];
@@ -292,7 +292,7 @@ function renderStatus(ctx: ProviderStatusContext): string {
 
 	if (configured.length === 0) {
 		lines.push("No provider from this package is configured yet.");
-		lines.push("Tip: run /providers:login to open the paged provider picker, then use /providers:refresh-models.");
+		lines.push("Tip: run /providers login to open the paged provider picker, then use /providers refresh-models.");
 		return lines.join("\n");
 	}
 
@@ -310,7 +310,7 @@ function renderStatus(ctx: ProviderStatusContext): string {
 	}
 
 	if (configured.length > 20) {
-		lines.push(`…and ${configured.length - 20} more. Run /providers:list to inspect everything.`);
+		lines.push(`…and ${configured.length - 20} more. Run /providers list to inspect everything.`);
 	}
 
 	return lines.join("\n");
@@ -355,7 +355,7 @@ async function renderProviderModels(
 	const currentModels = credential ? getCredentialModels(credential) : (runtimeState.models.get(provider.id) ?? []);
 	const models = currentModels.length > 0 ? currentModels : await getCatalogModels(provider).catch(() => []);
 	if (models.length === 0) {
-		return `${provider.id} has no discovered models yet. Configure it, then run /providers:refresh-models ${provider.id}.`;
+		return `${provider.id} has no discovered models yet. Configure it, then run /providers refresh-models ${provider.id}.`;
 	}
 
 	return [
@@ -433,7 +433,7 @@ async function resolveProviderSelection(
 ): Promise<SupportedProviderDefinition | null> {
 	const matchedProviders = query ? findProviders(query) : SUPPORTED_PROVIDERS;
 	if (matchedProviders.length === 0) {
-		ctx.ui.notify(`No provider matched "${query}". Run /providers:list first.`, "warning");
+		ctx.ui.notify(`No provider matched "${query}". Run /providers list first.`, "warning");
 		return null;
 	}
 

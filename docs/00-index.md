@@ -33,7 +33,7 @@ A minimalist terminal coding agent tool. Gives the LLM four tools by default (re
 │  ├──────────────────────────────────────────┤ │
 │  │  Skills — On-demand capability packs      │ │
 │  │  • SKILL.md + scripts/resources           │ │
-│  │  • /skill:name invocation or auto-load    │ │
+│  │  • /skill name invocation or auto-load    │ │
 │  ├──────────────────────────────────────────┤ │
 │  │  Prompt Templates — Reusable prompts      │ │
 │  │  • .md files, /name to expand             │ │

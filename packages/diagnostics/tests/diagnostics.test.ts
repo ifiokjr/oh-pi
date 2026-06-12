@@ -960,7 +960,7 @@ describe("diagnostics extension", () => {
 			"input",
 			{
 				type: "input",
-				text: "/skill:debug-helper diagnose CI",
+				text: "/skill debug-helper diagnose CI",
 				images: [],
 				source: "interactive",
 			},
@@ -1000,7 +1000,7 @@ describe("diagnostics extension", () => {
 
 		expect(harness.messages).toHaveLength(0);
 		const completion = latestHistoryCompletion(harness);
-		expect(completion.promptPreview).toBe("/skill:debug-helper diagnose CI");
+		expect(completion.promptPreview).toBe("/skill debug-helper diagnose CI");
 	});
 
 	it("accepts rpc input as user-authored but ignores stale or evicted pending input", async () => {

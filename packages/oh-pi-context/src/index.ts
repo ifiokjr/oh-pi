@@ -44,14 +44,14 @@ function extractText(content: unknown): string {
 export default function (pi: ExtensionAPI) {
 	// ── Lifecycle: index session messages ──
 	pi.on("session_shutdown", () => {
-		// Session entries are indexed via the ctx:index command or auto-indexed
+		// Session entries are indexed via the ctx index command or auto-indexed
 		// on shutdown using the session manager. The session_shutdown event
 		// in this API version does not pass ExtensionContext, so we skip
-		// auto-indexing here and rely on explicit /ctx:index instead.
+		// auto-indexing here and rely on explicit /ctx index instead.
 	});
 
 	// ── Commands ──
-	pi.registerCommand("ctx:index", {
+	pi.registerCommand("ctx index", {
 		description: "Index all messages in the current session into the knowledge base.",
 		async handler(_args, ctx) {
 			const sessionId = ctx.sessionManager.getSessionId();
@@ -77,12 +77,12 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("ctx:search", {
-		description: "Search the knowledge base. Usage: /ctx:search <query>",
+	pi.registerCommand("ctx search", {
+		description: "Search the knowledge base. Usage: /ctx search <query>",
 		async handler(args, ctx) {
 			const query = args.trim();
 			if (!query) {
-				notify(ctx, "Usage: /ctx:search <query>", "warning");
+				notify(ctx, "Usage: /ctx search <query>", "warning");
 				return;
 			}
 			const projectDir = ctx.sessionManager.getCwd();
@@ -102,8 +102,8 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("ctx:terse", {
-		description: "Toggle terse mode. Usage: /ctx:terse [on|off]",
+	pi.registerCommand("ctx terse", {
+		description: "Toggle terse mode. Usage: /ctx terse [on|off]",
 		async handler(args, ctx) {
 			const arg = args.trim().toLowerCase();
 			terseMode = arg === "on" ? true : arg === "off" ? false : !terseMode;
@@ -112,7 +112,7 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("ctx:stats", {
+	pi.registerCommand("ctx stats", {
 		description: "Show knowledge base statistics.",
 		async handler(_args, ctx) {
 			const stats = getStats();
@@ -125,7 +125,7 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("ctx:purge", {
+	pi.registerCommand("ctx purge", {
 		description: "Delete all entries from the knowledge base.",
 		async handler(_args, ctx) {
 			purgeAll();

@@ -407,7 +407,7 @@ describe("watchdog extension", () => {
 		const ctx = createMockCtx();
 		watchdogExtension(pi as any);
 
-		expect(pi._commands.has("watchdog:status")).toBe(true);
+		expect(pi._commands.has("watchdog status")).toBe(true);
 		const command = pi._commands.get("safe-mode");
 		expect(command).toBeDefined();
 
@@ -545,10 +545,10 @@ describe("watchdog extension", () => {
 		const ctx = createMockCtx();
 		watchdogExtension(pi as any);
 
-		await pi._commands.get("watchdog:startup").handler("", ctx);
-		expect(ctx._notifications.at(-1)?.msg).toContain("/watchdog:startup");
+		await pi._commands.get("watchdog startup").handler("", ctx);
+		expect(ctx._notifications.at(-1)?.msg).toContain("/watchdog startup");
 
-		expect(pi._commands.get("watchdog:status")?.description).toContain("watchdog status");
-		await expect(pi._commands.get("watchdog:status").handler("", ctx)).resolves.toBeUndefined();
+		expect(pi._commands.get("watchdog status")?.description).toContain("watchdog status");
+		await expect(pi._commands.get("watchdog status").handler("", ctx)).resolves.toBeUndefined();
 	});
 });

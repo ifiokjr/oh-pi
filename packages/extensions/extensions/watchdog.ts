@@ -301,7 +301,7 @@ export function formatWatchdogStatus(sample: WatchdogSample | null): string {
 export function formatWatchdogAlert(alert: WatchdogAlert): string {
 	return `Performance watchdog ${alert.severity}: ${alert.reasons.join(
 		", ",
-	)}. Run /watchdog:status or /safe-mode on if input feels laggy.`;
+	)}. Run /watchdog status or /safe-mode on if input feels laggy.`;
 }
 
 export function applySafeMode(
@@ -590,7 +590,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 			alertNotificationCount += 1;
 			if (alertNotificationCount >= ALERT_NOTIFICATION_LIMIT) {
 				activeCtx.ui.notify(
-					`${formatWatchdogAlert(alert)} Further alerts suppressed — check status bar or /watchdog:overlay.`,
+					`${formatWatchdogAlert(alert)} Further alerts suppressed — check status bar or /watchdog overlay.`,
 					levelForAlert(alert),
 				);
 			} else {
@@ -663,7 +663,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	const notifyStartupBreakdown = (ctx: ExtensionCommandContext | ExtensionContext) => {
 		const diagnostics = getStartupDiagnostics();
 		if (diagnostics.length === 0) {
-			ctx.ui.notify("No startup timings recorded yet. Restart the session and run /watchdog:startup.", "info");
+			ctx.ui.notify("No startup timings recorded yet. Restart the session and run /watchdog startup.", "info");
 			return;
 		}
 
@@ -750,7 +750,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 
 	const watchdogCommand = {
 		description:
-			"Inspect or control the performance watchdog: /watchdog:status|startup|overlay|dashboard|config|reset|on|off|sample|blame",
+			"Inspect or control the performance watchdog: /watchdog status|startup|overlay|dashboard|config|reset|on|off|sample|blame",
 		async handler(args, ctx) {
 			activeCtx = ctx;
 			setSafeModeStatus();
@@ -814,52 +814,52 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	}[] = [
 		{
 			description: "Show the current watchdog status.",
-			name: "watchdog:status",
+			name: "watchdog status",
 			subcommand: "status",
 		},
 		{
 			description: "Show watchdog startup timings.",
-			name: "watchdog:startup",
+			name: "watchdog startup",
 			subcommand: "startup",
 		},
 		{
 			description: "Open the watchdog overlay.",
-			name: "watchdog:overlay",
+			name: "watchdog overlay",
 			subcommand: "overlay",
 		},
 		{
 			description: "Open the watchdog dashboard overlay.",
-			name: "watchdog:dashboard",
+			name: "watchdog dashboard",
 			subcommand: "dashboard",
 		},
 		{
 			description: "Show the watchdog config file path and settings.",
-			name: "watchdog:config",
+			name: "watchdog config",
 			subcommand: "config",
 		},
 		{
 			description: "Reset watchdog metrics and alert history.",
-			name: "watchdog:reset",
+			name: "watchdog reset",
 			subcommand: "reset",
 		},
 		{
 			description: "Enable the performance watchdog.",
-			name: "watchdog:on",
+			name: "watchdog on",
 			subcommand: "on",
 		},
 		{
 			description: "Disable the performance watchdog.",
-			name: "watchdog:off",
+			name: "watchdog off",
 			subcommand: "off",
 		},
 		{
 			description: "Capture a watchdog sample right now.",
-			name: "watchdog:sample",
+			name: "watchdog sample",
 			subcommand: "sample",
 		},
 		{
 			description: "Show the watchdog blame report.",
-			name: "watchdog:blame",
+			name: "watchdog blame",
 			subcommand: "blame",
 		},
 	];

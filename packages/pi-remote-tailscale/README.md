@@ -27,9 +27,9 @@ Inside pi:
 ```text
 /remote
 /remote stop
-/remote:widget
-/remote:widget off
-/remote:widget on
+/remote widget
+/remote widget off
+/remote widget on
 ```
 
 ## What happens

@@ -1,12 +1,12 @@
 /**
  * Answer Extension — interactive Q&A from LLM responses
  *
- * Adds `/answer` and `/answer:auto` commands that extract questions from the
+ * Adds `/answer` and `/answer auto` commands that extract questions from the
  * last assistant message and present them in the shared QnA TUI component.
  *
  * Features:
  * - `/answer` extracts questions, then shows a QnA overlay for interactive answers
- * - `/answer:auto` toggles auto-detection: when enabled, questions in the final
+ * - `/answer auto` toggles auto-detection: when enabled, questions in the final
  *   LLM response automatically trigger the QnA overlay
  * - Answers are injected back into the session as a follow-up user message
  * - Uses `@ifi/pi-shared-qna` for the QnA TUI component
@@ -435,9 +435,9 @@ export default function answerExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	// ── /answer:auto command ──────────────────────────────────────────────
+	// ── /answer auto command ──────────────────────────────────────────────
 
-	pi.registerCommand("answer:auto", {
+	pi.registerCommand("answer auto", {
 		description: "Toggle auto-detection of questions in LLM responses",
 		handler: async (_args, ctx) => {
 			autoDetectEnabled = !autoDetectEnabled;

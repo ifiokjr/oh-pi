@@ -95,7 +95,7 @@ describe("ollama provider smoke tests", () => {
 		await ollamaProviderExtension(harness.pi as never);
 
 		expect(harness.commands.has("ollama")).toBe(true);
-		expect(harness.commands.has("ollama:status")).toBe(true);
+		expect(harness.commands.has("ollama status")).toBe(true);
 		expect(harness.commands.has("ollama-cloud")).toBe(true);
 		expect(harness.providers.has("ollama")).toBe(true);
 		expect(harness.providers.has("ollama-cloud")).toBe(true);
@@ -218,19 +218,19 @@ describe("ollama provider smoke tests", () => {
 		};
 		await ollamaProviderExtension(harness.pi as never);
 
-		await harness.commands.get("ollama:pull")?.handler?.("", harness.ctx as never);
-		expect(harness.notifications.at(-1)?.msg).toContain("Usage: /ollama:pull <model>");
+		await harness.commands.get("ollama pull")?.handler?.("", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("Usage: /ollama pull <model>");
 
-		await harness.commands.get("ollama:pull")?.handler?.("missing-model", harness.ctx as never);
-		expect(harness.notifications.at(-1)?.msg).toContain("Run /ollama:refresh-models first.");
+		await harness.commands.get("ollama pull")?.handler?.("missing-model", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("Run /ollama refresh-models first.");
 
-		await harness.commands.get("ollama:info")?.handler?.("", harness.ctx as never);
-		expect(harness.notifications.at(-1)?.msg).toContain("Usage: /ollama:info <model>");
+		await harness.commands.get("ollama info")?.handler?.("", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("Usage: /ollama info <model>");
 
-		await harness.commands.get("ollama:info")?.handler?.("missing-model", harness.ctx as never);
-		expect(harness.notifications.at(-1)?.msg).toContain("Run /ollama:refresh-models first.");
+		await harness.commands.get("ollama info")?.handler?.("missing-model", harness.ctx as never);
+		expect(harness.notifications.at(-1)?.msg).toContain("Run /ollama refresh-models first.");
 
-		await harness.commands.get("ollama:status")?.handler?.("", harness.ctx as never);
+		await harness.commands.get("ollama status")?.handler?.("", harness.ctx as never);
 		expect(harness.notifications.at(-1)?.msg).toContain("Ollama");
 	});
 
@@ -251,6 +251,6 @@ describe("ollama provider smoke tests", () => {
 		expect(provider).toBeDefined();
 		expect(() =>
 			provider?.streamSimple?.({ provider: "ollama", id: "missing-model" } as never, {} as never),
-		).toThrowError(/\/ollama:pull missing-model/);
+		).toThrowError(/\/ollama pull missing-model/);
 	});
 });

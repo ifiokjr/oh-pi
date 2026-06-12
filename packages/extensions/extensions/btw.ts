@@ -1143,17 +1143,17 @@ export default function (pi: ExtensionAPI) {
 		handler: btwHandler,
 	});
 
-	pi.registerCommand("btw:clear", {
+	pi.registerCommand("btw clear", {
 		description: "Dismiss the BTW overlay and clear the current thread.",
 		handler: btwClearHandler,
 	});
 
-	pi.registerCommand("btw:inject", {
+	pi.registerCommand("btw inject", {
 		description: "Inject the full BTW thread into the main agent as a user message.",
 		handler: btwInjectHandler,
 	});
 
-	pi.registerCommand("btw:summarize", {
+	pi.registerCommand("btw summarize", {
 		description: "Summarize the BTW thread, then inject the summary into the main agent.",
 		handler: btwSummarizeHandler,
 	});
@@ -1165,18 +1165,18 @@ export default function (pi: ExtensionAPI) {
 		handler: btwHandler,
 	});
 
-	pi.registerCommand("qq:clear", {
-		description: "Dismiss the QQ overlay and clear the thread. Alias for /btw:clear.",
+	pi.registerCommand("qq clear", {
+		description: "Dismiss the QQ overlay and clear the thread. Alias for /btw clear.",
 		handler: btwClearHandler,
 	});
 
-	pi.registerCommand("qq:inject", {
-		description: "Inject the full QQ thread into the main agent. Alias for /btw:inject.",
+	pi.registerCommand("qq inject", {
+		description: "Inject the full QQ thread into the main agent. Alias for /btw inject.",
 		handler: btwInjectHandler,
 	});
 
-	pi.registerCommand("qq:summarize", {
-		description: "Summarize the QQ thread and inject into the main agent. Alias for /btw:summarize.",
+	pi.registerCommand("qq summarize", {
+		description: "Summarize the QQ thread and inject into the main agent. Alias for /btw summarize.",
 		handler: btwSummarizeHandler,
 	});
 }

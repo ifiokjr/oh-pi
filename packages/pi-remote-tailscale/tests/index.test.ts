@@ -149,12 +149,12 @@ describe("pi-remote-tailscale extension", () => {
 		await harness.commands.get("remote").handler(undefined, harness.ctx);
 		await vi.runAllTimersAsync();
 
-		await harness.commands.get("remote:widget").handler("off", harness.ctx);
+		await harness.commands.get("remote widget").handler("off", harness.ctx);
 		expect(harness.notifications.at(-1)?.msg).toBe("Remote widget disabled.");
 		expect(harness.statusMap.has("remote")).toBe(false);
 
-		await harness.commands.get("remote:widget").handler("bogus", harness.ctx);
-		expect(harness.notifications.at(-1)?.msg).toBe("Usage: /remote:widget [on|off]");
+		await harness.commands.get("remote widget").handler("bogus", harness.ctx);
+		expect(harness.notifications.at(-1)?.msg).toBe("Usage: /remote widget [on|off]");
 
 		await harness.commands.get("remote").handler("stop", harness.ctx);
 		expect(handle.stop).toHaveBeenCalledTimes(1);
@@ -211,7 +211,7 @@ describe("pi-remote-tailscale extension", () => {
 		const extension = await loadExtension();
 		extension(harness.pi as never);
 
-		await harness.commands.get("remote:widget").handler(undefined, harness.ctx);
+		await harness.commands.get("remote widget").handler(undefined, harness.ctx);
 		expect(harness.notifications.at(-1)?.msg).toBe("Remote widget disabled.");
 
 		await harness.commands.get("remote").handler(undefined, harness.ctx);
@@ -221,7 +221,7 @@ describe("pi-remote-tailscale extension", () => {
 		await harness.commands.get("remote").handler(undefined, harness.ctx);
 		expect(harness.notifications.at(-1)?.msg).toBe("Unable to start remote access.");
 
-		await harness.commands.get("remote:widget").handler("on", harness.ctx);
+		await harness.commands.get("remote widget").handler("on", harness.ctx);
 		expect(harness.notifications.at(-1)?.msg).toBe("Remote widget enabled.");
 
 		serverModule.isRemoteSessionEnv.mockReturnValue(true);

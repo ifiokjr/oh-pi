@@ -206,7 +206,7 @@ export default function remoteTailscaleExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("remote:widget", {
+	pi.registerCommand("remote widget", {
 		description: "Toggle the remote status widget.",
 		handler: async (args: string | undefined, ctx: ExtensionCommandContext) => {
 			activeCtx = ctx;
@@ -221,7 +221,7 @@ export default function remoteTailscaleExtension(pi: ExtensionAPI) {
 							: null;
 
 			if (nextValue === null) {
-				ctx.ui.notify("Usage: /remote:widget [on|off]", "warning");
+				ctx.ui.notify("Usage: /remote widget [on|off]", "warning");
 				return;
 			}
 

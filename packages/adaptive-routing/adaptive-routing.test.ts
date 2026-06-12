@@ -179,7 +179,7 @@ describe("adaptive routing extension", () => {
 
 		adaptiveRoutingExtension(harness.pi as never);
 		expect(harness.commands.has("route")).toBe(true);
-		expect(harness.commands.has("route:status")).toBe(true);
+		expect(harness.commands.has("route status")).toBe(true);
 
 		await harness.emitAsync(
 			"before_agent_start",
@@ -239,10 +239,10 @@ describe("adaptive routing extension", () => {
 		const harness = createExtensionHarness();
 		adaptiveRoutingExtension(harness.pi as never);
 
-		await harness.commands.get("route:feedback")?.handler?.("", harness.ctx as never);
+		await harness.commands.get("route feedback")?.handler?.("", harness.ctx as never);
 		expect(harness.notifications.at(-1)?.msg).toContain("Usage: /route feedback");
 
-		await harness.commands.get("route:status")?.handler?.("", harness.ctx as never);
+		await harness.commands.get("route status")?.handler?.("", harness.ctx as never);
 		expect(harness.notifications.at(-1)?.msg).toContain("adaptive routing");
 	});
 
@@ -347,7 +347,7 @@ describe("adaptive routing extension", () => {
 		}) as never;
 
 		adaptiveRoutingExtension(harness.pi as never);
-		await harness.commands.get("route:why")?.handler?.("quick-discovery quickly scan the repo", harness.ctx as never);
+		await harness.commands.get("route why")?.handler?.("quick-discovery quickly scan the repo", harness.ctx as never);
 		expect(renderedLines).toEqual(
 			expect.arrayContaining([
 				"Delegated Routing Why",
@@ -389,7 +389,7 @@ describe("adaptive routing extension", () => {
 		}) as never;
 
 		adaptiveRoutingExtension(harness.pi as never);
-		await harness.commands.get("route:assignments")?.handler?.("", harness.ctx as never);
+		await harness.commands.get("route assignments")?.handler?.("", harness.ctx as never);
 		expect(renderedLines).toEqual(expect.arrayContaining([expect.stringContaining("groq/llama-3.3-70b-versatile")]));
 	});
 
@@ -503,7 +503,7 @@ describe("adaptive routing extension", () => {
 		);
 		await vi.advanceTimersByTimeAsync(3200);
 		await harness.emitAsync("agent_end", { type: "agent_end" }, harness.ctx);
-		await harness.commands.get("route:stats")?.handler?.("", harness.ctx as never);
+		await harness.commands.get("route stats")?.handler?.("", harness.ctx as never);
 
 		expect(renderedLines).toEqual(
 			expect.arrayContaining([

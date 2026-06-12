@@ -182,7 +182,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			}
 
 			if (runtime.taskCount >= MAX_TASKS) {
-				ctx.ui.notify(`Task limit reached (${MAX_TASKS}). Delete one with /schedule:delete <id>.`, "error");
+				ctx.ui.notify(`Task limit reached (${MAX_TASKS}). Delete one with /schedule delete <id>.`, "error");
 				return;
 			}
 
@@ -252,7 +252,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			}
 
 			if (runtime.taskCount >= MAX_TASKS) {
-				ctx.ui.notify(`Task limit reached (${MAX_TASKS}). Delete one with /schedule:delete <id>.`, "error");
+				ctx.ui.notify(`Task limit reached (${MAX_TASKS}). Delete one with /schedule delete <id>.`, "error");
 				return;
 			}
 
@@ -273,7 +273,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 
 	const scheduleCommand = {
 		description:
-			"Manage scheduled reminders and future check-ins. No args opens TUI manager. Also: /schedule:tui | /schedule:list | /schedule:enable <id> | /schedule:disable <id> | /schedule:delete <id> | /schedule:clear | /schedule:clear-other | /schedule:adopt <id|all> | /schedule:release <id|all> | /schedule:clear-foreign",
+			"Manage scheduled reminders and future check-ins. No args opens TUI manager. Also: /schedule tui | /schedule list | /schedule enable <id> | /schedule disable <id> | /schedule delete <id> | /schedule clear | /schedule clear-other | /schedule adopt <id|all> | /schedule release <id|all> | /schedule clear-foreign",
 		// Biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Command router with multiple subcommands.
 		handler: async (args, ctx) => {
 			const trimmed = args.trim();
@@ -311,7 +311,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 
 			if (action === "delete" || action === "remove" || action === "rm") {
 				if (!rawArg) {
-					ctx.ui.notify("Usage: /schedule:delete <id>", "warning");
+					ctx.ui.notify("Usage: /schedule delete <id>", "warning");
 					return;
 				}
 				const removed = runtime.deleteTask(rawArg);
@@ -368,7 +368,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 
 			if (action === "scope") {
 				ctx.ui.notify(
-					"Change scope by recreating with --workspace/--instance or by adopting and re-scheduling. /schedule:scope is not supported yet.",
+					"Change scope by recreating with --workspace/--instance or by adopting and re-scheduling. /schedule scope is not supported yet.",
 					"info",
 				);
 				return;
@@ -380,7 +380,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 			}
 
 			ctx.ui.notify(
-				"Usage: /schedule:tui|list|enable <id>|disable <id>|delete <id>|clear|clear-other|adopt <id|all>|release <id|all>|clear-foreign",
+				"Usage: /schedule tui|list|enable <id>|disable <id>|delete <id>|clear|clear-other|adopt <id|all>|release <id|all>|clear-foreign",
 				"warning",
 			);
 		},
@@ -395,62 +395,62 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 	}[] = [
 		{
 			description: "Open the scheduler TUI manager.",
-			name: "schedule:tui",
+			name: "schedule tui",
 			subcommand: "tui",
 		},
 		{
 			description: "Show all scheduled prompts in the message stream.",
-			name: "schedule:list",
+			name: "schedule list",
 			subcommand: "list",
 		},
 		{
 			description: "Enable one scheduled prompt.",
-			name: "schedule:enable",
+			name: "schedule enable",
 			subcommand: "enable",
 		},
 		{
 			description: "Disable one scheduled prompt.",
-			name: "schedule:disable",
+			name: "schedule disable",
 			subcommand: "disable",
 		},
 		{
 			description: "Delete one scheduled prompt.",
-			name: "schedule:delete",
+			name: "schedule delete",
 			subcommand: "delete",
 		},
 		{
-			description: "Alias for /schedule:delete.",
-			name: "schedule:remove",
+			description: "Alias for /schedule delete.",
+			name: "schedule remove",
 			subcommand: "remove",
 		},
 		{
-			description: "Alias for /schedule:delete.",
-			name: "schedule:rm",
+			description: "Alias for /schedule delete.",
+			name: "schedule rm",
 			subcommand: "rm",
 		},
 		{
 			description: "Delete every scheduled prompt.",
-			name: "schedule:clear",
+			name: "schedule clear",
 			subcommand: "clear",
 		},
 		{
 			description: "Delete tasks not created in this instance.",
-			name: "schedule:clear-other",
+			name: "schedule clear-other",
 			subcommand: "clear-other",
 		},
 		{
 			description: "Adopt one task or all tasks for this instance.",
-			name: "schedule:adopt",
+			name: "schedule adopt",
 			subcommand: "adopt",
 		},
 		{
 			description: "Release one task or all tasks from this instance.",
-			name: "schedule:release",
+			name: "schedule release",
 			subcommand: "release",
 		},
 		{
 			description: "Delete tasks owned by another instance.",
-			name: "schedule:clear-foreign",
+			name: "schedule clear-foreign",
 			subcommand: "clear-foreign",
 		},
 	];
@@ -463,7 +463,7 @@ export function registerCommands(pi: ExtensionAPI, runtime: SchedulerRuntime) {
 	}
 
 	pi.registerCommand("unschedule", {
-		description: "Alias for /schedule:delete <id>",
+		description: "Alias for /schedule delete <id>",
 		handler: async (args, ctx) => {
 			const id = args.trim();
 			if (!id) {

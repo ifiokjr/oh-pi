@@ -6,7 +6,7 @@ Core first-party extensions for pi.
 
 This package includes extensions such as:
 
-- answer / /answer:auto
+- answer / /answer auto
 - git-guard
 - custom-footer
 - tool-metadata
@@ -34,7 +34,7 @@ npx @ifi/oh-pi
 
 ## What it provides
 
-These extensions add commands, tools, UI widgets, background process handling, usage monitoring, scheduling features, tool execution metadata, external-editor integration, git worktree awareness, and runtime performance protection (`/watchdog`, `/watchdog:blame`, `/safe-mode`) to pi.
+These extensions add commands, tools, UI widgets, background process handling, usage monitoring, scheduling features, tool execution metadata, external-editor integration, git worktree awareness, and runtime performance protection (`/watchdog`, `/watchdog blame`, `/safe-mode`) to pi.
 
 `bg-process` now delegates to the richer `@ifi/pi-background-tasks` runtime, so the core bundle also gets `/bg`, `Ctrl+Shift+B`, and the `bg_task` tool.
 
@@ -45,7 +45,7 @@ These extensions add commands, tools, UI widgets, background process handling, u
 The `answer` extension extracts questions from the last LLM response and presents them in an interactive Q&A overlay powered by `@ifi/pi-shared-qna`.
 
 - `/answer` — scan the last assistant message for questions, then show a Q&A overlay to fill in answers
-- `/answer:auto` — toggle auto-detection: when enabled, questions in the final LLM response automatically trigger the Q&A overlay
+- `/answer auto` — toggle auto-detection: when enabled, questions in the final LLM response automatically trigger the Q&A overlay
 
 Answers are injected back into the session as a follow-up user message. The extension uses an LLM call to extract structured questions (with optional multiple-choice options) from the response text, then renders them with the same QnA TUI component used by plan mode's `request_user_input` tool.
 
@@ -99,9 +99,9 @@ The scheduler distinguishes between instance-scoped tasks and workspace-scoped t
 
 When another live instance already owns scheduler activity for the workspace, pi prompts before taking over. You can also manage ownership explicitly with:
 
-- `/schedule:adopt <id|all>`
-- `/schedule:release <id|all>`
-- `/schedule:clear-foreign`
+- `/schedule adopt <id|all>`
+- `/schedule release <id|all>`
+- `/schedule clear-foreign`
 
 Use workspace scope sparingly for long-running shared checks like CI/build/deploy monitoring. For ordinary reminders and follow-ups, prefer the default instance scope.
 

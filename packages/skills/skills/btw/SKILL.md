@@ -25,10 +25,10 @@ Use these commands in your guidance to the user:
 ```text
 /btw <question>
 /btw --save <question>
-/btw:new [question]
-/btw:clear
-/btw:inject [instructions]
-/btw:summarize [instructions]
+/btw new [question]
+/btw clear
+/btw inject [instructions]
+/btw summarize [instructions]
 ```
 
 Every `/btw` command has a `/qq` equivalent:
@@ -36,10 +36,10 @@ Every `/btw` command has a `/qq` equivalent:
 ```text
 /qq <question>
 /qq --save <question>
-/qq:new [question]
-/qq:clear
-/qq:inject [instructions]
-/qq:summarize [instructions]
+/qq new [question]
+/qq clear
+/qq inject [instructions]
+/qq summarize [instructions]
 ```
 
 ## How to guide the user
@@ -75,13 +75,13 @@ Use this when the user wants the exchange to appear as a visible BTW note in the
 Recommend:
 
 ```text
-/btw:new
+/btw new
 ```
 
 or
 
 ```text
-/btw:new <question>
+/btw new <question>
 ```
 
 Use this when the previous BTW discussion is no longer relevant.
@@ -91,7 +91,7 @@ Use this when the previous BTW discussion is no longer relevant.
 Recommend:
 
 ```text
-/btw:inject <instructions>
+/btw inject <instructions>
 ```
 
 Use this when the exact discussion matters and the user wants the main agent to act on it.
@@ -101,7 +101,7 @@ Use this when the exact discussion matters and the user wants the main agent to 
 Recommend:
 
 ```text
-/btw:summarize <instructions>
+/btw summarize <instructions>
 ```
 
 Use this when the thread is long and only the distilled outcome should go back into the main agent.
@@ -109,10 +109,10 @@ Use this when the thread is long and only the distilled outcome should go back i
 ## Recommendation rules
 
 - Prefer `/btw` over normal chat when the user explicitly wants a side conversation.
-- Prefer `/btw:summarize` over `/btw:inject` for long exploratory threads.
-- Prefer `/btw:inject` when precise wording, detailed tradeoffs, or a full plan matters.
-- Suggest `/btw:new` before starting a totally unrelated side topic.
-- Suggest `/btw:clear` when the widget/thread should be dismissed.
+- Prefer `/btw summarize` over `/btw inject` for long exploratory threads.
+- Prefer `/btw inject` when precise wording, detailed tradeoffs, or a full plan matters.
+- Suggest `/btw new` before starting a totally unrelated side topic.
+- Suggest `/btw clear` when the widget/thread should be dismissed.
 
 ## Response style
 
@@ -139,11 +139,11 @@ When helping the user use BTW:
 ### Example: create a clean new thread
 
 ```text
-/btw:new sketch a safer migration plan
+/btw new sketch a safer migration plan
 ```
 
 ### Example: send the result back
 
 ```text
-/btw:summarize implement the recommended migration plan
+/btw summarize implement the recommended migration plan
 ```

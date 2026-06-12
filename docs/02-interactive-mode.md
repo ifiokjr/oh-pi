@@ -19,7 +19,7 @@
 
 ## 3. Command System
 
-Type `/` to trigger commands. Extensions can register custom commands, Skills are invoked via `/skill:name`, Prompt Templates expand via `/templatename`.
+Type `/` to trigger commands. Extensions can register custom commands, Skills are invoked via `/skill name`, Prompt Templates expand via `/templatename`.
 
 ### Built-in Commands
 
