@@ -31,7 +31,7 @@ const MAX_TEXT_LINE_CHARS = 2000;
 const MAX_TEXT_LINES = 2000;
 const OUTPUT_GUARD_NOTE = "\n[tool output truncated for UI safety]";
 const MAX_DETAIL_FIELDS = 256;
-const MAX_DETAIL_DEPTH = 4;
+const MAX_DETAIL_DEPTH = 6;
 
 function pad(value: number): string {
 	return `${value}`.padStart(2, "0");

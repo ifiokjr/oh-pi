@@ -77,6 +77,51 @@ describe("tool-metadata extension", () => {
 		expect(patch.details.outputGuard).toEqual(expect.objectContaining({ detailsSanitized: true }));
 	});
 
+	it("preserves todo tool phase/task structure through details sanitization (depth regression)", async () => {
+		// Regression: MAX_DETAIL_DEPTH was 4, which truncated task objects at depth 4:
+		//   details(0) → phases(1) → phase(2) → tasks(3) → task(4) ← "[depth-truncated]"
+		// After sanitization the AgentSession would call setTodoPhases with tasks that are
+		// strings, causing task.content === undefined on every subsequent call.
+		const harness = createExtensionHarness();
+		toolMetadataExtension(harness.pi as never);
+
+		const todoDetails = {
+			phases: [
+				{
+					name: "Tasks",
+					tasks: [
+						{ content: "Task one", status: "in_progress" },
+						{ content: "Task two", status: "pending" },
+					],
+				},
+			],
+			storage: "memory",
+		};
+
+		const [patch] = await harness.emitAsync(
+			"tool_result",
+			{
+				toolCallId: "todo-1",
+				toolName: "todo",
+				input: { ops: [{ op: "init" }] },
+				content: [{ type: "text", text: "2 tasks" }],
+				details: todoDetails,
+			},
+			harness.ctx,
+		);
+
+		const phases = (patch.details as typeof todoDetails).phases;
+		expect(phases).toHaveLength(1);
+		// Tasks must be objects, not the "[depth-truncated]" string.
+		const tasks = phases[0].tasks;
+		expect(tasks).toHaveLength(2);
+		expect(typeof tasks[0]).toBe("object");
+		expect(tasks[0].content).toBe("Task one");
+		expect(tasks[0].status).toBe("in_progress");
+		expect(tasks[1].content).toBe("Task two");
+		expect(tasks[1].status).toBe("pending");
+	});
+
 	it("builds visible completion metadata for tool results", async () => {
 		const harness = createExtensionHarness();
 		harness.ctx.getContextUsage = vi
