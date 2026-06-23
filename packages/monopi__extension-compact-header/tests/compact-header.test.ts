@@ -101,6 +101,7 @@ describe("compact-header plain-icons bootstrap", () => {
 		const harness = createExtensionHarness();
 		const setHeader = vi.fn();
 		(harness.ctx.ui as { setHeader: typeof setHeader }).setHeader = setHeader;
+		harness.pi.getThinkingLevel = vi.fn(() => "default") as never;
 		harness.pi.getCommands = vi.fn(() => [
 			{ name: "optimize", source: "prompt" },
 			{ name: "review", source: "prompt" },
@@ -124,9 +125,14 @@ describe("compact-header plain-icons bootstrap", () => {
 				fg: (_color: string, text: string) => text,
 			},
 		);
+		expect(harness.pi.getThinkingLevel).toHaveBeenCalledTimes(1);
+		harness.pi.getThinkingLevel = vi.fn(() => {
+			throw new Error("This extension instance is stale after session replacement or reload");
+		}) as never;
 		component?.render(120);
 		component?.render(120);
 
 		expect(harness.pi.getCommands).toHaveBeenCalledTimes(1);
+		expect(harness.pi.getThinkingLevel).not.toHaveBeenCalled();
 	});
 });

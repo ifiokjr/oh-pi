@@ -491,7 +491,9 @@ function buildCommandSpec(pi: ExtensionAPI) {
 			"Inspect or manage git worktrees: /worktree [status|list|open [target]|create <branch> [purpose]|cleanup <target|all>]",
 		getArgumentCompletions(prefix: string) {
 			const options = ["status", "list", "open", "create", "cleanup"];
-			return options.filter((value) => value.startsWith(prefix.trim().toLowerCase())).map((value) => ({ value }));
+			return options
+				.filter((value) => value.startsWith(prefix.trim().toLowerCase()))
+				.map((value) => ({ label: value, value }));
 		},
 		handler: async (args: string, ctx: ExtensionContext) => {
 			const trimmed = args.trim();

@@ -98,6 +98,22 @@ export default function (pi: ExtensionAPI) {
 		ctx.ui.setHeader((tui, theme) => {
 			const unsubSafeMode = subscribeSafeMode(() => tui.requestRender());
 			const commandCatalog = buildCommandCatalog(pi.getCommands());
+			let model = "no model";
+			let provider = "";
+			let thinking = "default";
+			try {
+				const m = ctx.model;
+				model = m ? `${m.id}` : "no model";
+				provider = m?.provider ?? "";
+			} catch {
+				model = "no model";
+				provider = "";
+			}
+			try {
+				thinking = pi.getThinkingLevel();
+			} catch {
+				thinking = "default";
+			}
 			return {
 				dispose() {
 					unsubSafeMode();
@@ -109,18 +125,7 @@ export default function (pi: ExtensionAPI) {
 					const d = (s: string) => theme.fg("dim", s);
 					const a = (s: string) => theme.fg("accent", s);
 
-					let model: string;
-					let provider: string;
-					try {
-						const m = ctx.model;
-						model = m ? `${m.id}` : "no model";
-						provider = m?.provider ?? "";
-					} catch {
-						model = "no model";
-						provider = "";
-					}
 					const { prompts, skills } = commandCatalog;
-					const thinking = pi.getThinkingLevel();
 
 					const pad = (s: string, w: number) => s + " ".repeat(Math.max(0, w - visibleWidth(s)));
 					const t = (s: string) => truncateToWidth(s, width);

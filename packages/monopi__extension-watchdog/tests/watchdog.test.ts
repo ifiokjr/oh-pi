@@ -1,18 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
-	mockExistsSync: vi.fn(() => false),
-	mockReadFileSync: vi.fn(),
-}));
-
-const histogram = {
-	enable: vi.fn(),
-	disable: vi.fn(),
-	reset: vi.fn(),
-	percentile: vi.fn(() => 0),
-	mean: 0,
-	max: 0,
-};
+const { histogram, mockExistsSync, mockMonitorEventLoopDelay, mockReadFileSync } = vi.hoisted(() => {
+	const histogram = {
+		enable: vi.fn(),
+		disable: vi.fn(),
+		reset: vi.fn(),
+		percentile: vi.fn(() => 0),
+		mean: 0,
+		max: 0,
+	};
+	return {
+		histogram,
+		mockExistsSync: vi.fn(() => false),
+		mockMonitorEventLoopDelay: vi.fn(() => histogram),
+		mockReadFileSync: vi.fn(),
+	};
+});
 
 vi.mock("node:fs", () => ({
 	existsSync: mockExistsSync,
@@ -20,7 +23,7 @@ vi.mock("node:fs", () => ({
 }));
 
 vi.mock("node:perf_hooks", () => ({
-	monitorEventLoopDelay: vi.fn(() => histogram),
+	monitorEventLoopDelay: mockMonitorEventLoopDelay,
 }));
 
 vi.mock("node:os", async (importOriginal) => {
@@ -140,6 +143,8 @@ beforeEach(() => {
 	histogram.mean = 0;
 	histogram.max = 0;
 	histogram.percentile.mockReturnValue(0);
+	mockMonitorEventLoopDelay.mockReset();
+	mockMonitorEventLoopDelay.mockReturnValue(histogram);
 	mockExistsSync.mockReset();
 	mockExistsSync.mockReturnValue(false);
 	mockReadFileSync.mockReset();
@@ -241,6 +246,26 @@ describe("watchdog helpers", () => {
 });
 
 describe("watchdog extension", () => {
+	it("falls back when event-loop histograms are unavailable", async () => {
+		mockMonitorEventLoopDelay.mockImplementation(() => {
+			throw new Error("Not implemented");
+		});
+		const pi = createMockPi();
+		const ctx = createMockCtx();
+
+		expect(() => watchdogExtension(pi as any)).not.toThrow();
+		mockCpuUsageSequence([
+			{ user: 0, system: 0 },
+			{ user: 0, system: 0 },
+		]);
+		mockMemoryUsage();
+
+		await pi._emit("session_start", {}, ctx);
+		await pi._commands.get("watchdog").handler("sample", ctx);
+
+		expect(ctx._statuses.get("watchdog")).toBeUndefined();
+	});
+
 	it("does not load watchdog config during extension registration", () => {
 		const pi = createMockPi();
 		watchdogExtension(pi as any);

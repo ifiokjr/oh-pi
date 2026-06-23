@@ -65,6 +65,9 @@ describe("worktree extension", () => {
 		expect(harness.commands.has("worktree")).toBe(true);
 		expect(harness.commands.has("Worktree")).toBe(true);
 		expect(harness.commands.has("wt")).toBe(true);
+		expect(harness.commands.get("worktree")?.getArgumentCompletions?.("cl")).toEqual([
+			{ label: "cleanup", value: "cleanup" },
+		]);
 	});
 
 	it("does not probe or write worktree status on session start", () => {

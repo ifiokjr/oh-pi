@@ -29,6 +29,12 @@ function getTermWidth(): number {
 	return process.stdout.columns || 120;
 }
 
+function addWrappedText(container: Container, text: string, width: number): void {
+	for (const line of wrapTextWithAnsi(text, width)) {
+		container.addChild(new Text(line, 0, 0));
+	}
+}
+
 // Grapheme segmenter for proper Unicode handling (shared instance)
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
@@ -278,9 +284,7 @@ export function renderSubagentResult(
 
 		if (r.artifactPaths) {
 			c.addChild(new Spacer(1));
-			c.addChild(
-				new Text(truncLine(theme.fg("dim", `Artifacts: ${shortenPath(r.artifactPaths.outputPath)}`), w), 0, 0),
-			);
+			addWrappedText(c, theme.fg("dim", `Artifacts: ${shortenPath(r.artifactPaths.outputPath)}`), w);
 		}
 		return c;
 	}
@@ -469,7 +473,7 @@ export function renderSubagentResult(
 
 	if (d.artifacts) {
 		c.addChild(new Spacer(1));
-		c.addChild(new Text(truncLine(theme.fg("dim", `Artifacts dir: ${shortenPath(d.artifacts.dir)}`), w), 0, 0));
+		addWrappedText(c, theme.fg("dim", `Artifacts dir: ${shortenPath(d.artifacts.dir)}`), w);
 	}
 	return c;
 }

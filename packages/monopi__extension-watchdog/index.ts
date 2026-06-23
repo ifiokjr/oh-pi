@@ -46,6 +46,36 @@ const STARTUP_CONFIG_LOAD_DELAY_MS = 250;
 const STARTUP_WARMUP_SAMPLE_COUNT = 1;
 const STALE_SAMPLE_MIN_ELAPSED_MS = 60_000;
 const STALE_SAMPLE_MIN_LAG_MS = 30_000;
+
+interface EventLoopHistogram {
+	readonly max: number;
+	readonly mean: number;
+	disable(): void;
+	enable(): void;
+	percentile(percentile: number): number;
+	reset(): void;
+}
+
+function createNoopEventLoopHistogram(): EventLoopHistogram {
+	return {
+		disable() {},
+		enable() {},
+		max: 0,
+		mean: 0,
+		percentile() {
+			return 0;
+		},
+		reset() {},
+	};
+}
+
+function createEventLoopHistogram(): EventLoopHistogram {
+	try {
+		return monitorEventLoopDelay({ resolution: HISTOGRAM_RESOLUTION_MS });
+	} catch {
+		return createNoopEventLoopHistogram();
+	}
+}
 /**
 <!-- {=extensionsWatchdogConfigPathDocs} -->
 
@@ -419,9 +449,7 @@ export default function watchdogExtension(pi: ExtensionAPI) {
 	installRuntimeDiagnostics(pi);
 	let thresholds = DEFAULT_WATCHDOG_THRESHOLDS;
 	let sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_MS;
-	const histogram = monitorEventLoopDelay({
-		resolution: HISTOGRAM_RESOLUTION_MS,
-	});
+	const histogram = createEventLoopHistogram();
 
 	const coreCount = Math.max(1, cpus().length || 1);
 	const sampleHistory: WatchdogSample[] = [];

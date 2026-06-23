@@ -279,6 +279,47 @@ describe("renderSubagentResult", () => {
 		expect(widget.children.some((child: any) => child.constructor.name === "Markdown")).toBe(true);
 	});
 
+	it("wraps single-result artifact paths without truncating them", () => {
+		const originalColumns = process.stdout.columns;
+		process.stdout.columns = 30;
+		const artifactPath = "/tmp/artifacts/super-long-output-path-that-must-remain-readable.md";
+
+		try {
+			const widget: any = renderSubagentResult(
+				{
+					content: [{ type: "text", text: "ok" }],
+					details: {
+						mode: "single",
+						results: [
+							{
+								agent: "scout",
+								task: "Inspect",
+								exitCode: 0,
+								messages: [],
+								artifactPaths: {
+									inputPath: "/tmp/input.md",
+									outputPath: artifactPath,
+									metadataPath: "/tmp/meta.json",
+									jsonlPath: "/tmp/run.jsonl",
+								},
+							},
+						],
+					},
+				} as never,
+				{ expanded: true },
+				createTheme() as never,
+			);
+			const textChildren = widget.children.map((child: any) => child.text).filter(Boolean);
+			const artifactIndex = textChildren.findIndex((text: string) => text.startsWith("Artifacts:"));
+			const artifactLines = textChildren.slice(artifactIndex);
+
+			expect(artifactLines.join("")).toBe(`Artifacts: ${artifactPath}`);
+			expect(artifactLines.join("\n")).not.toContain("…");
+		} finally {
+			process.stdout.columns = originalColumns;
+		}
+	});
+
 	it("renders chain results with chain visualization, pending steps, running details, and artifact dirs", () => {
 		const widget: any = renderSubagentResult(
 			{

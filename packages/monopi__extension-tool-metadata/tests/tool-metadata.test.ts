@@ -54,6 +54,36 @@ describe("tool-metadata extension", () => {
 		expect(patch.content[0].text).not.toContain("\u0000");
 	});
 
+	it("preserves todo task fields nested in tool details", async () => {
+		const harness = createExtensionHarness();
+		toolMetadataExtension(harness.pi as never);
+
+		const [patch] = await harness.emitAsync(
+			"tool_result",
+			{
+				toolCallId: "tool-todo",
+				toolName: "todo",
+				input: {},
+				content: [{ type: "text", text: "updated todos" }],
+				details: {
+					phases: [
+						{
+							tasks: [
+								{ content: "Task one", status: "in_progress" },
+								{ content: "Task two", status: "pending" },
+							],
+						},
+					],
+				},
+			},
+			harness.ctx,
+		);
+
+		const phases = patch.details.phases as { tasks: { content: string; status: string }[] }[];
+		expect(phases[0].tasks[0]).toMatchObject({ content: "Task one", status: "in_progress" });
+		expect(phases[0].tasks[1]).toMatchObject({ content: "Task two", status: "pending" });
+	});
+
 	it("sanitizes oversized details payloads used by fallback renderers", async () => {
 		const harness = createExtensionHarness();
 		toolMetadataExtension(harness.pi as never);
