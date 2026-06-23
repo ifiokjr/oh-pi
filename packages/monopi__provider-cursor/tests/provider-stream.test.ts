@@ -518,6 +518,20 @@ describe("streamSimpleCursor", () => {
 		expect(providerMocks.sendRequestContextResult).toHaveBeenCalledTimes(1);
 		expect(providerMocks.sendExecResult).toHaveBeenCalledTimes(9);
 		expect(providerMocks.upsertConversationState).toHaveBeenCalledTimes(1);
+
+		const upsertCheckpoint = providerMocks.upsertConversationState.mock.calls[0]?.[1] as (current: {
+			conversationId: string;
+			blobStore: Map<string, Uint8Array>;
+			lastAccessMs: number;
+		}) => { conversationId: string; blobStore: Map<string, Uint8Array> };
+		const persisted = upsertCheckpoint({
+			conversationId: "saved-conv",
+			blobStore: new Map([["existing", new Uint8Array([9])]]),
+			lastAccessMs: 0,
+		});
+		expect(persisted.conversationId).toBe("saved-conv");
+		expect(Array.from(persisted.blobStore.keys()).sort()).toEqual(["blob", "existing"]);
+
 		expect(providerMocks.setActiveRun).toHaveBeenCalledWith(
 			"session:session-1:composer-2",
 			expect.objectContaining({

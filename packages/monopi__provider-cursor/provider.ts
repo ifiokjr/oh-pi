@@ -407,12 +407,18 @@ function handleServerMessage(options: {
 			options.state.totalTokens = serverMessage.message.value.tokenDetails.usedTokens;
 		}
 		const checkpoint = toBinary(ConversationStateStructureSchema, serverMessage.message.value);
-		upsertConversationState(options.runtime.conversationKey, (current) => ({
-			conversationId: current?.conversationId ?? deterministicConversationId(options.runtime.conversationKey),
-			checkpoint,
-			blobStore: current?.blobStore ?? new Map(options.run.blobStore),
-			lastAccessMs: Date.now(),
-		}));
+		upsertConversationState(options.runtime.conversationKey, (current) => {
+			const blobStore = new Map(current?.blobStore ?? []);
+			for (const [blobId, blobData] of options.run.blobStore) {
+				blobStore.set(blobId, blobData);
+			}
+			return {
+				conversationId: current?.conversationId ?? deterministicConversationId(options.runtime.conversationKey),
+				checkpoint,
+				blobStore,
+				lastAccessMs: Date.now(),
+			};
+		});
 	}
 }
 
