@@ -17,7 +17,7 @@ export interface BenchmarkTargetReport {
 
 const ROOT = process.cwd();
 const PACKAGE_PATH = path.join(ROOT, "package.json");
-const EXTENSION_PACKAGE_PREFIX = "packages/monopi__extensions/extensions/";
+const EXTENSION_PACKAGE_PREFIX = "packages/monopi__extension-";
 const ALL_FOCUSED_BENCHMARK_IDS = [
 	"scheduler-runtime-context-with-store",
 	"custom-footer-usage-scan-large-history",
@@ -41,9 +41,9 @@ const FOCUSED_BENCHMARK_RULES = [
 	{
 		benchmarkIds: ["scheduler-runtime-context-with-store"],
 		prefixes: [
-			"packages/monopi__extensions/extensions/scheduler.ts",
-			"packages/monopi__extensions/extensions/scheduler-shared.ts",
-			"packages/monopi__extensions/extensions/scheduler-registration.ts",
+			"packages/monopi__extension-scheduler/index.ts",
+			"packages/monopi__extension-scheduler/scheduler-shared.ts",
+			"packages/monopi__extension-scheduler/scheduler-registration.ts",
 		],
 	},
 	{
@@ -53,24 +53,24 @@ const FOCUSED_BENCHMARK_RULES = [
 			"worktree-context-temp-repo",
 		],
 		prefixes: [
-			"packages/monopi__extensions/extensions/custom-footer.ts",
-			"packages/monopi__extensions/extensions/custom-footer.test.ts",
+			"packages/monopi__extension-custom-footer/index.ts",
+			"packages/monopi__extension-custom-footer/tests/custom-footer.test.ts",
 		],
 	},
 	{
 		benchmarkIds: ["usage-tracker-session-start-near-threshold"],
 		prefixes: [
-			"packages/monopi__extensions/extensions/usage-tracker.ts",
-			"packages/monopi__extensions/extensions/usage-tracker.test.ts",
+			"packages/monopi__extension-usage-tracker/index.ts",
+			"packages/monopi__extension-usage-tracker/tests/usage-tracker.test.ts",
 		],
 	},
 	{
 		benchmarkIds: ["worktree-context-temp-repo", "worktree-snapshot-temp-repo", "custom-footer-first-render"],
 		prefixes: [
-			"packages/monopi__extensions/extensions/worktree.ts",
-			"packages/monopi__extensions/extensions/worktree.test.ts",
-			"packages/monopi__extensions/extensions/worktree-shared.ts",
-			"packages/monopi__extensions/extensions/worktree-shared.test.ts",
+			"packages/monopi__extension-worktree/index.ts",
+			"packages/monopi__extension-worktree/tests/worktree.test.ts",
+			"packages/monopi__extension-shared/worktree-shared.ts",
+			"packages/monopi__extension-shared/tests/worktree-shared.test.ts",
 		],
 	},
 ] as const;
@@ -82,10 +82,8 @@ function toPosix(value: string): string {
 function extensionIdFromEntry(entry: string): string {
 	const normalized = toPosix(entry);
 	const fileName = normalized.split("/").at(-1) ?? normalized;
-	if (fileName === "index.ts") {
-		return normalized.split("/").at(-2) ?? "unknown";
-	}
-	return fileName.replace(/\.ts$/, "");
+	const rawId = fileName === "index.ts" ? (normalized.split("/").at(-2) ?? "unknown") : fileName.replace(/\.ts$/, "");
+	return rawId.replace(/^monopi__extension-/, "");
 }
 
 function getPackageExtensionIds(entries: string[]): string[] {

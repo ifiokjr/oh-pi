@@ -1,0 +1,37 @@
+{
+	"name": "@monopi/extension-btw",
+	"version": "0.5.1",
+	"description": "Monopi btw pi extension.",
+	"keywords": [
+		"pi-package"
+	],
+	"homepage": "https://github.com/ifiokjr/monopi/tree/main/packages/monopi__extension-btw",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/monopi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/monopi.git",
+		"directory": "packages/monopi__extension-btw"
+	},
+	"files": [
+		"*.ts",
+		"README.md",
+		"!**/*.test.ts",
+		"!tests/**"
+	],
+	"type": "module",
+	"peerDependencies": {
+		"@earendil-works/pi-agent-core": ">=0.78.1",
+		"@earendil-works/pi-ai": ">=0.78.1",
+		"@earendil-works/pi-coding-agent": ">=0.78.1",
+		"@earendil-works/pi-tui": ">=0.78.1",
+		"typebox": "^1.1.24"
+	},
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	}
+}

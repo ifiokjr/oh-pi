@@ -82,12 +82,11 @@ Suggested path for a new contributor:
 
 Default runtime/content packages installed by `npx @monopi/monopi`:
 
-- `@monopi/extensions`
+- `@monopi/extension-worktree`
 - `@monopi/background-tasks`
 - `@monopi/diagnostics`
 - `@monopi/subagents`
 - `@monopi/web-remote`
-- `@monopi/themes`
 - `@monopi/skills`
 
 <!-- {/repoDefaultInstallerPackagesDocs} -->
@@ -98,6 +97,7 @@ Default runtime/content packages installed by `npx @monopi/monopi`:
 
 Opt-in packages that stay separate from the default installer bundle:
 
+- `@monopi/extension-bg-process`
 - `@monopi/adaptive-routing`
 - `@monopi/provider-catalog`
 - `@monopi/provider-cursor`
@@ -130,7 +130,7 @@ Most runtime packages in this repo ship raw TypeScript and can be loaded directl
 
 | Package                                                                  | Installs by default | Primary surfaces                                                                        | What it gives you                                                                                                                        |
 | ------------------------------------------------------------------------ | ------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@monopi/extensions`](../packages/monopi__extensions)                   | Yes                 | commands, tools, widgets, footer, tool interception                                     | The core QoL extension pack: git safety, session naming, status UI, scheduling, usage, watchdog, worktrees, side-conversations, and more |
+| [`@monopi/extension-worktree`](../packages/monopi__extension-worktree)   | Yes                 | commands, tools, widgets, footer, tool interception                                     | The core QoL extension pack: git safety, session naming, status UI, scheduling, usage, watchdog, worktrees, side-conversations, and more |
 | [`@monopi/background-tasks`](../packages/monopi__background-tasks)       | Yes                 | `bg_task`, `bg_status`, `/bg`, `Ctrl+Shift+B`                                           | Reactive background shell task management with log tails, watches, wakeups, and a richer tracked-task model                              |
 | [`@monopi/diagnostics`](../packages/monopi__diagnostics)                 | Yes                 | widget, session messages, `/diagnostics`, `Ctrl+Shift+D`                                | Prompt start/end timestamps, total duration, and per-turn timing                                                                         |
 | [`@monopi/subagents`](../packages/monopi__subagents)                     | Yes                 | `subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`, `/agents`, `Ctrl+Shift+A` | Rich delegated execution with built-in agents, reusable chains, background runs, and a TUI manager                                       |
@@ -144,7 +144,7 @@ Most runtime packages in this repo ship raw TypeScript and can be loaded directl
 | [`@monopi/bash-live-view`](../packages/monopi__bash-live-view)           | No                  | `/bash-pty`, `bash_live_view` tool with `usePTY`                                        | PTY-backed live terminal viewing with real-time widget and `/xterm/headless` ANSI rendering                                              |
 | [`@monopi/pretty`](../packages/monopi__pretty)                           | No                  | wrapped `read`, `bash_pretty`, `ls`, `find`, `grep` tools                               | Syntax highlighting via Shiki, Nerd Font icons, tree-view listings, colored bash summaries, FFF search                                   |
 
-## `@monopi/extensions`: core extension pack
+## `@monopi/extension-worktree`: split extension packages
 
 This package is where most of the day-to-day ergonomics live.
 
@@ -461,19 +461,6 @@ The skills pack currently ships 3 maintained skills.
 | `debug-helper` | Analyze errors, logs, crashes, and performance issues          |
 | `nushell`      | Nushell syntax reference for shell commands                    |
 
-## `@monopi/themes`
-
-The theme pack currently ships 6 themes.
-
-| Theme              | Style                              |
-| ------------------ | ---------------------------------- |
-| `oh-p-dark`        | First-party cyan/purple dark theme |
-| `cyberpunk`        | Neon magenta + electric cyan       |
-| `nord`             | Arctic blue palette                |
-| `catppuccin-mocha` | Pastel-on-dark palette             |
-| `tokyo-night`      | Blue/purple twilight palette       |
-| `gruvbox-dark`     | Warm retro dark palette            |
-
 ## `@monopi/agents`
 
 The AGENTS template pack currently ships 5 templates.
@@ -501,7 +488,7 @@ The AGENTS template pack currently ships 5 templates.
 
 ## Which feature should I reach for?
 
-- **Safer day-to-day pi sessions** → `@monopi/extensions`
+- **Safer day-to-day pi sessions** → `@monopi/extension-worktree`
 - **Long-lived watchers, servers, and log tails** → `@monopi/background-tasks`
 - **Timing and completion visibility** → `@monopi/diagnostics`
 - **Large parallel work** → `@monopi/subagents` (chains, parallel fan-out)

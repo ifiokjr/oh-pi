@@ -69,18 +69,18 @@
 	"packageManager": "pnpm@10.33.0",
 	"pi": {
 		"extensions": [
-			"./packages/monopi__extensions/extensions/answer.ts",
-			"./packages/monopi__extensions/extensions/watchdog.ts",
-			"./packages/monopi__extensions/extensions/btw.ts",
-			"./packages/monopi__extensions/extensions/compact-header.ts",
-			"./packages/monopi__extensions/extensions/custom-footer.ts",
-			"./packages/monopi__extensions/extensions/external-editor.ts",
-			"./packages/monopi__extensions/extensions/git-guard.ts",
-			"./packages/monopi__extensions/extensions/scheduler.ts",
-			"./packages/monopi__extensions/extensions/shell-format.ts",
-			"./packages/monopi__extensions/extensions/tool-metadata.ts",
-			"./packages/monopi__extensions/extensions/usage-tracker.ts",
-			"./packages/monopi__extensions/extensions/worktree.ts",
+			"./packages/monopi__extension-answer/index.ts",
+			"./packages/monopi__extension-watchdog/index.ts",
+			"./packages/monopi__extension-btw/index.ts",
+			"./packages/monopi__extension-compact-header/index.ts",
+			"./packages/monopi__extension-custom-footer/index.ts",
+			"./packages/monopi__extension-external-editor/index.ts",
+			"./packages/monopi__extension-git-guard/index.ts",
+			"./packages/monopi__extension-scheduler/index.ts",
+			"./packages/monopi__extension-shell-format/index.ts",
+			"./packages/monopi__extension-tool-metadata/index.ts",
+			"./packages/monopi__extension-usage-tracker/index.ts",
+			"./packages/monopi__extension-worktree/index.ts",
 			"./packages/monopi__background-tasks/index.ts",
 			"./packages/monopi__diagnostics/index.ts",
 			"./packages/monopi__subagents/index.ts",
@@ -92,9 +92,6 @@
 		],
 		"skills": [
 			"./packages/monopi__skills/skills"
-		],
-		"themes": [
-			"./packages/monopi__themes/themes"
 		]
 	}
 }

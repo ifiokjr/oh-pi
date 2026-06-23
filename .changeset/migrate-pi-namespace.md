@@ -11,6 +11,8 @@ default: major
 - **typebox migration: `@sinclair/typebox` (0.34.x) → `typebox` (1.x).** `@earendil-works/pi-ai@0.74+` adopted the renamed `typebox` package (a 0.x→1.x major bump). All workspace package.json peer deps and imports now use `typebox@^1.1.24` to keep nominal `TSchema`/`TUnsafe` types aligned with pi-ai's `StringEnum` helper. `@sinclair/typebox` removed from the allowlist; `typebox` added.
 - **pnpm overrides moved from `package.json` `pnpm.overrides` to `pnpm-workspace.yaml` `overrides:`** (pnpm 10 ignores `pnpm.overrides` in package.json). Vulnerable transitive deps bumped to patched versions: `undici` ≥7.28.0, `ws` ≥8.21.0, `hono` ≥4.12.25, `protobufjs` ≥7.6.1, `vite` ≥8.0.16, `shell-quote` ≥1.8.4. CI compatibility matrix updated to `min-0.78.1` / `current-0.79.10`.
 - **Extension event renames.** Upstream renamed `session_switch` → `session_before_switch` and `session_fork` → `session_before_fork`. All `pi.on(...)` registrations and test emissions across the repo were updated. The new `SessionBeforeSwitchEvent` requires a `reason` field and `SessionBeforeForkEvent` requires `entryId`/`position`; handlers return `void` (allowed by `ExtensionHandler<E, R = undefined>`).
+- **`@monopi/extensions` aggregate removed.** Each former aggregate extension now ships as a standalone published package (`@monopi/extension-*`), while shared runtime helpers live in `@monopi/extension-shared`. The legacy `bg-process` compatibility shim is preserved as opt-in `@monopi/extension-bg-process`; the default bundle keeps `@monopi/background-tasks` instead.
+- **`@monopi/themes` removed.** The JSON theme bundle is no longer published or installed by the default `@monopi/monopi` package; root pi metadata no longer registers repo-local themes.
 - **Ollama hardcoded cloud fallback catalog removed.** `FALLBACK_OLLAMA_CLOUD_MODELS` is now empty. Cloud models come exclusively from live Ollama Cloud discovery (reloadable any time via `/ollama refresh-models`) and the persisted last-discovery cache. The pre-registration prime now uses `discoverOllamaCloudModels` (with per-model `/api/show`) instead of list-only `discoverOllamaCloudModelList`, so primed models carry accurate live metadata rather than stale hardcoded values.
 - **`compat.reasoningEffortMap` migrated to model-level `thinkingLevelMap`.** Per upstream pi changes, the Ollama provider now sets `thinkingLevelMap` on reasoning models instead of the removed `compat.reasoningEffortMap` field.
 
@@ -23,10 +25,10 @@ default: major
 
 ## Verification
 
-- `pnpm test`: 162 files / 1459 tests passing (8 skipped).
-- `pnpm check` (format + lint): clean.
+- `pnpm test`: 144 files / 1343 tests passing (8 skipped).
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm mc:check`, and `pnpm mdt check`: clean.
 - `node scripts/verify-pi-compat.mjs --version 0.79.10 --restore`: smoke tests pass against the latest upstream.
-- Per-package `tsgo` typecheck: all migration-caused breakage resolved. Remaining typecheck failures in `analytics-dashboard` (recharts/lib `toSorted`/`ActiveShape`) and `pi-pretty` (`@ff-labs/fff-node` cast, vitest config) are pre-existing and unrelated to this migration.
+- `pnpm test:coverage` plus `pnpm tsx ./scripts/check-patch-coverage.ts --threshold 100 --lcov coverage/lcov.info`: patch coverage passes at 100%.
 
 ## Notes
 

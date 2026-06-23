@@ -6,16 +6,27 @@
  * `packages/monopi__monopi/bin/monopi.mjs` on Node 20.
  */
 export const INSTALLER_PACKAGES = [
-	"@monopi/extensions",
+	"@monopi/extension-answer",
+	"@monopi/extension-watchdog",
+	"@monopi/extension-btw",
+	"@monopi/extension-compact-header",
+	"@monopi/extension-custom-footer",
+	"@monopi/extension-external-editor",
+	"@monopi/extension-git-guard",
+	"@monopi/extension-scheduler",
+	"@monopi/extension-shell-format",
+	"@monopi/extension-tool-metadata",
+	"@monopi/extension-usage-tracker",
+	"@monopi/extension-worktree",
 	"@monopi/background-tasks",
 	"@monopi/diagnostics",
 	"@monopi/subagents",
-	"@monopi/themes",
 	"@monopi/skills",
 	"@monopi/web-remote",
 ];
 
 export const EXPERIMENTAL_PACKAGES = [
+	"@monopi/extension-bg-process",
 	"@monopi/adaptive-routing",
 	"@monopi/provider-catalog",
 	"@monopi/provider-cursor",

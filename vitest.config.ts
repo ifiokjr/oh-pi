@@ -63,7 +63,7 @@ export default defineConfig({
 			"packages/monopi__cli/src/**/*.test.ts",
 			"packages/monopi__diagnostics/tests/**/*.test.ts",
 			"packages/monopi__db/tests/**/*.test.ts",
-			"packages/monopi__extensions/extensions/**/*.test.ts",
+			"packages/monopi__extension-*/tests/**/*.test.ts",
 			"packages/monopi__subagents/tests/**/*.test.ts",
 			"packages/monopi__shared-qna/tests/**/*.test.ts",
 			"packages/monopi__provider-cursor/tests/**/*.test.ts",

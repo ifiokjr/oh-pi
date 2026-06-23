@@ -25,7 +25,7 @@ The implementation should:
 **Primary packages**:
 
 - `packages/monopi__adaptive-routing` — adaptive routing package
-- `packages/monopi__extensions` — safety/runtime extensions
+- `packages/monopi__extension-worktree` — safety/runtime extensions
 - `packages/monopi__subagents` — agent definitions, execution, management UI, schemas
 - `packages/ant-colony` — caste configs, spawning, budget planning, UI
 
@@ -70,9 +70,9 @@ This plan is complete when:
 
 **Likely files**:
 
-- `packages/monopi__extensions/extensions/*` (new helper or focused guard extension wiring)
-- `packages/monopi__extensions/README.md`
-- related tests under `packages/monopi__extensions/extensions/*.test.ts`
+- `packages/monopi__extension-*/**/*` (new helper or focused guard extension wiring)
+- `packages/monopi__extension-worktree/README.md`
+- related tests under `packages/monopi__extension-*/**/*.test.ts`
 
 **Acceptance**:
 
@@ -191,7 +191,7 @@ This plan is complete when:
 - `packages/monopi__subagents/agent-management.ts`
 - `packages/monopi__subagents/render.ts`
 - colony UI/status rendering files
-- docs in `packages/monopi__subagents/README.md`, `packages/ant-colony/README.md`, `packages/monopi__extensions/README.md`
+- docs in `packages/monopi__subagents/README.md`, `packages/ant-colony/README.md`, `packages/monopi__extension-worktree/README.md`
 
 **Acceptance**:
 

@@ -23,9 +23,9 @@ interface StartupBenchmarkSuite {
 	cleanup: () => Promise<void>;
 }
 
-type SchedulerExports = typeof import("../../packages/monopi__extensions/extensions/scheduler.js");
-type WorktreeExports = typeof import("../../packages/monopi__extensions/extensions/worktree-shared.js");
-type CustomFooterExports = typeof import("../../packages/monopi__extensions/extensions/custom-footer.js");
+type SchedulerExports = typeof import("../../packages/monopi__extension-scheduler/index.js");
+type WorktreeExports = typeof import("../../packages/monopi__extension-shared/worktree-shared.js");
+type CustomFooterExports = typeof import("../../packages/monopi__extension-custom-footer/index.js");
 
 const ROOT_PACKAGE_PATH = path.resolve(process.cwd(), "package.json");
 const TEMP_ROOT_CLEANUP_RETRY_DELAYS_MS = [0, 25, 50, 100] as const;
@@ -213,14 +213,13 @@ export async function createStartupBenchmarkSuite(): Promise<StartupBenchmarkSui
 		? manifestEntries.filter((entry) => extensionFilter.has(entry.id))
 		: manifestEntries;
 
-	const schedulerModule =
-		(await import("../../packages/monopi__extensions/extensions/scheduler.js")) as SchedulerExports;
+	const schedulerModule = (await import("../../packages/monopi__extension-scheduler/index.js")) as SchedulerExports;
 	const worktreeModule =
-		(await import("../../packages/monopi__extensions/extensions/worktree-shared.js")) as WorktreeExports;
+		(await import("../../packages/monopi__extension-shared/worktree-shared.js")) as WorktreeExports;
 	const customFooterModule =
-		(await import("../../packages/monopi__extensions/extensions/custom-footer.js")) as CustomFooterExports;
+		(await import("../../packages/monopi__extension-custom-footer/index.js")) as CustomFooterExports;
 	const usageTrackerModule =
-		(await import("../../packages/monopi__extensions/extensions/usage-tracker.js")) as ExtensionModule;
+		(await import("../../packages/monopi__extension-usage-tracker/index.js")) as ExtensionModule;
 
 	const now = Date.now();
 	const schedulerTasks = Array.from({ length: 50 }, (_, index) => buildSchedulerTask(index, now));

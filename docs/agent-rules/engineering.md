@@ -61,9 +61,8 @@ All packages live under `packages/` and share the same version.
 packages/
   core/                   → @monopi/core (compiled library: types, registry, i18n)
   cli/                    → @monopi/cli (compiled binary: TUI configurator)
-  extensions/             → @monopi/extensions (raw .ts extensions)
+  extensions/             → @monopi/extension-worktree (raw .ts extensions)
   adaptive-routing/       → @monopi/adaptive-routing (optional raw .ts routing package)
-  themes/                 → @monopi/themes (JSON theme files)
   skills/                 → @monopi/skills (skill directories)
   agents/                 → @monopi/agents (AGENTS.md templates)
   subagents/              → @monopi/subagents (raw .ts subagent orchestration package)

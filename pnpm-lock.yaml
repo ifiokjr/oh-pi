@@ -297,9 +297,45 @@ importers:
       '@monopi/core':
         specifier: 0.5.1
         version: link:../monopi__core
-      '@monopi/extensions':
+      '@monopi/extension-answer':
         specifier: 0.5.1
-        version: link:../monopi__extensions
+        version: link:../monopi__extension-answer
+      '@monopi/extension-bg-process':
+        specifier: 0.5.1
+        version: link:../monopi__extension-bg-process
+      '@monopi/extension-btw':
+        specifier: 0.5.1
+        version: link:../monopi__extension-btw
+      '@monopi/extension-compact-header':
+        specifier: 0.5.1
+        version: link:../monopi__extension-compact-header
+      '@monopi/extension-custom-footer':
+        specifier: 0.5.1
+        version: link:../monopi__extension-custom-footer
+      '@monopi/extension-external-editor':
+        specifier: 0.5.1
+        version: link:../monopi__extension-external-editor
+      '@monopi/extension-git-guard':
+        specifier: 0.5.1
+        version: link:../monopi__extension-git-guard
+      '@monopi/extension-scheduler':
+        specifier: 0.5.1
+        version: link:../monopi__extension-scheduler
+      '@monopi/extension-shell-format':
+        specifier: 0.5.1
+        version: link:../monopi__extension-shell-format
+      '@monopi/extension-tool-metadata':
+        specifier: 0.5.1
+        version: link:../monopi__extension-tool-metadata
+      '@monopi/extension-usage-tracker':
+        specifier: 0.5.1
+        version: link:../monopi__extension-usage-tracker
+      '@monopi/extension-watchdog':
+        specifier: 0.5.1
+        version: link:../monopi__extension-watchdog
+      '@monopi/extension-worktree':
+        specifier: 0.5.1
+        version: link:../monopi__extension-worktree
       '@monopi/shared-qna':
         specifier: 0.5.1
         version: link:../monopi__shared-qna
@@ -309,9 +345,6 @@ importers:
       '@monopi/subagents':
         specifier: 0.5.1
         version: link:../monopi__subagents
-      '@monopi/themes':
-        specifier: 0.5.1
-        version: link:../monopi__themes
       chalk:
         specifier: ^5.6.2
         version: 5.6.2
@@ -437,7 +470,28 @@ importers:
         specifier: 8.0.16
         version: 8.0.16(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)
 
-  packages/monopi__extensions:
+  packages/monopi__extension-answer:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      '@monopi/shared-qna':
+        specifier: 0.5.1
+        version: link:../monopi__shared-qna
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-bg-process:
     dependencies:
       '@earendil-works/pi-agent-core':
         specifier: '>=0.78.1'
@@ -454,15 +508,249 @@ importers:
       '@monopi/background-tasks':
         specifier: 0.5.1
         version: link:../monopi__background-tasks
-      '@monopi/core':
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-btw:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-compact-header:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      '@monopi/extension-shared':
         specifier: 0.5.1
-        version: link:../monopi__core
+        version: link:../monopi__extension-shared
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-custom-footer:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      '@monopi/extension-shared':
+        specifier: 0.5.1
+        version: link:../monopi__extension-shared
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-external-editor:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-git-guard:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-scheduler:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      '@monopi/extension-shared':
+        specifier: 0.5.1
+        version: link:../monopi__extension-shared
       '@monopi/shared-qna':
         specifier: 0.5.1
         version: link:../monopi__shared-qna
       croner:
         specifier: ^10.0.1
         version: 10.0.1
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-shared:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      '@monopi/core':
+        specifier: 0.5.1
+        version: link:../monopi__core
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-shell-format:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-tool-metadata:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-usage-tracker:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      '@monopi/extension-shared':
+        specifier: 0.5.1
+        version: link:../monopi__extension-shared
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-watchdog:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      '@monopi/extension-shared':
+        specifier: 0.5.1
+        version: link:../monopi__extension-shared
+      typebox:
+        specifier: ^1.1.24
+        version: 1.3.0
+
+  packages/monopi__extension-worktree:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-ai':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-coding-agent':
+        specifier: '>=0.78.1'
+        version: 0.78.1(ws@8.21.0)(zod@3.25.76)
+      '@earendil-works/pi-tui':
+        specifier: '>=0.78.1'
+        version: 0.78.1
+      '@monopi/extension-shared':
+        specifier: 0.5.1
+        version: link:../monopi__extension-shared
       typebox:
         specifier: ^1.1.24
         version: 1.3.0
@@ -612,8 +900,6 @@ importers:
       typebox:
         specifier: ^1.1.24
         version: 1.3.0
-
-  packages/monopi__themes: {}
 
   packages/monopi__web-client: {}
 

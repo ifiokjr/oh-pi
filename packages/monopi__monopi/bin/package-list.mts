@@ -3,22 +3,42 @@
 
 Default runtime/content packages installed by `npx @monopi/monopi`:
 
-- `@monopi/extensions`
+- `@monopi/extension-answer`
+- `@monopi/extension-watchdog`
+- `@monopi/extension-btw`
+- `@monopi/extension-compact-header`
+- `@monopi/extension-custom-footer`
+- `@monopi/extension-external-editor`
+- `@monopi/extension-git-guard`
+- `@monopi/extension-scheduler`
+- `@monopi/extension-shell-format`
+- `@monopi/extension-tool-metadata`
+- `@monopi/extension-usage-tracker`
+- `@monopi/extension-worktree`
 - `@monopi/background-tasks`
 - `@monopi/diagnostics`
 - `@monopi/subagents`
 - `@monopi/web-remote`
-- `@monopi/themes`
 - `@monopi/skills`
 
 <!-- {/repoDefaultInstallerPackagesDocs} -->
 */
 export const INSTALLER_PACKAGES = [
-	"@monopi/extensions",
+	"@monopi/extension-answer",
+	"@monopi/extension-watchdog",
+	"@monopi/extension-btw",
+	"@monopi/extension-compact-header",
+	"@monopi/extension-custom-footer",
+	"@monopi/extension-external-editor",
+	"@monopi/extension-git-guard",
+	"@monopi/extension-scheduler",
+	"@monopi/extension-shell-format",
+	"@monopi/extension-tool-metadata",
+	"@monopi/extension-usage-tracker",
+	"@monopi/extension-worktree",
 	"@monopi/background-tasks",
 	"@monopi/diagnostics",
 	"@monopi/subagents",
-	"@monopi/themes",
 	"@monopi/skills",
 	"@monopi/web-remote",
 ];
@@ -28,6 +48,7 @@ export const INSTALLER_PACKAGES = [
 
 Opt-in packages that stay separate from the default installer bundle:
 
+- `@monopi/extension-bg-process`
 - `@monopi/adaptive-routing`
 - `@monopi/provider-catalog`
 - `@monopi/provider-cursor`
@@ -40,6 +61,7 @@ Opt-in packages that stay separate from the default installer bundle:
 <!-- {/repoExperimentalPackagesDocs} -->
 */
 export const EXPERIMENTAL_PACKAGES = [
+	"@monopi/extension-bg-process",
 	"@monopi/adaptive-routing",
 	"@monopi/provider-catalog",
 	"@monopi/provider-cursor",

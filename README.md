@@ -101,7 +101,7 @@ This is a monorepo. Install everything at once with `npx @monopi/monopi`, or pic
 | [`@monopi/cli`](./packages/monopi__cli)                                 | Interactive TUI configurator                                               | `npx @monopi/cli`                            |
 | [`@monopi/core`](./packages/monopi__core)                               | Shared types, registries, icons, i18n, and path helpers                    | (library, not installed directly)            |
 | [`@monopi/db`](./packages/monopi__db)                                   | Shared SQLite/Drizzle database for persistence-based extensions            | (library, not installed directly)            |
-| [`@monopi/extensions`](./packages/monopi__extensions)                   | Core extension pack with session features                                  | `pi install npm:@monopi/extensions`          |
+| [`@monopi/extension-worktree`](./packages/monopi__extension-worktree)   | Split extension package for worktree management                            | `pi install npm:@monopi/extension-worktree`  |
 | [`@monopi/background-tasks`](./packages/monopi__background-tasks)       | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, and `bg_task`  | `pi install npm:@monopi/background-tasks`    |
 | [`@monopi/diagnostics`](./packages/monopi__diagnostics)                 | Prompt completion timing extension                                         | `pi install npm:@monopi/diagnostics`         |
 | [`@monopi/subagents`](./packages/monopi__subagents)                     | Full-featured subagent delegation runtime                                  | `pi install npm:@monopi/subagents`           |
@@ -110,7 +110,6 @@ This is a monorepo. Install everything at once with `npx @monopi/monopi`, or pic
 | [`@monopi/provider-catalog`](./packages/monopi__provider-catalog)       | Experimental OpenCode-backed provider catalog                              | `pi install npm:@monopi/provider-catalog`    |
 | [`@monopi/provider-cursor`](./packages/monopi__provider-cursor)         | Experimental Cursor OAuth provider                                         | `pi install npm:@monopi/provider-cursor`     |
 | [`@monopi/provider-ollama`](./packages/monopi__provider-ollama)         | Experimental Ollama local + cloud provider                                 | `pi install npm:@monopi/provider-ollama`     |
-| [`@monopi/themes`](./packages/monopi__themes)                           | 6 color themes                                                             | `pi install npm:@monopi/themes`              |
 | [`@monopi/skills`](./packages/monopi__skills)                           | 3 maintained skill packs                                                   | `pi install npm:@monopi/skills`              |
 | [`@monopi/agents`](./packages/monopi__agents)                           | 5 AGENTS.md templates                                                      | (used by CLI/templates)                      |
 | [`@monopi/shared-qna`](./packages/monopi__shared-qna)                   | Shared Q&A TUI helpers                                                     | (library, not installed directly)            |
@@ -535,13 +534,13 @@ That is the normal developer loop for monopi feature work.
 
 Managed local switching covers these packages:
 
-- `@monopi/extensions`
+- `@monopi/extension-worktree`
 - `@monopi/background-tasks`
 - `@monopi/diagnostics`
 - `@monopi/subagents`
 - `@monopi/web-remote`
-- `@monopi/themes`
 - `@monopi/skills`
+- `@monopi/extension-bg-process`
 - `@monopi/adaptive-routing`
 - `@monopi/provider-catalog`
 - `@monopi/provider-cursor`
@@ -605,7 +604,7 @@ default: patch
 ---
 ```
 
-Do not use package names like `@monopi/monopi` or `@monopi/extensions` in changeset frontmatter here — MonoChange validates changesets against the configured `default` release group.
+Do not use package names like `@monopi/monopi` or `@monopi/extension-worktree` in changeset frontmatter here — MonoChange validates changesets against the configured `default` release group.
 
 Choose the change type:
 
@@ -634,7 +633,7 @@ monopi/
 ├── packages/
 │   ├── monopi__core/              Shared types, registries, icons, i18n, and path helpers (compiled)
 │   ├── monopi__cli/               Interactive TUI configurator (compiled)
-│   ├── monopi__extensions/        Core pi extensions (raw .ts)
+│   ├── monopi__extension-*/      Split pi extension packages
 │   ├── monopi__background-tasks/  Reactive background shell task package (raw .ts)
 │   ├── monopi__diagnostics/       Prompt completion timing extension (raw .ts)
 │   ├── monopi__subagents/         Subagent orchestration package (raw .ts)
@@ -650,7 +649,6 @@ monopi/
 │   ├── monopi__analytics-dashboard/ React dashboard for visualizing AI usage (private app)
 │   ├── monopi__analytics-extension/ Analytics tracking extension for pi (raw .ts)
 │   ├── monopi__docs/             Documentation site for monopi (private app)
-│   ├── monopi__themes/           JSON theme files
 │   ├── monopi__skills/           Curated skill directories
 │   ├── monopi__agents/           AGENTS.md templates
 │   └── monopi__monopi/          Installer CLI (npx @monopi/monopi)

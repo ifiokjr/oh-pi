@@ -13,7 +13,6 @@ const resourcesDir = import.meta.dirname;
 
 /**
  * Resolve a subpath within an installed npm package.
- * @param pkg - Package name (e.g. "@monopi/themes")
  * @param subpath - Relative path within the package (e.g. "themes")
  * @returns Absolute path to the resolved directory/file
  */
@@ -34,11 +33,10 @@ function resolvePackagePathWithFallback(pkg: string, subpath: string, fallbackRe
 export const resources = {
 	agent: (name: string) => join(resolvePackagePath("@monopi/agents", "agents"), `${name}.md`),
 	diagnosticsDir: () => resolvePackagePathWithFallback("@monopi/diagnostics", ".", "../../../monopi__diagnostics"),
-	extension: (name: string) => join(resolvePackagePath("@monopi/extensions", "extensions"), name),
-	extensionFile: (name: string) => join(resolvePackagePath("@monopi/extensions", "extensions"), `${name}.ts`),
+	extension: (name: string) => join(resolvePackagePath(`@monopi/extension-${name}`, "."), "index.ts"),
+	extensionFile: (name: string) => join(resolvePackagePath(`@monopi/extension-${name}`, "."), "index.ts"),
 	sharedQnaDir: () => resolvePackagePathWithFallback("@monopi/shared-qna", ".", "../../../monopi__shared-qna"),
 	skill: (name: string) => join(resolvePackagePath("@monopi/skills", "skills"), name),
 	skillsDir: () => resolvePackagePath("@monopi/skills", "skills"),
 	subagentsDir: () => resolvePackagePath("@monopi/subagents", "."),
-	theme: (name: string) => join(resolvePackagePath("@monopi/themes", "themes"), `${name}.json`),
 };

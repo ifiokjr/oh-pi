@@ -54,4 +54,4 @@ const piTui = await requirePiTuiModule();
 ## Related
 
 - [`@earendil-works/pi-tui`](https://www.npmjs.com/package/@earendil-works/pi-tui) — the pi TUI library itself
-- [`@monopi/extensions`](../monopi__extensions) — uses this for TUI-based widgets
+- [`@monopi/extension-worktree`](../monopi__extension-worktree) — uses this for TUI-based widgets

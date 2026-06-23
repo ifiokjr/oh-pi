@@ -78,7 +78,7 @@ export function HomePage() {
 					<div>
 						<p className="text-sm text-zinc-400 mb-1.5">Or install individual packages:</p>
 						<code className="block bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm font-mono text-pi-emerald-glow">
-							pi install npm:@monopi/extensions
+							pi install npm:@monopi/extension-worktree
 						</code>
 					</div>
 				</div>

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { performance } from "node:perf_hooks";
 
-import { buildCommandCatalog } from "../packages/monopi__extensions/extensions/compact-header.ts";
+import { buildCommandCatalog } from "../packages/monopi__extension-compact-header/index.ts";
 
 function time(label, fn, iterations) {
 	const start = performance.now();

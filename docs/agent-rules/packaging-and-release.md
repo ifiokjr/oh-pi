@@ -18,7 +18,7 @@ default: patch
 ---
 ```
 
-Do not use package names like `@monopi/monopi` or `@monopi/extensions` in changeset frontmatter.
+Do not use package names like `@monopi/monopi` or `@monopi/extension-worktree` in changeset frontmatter.
 
 ## Change types
 
@@ -46,9 +46,8 @@ npx @monopi/monopi --remove
 Individual packages can also be installed directly:
 
 ```bash
-pi install npm:@monopi/extensions
+pi install npm:@monopi/extension-worktree
 pi install npm:@monopi/adaptive-routing
-pi install npm:@monopi/themes
 pi install npm:@monopi/skills
 pi install npm:@monopi/subagents
 pi install npm:@monopi/provider-cursor

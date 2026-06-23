@@ -522,25 +522,61 @@ type = "npm"
 # readme_file = "docs/@monopi/docs-placeholder.md"
 
 
-[package."@monopi/extensions"]
-path = "packages/monopi__extensions"
+[package."@monopi/extension-answer"]
+path = "packages/monopi__extension-answer"
 type = "npm"
 
-# [package."@monopi/extensions.publish"]
-# enabled = true
-# mode = "builtin"
-# trusted_publishing = true
-# [package."@monopi/extensions.publish.trusted_publishing"]
-# enabled = true
-# repository = "owner/repo"
-# workflow = "publish.yml"
-# environment = "release"
-# registry = "npm"
+[package."@monopi/extension-watchdog"]
+path = "packages/monopi__extension-watchdog"
+type = "npm"
 
-# [package."@monopi/extensions.publish.placeholder"]
-# readme = "This package is a placeholder published by monochange until the first real release."
-# readme_file = "docs/@monopi/extensions-placeholder.md"
+[package."@monopi/extension-bg-process"]
+path = "packages/monopi__extension-bg-process"
+type = "npm"
 
+[package."@monopi/extension-btw"]
+path = "packages/monopi__extension-btw"
+type = "npm"
+
+[package."@monopi/extension-compact-header"]
+path = "packages/monopi__extension-compact-header"
+type = "npm"
+
+[package."@monopi/extension-custom-footer"]
+path = "packages/monopi__extension-custom-footer"
+type = "npm"
+
+[package."@monopi/extension-external-editor"]
+path = "packages/monopi__extension-external-editor"
+type = "npm"
+
+[package."@monopi/extension-git-guard"]
+path = "packages/monopi__extension-git-guard"
+type = "npm"
+
+[package."@monopi/extension-scheduler"]
+path = "packages/monopi__extension-scheduler"
+type = "npm"
+
+[package."@monopi/extension-shell-format"]
+path = "packages/monopi__extension-shell-format"
+type = "npm"
+
+[package."@monopi/extension-tool-metadata"]
+path = "packages/monopi__extension-tool-metadata"
+type = "npm"
+
+[package."@monopi/extension-usage-tracker"]
+path = "packages/monopi__extension-usage-tracker"
+type = "npm"
+
+[package."@monopi/extension-worktree"]
+path = "packages/monopi__extension-worktree"
+type = "npm"
+
+[package."@monopi/extension-shared"]
+path = "packages/monopi__extension-shared"
+type = "npm"
 
 [package."@monopi/context"]
 path = "packages/monopi__context"
@@ -742,26 +778,6 @@ type = "npm"
 # readme_file = "docs/@monopi/subagents-placeholder.md"
 
 
-[package."@monopi/themes"]
-path = "packages/monopi__themes"
-type = "npm"
-
-# [package."@monopi/themes.publish"]
-# enabled = true
-# mode = "builtin"
-# trusted_publishing = true
-# [package."@monopi/themes.publish.trusted_publishing"]
-# enabled = true
-# repository = "owner/repo"
-# workflow = "publish.yml"
-# environment = "release"
-# registry = "npm"
-
-# [package."@monopi/themes.publish.placeholder"]
-# readme = "This package is a placeholder published by monochange until the first real release."
-# readme_file = "docs/@monopi/themes-placeholder.md"
-
-
 [package."@monopi/web-client"]
 path = "packages/monopi__web-client"
 type = "npm"
@@ -882,7 +898,20 @@ packages = [
 	"@monopi/provider-cursor",
 	"@monopi/diagnostics",
 	"@monopi/docs",
-	"@monopi/extensions",
+	"@monopi/extension-answer",
+	"@monopi/extension-watchdog",
+	"@monopi/extension-bg-process",
+	"@monopi/extension-btw",
+	"@monopi/extension-compact-header",
+	"@monopi/extension-custom-footer",
+	"@monopi/extension-external-editor",
+	"@monopi/extension-git-guard",
+	"@monopi/extension-scheduler",
+	"@monopi/extension-shell-format",
+	"@monopi/extension-tool-metadata",
+	"@monopi/extension-usage-tracker",
+	"@monopi/extension-worktree",
+	"@monopi/extension-shared",
 	"@monopi/context",
 	"@monopi/monopi",
 	"@monopi/provider-ollama",
@@ -893,7 +922,6 @@ packages = [
 	"@monopi/shared-qna",
 	"@monopi/skills",
 	"@monopi/subagents",
-	"@monopi/themes",
 	"@monopi/web-client",
 	"@monopi/web-remote",
 	"@monopi/web-server",

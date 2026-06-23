@@ -1,0 +1,42 @@
+{
+	"name": "@monopi/extension-scheduler",
+	"version": "0.5.1",
+	"description": "Monopi scheduler pi extension.",
+	"keywords": [
+		"pi-package"
+	],
+	"homepage": "https://github.com/ifiokjr/monopi/tree/main/packages/monopi__extension-scheduler",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/monopi/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/monopi.git",
+		"directory": "packages/monopi__extension-scheduler"
+	},
+	"files": [
+		"*.ts",
+		"README.md",
+		"!**/*.test.ts",
+		"!tests/**"
+	],
+	"type": "module",
+	"dependencies": {
+		"@monopi/extension-shared": "0.5.1",
+		"@monopi/shared-qna": "0.5.1",
+		"croner": "^10.0.1"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-agent-core": ">=0.78.1",
+		"@earendil-works/pi-ai": ">=0.78.1",
+		"@earendil-works/pi-coding-agent": ">=0.78.1",
+		"@earendil-works/pi-tui": ">=0.78.1",
+		"typebox": "^1.1.24"
+	},
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	}
+}

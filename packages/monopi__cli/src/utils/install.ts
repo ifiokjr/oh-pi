@@ -23,7 +23,6 @@ import {
 	writeModelConfig,
 	writeProviderEnv,
 	writeSkills,
-	writeTheme,
 } from "./writers.js";
 
 const MANAGED_CONFIG_ENTRIES = [
@@ -133,7 +132,6 @@ export function applyConfig(config: OhPConfigWithRouting) {
 	writeExtensions(agentDir, config);
 	writeAdaptiveRoutingConfig(agentDir, config);
 	writeSkills(agentDir, config);
-	writeTheme(agentDir, config);
 }
 
 /**

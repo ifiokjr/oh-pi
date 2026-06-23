@@ -4,7 +4,7 @@ import { computeBenchmarkTargets } from "./select-targets";
 
 describe("startup benchmark target selection", () => {
 	it("targets worktree-focused hotspots and the worktree extension for worktree changes", async () => {
-		const report = await computeBenchmarkTargets(["packages/monopi__extensions/extensions/worktree-shared.ts"]);
+		const report = await computeBenchmarkTargets(["packages/monopi__extension-shared/worktree-shared.ts"]);
 
 		expect(report.mode).toBe("selected");
 		expect(report.selectedExtensions).toContain("worktree");
@@ -16,7 +16,7 @@ describe("startup benchmark target selection", () => {
 	});
 
 	it("targets scheduler-focused hotspots for scheduler changes", async () => {
-		const report = await computeBenchmarkTargets(["packages/monopi__extensions/extensions/scheduler-registration.ts"]);
+		const report = await computeBenchmarkTargets(["packages/monopi__extension-scheduler/scheduler-registration.ts"]);
 
 		expect(report.mode).toBe("selected");
 		expect(report.selectedExtensions).toContain("scheduler");

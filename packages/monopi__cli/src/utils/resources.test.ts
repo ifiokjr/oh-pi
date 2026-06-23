@@ -10,14 +10,18 @@ describe("resources", () => {
 	});
 
 	it("extension returns correct path", () => {
-		const p = resources.extension("bar");
-		expect(p).toContain("extensions/bar");
+		const p = resources.extension("worktree");
+		expect(
+			/(?:packages\/monopi__extension-worktree|node_modules\/@monopi\/extension-worktree)\/index\.ts$/.test(p),
+		).toBe(true);
 		expect(p.startsWith("/")).toBe(true);
 	});
 
 	it("extensionFile returns correct path", () => {
-		const p = resources.extensionFile("baz");
-		expect(p).toContain("extensions/baz.ts");
+		const p = resources.extensionFile("worktree");
+		expect(
+			/(?:packages\/monopi__extension-worktree|node_modules\/@monopi\/extension-worktree)\/index\.ts$/.test(p),
+		).toBe(true);
 		expect(p.startsWith("/")).toBe(true);
 	});
 
@@ -48,12 +52,6 @@ describe("resources", () => {
 	it("skillsDir returns correct path", () => {
 		const p = resources.skillsDir();
 		expect(p).toContain("skills");
-		expect(p.startsWith("/")).toBe(true);
-	});
-
-	it("theme returns correct path", () => {
-		const p = resources.theme("dark");
-		expect(p).toContain("themes/dark.json");
 		expect(p.startsWith("/")).toBe(true);
 	});
 });

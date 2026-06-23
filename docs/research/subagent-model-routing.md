@@ -57,7 +57,7 @@ Useful pieces already exist in:
 - `packages/monopi__adaptive-routing/index.ts`
 - `packages/monopi__adaptive-routing/engine.ts`
 - `packages/monopi__adaptive-routing/normalize.ts`
-- `packages/monopi__extensions/extensions/usage-tracker.ts`
+- `packages/monopi__extension-usage-tracker/index.ts`
 
 Those pieces already prove that pi can:
 

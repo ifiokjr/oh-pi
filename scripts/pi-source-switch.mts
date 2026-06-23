@@ -27,12 +27,11 @@ interactive pi session.
 
 Managed local switching covers these packages:
 
-- `@monopi/extensions`
+- `@monopi/extension-worktree`
 - `@monopi/background-tasks`
 - `@monopi/diagnostics`
 - `@monopi/subagents`
 - `@monopi/web-remote`
-- `@monopi/themes`
 - `@monopi/skills`
 - `@monopi/adaptive-routing`
 - `@monopi/provider-catalog`

@@ -35,7 +35,7 @@ The benchmark suite currently covers:
 
 ## Ranked hotspot summary
 
-### 1. `packages/monopi__extensions/extensions/worktree-shared.ts`
+### 1. `packages/monopi__extension-shared/worktree-shared.ts`
 
 **Why it matters**
 
@@ -73,7 +73,7 @@ That change also removed the footer's 30-second timer from re-triggering worktre
 
 This is the most expensive focused startup-adjacent benchmark today and maps directly to the sort of post-startup hitch that feels like typing lag.
 
-### 2. `packages/monopi__extensions/extensions/scheduler.ts`
+### 2. `packages/monopi__extension-scheduler/index.ts`
 
 **Why it matters**
 
@@ -93,7 +93,7 @@ This is the most expensive focused startup-adjacent benchmark today and maps dir
 
 The shared status-bar cache now skips initial no-op `setStatus(key, undefined)` clears for unseen keys. That removes the idle startup status writes that still showed up in the runtime churn report for scheduler and watchdog while preserving real clears after a visible status had been shown.
 
-### 3. `packages/monopi__extensions/extensions/custom-footer.ts`
+### 3. `packages/monopi__extension-custom-footer/index.ts`
 
 **Why it matters**
 
@@ -112,7 +112,7 @@ The footer caches totals after startup, but the aggregation path is still O(n) o
 - PR probe completions request a redraw only when the visible PR list actually changes
 - watchdog and scheduler status-bar writes should stay deduplicated so periodic clean-state refreshes do not spam identical `setStatus(...)` calls
 
-### 4. `packages/monopi__extensions/extensions/usage-tracker.ts`
+### 4. `packages/monopi__extension-usage-tracker/index.ts`
 
 **Why it matters**
 

@@ -26,9 +26,10 @@ describe("monopi package list", () => {
 	it("includes background tasks in the default installer bundle and switcher package set", () => {
 		expect(INSTALLER_PACKAGES).toContain("@monopi/background-tasks");
 		expect(INSTALLER_PACKAGES.indexOf("@monopi/background-tasks")).toBeGreaterThan(
-			INSTALLER_PACKAGES.indexOf("@monopi/extensions"),
+			INSTALLER_PACKAGES.indexOf("@monopi/extension-worktree"),
 		);
 		expect(EXPERIMENTAL_PACKAGES).not.toContain("@monopi/background-tasks");
+		expect(EXPERIMENTAL_PACKAGES).toContain("@monopi/extension-bg-process");
 		expect(SWITCHER_PACKAGES).toEqual([...INSTALLER_PACKAGES, ...EXPERIMENTAL_PACKAGES]);
 		expect(RUNTIME_INSTALLER_PACKAGES).toEqual(INSTALLER_PACKAGES);
 		expect(RUNTIME_EXPERIMENTAL_PACKAGES).toEqual(EXPERIMENTAL_PACKAGES);
@@ -42,7 +43,7 @@ describe("monopi package list", () => {
 		});
 
 		expect(output).toContain("@monopi/background-tasks");
-		expect(output).toContain("@monopi/extensions");
+		expect(output).toContain("@monopi/extension-worktree");
 	});
 
 	it("loads the installer entrypoint with the package list import", async () => {

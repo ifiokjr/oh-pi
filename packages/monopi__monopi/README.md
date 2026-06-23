@@ -75,16 +75,15 @@ monopi repo
 
 ## Packages
 
-| Package                    | Contents                                                                                                                                                          |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@monopi/extensions`       | 12 core session features including git-guard, custom-footer, tool-metadata, scheduler, usage-tracker, btw/qq, watchdog, bg-process, external-editor, and worktree |
-| `@monopi/background-tasks` | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, log tails, and the `bg_task` tool                                                                     |
-| `@monopi/diagnostics`      | Prompt completion timestamps, durations, per-turn timing, widget, and `/diagnostics`                                                                              |
-| `@monopi/subagents`        | Subagent orchestration runtime (`subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`, `/agents`)                                                          |
-| `@monopi/web-remote`       | `/remote` session sharing for browser-oriented remote access                                                                                                      |
-| `@monopi/themes`           | 6 themes: cyberpunk, nord, gruvbox, tokyo-night, catppuccin-mocha, oh-p-dark                                                                                      |
-| `@monopi/skills`           | 19 skills including web-search, web-fetch, context7, debug-helper, shell syntax, quick-setup, and more                                                            |
-| `@monopi/agents`           | 5 AGENTS.md templates for common roles                                                                                                                            |
+| Package                      | Contents                                                                                                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@monopi/extension-worktree` | Split session extension packages such as git-guard, custom-footer, tool-metadata, scheduler, usage-tracker, btw/qq, watchdog, external-editor, and worktree |
+| `@monopi/background-tasks`   | Reactive background shell tasks with `/bg`, `Ctrl+Shift+B`, log tails, and the `bg_task` tool                                                               |
+| `@monopi/diagnostics`        | Prompt completion timestamps, durations, per-turn timing, widget, and `/diagnostics`                                                                        |
+| `@monopi/subagents`          | Subagent orchestration runtime (`subagent`, `subagent_status`, `/run`, `/chain`, `/parallel`, `/agents`)                                                    |
+| `@monopi/web-remote`         | `/remote` session sharing for browser-oriented remote access                                                                                                |
+| `@monopi/skills`             | 19 skills including web-search, web-fetch, context7, debug-helper, shell syntax, quick-setup, and more                                                      |
+| `@monopi/agents`             | 5 AGENTS.md templates for common roles                                                                                                                      |
 
 Optional packages that stay opt-in:
 
@@ -92,6 +91,7 @@ Optional packages that stay opt-in:
 
 Opt-in packages that stay separate from the default installer bundle:
 
+- `@monopi/extension-bg-process`
 - `@monopi/adaptive-routing`
 - `@monopi/provider-catalog`
 - `@monopi/provider-cursor`

@@ -35,7 +35,18 @@ describe("git-install package manifest", () => {
 	it("aggregates the standalone pi packages at the repo root", () => {
 		const rootManifest = readPackageJson("package.json");
 		const extensionPackages = [
-			"packages/monopi__extensions/package.json",
+			"packages/monopi__extension-answer/package.json",
+			"packages/monopi__extension-watchdog/package.json",
+			"packages/monopi__extension-btw/package.json",
+			"packages/monopi__extension-compact-header/package.json",
+			"packages/monopi__extension-custom-footer/package.json",
+			"packages/monopi__extension-external-editor/package.json",
+			"packages/monopi__extension-git-guard/package.json",
+			"packages/monopi__extension-scheduler/package.json",
+			"packages/monopi__extension-shell-format/package.json",
+			"packages/monopi__extension-tool-metadata/package.json",
+			"packages/monopi__extension-usage-tracker/package.json",
+			"packages/monopi__extension-worktree/package.json",
 			"packages/monopi__background-tasks/package.json",
 			"packages/monopi__diagnostics/package.json",
 			"packages/monopi__subagents/package.json",
@@ -52,7 +63,7 @@ describe("git-install package manifest", () => {
 		expect(rootManifest.workspaces).toEqual(["packages/*"]);
 		expect(rootManifest.pi?.extensions).toEqual(expectedExtensionEntries);
 		expect(rootManifest.pi?.skills).toEqual(["./packages/monopi__skills/skills"]);
-		expect(rootManifest.pi?.themes).toEqual(["./packages/monopi__themes/themes"]);
+		expect(rootManifest.pi?.themes).toBeUndefined();
 
 		for (const extensionEntry of rootManifest.pi?.extensions ?? []) {
 			expect(extensionEntry.endsWith(".ts")).toBe(true);

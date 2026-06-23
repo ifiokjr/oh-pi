@@ -12,7 +12,10 @@ export const PI_PACKAGES = [
 	"@earendil-works/pi-tui",
 ];
 export const SMOKE_TESTS = [
-	"packages/monopi__extensions/extensions/smoke.test.ts",
+	"scripts/pi-package-manifest.test.ts",
+	"packages/monopi__extension-btw/tests/btw.test.ts",
+	"packages/monopi__extension-scheduler/tests/scheduler.test.ts",
+	"packages/monopi__extension-worktree/tests/worktree.test.ts",
 	"packages/monopi__diagnostics/tests/smoke.test.ts",
 	"packages/ant-colony/tests/smoke.test.ts",
 	"packages/monopi__subagents/tests/smoke.test.ts",

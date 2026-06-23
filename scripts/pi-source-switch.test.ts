@@ -205,18 +205,18 @@ describe("pi source switcher helpers", () => {
 	});
 
 	it("parses scoped and unscoped npm package names", () => {
-		expect(parseNpmPackageName("npm:@monopi/extensions")).toBe("@monopi/extensions");
-		expect(parseNpmPackageName("npm:@monopi/extensions@0.4.4")).toBe("@monopi/extensions");
+		expect(parseNpmPackageName("npm:@monopi/extension-worktree")).toBe("@monopi/extension-worktree");
+		expect(parseNpmPackageName("npm:@monopi/extension-worktree@0.4.4")).toBe("@monopi/extension-worktree");
 		expect(parseNpmPackageName("npm:chalk@5.0.0")).toBe("chalk");
 		expect(parseNpmPackageName("/tmp/local-package")).toBeUndefined();
 	});
 
 	it("rewrites managed package sources while preserving object settings", () => {
 		const nextEntries = rewriteManagedPackageSources(
-			["npm:@monopi/monopi", { source: "npm:@monopi/extensions" }, "npm:@monopi/themes"],
+			["npm:@monopi/monopi", { source: "npm:@monopi/extension-worktree" }, "npm:@monopi/skills"],
 			new Map([
-				["@monopi/extensions", "/repo/packages/monopi__extensions"],
-				["@monopi/themes", "/repo/packages/monopi__themes"],
+				["@monopi/extension-worktree", "/repo/packages/monopi__extension-worktree"],
+				["@monopi/skills", "/repo/packages/monopi__skills"],
 				["@monopi/provider-catalog", "/repo/packages/monopi__provider-catalog"],
 				["@monopi/provider-cursor", "/repo/packages/monopi__provider-cursor"],
 			]),
@@ -225,8 +225,8 @@ describe("pi source switcher helpers", () => {
 
 		expect(nextEntries).toEqual([
 			"npm:@monopi/monopi",
-			{ source: "/repo/packages/monopi__extensions" },
-			"/repo/packages/monopi__themes",
+			{ source: "/repo/packages/monopi__extension-worktree" },
+			"/repo/packages/monopi__skills",
 			"/repo/packages/monopi__provider-catalog",
 			"/repo/packages/monopi__provider-cursor",
 		]);
@@ -234,45 +234,48 @@ describe("pi source switcher helpers", () => {
 
 	it("dedupes managed package entries while preserving object-style config", () => {
 		const nextEntries = dedupeManagedPackageEntries(
-			["npm:@monopi/monopi", "/tmp/old/extensions", "/tmp/new/extensions", "/tmp/old/themes", "/tmp/new/themes"],
+			["npm:@monopi/monopi", "/tmp/old/extensions", "/tmp/new/extensions", "/tmp/old/skills", "/tmp/new/skills"],
 			(source) => {
 				if (source.includes("extensions")) {
-					return "@monopi/extensions";
+					return "@monopi/extension-worktree";
 				}
-				if (source.includes("themes")) {
-					return "@monopi/themes";
+				if (source.includes("skills")) {
+					return "@monopi/skills";
 				}
 				return parseNpmPackageName(source);
 			},
 		);
 
-		expect(nextEntries).toEqual(["npm:@monopi/monopi", "/tmp/new/extensions", "/tmp/new/themes"]);
+		expect(nextEntries).toEqual(["npm:@monopi/monopi", "/tmp/new/extensions", "/tmp/new/skills"]);
 	});
 
 	it("resolves workspace package directories from a repo checkout", () => {
 		const repoDir = createTempDir("oh-pi-switcher-");
 		const packagesDir = path.join(repoDir, "packages");
-		mkdirSync(path.join(packagesDir, "extensions"), { recursive: true });
-		mkdirSync(path.join(packagesDir, "themes"), { recursive: true });
-		writeFileSync(path.join(packagesDir, "extensions", "package.json"), JSON.stringify({ name: "@monopi/extensions" }));
-		writeFileSync(path.join(packagesDir, "themes", "package.json"), JSON.stringify({ name: "@monopi/themes" }));
+		mkdirSync(path.join(packagesDir, "extension-worktree"), { recursive: true });
+		mkdirSync(path.join(packagesDir, "skills"), { recursive: true });
+		writeFileSync(
+			path.join(packagesDir, "extension-worktree", "package.json"),
+			JSON.stringify({ name: "@monopi/extension-worktree" }),
+		);
+		writeFileSync(path.join(packagesDir, "skills", "package.json"), JSON.stringify({ name: "@monopi/skills" }));
 
-		const sources = resolveWorkspacePackageSources(repoDir, ["@monopi/extensions", "@monopi/themes"]);
-		expect(sources.get("@monopi/extensions")).toBe(path.join(repoDir, "packages", "extensions"));
-		expect(sources.get("@monopi/themes")).toBe(path.join(repoDir, "packages", "themes"));
+		const sources = resolveWorkspacePackageSources(repoDir, ["@monopi/extension-worktree", "@monopi/skills"]);
+		expect(sources.get("@monopi/extension-worktree")).toBe(path.join(repoDir, "packages", "extension-worktree"));
+		expect(sources.get("@monopi/skills")).toBe(path.join(repoDir, "packages", "skills"));
 	});
 
 	it("merges local package manifests into object settings so new extensions are not missed", () => {
 		expect(
 			mergeManagedPackageManifest(
 				{
-					source: "/repo/packages/monopi__extensions",
+					source: "/repo/packages/monopi__extension-worktree",
 					extensions: ["extensions/existing.ts"],
 				},
 				{ extensions: ["extensions/existing.ts", "extensions/worktree.ts"] },
 			),
 		).toEqual({
-			source: "/repo/packages/monopi__extensions",
+			source: "/repo/packages/monopi__extension-worktree",
 			extensions: ["extensions/existing.ts", "extensions/worktree.ts"],
 		});
 	});
@@ -280,37 +283,37 @@ describe("pi source switcher helpers", () => {
 	it("keeps explicit empty arrays when merging local package manifests", () => {
 		expect(
 			mergeManagedPackageManifest(
-				{ source: "/repo/packages/monopi__extensions", extensions: [] },
+				{ source: "/repo/packages/monopi__extension-worktree", extensions: [] },
 				{ extensions: ["extensions/worktree.ts"] },
 			),
-		).toEqual({ source: "/repo/packages/monopi__extensions", extensions: [] });
+		).toEqual({ source: "/repo/packages/monopi__extension-worktree", extensions: [] });
 	});
 
 	it("reads workspace pi manifests for managed packages", () => {
 		const repoDir = createTempDir("oh-pi-switcher-manifest-");
-		const packageDir = path.join(repoDir, "packages", "extensions");
+		const packageDir = path.join(repoDir, "packages", "extension-worktree");
 		mkdirSync(packageDir, { recursive: true });
 		writeFileSync(
 			path.join(packageDir, "package.json"),
 			JSON.stringify({
-				name: "@monopi/extensions",
+				name: "@monopi/extension-worktree",
 				pi: {
 					extensions: ["./extensions/custom-footer.ts", "./extensions/worktree.ts"],
 				},
 			}),
 		);
 
-		const manifests = resolveWorkspacePackageManifests(repoDir, ["@monopi/extensions"]);
-		expect(manifests.get("@monopi/extensions")).toEqual({
+		const manifests = resolveWorkspacePackageManifests(repoDir, ["@monopi/extension-worktree"]);
+		expect(manifests.get("@monopi/extension-worktree")).toEqual({
 			extensions: ["extensions/custom-footer.ts", "extensions/worktree.ts"],
 		});
 	});
 
 	it("installs newly added managed packages while updating existing ones", () => {
 		const operations = planPackageSyncOperations(
-			new Map([["@monopi/extensions", "npm:@monopi/extensions"]]),
+			new Map([["@monopi/extension-worktree", "npm:@monopi/extension-worktree"]]),
 			new Map([
-				["@monopi/extensions", "/repo/packages/monopi__extensions"],
+				["@monopi/extension-worktree", "/repo/packages/monopi__extension-worktree"],
 				["@monopi/provider-catalog", "/repo/packages/monopi__provider-catalog"],
 			]),
 		);
@@ -318,8 +321,8 @@ describe("pi source switcher helpers", () => {
 		expect(operations).toEqual(
 			expect.arrayContaining([
 				{
-					packageName: "@monopi/extensions",
-					source: "/repo/packages/monopi__extensions",
+					packageName: "@monopi/extension-worktree",
+					source: "/repo/packages/monopi__extension-worktree",
 					action: "update",
 				},
 				{
@@ -333,11 +336,11 @@ describe("pi source switcher helpers", () => {
 
 	it("resolves local path sources back to workspace package names", () => {
 		const repoDir = createTempDir("oh-pi-switcher-source-");
-		const packageDir = path.join(repoDir, "packages", "themes");
+		const packageDir = path.join(repoDir, "packages", "skills");
 		mkdirSync(packageDir, { recursive: true });
-		writeFileSync(path.join(packageDir, "package.json"), JSON.stringify({ name: "@monopi/themes" }));
+		writeFileSync(path.join(packageDir, "package.json"), JSON.stringify({ name: "@monopi/skills" }));
 
-		expect(resolveManagedPackageNameFromSource(packageDir, repoDir)).toBe("@monopi/themes");
+		expect(resolveManagedPackageNameFromSource(packageDir, repoDir)).toBe("@monopi/skills");
 	});
 
 	it("adds common global pnpm and pi bin directories when building pi candidates", () => {
@@ -367,7 +370,7 @@ describe("pi source switcher helpers", () => {
 		writeFileSync(
 			settingsPath,
 			JSON.stringify({
-				packages: ["npm:@monopi/extensions@0.4.3", "npm:@monopi/themes@0.4.3", "npm:chalk@5.0.0"],
+				packages: ["npm:@monopi/extension-worktree@0.4.3", "npm:@monopi/skills@0.4.3", "npm:chalk@5.0.0"],
 			}),
 		);
 
@@ -381,8 +384,8 @@ describe("pi source switcher helpers", () => {
 		expect(result.stderr).toBe("");
 		expect(result.stdout).toContain("monopi managed package sources (user settings)");
 		expect(result.stdout).toContain(`Settings: ${settingsPath}`);
-		expect(result.stdout).toContain("npm:@monopi/extensions@0.4.3");
-		expect(result.stdout).toContain("npm:@monopi/themes@0.4.3");
+		expect(result.stdout).toContain("npm:@monopi/extension-worktree@0.4.3");
+		expect(result.stdout).toContain("npm:@monopi/skills@0.4.3");
 		expect(result.stdout).toContain("@monopi/provider-cursor");
 		expect(result.stdout).toContain("<not configured>");
 	});
@@ -395,7 +398,7 @@ describe("pi source switcher helpers", () => {
 			{
 				packages: [
 					{
-						source: "npm:@monopi/extensions",
+						source: "npm:@monopi/extension-worktree",
 						extensions: ["extensions/legacy.ts"],
 					},
 					"npm:chalk@5.0.0",
@@ -408,12 +411,12 @@ describe("pi source switcher helpers", () => {
 
 		const workspacePackages = createWorkspaceRepo({
 			manifests: {
-				"@monopi/extensions": {
+				"@monopi/extension-worktree": {
 					extensions: ["./extensions/custom-footer.ts", "./extensions/worktree.ts"],
 				},
 			},
 		});
-		const repoDir = path.dirname(path.dirname(workspacePackages.get("@monopi/extensions") ?? ""));
+		const repoDir = path.dirname(path.dirname(workspacePackages.get("@monopi/extension-worktree") ?? ""));
 
 		const result = runSwitcher(["local", "--pi-local", "--dry-run", "--path", repoDir], {
 			cwd: projectDir,
@@ -425,7 +428,7 @@ describe("pi source switcher helpers", () => {
 		expect(result.stdout).toContain("Switching monopi packages to local mode (project settings)");
 		expect(result.stdout).toContain(`Settings: ${resolvedSettingsPath}`);
 		expect(result.stdout).toContain(`Repo: ${repoDir}`);
-		expect(result.stdout).toContain(workspacePackages.get("@monopi/extensions") ?? "");
+		expect(result.stdout).toContain(workspacePackages.get("@monopi/extension-worktree") ?? "");
 		expect(result.stdout).toContain("Dry run only — settings were not written");
 		expect(result.stdout).toContain("run `pnpm install --frozen-lockfile` before restarting pi");
 		expect(result.stdout).toContain(
@@ -443,7 +446,7 @@ describe("pi source switcher helpers", () => {
 				{
 					packages: [
 						{
-							source: "npm:@monopi/extensions@0.4.3",
+							source: "npm:@monopi/extension-worktree@0.4.3",
 							extensions: ["extensions/custom-footer.ts"],
 						},
 						"npm:chalk@5.0.0",
@@ -479,30 +482,30 @@ describe("pi source switcher helpers", () => {
 			.filter((value): value is string => Boolean(value));
 		const managedSources = savedSources.filter((value) => value.startsWith("npm:@monopi/"));
 		const extensionEntry = savedSettings.packages.find(
-			(entry) => getPackageSource(entry) === "npm:@monopi/extensions@0.4.4",
+			(entry) => getPackageSource(entry) === "npm:@monopi/extension-worktree@0.4.4",
 		) as { source: string; extensions?: string[] } | undefined;
 
 		expect(managedSources).toHaveLength(SWITCHER_PACKAGES.length);
 		expect(savedSources).toContain("npm:@monopi/provider-cursor@0.4.4");
 		expect(savedSources).toContain("npm:chalk@5.0.0");
 		expect(extensionEntry).toEqual({
-			source: "npm:@monopi/extensions@0.4.4",
+			source: "npm:@monopi/extension-worktree@0.4.4",
 			extensions: ["extensions/custom-footer.ts"],
 		});
 
 		const piLog = readFileSync(logPath, "utf8");
 		expect(piLog).toContain("--version");
-		expect(piLog).toContain("update npm:@monopi/extensions@0.4.4");
+		expect(piLog).toContain("update npm:@monopi/extension-worktree@0.4.4");
 		expect(piLog).toContain("install npm:@monopi/provider-cursor@0.4.4");
 	}, 20_000);
 
 	it("prints a workspace install reminder after switching to local mode", () => {
 		const agentDir = createTempDir("oh-pi-switcher-agent-");
 		const settingsPath = path.join(agentDir, "settings.json");
-		writeFileSync(settingsPath, JSON.stringify({ packages: ["npm:@monopi/extensions@0.4.3"] }, null, 2));
+		writeFileSync(settingsPath, JSON.stringify({ packages: ["npm:@monopi/extension-worktree@0.4.3"] }, null, 2));
 
 		const workspacePackages = createWorkspaceRepo();
-		const repoDir = path.dirname(path.dirname(workspacePackages.get("@monopi/extensions") ?? ""));
+		const repoDir = path.dirname(path.dirname(workspacePackages.get("@monopi/extension-worktree") ?? ""));
 		const logPath = path.join(agentDir, "pi.log");
 		const piBinDir = createFakePiExecutable(logPath);
 
@@ -527,16 +530,16 @@ describe("pi source switcher helpers", () => {
 		expect(result.stdout).toContain(
 			"pnpm pi:local refreshes compiled runtime dependencies like @monopi/core before switching",
 		);
-		expect(savedSources).toContain(workspacePackages.get("@monopi/extensions") ?? "");
+		expect(savedSources).toContain(workspacePackages.get("@monopi/extension-worktree") ?? "");
 	}, 20_000);
 
 	it("rebuilds and refreshes compiled local runtime dependencies before switching to local mode", () => {
 		const agentDir = createTempDir("oh-pi-switcher-agent-");
 		const settingsPath = path.join(agentDir, "settings.json");
-		writeFileSync(settingsPath, JSON.stringify({ packages: ["npm:@monopi/extensions@0.4.3"] }, null, 2));
+		writeFileSync(settingsPath, JSON.stringify({ packages: ["npm:@monopi/extension-worktree@0.4.3"] }, null, 2));
 
 		const workspacePackages = createWorkspaceRepo();
-		const repoDir = path.dirname(path.dirname(workspacePackages.get("@monopi/extensions") ?? ""));
+		const repoDir = path.dirname(path.dirname(workspacePackages.get("@monopi/extension-worktree") ?? ""));
 		const repoNodeModulesCoreDir = path.join(repoDir, "node_modules", "@monopi", "core", "dist");
 		mkdirSync(repoNodeModulesCoreDir, { recursive: true });
 		writeFileSync(path.join(repoNodeModulesCoreDir, "index.js"), "export const marker = 'stale';\n", "utf8");
@@ -577,11 +580,11 @@ describe("pi source switcher helpers", () => {
 		const agentDir = createTempDir("oh-pi-switcher-agent-");
 		writeFileSync(
 			path.join(agentDir, "settings.json"),
-			JSON.stringify({ packages: ["npm:@monopi/extensions@0.4.3"] }, null, 2),
+			JSON.stringify({ packages: ["npm:@monopi/extension-worktree@0.4.3"] }, null, 2),
 		);
 
 		const workspacePackages = createWorkspaceRepo();
-		const repoDir = path.dirname(path.dirname(workspacePackages.get("@monopi/extensions") ?? ""));
+		const repoDir = path.dirname(path.dirname(workspacePackages.get("@monopi/extension-worktree") ?? ""));
 		mkdirSync(path.join(repoDir, "node_modules"), { recursive: true });
 		mkdirSync(path.join(repoDir, "packages", "monopi__core"), { recursive: true });
 
@@ -617,11 +620,11 @@ describe("pi source switcher helpers", () => {
 		const agentDir = createTempDir("oh-pi-switcher-agent-");
 		writeFileSync(
 			path.join(agentDir, "settings.json"),
-			JSON.stringify({ packages: ["npm:@monopi/extensions@0.4.3"] }, null, 2),
+			JSON.stringify({ packages: ["npm:@monopi/extension-worktree@0.4.3"] }, null, 2),
 		);
 
 		const workspacePackages = createWorkspaceRepo();
-		const repoDir = path.dirname(path.dirname(workspacePackages.get("@monopi/extensions") ?? ""));
+		const repoDir = path.dirname(path.dirname(workspacePackages.get("@monopi/extension-worktree") ?? ""));
 		mkdirSync(path.join(repoDir, "packages", "monopi__core"), { recursive: true });
 
 		const piLogPath = path.join(agentDir, "pi.log");
@@ -651,7 +654,7 @@ describe("pi source switcher helpers", () => {
 
 	it("exits with an error when local mode cannot resolve the full managed workspace set", () => {
 		const repoDir = createTempDir("oh-pi-switcher-incomplete-");
-		writeWorkspacePackage(repoDir, "monopi__extensions", "@monopi/extensions");
+		writeWorkspacePackage(repoDir, "monopi__extension-worktree", "@monopi/extension-worktree");
 
 		const result = runSwitcher(["local", "--dry-run", "--path", repoDir], {
 			env: {

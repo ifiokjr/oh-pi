@@ -97,7 +97,7 @@ Use one of:
 - `minor` — new features, new extensions, new config options
 - `patch` — bug fixes, docs, and internal refactors
 
-If you use package names like `@monopi/monopi` or `@monopi/extensions` in changeset frontmatter, MonoChange will reject the changeset for this repo configuration.
+If you use package names like `@monopi/monopi` or `@monopi/extension-worktree` in changeset frontmatter, MonoChange will reject the changeset for this repo configuration.
 
 ## Branch Strategy
 

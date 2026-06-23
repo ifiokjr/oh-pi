@@ -8,10 +8,10 @@ Reactive background shell tasks for pi.
 pi install npm:@monopi/background-tasks
 ```
 
-Or install the full default monopi bundle, which also includes the compatible `bg-process` shim:
+For the legacy `bg-process` extension id, install the opt-in compatibility package:
 
 ```bash
-npx @monopi/monopi
+pi install npm:@monopi/extension-bg-process
 ```
 
 ## What it provides

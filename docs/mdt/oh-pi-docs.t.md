@@ -262,12 +262,11 @@ monopi repo
 
 Default runtime/content packages installed by `npx @monopi/monopi`:
 
-- `@monopi/extensions`
+- `@monopi/extension-worktree`
 - `@monopi/background-tasks`
 - `@monopi/diagnostics`
 - `@monopi/subagents`
 - `@monopi/web-remote`
-- `@monopi/themes`
 - `@monopi/skills`
 
 <!-- {/repoDefaultInstallerPackagesDocs} -->
@@ -276,6 +275,7 @@ Default runtime/content packages installed by `npx @monopi/monopi`:
 
 Opt-in packages that stay separate from the default installer bundle:
 
+- `@monopi/extension-bg-process`
 - `@monopi/adaptive-routing`
 - `@monopi/provider-catalog`
 - `@monopi/provider-cursor`
@@ -327,13 +327,13 @@ pi
 
 Managed local switching covers these packages:
 
-- `@monopi/extensions`
+- `@monopi/extension-worktree`
 - `@monopi/background-tasks`
 - `@monopi/diagnostics`
 - `@monopi/subagents`
 - `@monopi/web-remote`
-- `@monopi/themes`
 - `@monopi/skills`
+- `@monopi/extension-bg-process`
 - `@monopi/adaptive-routing`
 - `@monopi/provider-catalog`
 - `@monopi/provider-cursor`
