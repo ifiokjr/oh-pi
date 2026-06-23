@@ -46,6 +46,7 @@ import { registerSubagentCommands } from "./command-registration.js";
 import { createDynamicAgent } from "./dynamic-agent.js";
 import { runSync } from "./execution.js";
 import { parseStringList, resolveExternalAgent } from "./external-agents.js";
+import { resolveSubagentLimits } from "./limits.js";
 import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
 import { renderSubagentResult, renderWidget } from "./render.js";
 import { recordRun } from "./run-history.js";
@@ -59,8 +60,6 @@ import {
 	checkSubagentDepth,
 	DEFAULT_ARTIFACT_CONFIG,
 	DEFAULT_MAX_OUTPUT,
-	MAX_CONCURRENCY,
-	MAX_PARALLEL,
 	RESULTS_DIR,
 	WIDGET_KEY,
 } from "./types.js";
@@ -296,6 +295,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			const hasChain = (params.chain?.length ?? 0) > 0;
 			const hasTasks = (params.tasks?.length ?? 0) > 0;
 			const hasSingle = Boolean(params.agent && params.task);
+			const limits = await resolveSubagentLimits({ cwd: ctx.cwd });
 
 			const requestedAsync = params.async ?? asyncByDefault;
 			const parallelDowngraded = hasTasks && requestedAsync;
@@ -592,10 +592,10 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 			}
 
 			if (hasTasks && params.tasks) {
-				// MAX_PARALLEL check first (fail fast before TUI)
-				if (params.tasks.length > MAX_PARALLEL) {
+				// Limit check first (fail fast before TUI)
+				if (params.tasks.length > limits.maxParallel) {
 					return {
-						content: [{ type: "text", text: `Max ${MAX_PARALLEL} tasks` }],
+						content: [{ type: "text", text: `Max ${limits.maxParallel} tasks` }],
 						isError: true,
 						details: { mode: "parallel" as const, results: [] },
 					};
@@ -747,7 +747,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 				const behaviors = agentConfigs.map((c) => resolveStepBehavior(c, {}));
 				const liveResults: (SingleResult | undefined)[] = new Array(params.tasks.length).fill(undefined);
 				const liveProgress: (AgentProgress | undefined)[] = new Array(params.tasks.length).fill(undefined);
-				const results = await mapConcurrent(params.tasks, MAX_CONCURRENCY, async (t, i) => {
+				const results = await mapConcurrent(params.tasks, limits.maxConcurrency, async (t, i) => {
 					const overrideSkills = skillOverrides[i];
 					const effectiveSkills = overrideSkills === undefined ? behaviors[i]?.skills : overrideSkills;
 					return runSync(ctx.cwd, agents, t.agent, tasks[i]!, {

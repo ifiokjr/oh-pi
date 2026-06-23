@@ -78,11 +78,21 @@ vi.mock("../types.js", () => ({
 	WIDGET_KEY: "subagent-async",
 	checkSubagentDepth: () => ({ blocked: false, depth: 0, maxDepth: 2 }),
 }));
+vi.mock("../limits.js", () => ({
+	resolveSubagentLimits: () => ({ maxConcurrency: 4, maxParallel: 8 }),
+}));
 vi.mock("../utils.js", () => ({
 	readStatus: mockReadStatus,
 	findByPrefix: vi.fn(),
 	getFinalOutput: vi.fn(() => ""),
-	mapConcurrent: async <T, R>(items: T[], fn: (item: T) => Promise<R>) => Promise.all(items.map((item) => fn(item))),
+	mapConcurrent: async <T, R>(
+		items: T[],
+		concurrencyOrFn: number | ((item: T) => Promise<R>),
+		maybeFn?: (item: T) => Promise<R>,
+	) => {
+		const mapper = typeof concurrencyOrFn === "function" ? concurrencyOrFn : maybeFn;
+		return Promise.all(items.map((item) => mapper?.(item)));
+	},
 }));
 vi.mock("../completion-dedupe.js", () => ({
 	buildCompletionKey: vi.fn(() => "key"),

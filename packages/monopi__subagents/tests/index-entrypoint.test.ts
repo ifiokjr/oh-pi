@@ -55,6 +55,7 @@ const mocks = vi.hoisted(() => ({
 	expandTildePath: vi.fn((value: string) => value),
 	getSubagentSessionRoot: vi.fn(() => "/tmp/subagent-session-root"),
 	loadSubagentConfig: vi.fn(() => ({})),
+	resolveSubagentLimits: vi.fn(() => ({ maxConcurrency: 4, maxParallel: 3 })),
 	resolveSubagentModelResolution: vi.fn(() => ({
 		model: undefined,
 		source: "agent-default",
@@ -113,10 +114,11 @@ vi.mock("../types.js", () => ({
 	RESULTS_DIR: "/tmp/pi-async-subagent-results",
 	DEFAULT_ARTIFACT_CONFIG: { cleanupDays: 7 },
 	DEFAULT_MAX_OUTPUT: { bytes: 200 * 1024, lines: 5000 },
-	MAX_CONCURRENCY: 4,
-	MAX_PARALLEL: 3,
 	WIDGET_KEY: "subagent-async",
 	checkSubagentDepth: mocks.checkSubagentDepth,
+}));
+vi.mock("../limits.js", () => ({
+	resolveSubagentLimits: mocks.resolveSubagentLimits,
 }));
 vi.mock("../utils.js", () => ({
 	readStatus: mocks.readStatus,
@@ -336,6 +338,7 @@ beforeEach(() => {
 	mocks.findByPrefix.mockReturnValue(null);
 	mocks.readStatus.mockReturnValue(null);
 	mocks.loadSubagentConfig.mockReturnValue({});
+	mocks.resolveSubagentLimits.mockReturnValue({ maxConcurrency: 4, maxParallel: 3 });
 });
 
 afterEach(() => {
