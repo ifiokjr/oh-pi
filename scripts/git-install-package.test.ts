@@ -36,6 +36,7 @@ describe("git-install package manifest", () => {
 		const rootManifest = readPackageJson("package.json");
 		const extensionPackages = [
 			"packages/monopi__extension-answer/package.json",
+			"packages/monopi__extension-goal/package.json",
 			"packages/monopi__extension-watchdog/package.json",
 			"packages/monopi__extension-btw/package.json",
 			"packages/monopi__extension-compact-header/package.json",
