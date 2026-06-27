@@ -526,6 +526,10 @@ type = "npm"
 path = "packages/monopi__extension-answer"
 type = "npm"
 
+[package."@monopi/extension-prompt-modes"]
+path = "packages/monopi__extension-prompt-modes"
+type = "npm"
+
 [package."@monopi/extension-files"]
 path = "packages/monopi__extension-files"
 type = "npm"
@@ -915,6 +919,7 @@ packages = [
 	"@monopi/diagnostics",
 	"@monopi/docs",
 	"@monopi/extension-answer",
+	"@monopi/extension-prompt-modes",
 	"@monopi/extension-files",
 	"@monopi/extension-goal",
 	"@monopi/extension-review",
