@@ -3,9 +3,7 @@
  */
 
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { mergeAgentsForScope } from "./agent-selection.js";
 import { KNOWN_FIELDS } from "./agent-serializer.js";
@@ -244,6 +242,30 @@ function loadChainsFromDir(dir: string, source: AgentSource): ChainConfig[] {
 
 const BUILTIN_AGENTS_DIR = path.join(import.meta.dirname, "agents");
 
+/** Read the nearest project `subagents.excludeBuiltins` setting. */
+function readExcludeBuiltinsFlag(cwd: string): boolean {
+	let current = path.resolve(cwd);
+	while (true) {
+		const settingsPath = path.join(current, ".pi", "settings.json");
+		if (fs.existsSync(settingsPath)) {
+			try {
+				const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8")) as {
+					subagents?: { excludeBuiltins?: unknown };
+				};
+				return settings.subagents?.excludeBuiltins === true;
+			} catch {
+				return false;
+			}
+		}
+
+		const parent = path.dirname(current);
+		if (parent === current) {
+			return false;
+		}
+		current = parent;
+	}
+}
+
 function mergeNamedConfigs<T extends { name: string }>(groups: T[][]): T[] {
 	const merged = new Map<string, T>();
 	for (const group of groups) {
@@ -276,9 +298,10 @@ export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryRe
 	const userDir = getUserAgentsDir();
 	const projectAgentsDir = findNearestProjectAgentsDir(cwd);
 	const projectAgentDirs = findProjectAgentsDirs(cwd);
+	const excludeBuiltins = readExcludeBuiltinsFlag(cwd);
 
-	const builtinAgents = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
-	const userAgents = scope === "project" ? [] : loadAgentsFromDir(userDir, "user");
+	const builtinAgents = excludeBuiltins ? [] : loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
+	const userAgents = scope === "project" || excludeBuiltins ? [] : loadAgentsFromDir(userDir, "user");
 	const projectAgents = scope === "user" ? [] : loadAgentsFromDirs(projectAgentDirs, "project");
 	const agents = mergeAgentsForScope(scope, userAgents, projectAgents, builtinAgents);
 
@@ -296,9 +319,10 @@ export function discoverAgentsAll(cwd: string): {
 	const userDir = getUserAgentsDir();
 	const projectDir = findNearestProjectAgentsDir(cwd);
 	const projectDirs = findProjectAgentsDirs(cwd);
+	const excludeBuiltins = readExcludeBuiltinsFlag(cwd);
 
-	const builtin = loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
-	const user = loadAgentsFromDir(userDir, "user");
+	const builtin = excludeBuiltins ? [] : loadAgentsFromDir(BUILTIN_AGENTS_DIR, "builtin");
+	const user = excludeBuiltins ? [] : loadAgentsFromDir(userDir, "user");
 	const project = loadAgentsFromDirs(projectDirs, "project");
 	const chains = mergeNamedConfigs([loadChainsFromDir(userDir, "user"), loadChainsFromDirs(projectDirs, "project")]);
 

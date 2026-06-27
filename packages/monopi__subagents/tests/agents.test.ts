@@ -27,6 +27,12 @@ function writeAgentFile(rootDir: string, relativePath: string, content: string):
 	fs.writeFileSync(filePath, content, "utf-8");
 }
 
+function writeProjectSettings(rootDir: string, settings: unknown): void {
+	const settingsPath = path.join(rootDir, ".pi", "settings.json");
+	fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+	fs.writeFileSync(settingsPath, JSON.stringify(settings), "utf-8");
+}
+
 beforeEach(() => {
 	savedHome = process.env.HOME;
 	savedUserProfile = process.env.USERPROFILE;
@@ -79,6 +85,36 @@ describe("discoverAgents", () => {
 		expect(byName.get("frontend-designer")?.extraFields?.category).toBe("visual-engineering");
 		expect(byName.get("multimodal-summariser")?.extraFields?.category).toBe("multimodal-default");
 		expect(result.projectAgentsDir).toBe(getSharedProjectAgentsDir(cwd));
+	});
+
+	it("excludes builtin and user agents when project settings request project-only discovery", () => {
+		const homeDir = createTempDir("subagents-exclude-home-");
+		const projectDir = createTempDir("subagents-exclude-project-");
+		const nestedDir = path.join(projectDir, "packages", "legal");
+		process.env.HOME = homeDir;
+		process.env.USERPROFILE = homeDir;
+		process.env.PI_SUBAGENT_PROJECT_AGENTS_MODE = "shared";
+		fs.mkdirSync(nestedDir, { recursive: true });
+		writeProjectSettings(projectDir, { subagents: { excludeBuiltins: true } });
+
+		writeAgentFile(
+			homeDir,
+			".pi/agent/agents/custom-user.md",
+			"---\nname: custom-user\ndescription: User agent\n---\n\nUser prompt\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(projectDir),
+			"custom-project.md",
+			"---\nname: custom-project\ndescription: Project agent\n---\n\nProject prompt\n",
+		);
+
+		const result = discoverAgents(nestedDir, "both");
+		const byName = new Map(result.agents.map((agent) => [agent.name, agent]));
+		expect(byName.get("custom-project")?.source).toBe("project");
+		expect(byName.has("custom-user")).toBe(false);
+		expect(byName.has("scout")).toBe(false);
+		expect(byName.has("planner")).toBe(false);
+		expect(result.projectAgentsDir).toBe(getSharedProjectAgentsDir(projectDir));
 	});
 
 	it("prefers shared project agents over user and builtin agents by default", () => {
@@ -219,6 +255,34 @@ describe("discoverAgentsAll", () => {
 		expect(result.project.map((agent) => agent.name)).toContain("custom-project");
 		expect(result.chains.map((chain) => chain.name)).toContain("review-pipeline");
 		expect(result.userDir).toBe(path.join(homeDir, ".pi", "agent", "agents"));
+		expect(result.projectDir).toBe(getSharedProjectAgentsDir(projectDir));
+	});
+
+	it("excludes builtin and user agent groups from discoverAgentsAll when configured", () => {
+		const homeDir = createTempDir("subagents-all-exclude-home-");
+		const projectDir = createTempDir("subagents-all-exclude-project-");
+		const nestedDir = path.join(projectDir, "apps", "legal");
+		process.env.HOME = homeDir;
+		process.env.USERPROFILE = homeDir;
+		process.env.PI_SUBAGENT_PROJECT_AGENTS_MODE = "shared";
+		fs.mkdirSync(nestedDir, { recursive: true });
+		writeProjectSettings(projectDir, { subagents: { excludeBuiltins: true } });
+
+		writeAgentFile(
+			homeDir,
+			".pi/agent/agents/custom-user.md",
+			"---\nname: custom-user\ndescription: User agent\n---\n\nUser prompt\n",
+		);
+		writeAgentFile(
+			getSharedProjectAgentsDir(projectDir),
+			"custom-project.md",
+			"---\nname: custom-project\ndescription: Project agent\n---\n\nProject prompt\n",
+		);
+
+		const result = discoverAgentsAll(nestedDir);
+		expect(result.builtin).toEqual([]);
+		expect(result.user).toEqual([]);
+		expect(result.project.map((agent) => agent.name)).toContain("custom-project");
 		expect(result.projectDir).toBe(getSharedProjectAgentsDir(projectDir));
 	});
 
