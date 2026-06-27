@@ -1,0 +1,36 @@
+{
+	"name": "@monopi/extension-review",
+	"version": "0.5.1",
+	"description": "Monopi code review pi extension.",
+	"keywords": [
+		"pi-package"
+	],
+	"homepage": "https://github.com/ifiokjr/monopi/tree/main/packages/monopi__extension-review",
+	"bugs": {
+		"url": "https://github.com/ifiokjr/monopi/issues"
+	},
+	"license": "MIT AND Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ifiokjr/monopi.git",
+		"directory": "packages/monopi__extension-review"
+	},
+	"files": [
+		"*.ts",
+		"README.md",
+		"!**/*.test.ts",
+		"!tests/**"
+	],
+	"type": "module",
+	"peerDependencies": {
+		"@earendil-works/pi-agent-core": ">=0.78.1",
+		"@earendil-works/pi-ai": ">=0.78.1",
+		"@earendil-works/pi-coding-agent": ">=0.78.1",
+		"@earendil-works/pi-tui": ">=0.78.1"
+	},
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	}
+}

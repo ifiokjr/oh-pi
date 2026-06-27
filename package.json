@@ -72,6 +72,7 @@
 			"./packages/monopi__extension-answer/index.ts",
 			"./packages/monopi__extension-goal/index.ts",
 			"./packages/monopi__extension-todos/index.ts",
+			"./packages/monopi__extension-review/index.ts",
 			"./packages/monopi__extension-watchdog/index.ts",
 			"./packages/monopi__extension-btw/index.ts",
 			"./packages/monopi__extension-compact-header/index.ts",

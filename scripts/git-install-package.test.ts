@@ -38,6 +38,7 @@ describe("git-install package manifest", () => {
 			"packages/monopi__extension-answer/package.json",
 			"packages/monopi__extension-goal/package.json",
 			"packages/monopi__extension-todos/package.json",
+			"packages/monopi__extension-review/package.json",
 			"packages/monopi__extension-watchdog/package.json",
 			"packages/monopi__extension-btw/package.json",
 			"packages/monopi__extension-compact-header/package.json",
