@@ -30,8 +30,24 @@ interface CacheEntry {
 }
 
 const MAX_CACHE_SIZE = 100;
+const MAX_WATCHED_DIRS = 128;
+const WATCH_DEBOUNCE_MS = 1_000;
 const resolutionCache = new Map<string, CacheEntry>();
 const autoSavedAgents = new Set<string>(); // key: name:cwd
+
+interface WatchEntry {
+	watcher: fs.FSWatcher;
+	timer: ReturnType<typeof setTimeout> | null;
+}
+
+type WatchFactory = (dirPath: string, listener: fs.WatchListener<string>) => fs.FSWatcher;
+
+function defaultWatchFactory(dirPath: string, listener: fs.WatchListener<string>): fs.FSWatcher {
+	return fs.watch(dirPath, { persistent: false }, listener);
+}
+
+let watchFactory: WatchFactory = defaultWatchFactory;
+const externalAgentWatchers = new Map<string, WatchEntry>();
 
 function cacheKey(name: string, cwd: string): string {
 	return `${name}:${path.resolve(cwd)}`;
@@ -80,6 +96,91 @@ function setCachedResult(name: string, cwd: string, result: ExternalAgentResult 
 export function clearExternalAgentCache(): void {
 	resolutionCache.clear();
 	autoSavedAgents.clear();
+}
+
+/** Inspect cache size in tests without exposing mutable cache internals. */
+export function getExternalAgentCacheSizeForTests(): number {
+	return resolutionCache.size;
+}
+
+function isPathWithinDir(filePath: string, dirPath: string): boolean {
+	const resolvedFile = path.resolve(filePath);
+	const resolvedDir = path.resolve(dirPath);
+	return resolvedFile === resolvedDir || resolvedFile.startsWith(`${resolvedDir}${path.sep}`);
+}
+
+function invalidateExternalAgentCacheForDir(dirPath: string): void {
+	const deleteKeys: string[] = [];
+	for (const [key, entry] of resolutionCache) {
+		if (entry.filePath && isPathWithinDir(entry.filePath, dirPath)) {
+			deleteKeys.push(key);
+		}
+	}
+	for (const key of deleteKeys) resolutionCache.delete(key);
+	if (deleteKeys.length > 0) autoSavedAgents.clear();
+}
+
+function closeExternalAgentWatcher(dirPath: string, entry: WatchEntry): void {
+	if (entry.timer) clearTimeout(entry.timer);
+	try {
+		entry.watcher.close();
+	} catch {}
+	externalAgentWatchers.delete(dirPath);
+}
+
+/** Close all external-agent config directory watchers. */
+export function closeExternalAgentWatchers(): void {
+	const entries = Array.from(externalAgentWatchers.entries());
+	for (const [dirPath, entry] of entries) closeExternalAgentWatcher(dirPath, entry);
+}
+
+/** Override watcher construction in tests. */
+export function setExternalAgentWatchFactoryForTests(factory: WatchFactory | null): void {
+	closeExternalAgentWatchers();
+	watchFactory = factory ?? defaultWatchFactory;
+}
+
+function scheduleExternalAgentCacheInvalidation(dirPath: string): void {
+	const entry = externalAgentWatchers.get(dirPath);
+	if (!entry) return;
+	if (entry.timer) clearTimeout(entry.timer);
+	entry.timer = setTimeout(() => {
+		entry.timer = null;
+		invalidateExternalAgentCacheForDir(dirPath);
+	}, WATCH_DEBOUNCE_MS);
+	entry.timer.unref?.();
+}
+
+function isDirectoryPath(dirPath: string): boolean {
+	try {
+		return fs.statSync(dirPath).isDirectory();
+	} catch {
+		return false;
+	}
+}
+
+function discoverExternalAgentWatchDirs(cwd: string): string[] {
+	const dirs: string[] = [];
+	for (const dir of searchUp(cwd, ".vscode")) dirs.push(path.join(dir, ".vscode"));
+	for (const dir of searchUp(cwd, ".claude")) dirs.push(path.join(dir, ".claude", "agents"));
+	for (const dir of searchUp(cwd, ".opencode")) dirs.push(path.join(dir, ".opencode", "agents"));
+	for (const dir of searchUp(cwd, ".pi")) dirs.push(path.join(dir, ".pi", "agents"));
+	return dirs;
+}
+
+/** Watch existing external-agent config directories and debounce cache invalidation. */
+export function watchExternalAgentConfigDirs(cwd: string): void {
+	for (const dirPath of discoverExternalAgentWatchDirs(cwd)) {
+		const resolvedDir = path.resolve(dirPath);
+		if (externalAgentWatchers.has(resolvedDir) || !isDirectoryPath(resolvedDir)) continue;
+		if (externalAgentWatchers.size >= MAX_WATCHED_DIRS) return;
+		try {
+			const watcher = watchFactory(resolvedDir, () => scheduleExternalAgentCacheInvalidation(resolvedDir));
+			externalAgentWatchers.set(resolvedDir, { watcher, timer: null });
+		} catch {
+			// Best-effort watcher registration; cache mtime checks still protect reads.
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -336,6 +437,8 @@ export function resolveExternalAgent(name: string, cwd: string): ExternalAgentRe
 		if (cached) maybeAutoSaveAgent(name, cwd, cached);
 		return cached ?? undefined;
 	}
+
+	watchExternalAgentConfigDirs(cwd);
 
 	let filePathForCache = "";
 

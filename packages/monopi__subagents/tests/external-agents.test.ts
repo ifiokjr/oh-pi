@@ -5,9 +5,15 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { clearExternalAgentCache, resolveExternalAgent } from "../external-agents.js";
+import {
+	clearExternalAgentCache,
+	closeExternalAgentWatchers,
+	getExternalAgentCacheSizeForTests,
+	resolveExternalAgent,
+	setExternalAgentWatchFactoryForTests,
+} from "../external-agents.js";
 
 describe("resolveExternalAgent", () => {
 	let tmpDir: string;
@@ -21,6 +27,11 @@ describe("resolveExternalAgent", () => {
 	});
 
 	afterEach(() => {
+		setExternalAgentWatchFactoryForTests(null);
+		closeExternalAgentWatchers();
+		clearExternalAgentCache();
+		vi.useRealTimers();
+		vi.restoreAllMocks();
 		process.chdir(originalCwd);
 		fs.rmSync(tmpDir, { recursive: true, force: true });
 	});
@@ -236,6 +247,36 @@ describe("resolveExternalAgent", () => {
 	// -------------------------------------------------------------------
 
 	describe("caching", () => {
+		it("debounces watched config directory changes and invalidates cached results", async () => {
+			vi.useFakeTimers();
+
+			const agentsDir = path.join(tmpDir, ".pi", "agents");
+			const agentPath = path.join(agentsDir, "watched.md");
+			fs.mkdirSync(agentsDir, { recursive: true });
+			fs.writeFileSync(agentPath, "old prompt");
+
+			let emitChange: (() => void) | undefined;
+			const watcherClose = vi.fn();
+			const watchFactory = vi.fn((_: string, listener: fs.WatchListener<string>) => {
+				emitChange = () => listener("change", "watched.md");
+				return { close: watcherClose } as unknown as fs.FSWatcher;
+			});
+			setExternalAgentWatchFactoryForTests(watchFactory);
+
+			const first = resolveExternalAgent("watched", tmpDir);
+			expect(first?.config.systemPrompt).toBe("old prompt");
+			expect(watchFactory).toHaveBeenCalledOnce();
+
+			expect(getExternalAgentCacheSizeForTests()).toBe(1);
+
+			emitChange?.();
+			await vi.advanceTimersByTimeAsync(999);
+			expect(getExternalAgentCacheSizeForTests()).toBe(1);
+
+			await vi.advanceTimersByTimeAsync(1);
+			expect(getExternalAgentCacheSizeForTests()).toBe(0);
+		});
+
 		it("caches resolved agents", () => {
 			const agentsDir = path.join(tmpDir, ".pi", "agents");
 			fs.mkdirSync(agentsDir, { recursive: true });

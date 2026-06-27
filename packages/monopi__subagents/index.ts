@@ -45,7 +45,7 @@ import { executeChain } from "./chain-execution.js";
 import { registerSubagentCommands } from "./command-registration.js";
 import { createDynamicAgent } from "./dynamic-agent.js";
 import { runSync } from "./execution.js";
-import { parseStringList, resolveExternalAgent } from "./external-agents.js";
+import { closeExternalAgentWatchers, parseStringList, resolveExternalAgent } from "./external-agents.js";
 import { resolveSubagentLimits } from "./limits.js";
 import { resolveSubagentModelResolution, toAvailableModelRefs } from "./model-routing.js";
 import { renderSubagentResult, renderWidget } from "./render.js";
@@ -1453,6 +1453,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		}
 		cleanupTimers.clear();
 		asyncJobs.clear();
+		closeExternalAgentWatchers();
 		runtimeMonitor.clearResults();
 		if (ctx.hasUI) {
 			lastUiContext = ctx;
@@ -1478,6 +1479,7 @@ MANAGEMENT (use action field — omit agent/task/chain/tasks):
 		}
 		cleanupTimers.clear();
 		asyncJobs.clear();
+		closeExternalAgentWatchers();
 		runtimeMonitor.clearResults();
 		if (lastUiContext?.hasUI) {
 			lastUiContext.ui.setWidget(WIDGET_KEY, undefined);
