@@ -70,6 +70,7 @@
 	"pi": {
 		"extensions": [
 			"./packages/monopi__extension-answer/index.ts",
+			"./packages/monopi__extension-files/index.ts",
 			"./packages/monopi__extension-goal/index.ts",
 			"./packages/monopi__extension-todos/index.ts",
 			"./packages/monopi__extension-review/index.ts",
