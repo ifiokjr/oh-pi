@@ -11,19 +11,30 @@
  * - Answers are injected back into the session as a follow-up user message
  * - Uses `@monopi/shared-qna` for the QnA TUI component
  * - Uses `completeSimple` for LLM-powered question extraction
+ *
+ * Incorporates extraction-model selection and JSON repair ideas from
+ * mitsuhiko/agent-stuff extensions/answer.ts (Apache-2.0).
  */
 
-import type { UserMessage } from "@earendil-works/pi-ai";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type {
+	ExtensionAPI,
+	ExtensionCommandContext,
+	ExtensionContext,
+	ModelRegistry,
+} from "@earendil-works/pi-coding-agent";
 import type { QnAQuestion, QnAResult, QnATemplate } from "@monopi/shared-qna";
 
-import { completeSimple } from "@earendil-works/pi-ai";
+import { completeSimple, parseJsonWithRepair, type Api, type Model, type UserMessage } from "@earendil-works/pi-ai";
 import { BorderedLoader } from "@earendil-works/pi-coding-agent";
 import { QnATuiComponent } from "@monopi/shared-qna";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const ANSWER_ENTRY_TYPE = "answer-state";
+const CODEX_MODEL_IDS = ["gpt-5.4-mini", "gpt-5.3-codex-spark", "gpt-5.4", "gpt-5.3-codex"];
+const HAIKU_MODEL_ID = "claude-haiku-4-5";
+const JSON_FENCE_START_RE = /^```(?:json)?\s*\n?/i;
+const JSON_FENCE_END_RE = /\n?```\s*$/i;
 
 const EXTRACTION_SYSTEM_PROMPT = [
 	"You are a question extractor. Given text from a conversation, extract any questions that need answering.",
@@ -209,6 +220,77 @@ function buildAnswerMessage(result: QnAResult): string {
 
 // ── Question extraction ────────────────────────────────────────────────────
 
+function toExtractionArray(raw: unknown): unknown[] {
+	if (Array.isArray(raw)) {
+		return raw;
+	}
+	if (raw && typeof raw === "object" && Array.isArray((raw as { questions?: unknown }).questions)) {
+		return (raw as { questions: unknown[] }).questions;
+	}
+	return [];
+}
+
+function parseExtractedQuestions(responseText: string): ExtractedQuestion[] | null {
+	const candidates = [
+		responseText.replace(JSON_FENCE_START_RE, "").replace(JSON_FENCE_END_RE, "").trim(),
+		responseText,
+	];
+
+	for (const candidate of candidates) {
+		if (!candidate) {
+			continue;
+		}
+		try {
+			return normalizeExtractedQuestions(toExtractionArray(parseJsonWithRepair<unknown>(candidate)));
+		} catch {
+			try {
+				return normalizeExtractedQuestions(toExtractionArray(JSON.parse(candidate)));
+			} catch {
+				// Try the next candidate.
+			}
+		}
+	}
+
+	return null;
+}
+
+async function selectExtractionModel(currentModel: Model<Api>, modelRegistry: ModelRegistry): Promise<Model<Api>> {
+	const registry = modelRegistry as ModelRegistry & {
+		find?: (provider: string, modelId: string) => Model<Api> | undefined;
+	};
+
+	if (!registry.find) {
+		return currentModel;
+	}
+
+	for (const modelId of CODEX_MODEL_IDS) {
+		const candidate = registry.find("openai-codex", modelId);
+		if (!candidate) {
+			continue;
+		}
+		try {
+			const auth = await modelRegistry.getApiKeyAndHeaders(candidate);
+			if (auth.ok && auth.apiKey) {
+				return candidate;
+			}
+		} catch {
+			// Keep looking for another configured model.
+		}
+	}
+
+	const haikuModel = registry.find("anthropic", HAIKU_MODEL_ID);
+	if (!haikuModel) {
+		return currentModel;
+	}
+
+	try {
+		const auth = await modelRegistry.getApiKeyAndHeaders(haikuModel);
+		return auth.ok && auth.apiKey ? haikuModel : currentModel;
+	} catch {
+		return currentModel;
+	}
+}
+
 async function extractQuestions(
 	text: string,
 	ctx: ExtensionContext | ExtensionCommandContext,
@@ -217,7 +299,8 @@ async function extractQuestions(
 		return null;
 	}
 
-	const auth = await ctx.modelRegistry.getApiKeyAndHeaders(ctx.model);
+	const extractionModel = await selectExtractionModel(ctx.model, ctx.modelRegistry);
+	const auth = await ctx.modelRegistry.getApiKeyAndHeaders(extractionModel);
 	if (!(auth.ok && auth.apiKey)) {
 		return null;
 	}
@@ -229,7 +312,7 @@ async function extractQuestions(
 	};
 
 	const response = await completeSimple(
-		ctx.model,
+		extractionModel,
 		{ messages: [userMessage], systemPrompt: EXTRACTION_SYSTEM_PROMPT },
 		{ apiKey: auth.apiKey, headers: auth.headers, reasoning: "low" },
 	);
@@ -248,18 +331,7 @@ async function extractQuestions(
 		return null;
 	}
 
-	const JSON_FENCE_START_RE = /^```(?:json)?\s*\n?/i;
-	const JSON_FENCE_END_RE = /\n?```\s*$/i;
-
-	// Strip markdown code fences if present
-	const jsonText = responseText.replace(JSON_FENCE_START_RE, "").replace(JSON_FENCE_END_RE, "").trim();
-
-	try {
-		const parsed = JSON.parse(jsonText);
-		return normalizeExtractedQuestions(parsed);
-	} catch {
-		return null;
-	}
+	return parseExtractedQuestions(responseText);
 }
 
 // ── Auto-detect question presence ───────────────────────────────────────────

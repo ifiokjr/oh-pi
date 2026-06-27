@@ -578,6 +578,22 @@ describe("extractQuestions", () => {
 		expect(result).toEqual([{ question: "What DB?" }]);
 	});
 
+	it("extracts questions from upstream object-shaped JSON response", async () => {
+		const harness = setupHarnessWithAssistantMessage("Hello?");
+		mockCompleteSimple.mockResolvedValue({
+			stopReason: "stop",
+			content: [
+				{
+					type: "text" as const,
+					text: JSON.stringify({ questions: [{ question: "Which runtime?" }] }),
+				},
+			],
+		} as never);
+
+		const result = await extractQuestions("Hello?", harness.ctx as never);
+		expect(result).toEqual([{ question: "Which runtime?" }]);
+	});
+
 	it("extracts questions with options", async () => {
 		const harness = setupHarnessWithAssistantMessage("Hello?");
 		mockCompleteSimple.mockResolvedValue(
@@ -656,6 +672,19 @@ describe("extractQuestions", () => {
 
 		// Verify API key
 		expect(callArgs[2].apiKey).toBe("test-key");
+	});
+
+	it("prefers a configured Codex extraction model when available", async () => {
+		const harness = setupHarnessWithAssistantMessage("Hello?");
+		const codexModel = { provider: "openai-codex", id: "gpt-5.4-mini", api: "openai-responses" };
+		harness.ctx.modelRegistry.find = vi.fn((provider: string, modelId: string) => {
+			return provider === "openai-codex" && modelId === "gpt-5.4-mini" ? codexModel : undefined;
+		}) as never;
+		mockCompleteSimple.mockResolvedValue(makeExtractedQuestionsResponse([]) as never);
+
+		await extractQuestions("What is your name?", harness.ctx as never);
+
+		expect(mockCompleteSimple.mock.calls[0]![0]).toBe(codexModel);
 	});
 });
 

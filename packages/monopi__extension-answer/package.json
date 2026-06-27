@@ -9,7 +9,7 @@
 	"bugs": {
 		"url": "https://github.com/ifiokjr/monopi/issues"
 	},
-	"license": "MIT",
+	"license": "MIT AND Apache-2.0",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/ifiokjr/monopi.git",

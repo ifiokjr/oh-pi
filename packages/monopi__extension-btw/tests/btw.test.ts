@@ -15,13 +15,16 @@ vi.mock("@earendil-works/pi-tui", () => ({
 		focused = false;
 		onSubmit: ((value: string) => void) | null = null;
 		onEscape: (() => void) | null = null;
-		setValue(_value: string) {}
+		private value = "";
+		setValue(value: string) {
+			this.value = value;
+		}
 		getValue() {
-			return "";
+			return this.value;
 		}
 		handleInput(_data: string) {}
 		render(_width: number) {
-			return [""];
+			return [this.value];
 		}
 	},
 	Markdown: class Markdown {
@@ -101,7 +104,15 @@ function makeAssistantResponse(text: string, stopReason = "stop") {
 	};
 }
 
-describe("btw commands and rendering", () => {
+function configureModel(harness: ReturnType<typeof createExtensionHarness>) {
+	harness.ctx.model = model as never;
+	harness.ctx.modelRegistry = {
+		getApiKeyAndHeaders: vi.fn().mockResolvedValue({ ok: true, apiKey: "direct-key", headers: {} }),
+		getAvailable: () => [],
+	} as never;
+}
+
+describe("btw command", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockSession.agent.state.messages = [];
@@ -113,35 +124,22 @@ describe("btw commands and rendering", () => {
 		});
 	});
 
-	it("registers btw and qq command families", () => {
+	it("registers the upstream single-command BTW flow", () => {
 		const harness = createExtensionHarness();
 		btwExtension(harness.pi as never);
 
-		const commands = Array.from(harness.commands.keys()).sort();
-		expect(commands).toContain("btw");
-		expect(commands).toContain("btw clear");
-		expect(commands).toContain("btw inject");
-		expect(commands).toContain("btw summarize");
-		expect(commands).toContain("qq");
-		expect(commands).toContain("qq clear");
-		expect(commands).toContain("qq inject");
-		expect(commands).toContain("qq summarize");
+		expect(Array.from(harness.commands.keys()).sort()).toEqual(["btw"]);
 	});
 
-	it("opens overlay when /btw is called without a question if no thread exists", async () => {
+	it("opens the overlay when /btw is called without a question", async () => {
 		const harness = createExtensionHarness();
-		harness.ctx.model = model as never;
-		harness.ctx.modelRegistry = {
-			getApiKey: vi.fn().mockResolvedValue("direct-key"),
-			getAvailable: () => [],
-		} as never;
+		configureModel(harness);
 		const customSpy = vi.fn().mockResolvedValue(null);
 		harness.ctx.ui.custom = customSpy;
 
 		btwExtension(harness.pi as never);
 		await harness.commands.get("btw").handler("", harness.ctx);
 
-		// Should have attempted to open the overlay
 		expect(customSpy).toHaveBeenCalled();
 	});
 
@@ -159,11 +157,7 @@ describe("btw commands and rendering", () => {
 
 	it("creates a side session and persists the thread entry", async () => {
 		const harness = createExtensionHarness();
-		harness.ctx.model = model as never;
-		harness.ctx.modelRegistry = {
-			getApiKey: vi.fn().mockResolvedValue("direct-key"),
-			getAvailable: () => [],
-		} as never;
+		configureModel(harness);
 		const appendEntry = vi.fn();
 		harness.pi.appendEntry = appendEntry;
 		harness.ctx.ui.custom = vi.fn().mockResolvedValue(null);
@@ -180,120 +174,34 @@ describe("btw commands and rendering", () => {
 		);
 	});
 
-	it("persists a btw-thread-reset on clear", async () => {
+	it("restores thread entries on session_start", async () => {
 		const harness = createExtensionHarness();
-		harness.ctx.model = model as never;
-		harness.ctx.modelRegistry = {
-			getApiKey: vi.fn().mockResolvedValue("direct-key"),
-			getAvailable: () => [],
-		} as never;
-		const appendEntry = vi.fn();
-		harness.pi.appendEntry = appendEntry;
-
-		btwExtension(harness.pi as never);
-		await harness.commands.get("btw clear").handler("", harness.ctx);
-
-		expect(appendEntry).toHaveBeenCalledWith(
-			"btw-thread-reset",
-			expect.objectContaining({ timestamp: expect.any(Number) }),
-		);
-		expect(harness.notifications).toContainEqual({
-			msg: "Cleared BTW thread.",
-			type: "info",
-		});
-	});
-
-	it("warns when inject is requested without a thread", async () => {
-		const harness = createExtensionHarness();
-		btwExtension(harness.pi as never);
-
-		await harness.commands.get("btw inject").handler("", harness.ctx);
-
-		expect(harness.notifications).toContainEqual({
-			msg: "No BTW thread to inject.",
-			type: "warning",
-		});
-	});
-
-	it("warns when summarize is requested without a thread", async () => {
-		const harness = createExtensionHarness();
-		btwExtension(harness.pi as never);
-
-		await harness.commands.get("btw summarize").handler("", harness.ctx);
-
-		expect(harness.notifications).toContainEqual({
-			msg: "No BTW thread to summarize.",
-			type: "warning",
-		});
-	});
-
-	it("filters visible BTW notes out of the main context and renders expanded messages", async () => {
-		const harness = createExtensionHarness();
-		btwExtension(harness.pi as never);
-
-		const [result] = await harness.emitAsync("context", {
-			messages: [
-				{ role: "user", content: "keep" },
-				{ role: "custom", customType: "btw-note", content: "hide" },
-			],
-		});
-		expect(result.messages).toEqual([{ role: "user", content: "keep" }]);
-
-		const renderer = harness.messageRenderers.get("btw-note");
-		const rendered = renderer(
+		const getBranch = vi.fn(() => [
 			{
-				content: "**Question:** Why?\n\nBecause.",
-				details: {
+				type: "custom",
+				customType: "btw-thread-entry",
+				data: {
+					question: "What changed?",
+					answer: "A few startup paths were deferred.",
 					provider: "anthropic",
 					model: "claude-sonnet-4",
-					thinkingLevel: "low",
-					usage: { input: 1, output: 2, totalTokens: 3 },
+					thinkingLevel: "off",
+					timestamp: Date.now(),
 				},
 			},
-			{ expanded: true },
-			{
-				bold: (text: string) => text,
-				fg: (_tone: string, text: string) => text,
-			},
-		);
-		expect(rendered.children.length).toBeGreaterThanOrEqual(1);
-		const markdownChildren = rendered.children.filter((c: any) => c.constructor.name === "Markdown");
-		expect(markdownChildren.length).toBeGreaterThanOrEqual(2);
-		// Second Markdown child is the content
-		expect(markdownChildren[1].text).toContain("Because.");
-	});
-
-	it("injects a full thread into the main session", async () => {
-		const harness = createExtensionHarness();
-		harness.ctx.model = model as never;
-		harness.ctx.modelRegistry = {
-			getApiKey: vi.fn().mockResolvedValue("direct-key"),
-			getAvailable: () => [],
-		} as never;
-		const appendEntry = vi.fn();
-		const sendUserMessage = vi.fn();
-		harness.pi.appendEntry = appendEntry;
-		harness.pi.sendUserMessage = sendUserMessage;
+		]);
+		harness.ctx.sessionManager.getBranch = getBranch;
 
 		btwExtension(harness.pi as never);
-		// First create a thread entry
-		await harness.commands.get("btw").handler("Investigate auth", harness.ctx);
-		// Then inject it
-		await harness.commands.get("btw inject").handler("", harness.ctx);
+		await harness.emitAsync("session_start", { type: "session_start" }, harness.ctx);
 
-		expect(sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("side conversation"));
-		expect(appendEntry).toHaveBeenCalledWith("btw-thread-reset", expect.any(Object));
+		expect(getBranch).toHaveBeenCalled();
 	});
 
-	it("does not reset thread on session_tree while busy", async () => {
+	it("does not reset the thread on session_tree while a side prompt is busy", async () => {
 		const harness = createExtensionHarness();
-		harness.ctx.model = model as never;
-		harness.ctx.modelRegistry = {
-			getApiKey: vi.fn().mockResolvedValue("direct-key"),
-			getAvailable: () => [],
-		} as never;
+		configureModel(harness);
 
-		// Make the prompt never resolve (simulating busy state)
 		let resolvePrompt: (() => void) | undefined;
 		mockSession.prompt.mockImplementation(
 			() =>
@@ -303,14 +211,11 @@ describe("btw commands and rendering", () => {
 		);
 
 		btwExtension(harness.pi as never);
-
 		const runPromise = harness.commands.get("btw").handler("Question?", harness.ctx);
-
-		await new Promise((r) => setTimeout(r, 0));
+		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		const getBranch = vi.fn(() => []);
 		harness.ctx.sessionManager.getBranch = getBranch;
-
 		harness.emit("session_tree", { type: "session_tree" }, harness.ctx);
 
 		expect(getBranch).not.toHaveBeenCalled();
@@ -329,21 +234,22 @@ describe("btw startup restore", () => {
 		vi.useRealTimers();
 	});
 
-	it("restores thread on session_start", async () => {
+	it("ignores entries before the last reset marker", async () => {
 		const harness = createExtensionHarness();
 		const getBranch = vi.fn(() => [
 			{
 				type: "custom",
 				customType: "btw-thread-entry",
 				data: {
-					question: "What changed?",
-					answer: "A few startup paths were deferred.",
+					question: "Old question",
+					answer: "Old answer",
 					provider: "anthropic",
 					model: "claude-sonnet-4",
 					thinkingLevel: "off",
 					timestamp: Date.now(),
 				},
 			},
+			{ type: "custom", customType: "btw-thread-reset", data: { timestamp: Date.now() } },
 		]);
 		harness.ctx.sessionManager.getBranch = getBranch;
 
