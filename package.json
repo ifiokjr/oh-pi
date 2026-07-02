@@ -35,7 +35,7 @@
 		"docs:update": "pnpm mdt update",
 		"docs:check": "pnpm mdt check",
 		"lint": "oxlint --deny-warnings .",
-		"lint:fix": "oxlint --fix .",
+		"lint:fix": "oxfmt --write . && oxlint --fix .",
 		"lint:type-aware": "oxlint --deny-warnings --type-aware .",
 		"format": "oxfmt --write .",
 		"format:check": "oxfmt --check .",
