@@ -1,5 +1,5 @@
 ---
-default: minor
+monopi: minor
 ---
 
 Rewrite `btw` extension as overlay-based side session with tools

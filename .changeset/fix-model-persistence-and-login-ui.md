@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 fix(providers): fix model persistence timing and restore login UI

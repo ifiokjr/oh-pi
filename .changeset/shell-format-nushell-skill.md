@@ -1,5 +1,5 @@
 ---
-default: minor
+monopi: minor
 ---
 
 # Shell Format Extension & Nushell Skill

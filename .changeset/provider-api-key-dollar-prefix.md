@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 Fix legacy env var reference deprecation warning in provider catalog

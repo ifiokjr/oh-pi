@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 Bump `@vitest/browser` to 4.1.8 (fixes GHSA-2h32-95rg-cppp)

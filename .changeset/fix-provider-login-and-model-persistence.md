@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 fix(provider-catalog): use native ui.select for provider login and persist models across instances

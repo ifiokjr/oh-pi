@@ -1,5 +1,5 @@
 ---
-default: minor
+monopi: minor
 ---
 
 Adopt upstream-inspired BTW and answer extension improvements

@@ -206,7 +206,7 @@ path = "packages/monopi__db"
 type = "npm"
 
 
-[group.default]
+[group.monopi]
 packages = [
 	"@monopi/adaptive-routing",
 	"@monopi/agents",
@@ -256,8 +256,6 @@ packages = [
 tag = true
 release = true
 version_format = "primary"
-
-
 [lints]
 use = ["cargo/baseline", "npm/baseline", "dart/baseline"]
 

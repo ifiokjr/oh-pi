@@ -1,5 +1,5 @@
 ---
-default: minor
+monopi: minor
 ---
 
 Add @monopi/extension-goal package

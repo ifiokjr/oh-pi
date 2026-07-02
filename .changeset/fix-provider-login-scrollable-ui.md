@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 fix(providers): use proper TUI components for provider login with height limiting and fuzzy search

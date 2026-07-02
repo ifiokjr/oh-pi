@@ -1,5 +1,5 @@
 ---
-default: minor
+monopi: minor
 ---
 
 # Remove ant-colony package and port concepts to subagents

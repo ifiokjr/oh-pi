@@ -1,5 +1,5 @@
 ---
-default: minor
+monopi: minor
 ---
 
 # Allow projects to hide built-in subagents

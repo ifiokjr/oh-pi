@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 # Hide diagnostics message text from LLM context

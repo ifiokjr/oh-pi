@@ -1,5 +1,5 @@
 ---
-default: minor
+monopi: minor
 ---
 
 # Improve subagents

@@ -1,5 +1,5 @@
 ---
-default: minor
+monopi: minor
 ---
 
 # Dynamic Subagent Creation & External Agent Protocols

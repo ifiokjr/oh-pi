@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 # Subagent package skill resolution

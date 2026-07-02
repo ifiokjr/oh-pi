@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 # Revert to space-separated slash subcommands

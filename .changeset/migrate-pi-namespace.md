@@ -1,5 +1,5 @@
 ---
-default: major
+monopi: major
 ---
 
 # Migrate Pi namespace and Ollama provider

@@ -1,5 +1,5 @@
 ---
-default: minor
+monopi: minor
 ---
 
 # Context Knowledge Base Extension

@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 # Remove duplicate project skills

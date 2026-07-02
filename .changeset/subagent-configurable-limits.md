@@ -1,5 +1,5 @@
 ---
-default: minor
+monopi: minor
 ---
 
 # Make subagent fan-out limits configurable

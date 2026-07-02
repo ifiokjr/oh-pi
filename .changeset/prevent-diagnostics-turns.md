@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 # Prevent diagnostics messages from triggering LLM turns

@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 # Update React Router for security audit

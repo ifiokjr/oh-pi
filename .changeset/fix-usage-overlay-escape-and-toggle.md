@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 Fix usage dashboard overlay not closable with Escape key

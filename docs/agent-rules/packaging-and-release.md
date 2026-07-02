@@ -10,11 +10,11 @@
 pnpm change
 ```
 
-This repo uses MonoChange with a lockstep `default` group, so every changeset frontmatter must use only `default` as the key.
+This repo uses MonoChange with a lockstep `monopi` group, so every changeset frontmatter must use only `monopi` as the key.
 
 ```md
 ---
-default: patch
+monopi: patch
 ---
 ```
 

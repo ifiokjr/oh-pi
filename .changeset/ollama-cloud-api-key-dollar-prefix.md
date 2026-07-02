@@ -1,5 +1,5 @@
 ---
-default: patch
+monopi: patch
 ---
 
 Fix `registerProvider("ollama-cloud")` legacy env var deprecation warning
